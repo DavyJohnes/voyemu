@@ -2,8 +2,8 @@
   "schema": 1,
   "prebuilt": {
     "macos_arm64": {
-      "url": "https://github.com/voyemu/voyemu/releases/download/qnx-host-macos-arm64-98d88ffa/qnx-host-macos-arm64.zip",
-      "sha256": "98d88ffa6d6c26b55550249a9d7214f62486b324da4e66328dbd450bba85bef2"
+      "url": "https://github.com/voyemu/voyemu/releases/download/qnx-host-macos-arm64-834c40c7/qnx-host-macos-arm64.zip",
+      "sha256": "834c40c7a0dfc1c24a4ae386f4ef32d9805c2656f832ca69ff392e24d671d794"
     },
     "linux_x64": {
       "url": "https://github.com/voyemu/voyemu/releases/download/qnx-host-linux-x64-86ea52c3/qnx-host-linux-x64.zip",
