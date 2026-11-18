@@ -1,6 +1,6 @@
 # Voyemu
 
-[English](https://github.com/voyemu/voyemu/blob/main/README.md) | Русский | [История изменений](https://github.com/voyemu/voyemu/blob/main/CHANGELOG.ru.md)
+[English](README.md) | Русский | [История изменений](CHANGELOG.ru.md)
 
 Voyemu — эмулятор автомобилей Voyah на базе Android (Free, Dreamer, Passion) для macOS, Windows и Linux. Он запускает оригинальную прошивку мультимедиа (Android, два экрана) и приборки (QNX), скачанную с автомобиля пользователя или взятую из файлов OTA-обновления; сама прошивка в Voyemu не входит. Voyemu эмулирует нажатия кнопок руля и ввод параметров автомобиля. Через Voyemu API скрипты получают снимки экрана и дерево элементов интерфейса, передают ввод и читают сообщения CAN.
 
@@ -48,6 +48,6 @@ Voyemu работает на macOS 15+ с Apple Silicon, на Windows x64 и н�
 - [Сборка](https://github.com/voyemu/voyemu/blob/main/docs/dev/build.ru.md), [тесты](https://github.com/voyemu/voyemu/blob/main/docs/dev/tests.ru.md) и [CI](https://github.com/voyemu/voyemu/blob/main/docs/dev/ci.ru.md): сборка и проверка Voyemu из исходников.
 - [Вся документация](https://github.com/voyemu/voyemu/blob/main/docs/index.ru.md).
 
-Код Voyemu распространяется по [MIT](https://github.com/voyemu/voyemu/blob/main/LICENSE). Inter использует [SIL Open Font License](https://github.com/voyemu/voyemu/blob/main/profiles/common/fonts/Inter-OFL.txt). Сторонние код и инструменты сохраняют собственные лицензии; см. [уведомления о сторонних лицензиях](https://github.com/voyemu/voyemu/blob/main/src/licenses/README.md).
+Код Voyemu распространяется по [MIT](LICENSE). Inter использует [SIL Open Font License](profiles/common/fonts/Inter-OFL.txt). Сторонние код и инструменты сохраняют собственные лицензии; см. [уведомления о сторонних лицензиях](https://github.com/voyemu/voyemu/blob/main/src/licenses/README.md).
 
 Штатные файлы прошивки и производные образы автомобиля исключены из публичных исходников. Рецепты с `guard` и проверяемые бинарные смещения описывают адаптацию; штатная графика извлекается в подготовленную машину. Лицензия проекта не даёт права распространять материалы OEM. Voyemu не связан с производителем автомобиля.

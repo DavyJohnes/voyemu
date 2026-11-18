@@ -1,6 +1,6 @@
 # Voyemu
 
-English | [Русский](https://github.com/voyemu/voyemu/blob/main/README.ru.md) | [Changelog](https://github.com/voyemu/voyemu/blob/main/CHANGELOG.md)
+English | [Русский](README.ru.md) | [Changelog](CHANGELOG.md)
 
 Voyemu emulates Android-based Voyah vehicles (Free, Dreamer, Passion) on macOS, Windows and Linux. It runs the original multimedia (Android, two screens) and instrument cluster (QNX) firmware, downloaded from the user's vehicle or taken from OTA update files; no firmware is included. Voyemu emulates steering-wheel button presses and vehicle parameter input. Through the Voyemu API, scripts take screenshots, read the UI element tree, send input and observe CAN messages.
 
@@ -48,6 +48,6 @@ Run the commands from the installation root, see [release](https://github.com/vo
 - [Build](https://github.com/voyemu/voyemu/blob/main/docs/dev/build.md), [tests](https://github.com/voyemu/voyemu/blob/main/docs/dev/tests.md) and [CI](https://github.com/voyemu/voyemu/blob/main/docs/dev/ci.md): building and checking Voyemu from source.
 - [All documentation](https://github.com/voyemu/voyemu/blob/main/docs/index.md).
 
-Voyemu code is covered by [MIT](https://github.com/voyemu/voyemu/blob/main/LICENSE). Inter uses the [SIL Open Font License](https://github.com/voyemu/voyemu/blob/main/profiles/common/fonts/Inter-OFL.txt). Third-party code and tools retain their own licenses; see [third-party notices](https://github.com/voyemu/voyemu/blob/main/src/licenses/README.md).
+Voyemu code is covered by [MIT](LICENSE). Inter uses the [SIL Open Font License](profiles/common/fonts/Inter-OFL.txt). Third-party code and tools retain their own licenses; see [third-party notices](https://github.com/voyemu/voyemu/blob/main/src/licenses/README.md).
 
 OEM firmware files and derived vehicle images are excluded from public source code. Recipes with a `guard` and checked binary offsets describe adaptations; OEM artwork is extracted into the prepared machine. The project license does not grant permission to redistribute OEM materials. Voyemu is not affiliated with the vehicle manufacturer.
