@@ -218,8 +218,11 @@ case "$set_name" in
                 PATH="$PWD/$(jq -er .optionalTools.linuxBuild.cmake.directory "$pins")/bin:$PWD/$(jq -er .optionalTools.linuxBuild.ninja.directory "$pins"):$PATH" \
                     bash -c 'cmake -P src/dev/format/uncrustify.cmake || cmake -DVOYEMU_UNCRUSTIFY_FROM_SOURCE=ON -P src/dev/format/uncrustify.cmake'
                 ;;
-            linux) host_tool linuxBuild jdk ;;
-            tidy-windows) wheel_tool clangTidy ;;
+            linux | windows-cross) host_tool linuxBuild jdk ;;
+            tidy-windows)
+                host_tool linuxBuild jdk
+                wheel_tool clangTidy
+                ;;
             # The Uncrustify source tarball, named as src/dev/format/uncrustify.cmake expects; the build needs Python 3.
             uncrustify)
                 fetch "$(jq -er .optionalTools.uncrustify.url "$pins")" "$(jq -er .optionalTools.uncrustify.sha256 "$pins")" \

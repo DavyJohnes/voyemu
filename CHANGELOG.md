@@ -38,3 +38,5 @@ First public release. Voyemu runs a vehicle's Android multimedia applications an
 ### Known issues
 
 - The QNX instrument cluster shows the wrong startup animation on the `free-09-chinese-20260106-6.0.3` profile.
+- On Free 6.11.1 and 7.3.1, preparing a factory machine can exit with code `4` if ADB disconnects while applying the Android wallpaper. A copy of a Free 7.3.1 machine requires a successful base build.
+- On Free 6.11.1 and 7.3.1, the rear-seat screen app (ThirdScreen) crashes when SELinux denies a write to the Android property `qinggan.thirdscreen.standby`.
