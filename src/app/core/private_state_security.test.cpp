@@ -166,6 +166,35 @@ int main(int argc, char **argv) {
             }
         } cleanup{root};
 
+        const auto long_lock = root / (std::string(215, 'l') + ".lock");
+        check(long_lock.native().size() >= MAX_PATH, "fixture must exceed legacy MAX_PATH");
+        auto lock = [&] {
+            return detail::open_private_state_lock(
+                    long_lock, GENERIC_READ | GENERIC_WRITE | READ_CONTROL, OPEN_ALWAYS,
+                    FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OPEN_REPARSE_POINT);
+        };
+        const HANDLE held = lock();
+        check(held != INVALID_HANDLE_VALUE, "long private lock creation");
+        const bool private_file = security.accepts(held, true);
+        const HANDLE competing = lock();
+        CloseHandle(held);
+
+        if (competing != INVALID_HANDLE_VALUE) {
+            CloseHandle(competing);
+        }
+
+        const HANDLE released = lock();
+
+        if (released != INVALID_HANDLE_VALUE) {
+            CloseHandle(released);
+        }
+
+        check(DeleteFileW(os::win32_file_path(long_lock).c_str()), "long lock cleanup");
+        check(private_file && competing == INVALID_HANDLE_VALUE && released != INVALID_HANDLE_VALUE,
+              "long lock remains private and exclusive until released");
+
+        std::cout << "Long private lock remained exclusive until release\n";
+
         for (unsigned mode = 0; mode < 3; ++mode) {
             auto descriptor = security.descriptor;
             check(SetSecurityDescriptorDacl(&descriptor, TRUE,

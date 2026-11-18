@@ -274,25 +274,49 @@ Json AndroidQuickBoot::disks() const {
     }
 
     const auto system = android_system_binding(prepared);
+    const auto avd_disk_stamp = [&](const std::filesystem::path &disk, const char *name) {
+#ifdef _WIN32
+        const auto alias = runtime_ / name;
+
+        // Windows normally publishes these SDK aliases as hard links. Accept
+        // a second link only when both known paths identify the same file.
+        if (runtime_ != machine_ &&
+            std::filesystem::is_regular_file(std::filesystem::symlink_status(alias)) &&
+            std::filesystem::equivalent(disk, alias) && disk != alias) {
+            const auto identity = stamp(disk, 2);
+
+            if (stamp(alias, 2) != identity) {
+                throw VoyemuError("QUICKBOOT_FILE", "AVD disk alias identity changed");
+            }
+
+            return identity;
+        }
+#else
+        (void)name;
+#endif
+
+        return stamp(disk);
+    };
 
     for (const char *name :
-         {"userdata-qemu.img", "cache.img", "encryptionkey.img", "userdata-qemu.img.qcow2",
-          "cache.img.qcow2", "encryptionkey.img.qcow2", "system.img.qcow2", "vendor.img.qcow2"}) {
-        result[name] =
-                stamp(std::string_view(name) == "system.img.qcow2" ? system.overlay
-                      : (runtime_ != machine_ && std::string_view(name).starts_with("cache.img"))
-                              ? runtime_ / name
-                              : machine_ / name);
+         {"userdata-qemu.img", "userdata-qemu.img.qcow2", "encryptionkey.img.qcow2"}) {
+        result[name] = stamp(machine_ / name);
     }
+
+    for (const char *name : {"cache.img", "cache.img.qcow2"}) {
+        result[name] = stamp(runtime_ / name);
+    }
+
+    result["encryptionkey.img"] = avd_disk_stamp(machine_ / "encryptionkey.img",
+                                                 "encryptionkey.img");
+    result["system.img.qcow2"] = avd_disk_stamp(system.overlay, "system.img.qcow2");
+    result["vendor.img.qcow2"] = avd_disk_stamp(machine_ / "vendor.img.qcow2", "vendor.img.qcow2");
 
     const auto base =
             key_.value("prepared", Json::object()).value("base", (machine_ / "base").string());
-
-    for (const char *name : {"system.img", "vendor.img"}) {
-        result[std::string("base/") + name] = stamp(std::string_view(name) == "system.img"
-                                                            ? system.raw
-                                                            : std::filesystem::path(base) / name);
-    }
+    result["base/system.img"] = avd_disk_stamp(system.raw, "system.img");
+    result["base/vendor.img"] = avd_disk_stamp(std::filesystem::path(base) / "vendor.img",
+                                               "vendor.img");
 
     return result;
 }

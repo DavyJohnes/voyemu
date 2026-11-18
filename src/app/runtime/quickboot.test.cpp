@@ -723,6 +723,53 @@ int main() try {
                                         {"reason", "provider_not_installed"}};
     assert(!android_presave_required(passion_spec) &&
            !android_quickboot_key(passion_spec).contains("presave_protocol"));
+#ifdef _WIN32
+    {
+        const auto runtime = root / "avd";
+        AndroidQuickBoot linked(machine, key, runtime);
+        linked.begin();
+
+        for (const auto *name : {"cache.img", "cache.img.qcow2"}) {
+            std::ofstream(runtime / name) << "disposable cache";
+        }
+
+        for (const auto *name : {"snapshot.pb", "ram.bin", "hardware.ini"}) {
+            std::ofstream(runtime / "snapshots" / AndroidQuickBoot::snapshot_name / name)
+                    << "saved snapshot";
+        }
+
+        for (const auto *name : {"encryptionkey.img", "system.img.qcow2", "vendor.img.qcow2"}) {
+            std::filesystem::create_hard_link(machine / name, runtime / name);
+        }
+
+        for (const auto *name : {"system.img", "vendor.img"}) {
+            std::filesystem::create_hard_link(machine / "base" / name, runtime / name);
+        }
+
+        linked.commit(boot);
+        assert(linked.inspect().resume && linked.runtime_checkpoint().resume);
+        const auto reject_link = [&](const auto &disk) {
+            const auto foreign = root / "foreign-link.img";
+            std::filesystem::create_hard_link(disk, foreign);
+            assert(!linked.inspect().resume && !linked.runtime_checkpoint().resume);
+            linked.begin();
+            bool rejected = false;
+
+            try {
+                linked.commit(boot);
+            } catch (const VoyemuError &error) {
+                rejected = std::string_view(error.what()).starts_with("QUICKBOOT_FILE:");
+            }
+
+            assert(rejected);
+            std::filesystem::remove(foreign);
+            linked.commit(boot);
+            assert(linked.inspect().resume);
+        };
+        reject_link(machine / "base/system.img");
+        reject_link(machine / "userdata-qemu.img");
+    }
+#endif
     std::filesystem::remove_all(root);
     std::cout << "checkpoint invalidation and unchanged guest storage passed\n";
 } catch (const std::exception &error) {

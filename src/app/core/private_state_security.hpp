@@ -8,6 +8,7 @@
 // descriptor has to ride CreateDirectoryW/CreateFileW. Non-Windows builds see an
 // empty header: no new dependency and no <windows.h> reaches the POSIX branches.
 #ifdef _WIN32
+#include "os/fs.hpp"
 #include <windows.h>
 #include <aclapi.h>
 
@@ -176,8 +177,8 @@ struct PrivateStateSecurity {
 inline HANDLE open_private_state_lock(const std::filesystem::path &path, DWORD access,
                                       DWORD disposition, DWORD flags) {
     PrivateStateSecurity security;
-    const HANDLE file = CreateFileW(path.c_str(), access, 0, &security.attributes, disposition,
-                                    flags, nullptr);
+    const HANDLE file = CreateFileW(os::win32_file_path(path).c_str(), access, 0,
+                                    &security.attributes, disposition, flags, nullptr);
 
     if (file == INVALID_HANDLE_VALUE) {
         return file;
@@ -189,7 +190,9 @@ inline HANDLE open_private_state_lock(const std::filesystem::path &path, DWORD a
         return file;
     }
 
+    const DWORD error = GetLastError();
     CloseHandle(file);
+    SetLastError(error);
 
     return INVALID_HANDLE_VALUE;
 }

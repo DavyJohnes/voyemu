@@ -24,16 +24,21 @@ Json refresh_machine_ui_observer(const std::filesystem::path &root, std::string_
             file = voyemu::detail::open_private_state_lock(
                     path, GENERIC_READ | GENERIC_WRITE, OPEN_ALWAYS,
                     FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OPEN_REPARSE_POINT);
+
+            if (file == INVALID_HANDLE_VALUE) {
+                const auto error = GetLastError();
+                throw VoyemuError("SESSION_LOCK",
+                                  "observer refresh requires stopped profile; win32=" +
+                                          std::to_string(error));
+            }
+
             BY_HANDLE_FILE_INFORMATION info{};
 
-            if (file == INVALID_HANDLE_VALUE || !GetFileInformationByHandle(file, &info) ||
+            if (!GetFileInformationByHandle(file, &info) ||
                 (info.dwFileAttributes &
                  (FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_REPARSE_POINT)) ||
                 info.nNumberOfLinks != 1) {
-                if (file != INVALID_HANDLE_VALUE) {
-                    CloseHandle(file);
-                }
-
+                CloseHandle(file);
                 throw VoyemuError("SESSION_LOCK", "observer refresh requires stopped profile");
             }
         }

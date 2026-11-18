@@ -1645,7 +1645,8 @@ int main(int argc, char **argv) try {
 
             while (std::chrono::steady_clock::now() < exited_until) {
                 if (std::filesystem::is_regular_file(exited_directory / "runtime.json") &&
-                    read_private_json(exited_directory / "runtime.json").value("stopped", false)) {
+                    read_private_json(exited_directory / "runtime.json").value("stopped", false) &&
+                    android_port_leasable(port)) {
                     exited_clean = true;
                     break;
                 }
@@ -2125,8 +2126,12 @@ int main(int argc, char **argv) try {
             return files;
         };
         const auto before_resume = fixture_files();
-        auto missing_resume = run({"_start", "--resume"});
-        const auto resume_error = Json::parse(missing_resume.output);
+        auto missing_resume =
+                run(control_latency ? std::vector<std::string>{"_start", "--resume", "--cluster=on"}
+                                    : std::vector<std::string>{"_start", "--resume"});
+        const auto resume_error = Json::parse(missing_resume.output, nullptr, false);
+        require(resume_error.is_object(),
+                "explicit resume returned no JSON: " + missing_resume.output);
         require(missing_resume.exit_code == 4 && !resume_error.at("ok").get<bool>() &&
                         resume_error.at("error") ==
                                 "VEHICLE_STARTUP: saved scenario missing: " +
@@ -2200,11 +2205,16 @@ int main(int argc, char **argv) try {
             first_arguments.push_back("--background");
         }
 
+        if (control_latency) {
+            // This fixture already pins its own QNX child and needs no host engine download.
+            first_arguments.emplace_back("--cluster=on");
+        }
+
         auto first = slow_startup ? json({"start", "--exclusive", "--ownership-id", slow_owner})
                                   : json(std::move(first_arguments));
         auto first_id = first.at("session_id").get<std::string>();
         require(first["runtime"] == "native C++" && first["with_cluster"] == control_latency,
-                "default start changed cluster opt-in");
+                "start selected the wrong cluster scope");
         auto active = json({"status"});
         require(active["session_id"] == first_id && active["stopped"] == false,
                 "first native epoch not active");
@@ -3575,15 +3585,24 @@ int main(int argc, char **argv) try {
         }
 
         if (control_latency) {
+#ifdef _WIN32
+            const auto supervisor_pid = process_owner.at("creator_pid").get<DWORD>();
+            std::unique_ptr<void, decltype(&CloseHandle)> supervisor(
+                    OpenProcess(SYNCHRONIZE, FALSE, supervisor_pid), &CloseHandle);
+            require(bool(supervisor), "open own control fixture supervisor");
+#endif
+
             const auto endpoint = active.at("endpoint").get<std::string>();
             auto rpc = [&](Json value) {
                 value["session_id"] = first_id;
 
                 return request(endpoint, value, 3000);
             };
-            require(rpc({{"op", "wheel"}, {"id", "menu"}, {"phase", "up"}, {"owner", "fixture-ui"}})
-                            .value("accepted", false),
-                    "initial release rejected");
+            const auto initial_release = rpc(
+                    {{"op", "wheel"}, {"id", "menu"}, {"phase", "up"}, {"owner", "fixture-ui"}});
+            require(initial_release.value("accepted", false), "initial release rejected");
+            const auto release_sequence = initial_release.at("event_sequence");
+
             auto arm = [&](const char *operation, int milliseconds = 600) {
                 std::filesystem::remove(root / "adb-gate-held");
                 std::filesystem::remove(root / "adb-gate-release");
@@ -3634,15 +3653,25 @@ int main(int argc, char **argv) try {
 
                 throw std::runtime_error("current captured state was not acknowledged");
             };
-            const auto released_until = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+            const auto released_until = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+            bool release_acknowledged = false;
 
-            while (!read_private_json(root / "held-input.json").empty() &&
-                   std::chrono::steady_clock::now() < released_until) {
+            while (std::chrono::steady_clock::now() < released_until) {
+                const auto android = rpc({{"op", "status"}}).at("deliveries").at("android");
+                const auto wheel = android.value("wheel", Json::object());
+
+                if (wheel.value("guest_acknowledged", false) &&
+                    wheel.at("event_sequence") == release_sequence) {
+                    release_acknowledged = true;
+                    break;
+                }
+
                 std::this_thread::sleep_for(std::chrono::milliseconds(10));
             }
 
-            require(read_private_json(root / "held-input.json").empty(),
-                    "initial Android phase did not release");
+            require(release_acknowledged && read_private_json(root / "held-input.json").empty(),
+                    "initial Android release was not acknowledged");
+
             require(rpc({{"op", "cluster_restart"}}).value("ok", false),
                     "prepared fake QNX did not start");
             arm("identity");
@@ -3714,6 +3743,10 @@ int main(int argc, char **argv) try {
                     "concurrent lifecycle did not cleanly stop owned Android");
             require(read_private_json(root / "held-input.json").empty(),
                     "concurrent wheel phases left held input");
+#ifdef _WIN32
+            require(WaitForSingleObject(supervisor.get(), 5000) == WAIT_OBJECT_0,
+                    "control fixture supervisor did not release its files");
+#endif
             std::filesystem::remove_all(root);
             std::cout
                     << "bounded ADB leaves input/status/wheel responsive; captured state and lifecycle remain guarded\n";
@@ -3757,17 +3790,28 @@ int main(int argc, char **argv) try {
             }
 
             require(polled, "fixture did not observe a completed ready-state background poll");
+            const auto endpoint = active.at("endpoint").get<std::string>();
             const auto started = std::chrono::steady_clock::now();
-            auto changed = json({"patch", "--values", Json{{"speed", 43}}.dump()});
+            auto changed = request(
+                    endpoint,
+                    {{"op", "patch"}, {"session_id", first_id}, {"values", {{"speed", 43}}}});
             const auto patch_reply_ms = std::chrono::duration<double, std::milli>(
                                                 std::chrono::steady_clock::now() - started)
                                                 .count();
             const auto revision = changed["state"]["sequence"];
             bool applied = false;
             Json last_status = changed, publication_samples = Json::array();
+#ifdef _WIN32
+            // Windows uses a framed readiness transaction around the protected receipt. Its
+            // three-second maintenance interval is still much longer than this full publication
+            // budget.
+            constexpr auto delivery_budget = std::chrono::milliseconds(1500);
+#else
+            constexpr auto delivery_budget = std::chrono::milliseconds(500);
+#endif
 
-            while (std::chrono::steady_clock::now() - started < std::chrono::milliseconds(500)) {
-                last_status = json({"status"});
+            while (std::chrono::steady_clock::now() - started < delivery_budget) {
+                last_status = request(endpoint, {{"op", "status"}, {"session_id", first_id}});
                 const auto &a = last_status["deliveries"]["android"];
                 const auto published = read_private_json(root / "full-input.json");
                 publication_samples.push_back(
@@ -3799,8 +3843,7 @@ int main(int argc, char **argv) try {
                           << '\n';
             }
 
-            require(applied,
-                    "ready Android state update waited for the two-second background poll");
+            require(applied, "ready Android state update missed its delivery budget");
         }
 
         if (state_restore) {

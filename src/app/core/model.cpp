@@ -868,7 +868,7 @@ void ensure_private_directory(const std::filesystem::path &path) {
     for (const auto &component : path.relative_path()) {
         current /= component;
 
-        if (!CreateDirectoryW(current.c_str(), &security.attributes) &&
+        if (!CreateDirectoryW(os::win32_file_path(current).c_str(), &security.attributes) &&
             GetLastError() != ERROR_ALREADY_EXISTS) {
             throw VoyemuError("STATE_PATH", "cannot create private directory");
         }
@@ -1010,7 +1010,8 @@ bool state_incarnation(const StateFile &a, const StateFile &b) {
 }
 
 bool state_snapshot(const std::filesystem::path &path, StateFile &value) {
-    StateHandle file{CreateFileW(path.c_str(), FILE_READ_ATTRIBUTES | READ_CONTROL,
+    StateHandle file{CreateFileW(os::win32_file_path(path).c_str(),
+                                 FILE_READ_ATTRIBUTES | READ_CONTROL,
                                  FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr,
                                  OPEN_EXISTING, FILE_FLAG_OPEN_REPARSE_POINT, nullptr)};
 
@@ -1027,7 +1028,8 @@ bool same_state(const StateFile &a, const StateFile &b) {
 
 bool pending_state(const std::filesystem::path &path, const StateFile &expected,
                    const std::string &text, bool remove = false) {
-    StateHandle file{CreateFileW(path.c_str(), GENERIC_READ | READ_CONTROL | (remove ? DELETE : 0),
+    StateHandle file{CreateFileW(os::win32_file_path(path).c_str(),
+                                 GENERIC_READ | READ_CONTROL | (remove ? DELETE : 0),
                                  FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr,
                                  OPEN_EXISTING, FILE_FLAG_OPEN_REPARSE_POINT, nullptr)};
     StateFile current;
@@ -1096,8 +1098,8 @@ static void write_private_json_text(const std::filesystem::path &path, const std
     StateFile previous;
     const bool previous_valid = state_snapshot(path, previous);
     detail::PrivateStateSecurity security;
-    HANDLE file = CreateFileW(pending.c_str(), GENERIC_WRITE, 0, &security.attributes, CREATE_NEW,
-                              FILE_ATTRIBUTE_NORMAL, nullptr);
+    HANDLE file = CreateFileW(os::win32_file_path(pending).c_str(), GENERIC_WRITE, 0,
+                              &security.attributes, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, nullptr);
 
     if (file == INVALID_HANDLE_VALUE) {
         throw VoyemuError("STATE_WRITE", "exclusive temporary file failed");
@@ -1110,7 +1112,7 @@ static void write_private_json_text(const std::filesystem::path &path, const std
     if (!success) {
         const auto error = GetLastError();
         CloseHandle(file);
-        DeleteFileW(pending.c_str());
+        DeleteFileW(os::win32_file_path(pending).c_str());
         throw VoyemuError("STATE_WRITE", "flush failed; win32=" + std::to_string(error));
     }
 

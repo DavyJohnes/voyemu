@@ -1186,6 +1186,7 @@ void Session::advance_windows_android_transaction() {
         }
 
         transaction.health_marker = random_token();
+        transaction.settings_revision = model_.state().at("sequence").get<std::uint32_t>();
         transaction.capture_limit = 512 * 1024;
     }
 
@@ -1217,6 +1218,38 @@ void Session::advance_windows_android_transaction() {
         }
 
         return result;
+    };
+    auto observe_language = [&](const std::string &output) {
+        auto &language = android["language"];
+        language = {{"source", "qinggan.settings/system/system_language_setting"},
+                    {"visible_effect_verified", false}};
+
+        if (const auto value = oem_language_setting(output)) {
+            language.update({{"status", "observed"}, {"value", *value}});
+
+            if (model_.state().at("sequence") != transaction.settings_revision) {
+                language["status"] = "awaiting_stable_source";
+            } else {
+                if (auto change = oem_language_change(oem_language_, *value)) {
+                    if (model_.state().at("raw_oem").at("ivi_languageSet") != *value) {
+                        model_.patch(*change);
+                        write_private_json(directory_ / "vehicle-state.json", model_.state());
+
+                        if (cluster_requested_) {
+                            deliveries_["qnx"]["vehicle"] = qnx_vehicle_pending();
+                        }
+                    }
+
+                    oem_language_ = value;
+                }
+
+                language["source_revision"] = model_.state()["sequence"];
+                language["canonical_matches"] =
+                        model_.state().at("raw_oem").at("ivi_languageSet") == *value;
+            }
+        } else {
+            language["status"] = "not_observed";
+        }
     };
     auto require_reply = [&](const ProcessResult &result) {
         if (!passed(result) || result.output.find("SecurityException") != std::string::npos) {
@@ -1464,6 +1497,8 @@ void Session::advance_windows_android_transaction() {
             }
             case Phase::health: {
                 if (transaction.health_marker.empty()) {
+                    transaction.settings_revision =
+                            model_.state().at("sequence").get<std::uint32_t>();
                     transaction.health_marker = random_token();
                 }
 
@@ -1632,16 +1667,7 @@ void Session::advance_windows_android_transaction() {
                     }
                 }
 
-                if (const auto language = oem_language_setting(sections[8])) {
-                    if (auto change = oem_language_change(oem_language_, *language)) {
-                        if (model_.state().at("raw_oem").at("ivi_languageSet") != *language) {
-                            model_.patch(*change);
-                            write_private_json(directory_ / "vehicle-state.json", model_.state());
-                        }
-
-                        oem_language_ = language;
-                    }
-                }
+                observe_language(sections[8]);
 
                 if (const auto light = host_light_theme(sections[9])) {
                     android["appearance"] = {{"status", "observed"},
@@ -2357,37 +2383,7 @@ void Session::advance_windows_android_transaction() {
                     return;
                 }
 
-                auto &language = android["language"];
-                language = {{"source", "qinggan.settings/system/system_language_setting"},
-                            {"visible_effect_verified", false}};
-
-                if (const auto value = oem_language_setting(result->output)) {
-                    language.update({{"status", "observed"}, {"value", *value}});
-
-                    if (model_.state().at("sequence") != transaction.settings_revision) {
-                        language["status"] = "awaiting_stable_source";
-                    } else {
-                        if (auto change = oem_language_change(oem_language_, *value)) {
-                            if (model_.state().at("raw_oem").at("ivi_languageSet") != *value) {
-                                model_.patch(*change);
-                                write_private_json(directory_ / "vehicle-state.json",
-                                                   model_.state());
-
-                                if (cluster_requested_) {
-                                    deliveries_["qnx"]["vehicle"] = qnx_vehicle_pending();
-                                }
-                            }
-
-                            oem_language_ = value;
-                        }
-
-                        language["source_revision"] = model_.state()["sequence"];
-                        language["canonical_matches"] =
-                                model_.state().at("raw_oem").at("ivi_languageSet") == *value;
-                    }
-                } else {
-                    language["status"] = "not_observed";
-                }
+                observe_language(result->output);
 
                 transaction.phase = Phase::appearance;
                 break;

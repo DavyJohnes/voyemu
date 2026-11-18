@@ -12,6 +12,7 @@
 #include "passion_display_cache.hpp"
 #include "passion_presentation.hpp"
 #include "passion_wheel.hpp"
+#include "private_state_security.hpp"
 #include "program_modes.hpp"
 #include "qinggan11_startup.hpp"
 #include "qnx_interguest_contract.hpp"
@@ -1646,8 +1647,9 @@ struct SessionPersistenceFixture {
         };
         auto make_disk = [&](const std::filesystem::path &path, std::uint64_t bytes) {
 #ifdef _WIN32
-            const HANDLE file = CreateFileW(path.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_NEW,
-                                            FILE_ATTRIBUTE_NORMAL, nullptr);
+            detail::PrivateStateSecurity security;
+            const HANDLE file = CreateFileW(path.c_str(), GENERIC_WRITE, 0, &security.attributes,
+                                            CREATE_NEW, FILE_ATTRIBUTE_NORMAL, nullptr);
             assert(file != INVALID_HANDLE_VALUE);
             LARGE_INTEGER extent{};
             extent.QuadPart = static_cast<LONGLONG>(bytes);

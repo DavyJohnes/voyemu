@@ -186,6 +186,11 @@ jobs:
               with:
                   persist-credentials: false
             - run: New-Item -ItemType Directory -Force .local/build/tmp/ci | Out-Null
+            - name: Prepare private fixture location
+              run: |
+                  $fixtures = Join-Path $env:USERPROFILE 'voyemu-native-test'
+                  New-Item -ItemType Directory -Force $fixtures | Out-Null
+                  "VOYEMU_NATIVE_FIXTURE_BASE=$fixtures" >> $env:GITHUB_ENV
             - uses: ./.github/actions/toolchains
               with:
                   set: windows

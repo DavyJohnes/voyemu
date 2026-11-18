@@ -57,7 +57,7 @@ void ordinary(const std::filesystem::path &path) {
         need(!std::filesystem::is_symlink(std::filesystem::symlink_status(at)),
              ("linked path: " + at.string()).c_str());
 #ifdef _WIN32
-        const auto attributes = GetFileAttributesW(at.c_str());
+        const auto attributes = GetFileAttributesW(os::win32_file_path(at).c_str());
 
         if (attributes == INVALID_FILE_ATTRIBUTES || (attributes & FILE_ATTRIBUTE_REPARSE_POINT)) {
             throw VoyemuError("PORTABLE_RUNTIME",
@@ -178,9 +178,16 @@ void copy_sparse(const std::filesystem::path &source, const std::string &sha,
     std::ifstream input(source, std::ios::binary);
     need(bool(input), "seed open failed");
 #ifdef _WIN32
-    HANDLE fd = CreateFileW(target.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_NEW,
-                            FILE_ATTRIBUTE_NORMAL, nullptr);
-    need(fd != INVALID_HANDLE_VALUE, "exclusive image output failed");
+    detail::PrivateStateSecurity security;
+    HANDLE fd = CreateFileW(os::win32_file_path(target).c_str(), GENERIC_WRITE, 0,
+                            &security.attributes, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, nullptr);
+
+    if (fd == INVALID_HANDLE_VALUE) {
+        const auto error = GetLastError();
+        throw VoyemuError("PORTABLE_RUNTIME",
+                          "exclusive image output failed; win32=" + std::to_string(error));
+    }
+
     struct File {
         HANDLE value;
 

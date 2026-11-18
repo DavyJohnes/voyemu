@@ -4,15 +4,33 @@
 #include <windows.h>
 
 namespace voyemu::os {
+std::wstring win32_file_path(const std::filesystem::path &path) {
+    auto native = path.native();
+
+    if (native.size() < MAX_PATH - 12 || !path.is_absolute() || path != path.lexically_normal() ||
+        native.starts_with(L"\\\\?\\") || native.starts_with(L"\\\\.\\")) {
+        return native;
+    }
+
+    native = std::filesystem::path(path).make_preferred().native();
+
+    if (native.starts_with(L"\\\\")) {
+        return L"\\\\?\\UNC\\" + native.substr(2);
+    }
+
+    return L"\\\\?\\" + native;
+}
+
 bool rename_exclusive(const std::filesystem::path &from, const std::filesystem::path &to) {
     // Without MOVEFILE_REPLACE_EXISTING the move fails when the destination exists.
-    return ::MoveFileExW(from.c_str(), to.c_str(), MOVEFILE_WRITE_THROUGH) != 0;
+    return ::MoveFileExW(win32_file_path(from).c_str(), win32_file_path(to).c_str(),
+                         MOVEFILE_WRITE_THROUGH) != 0;
 }
 
 ExclusiveFile::ExclusiveFile(const std::filesystem::path &path, bool share_read)
-    : handle_(reinterpret_cast<std::intptr_t>(
-              ::CreateFileW(path.c_str(), GENERIC_WRITE, share_read ? FILE_SHARE_READ : 0, nullptr,
-                            CREATE_NEW, FILE_ATTRIBUTE_NORMAL, nullptr))) {
+    : handle_(reinterpret_cast<std::intptr_t>(::CreateFileW(
+              win32_file_path(path).c_str(), GENERIC_WRITE, share_read ? FILE_SHARE_READ : 0,
+              nullptr, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, nullptr))) {
     if (!open()) {
         const auto error = ::GetLastError();
         exists_ = error == ERROR_FILE_EXISTS || error == ERROR_ALREADY_EXISTS;
@@ -63,7 +81,7 @@ bool ExclusiveFile::close() {
 
 FileLock::FileLock(const std::filesystem::path &path, bool exclusive)
     : handle_(reinterpret_cast<std::intptr_t>(::CreateFileW(
-              path.c_str(), GENERIC_READ | GENERIC_WRITE,
+              win32_file_path(path).c_str(), GENERIC_READ | GENERIC_WRITE,
               FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_ALWAYS,
               FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OPEN_REPARSE_POINT, nullptr))) {
     OVERLAPPED range{};
@@ -88,16 +106,17 @@ bool FileLock::held() const {
 }
 
 bool link_exclusive(const std::filesystem::path &existing, const std::filesystem::path &link) {
-    return ::CreateHardLinkW(link.c_str(), existing.c_str(), nullptr) != 0;
+    return ::CreateHardLinkW(win32_file_path(link).c_str(), win32_file_path(existing).c_str(),
+                             nullptr) != 0;
 }
 
 bool replace_file(const std::filesystem::path &from, const std::filesystem::path &to) {
-    return ::MoveFileExW(from.c_str(), to.c_str(),
+    return ::MoveFileExW(win32_file_path(from).c_str(), win32_file_path(to).c_str(),
                          MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH) != 0;
 }
 
 bool reparse_point(const std::filesystem::path &path) {
-    const auto attributes = ::GetFileAttributesW(path.c_str());
+    const auto attributes = ::GetFileAttributesW(win32_file_path(path).c_str());
 
     return attributes != INVALID_FILE_ATTRIBUTES && (attributes & FILE_ATTRIBUTE_REPARSE_POINT);
 }

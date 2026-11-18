@@ -8,6 +8,8 @@ A release sets its version and release date by hand in `src/app/CMakeLists.txt`,
 
 A version with a suffix after `-`, such as `1.0.0-beta1`, is a prerelease: the `release` workflow publishes it as a GitHub prerelease and leaves the Homebrew formula unchanged. A version without a suffix, such as `1.0.0`, is a stable release and also updates the formula. The release notes are the section of the version in `CHANGELOG.md` under the heading `## <version>` or `## <version> — <date>`.
 
+Pushing a stable release tag starts the workflow automatically. For a prerelease, dispatch the workflow on its tag. Set `macos_only` or `windows_only` to publish a single host archive. Leave both unset to publish all hosts.
+
 ## Archives
 
 | Host | Archive |

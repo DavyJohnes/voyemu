@@ -1089,8 +1089,15 @@ void Session::stop_android(std::unique_lock<std::recursive_mutex> &state, bool s
             android_quickboot_->commit(android_boot_nonce_, session_id_, presave_receipt,
                                        android_transport_boot_, android_input_sequence_);
             deliveries_["android"]["quickboot"]["checkpoint_saved"] = true;
-        } catch (const std::exception &) {
+        } catch (const std::exception &error) {
             deliveries_["android"]["quickboot"]["save_status"] = "checkpoint_fingerprint_failed";
+            try {
+                logging::write(logging::Level::error, "android", "checkpoint.fingerprint_failed",
+                               {{"session_id", session_id_},
+                                {"generation", android_generation_},
+                                {"error", error.what()}});
+            } catch (...) { /* Ignored: diagnostics never change the shutdown that follows. */
+            }
         }
     }
 

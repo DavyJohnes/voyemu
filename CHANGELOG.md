@@ -2,6 +2,10 @@
 
 English | [Русский](CHANGELOG.ru.md) | [README](README.md)
 
+## 1.0.0-beta2 — 2026-11-18
+
+Windows x64 prerelease. This release includes the Windows archive and fixes for Windows storage checks, Android Quick Boot and native CI. The QNX cluster on Windows still needs a CI-built QNX engine. Until that engine is published, Windows machines run with Android multimedia only. The known issues from beta1 still apply.
+
 ## 1.0.0-beta1 — 2026-11-18
 
 First public release. Voyemu runs a vehicle's Android multimedia applications and QNX instrument cluster on macOS, Windows and Linux from firmware profiles. On Windows the cluster needs the CI-built QNX engine, which is not published yet; until then machines run without the cluster.

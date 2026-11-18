@@ -9,6 +9,7 @@
 #define NOMINMAX
 #include <windows.h>
 #include <aclapi.h>
+#include <sddl.h>
 
 #include <memory>
 #include <vector>
@@ -359,8 +360,34 @@ struct Identity {
     }
 };
 
+bool is_system_volume_root(const BY_HANDLE_FILE_INFORMATION &info) {
+    wchar_t windows[MAX_PATH]{};
+    const auto size = GetSystemWindowsDirectoryW(windows, MAX_PATH);
+
+    if (!size || size >= MAX_PATH) {
+        return false;
+    }
+
+    wchar_t root[MAX_PATH]{};
+
+    if (!GetVolumePathNameW(windows, root, MAX_PATH)) {
+        return false;
+    }
+
+    const Handle system_root(CreateFileW(
+            root, FILE_READ_ATTRIBUTES, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+            nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr));
+    BY_HANDLE_FILE_INFORMATION system_info{};
+
+    return system_root.value != INVALID_HANDLE_VALUE &&
+           GetFileInformationByHandle(system_root.value, &system_info) &&
+           info.dwVolumeSerialNumber == system_info.dwVolumeSerialNumber &&
+           info.nFileIndexHigh == system_info.nFileIndexHigh &&
+           info.nFileIndexLow == system_info.nFileIndexLow;
+}
+
 void check(HANDLE file, bool directory = false, bool parent = false,
-           const std::filesystem::path *volume = nullptr) {
+           const std::filesystem::path *volume = nullptr, bool volume_root = false) {
     BY_HANDLE_FILE_INFORMATION info{};
 
     if (GetFileType(file) != FILE_TYPE_DISK || !GetFileInformationByHandle(file, &info) ||
@@ -398,7 +425,21 @@ void check(HANDLE file, bool directory = false, bool parent = false,
         }
     } release{descriptor};
 
-    if (!owner || !acl || (parent ? !identity.trusted(owner) : !EqualSid(owner, identity.sid()))) {
+    const bool system_root = volume_root && is_system_volume_root(info);
+    PSID installer = nullptr;
+
+    if (system_root &&
+        !ConvertStringSidToSidW(L"S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464",
+                                &installer)) {
+        fail();
+    }
+
+    const Release installer_release{installer};
+    const bool installer_owns_root = owner && installer && EqualSid(owner, installer);
+
+    if (!owner || !acl ||
+        (parent ? !identity.trusted(owner) && !installer_owns_root
+                : !EqualSid(owner, identity.sid()))) {
         throw VoyemuError("ADMISSION_STATE", "storage owner or DACL differs");
     }
 
@@ -424,11 +465,20 @@ void check(HANDLE file, bool directory = false, bool parent = false,
         }
 
         const auto *ace = static_cast<const ACCESS_ALLOWED_ACE *>(raw);
-        const auto mutation = GENERIC_ALL | GENERIC_WRITE | WRITE_DAC | WRITE_OWNER | DELETE |
-                              FILE_DELETE_CHILD | FILE_WRITE_DATA | FILE_APPEND_DATA |
-                              FILE_WRITE_EA | FILE_WRITE_ATTRIBUTES;
+        auto mutation = GENERIC_ALL | GENERIC_WRITE | WRITE_DAC | WRITE_OWNER | DELETE |
+                        FILE_DELETE_CHILD | FILE_WRITE_DATA | FILE_APPEND_DATA | FILE_WRITE_EA |
+                        FILE_WRITE_ATTRIBUTES;
 
-        if (!identity.trusted(const_cast<DWORD *>(&ace->SidStart)) &&
+        // Windows allows ordinary users to create subdirectories at the system volume
+        // root. Every descendant is opened and checked separately; replacement, deletion
+        // and all other foreign mutations remain forbidden at the root.
+        if (system_root) {
+            mutation &= ~FILE_ADD_SUBDIRECTORY;
+        }
+
+        const auto trustee = const_cast<DWORD *>(&ace->SidStart);
+
+        if (!identity.trusted(trustee) && !(installer && EqualSid(trustee, installer)) &&
             (!parent || (ace->Mask & mutation))) {
             throw std::runtime_error(
                     parent ? "ADMISSION_STATE: writable foreign parent ACL"
@@ -495,7 +545,7 @@ struct Directory {
                 fail();
             }
 
-            check(file->value, true, !leaf, &drive_root);
+            check(file->value, true, !leaf, &drive_root, volume_root);
             ancestry.push_back(std::move(file));
         };
         // Resolve the DOS drive mapping once, then reject reparses in every path component.

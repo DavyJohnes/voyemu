@@ -1077,23 +1077,27 @@ static void shutdown_io(const std::string &name) {
         auto stream = begin(h, s, "blocked-writer");
         Bytes input(65536, 0x65);
         bool blocked = false;
-        size_t total = 0;
-        unsigned blocked_cycles = 0;
+        // Read the first packet but withhold its ACK so the peer cannot drain queued input.
+        size_t accepted = 0;
+        require(adb_host_write(h.value, stream.operation, view(input), &accepted) ==
+                                ADB_STATUS_OK &&
+                        accepted > 0,
+                "blocked writer did not accept initial input");
+        const auto pending = read_packet(s);
+        require(pending.command == wrte && pending.first == stream.local &&
+                        pending.second == stream.remote,
+                "blocked writer did not send stream data");
+        const auto deadline = Clock::now() + 2s;
 
-        for (unsigned attempt = 0; attempt < 4000; ++attempt) {
-            size_t accepted = 0;
+        while (Clock::now() < deadline) {
             auto status = adb_host_write(h.value, stream.operation, view(input), &accepted);
             require(status == ADB_STATUS_OK || status == ADB_STATUS_WOULD_BLOCK,
-                    "blocked write failed unexpectedly");
-            total += accepted;
-            blocked_cycles = status == ADB_STATUS_WOULD_BLOCK ? blocked_cycles + 1 : 0;
+                    "blocked write failed with status " + std::to_string(status));
 
-            if (blocked_cycles >= 100 && total > 0) {
+            if (status == ADB_STATUS_WOULD_BLOCK) {
                 blocked = true;
                 break;
             }
-
-            std::this_thread::sleep_for(1ms);
         }
 
         require(blocked, "blocked-writer scenario did not produce backpressure");

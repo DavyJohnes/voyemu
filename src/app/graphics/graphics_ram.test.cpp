@@ -141,18 +141,31 @@ void mapped_backing(const std::filesystem::path &root) {
                 },
                 "RAM transfer geometry");
 
-        // Windows retains a file handle without delete sharing; a directory rename still changes
-        // the pathname used by the identity guard without replacing the mapped file handle.
-        std::filesystem::rename(directory, parked);
-        ensure_private_directory(directory);
-        create_qnx_ram(path, ram_bytes);
-        rejected(
-                [&] {
-                    first.check_identity();
-                },
-                "RAM backing changed");
-        std::filesystem::remove_all(directory);
-        std::filesystem::rename(parked, directory);
+        std::error_code rename_error;
+        std::filesystem::rename(directory, parked, rename_error);
+
+#ifdef _WIN32
+        if (rename_error) {
+            need(rename_error == std::errc::permission_denied ||
+                         rename_error.value() == ERROR_SHARING_VIOLATION,
+                 rename_error.message());
+            need(std::filesystem::exists(path) && !std::filesystem::exists(parked),
+                 "failed rename displaced the mapped backing");
+        } else
+#endif
+        {
+            need(!rename_error, rename_error.message());
+            ensure_private_directory(directory);
+            create_qnx_ram(path, ram_bytes);
+            rejected(
+                    [&] {
+                        first.check_identity();
+                    },
+                    "RAM backing changed");
+            std::filesystem::remove_all(directory);
+            std::filesystem::rename(parked, directory);
+        }
+
         first.check_identity();
 
 #ifndef _WIN32
@@ -184,7 +197,21 @@ void mapped_backing(const std::filesystem::path &root) {
     file.read(reinterpret_cast<char *>(actual.data()), actual.size());
     need(bool(file) && actual == written, "mapped writer missing from backing file");
     file.close();
+#ifdef _WIN32
+    // The cross-build's filesystem resize can narrow the sparse file size to 32 bits.
+    const HANDLE backing = CreateFileW(path.c_str(), GENERIC_WRITE, FILE_SHARE_READ, nullptr,
+                                       OPEN_EXISTING, FILE_FLAG_OPEN_REPARSE_POINT, nullptr);
+    need(backing != INVALID_HANDLE_VALUE, "open fixture RAM for truncation");
+    LARGE_INTEGER shorter{};
+    shorter.QuadPart = ram_bytes - 4096;
+    const bool truncated = SetFilePointerEx(backing, shorter, nullptr, FILE_BEGIN) &&
+                           SetEndOfFile(backing);
+    CloseHandle(backing);
+    need(truncated && std::filesystem::file_size(path) == ram_bytes - 4096,
+         "wrong-size RAM fixture extent");
+#else
     std::filesystem::resize_file(path, ram_bytes - 4096);
+#endif
     rejected(
             [&] {
                 detail::Ram wrong_size(options);

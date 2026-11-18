@@ -8,7 +8,11 @@ namespace voyemu::os {
 // Atomically renames from to to only when to does not exist; false leaves errno or
 // GetLastError() describing the failure.
 bool rename_exclusive(const std::filesystem::path &from, const std::filesystem::path &to);
-#ifndef _WIN32
+#ifdef _WIN32
+// Supplies a normalized absolute path to a Unicode Win32 filesystem call.
+// Extended syntax keeps deeply nested private workspaces independent of MAX_PATH.
+std::wstring win32_file_path(const std::filesystem::path &path);
+#else
 // Atomically exchanges two existing paths; Windows has no equivalent.
 bool exchange_paths(const std::filesystem::path &first, const std::filesystem::path &second);
 #endif

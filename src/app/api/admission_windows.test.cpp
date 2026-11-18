@@ -53,19 +53,24 @@ void overwrite(const std::filesystem::path &path, const std::string &text) {
     assert(file.good());
 }
 
-bool make_insecure(const std::filesystem::path &path) {
+bool make_insecure(const std::filesystem::path &path, DWORD mask = FILE_ALL_ACCESS) {
     BYTE world[SECURITY_MAX_SID_SIZE]{};
     DWORD size = sizeof(world);
 
     assert(CreateWellKnownSid(WinWorldSid, nullptr, world, &size));
     EXPLICIT_ACCESSW access{};
-    access.grfAccessPermissions = FILE_ALL_ACCESS;
+    access.grfAccessPermissions = mask;
     access.grfAccessMode = GRANT_ACCESS;
     access.grfInheritance = SUB_CONTAINERS_AND_OBJECTS_INHERIT;
     access.Trustee.TrusteeForm = TRUSTEE_IS_SID;
     access.Trustee.ptstrName = reinterpret_cast<LPWSTR>(world);
+    PACL original = nullptr;
+    PSECURITY_DESCRIPTOR descriptor = nullptr;
+    assert(GetNamedSecurityInfoW(path.c_str(), SE_FILE_OBJECT, DACL_SECURITY_INFORMATION, nullptr,
+                                 nullptr, &original, nullptr, &descriptor) == ERROR_SUCCESS);
     PACL acl = nullptr;
-    assert(SetEntriesInAclW(1, &access, nullptr, &acl) == ERROR_SUCCESS);
+    assert(SetEntriesInAclW(1, &access, original, &acl) == ERROR_SUCCESS);
+    LocalFree(descriptor);
     const auto result =
             SetNamedSecurityInfoW(const_cast<LPWSTR>(path.c_str()), SE_FILE_OBJECT,
                                   DACL_SECURITY_INFORMATION | PROTECTED_DACL_SECURITY_INFORMATION,
@@ -94,7 +99,7 @@ bool make_insecure(const std::filesystem::path &path) {
                 static_cast<ACE_HEADER *>(raw)->AceType == ACCESS_ALLOWED_ACE_TYPE) {
                 auto *ace = static_cast<ACCESS_ALLOWED_ACE *>(raw);
 
-                if (EqualSid(&ace->SidStart, world) && (ace->Mask & FILE_WRITE_DATA)) {
+                if (EqualSid(&ace->SidStart, world) && (ace->Mask & mask) == mask) {
                     confirmed = true;
                 }
             }
@@ -364,6 +369,19 @@ int main(int argc, char **argv) try {
             assert(!std::filesystem::exists(insecure / "store"));
         } else {
             std::cout << "SKIP insecure ACL mutation: readback did not confirm Everyone write"
+                      << std::endl;
+        }
+
+        const auto create_only = root / "foreign-create";
+        AdmissionStore create_only_store(create_only);
+
+        if (make_insecure(create_only, FILE_ADD_SUBDIRECTORY)) {
+            rejects("foreign subdirectory creation on non-root parent", [&] {
+                AdmissionStore denied(create_only / "store");
+            });
+            assert(!std::filesystem::exists(create_only / "store"));
+        } else {
+            std::cout << "SKIP create-only ACL mutation: readback did not confirm Everyone create"
                       << std::endl;
         }
 

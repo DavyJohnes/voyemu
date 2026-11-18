@@ -18,12 +18,6 @@
 #include <archive.h>
 #include <archive_entry.h>
 #endif
-#ifdef _WIN32
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <windows.h>
-#endif
 namespace voyemu {
 namespace {
 constexpr CodeCheck need{"invalid QNX update import"};
@@ -66,12 +60,12 @@ void append(std::ifstream &source, std::ofstream &output, std::uint64_t bytes,
 }
 #endif
 
-void selected_entry(const std::filesystem::path &file, std::string_view archive_sha256,
-                    const std::string &selected, std::uint64_t bytes, std::ofstream &output,
-                    const std::filesystem::path &stage, std::uint64_t reserve) {
 #ifdef __APPLE__
-    (void)archive_sha256;
+void selected_entry(const std::filesystem::path &file, const std::string &selected,
+                    std::uint64_t bytes, std::ofstream &output, const std::filesystem::path &stage,
+                    std::uint64_t reserve) {
     struct archive *reader = archive_read_new();
+
     need(reader != nullptr, "QNX_IMPORT_READER");
     struct Cleanup {
         archive *value;
@@ -134,65 +128,8 @@ void selected_entry(const std::filesystem::path &file, std::string_view archive_
     }
 
     need(found, "QNX_IMPORT_ENTRY_MISSING");
-#elif defined(_WIN32)
-    (void)archive_sha256;
-    const auto scratch = stage / ("entry-" + random_token());
-    need(std::filesystem::create_directory(scratch), "QNX_IMPORT_ENTRY_STAGE");
-    struct Cleanup {
-        std::filesystem::path value;
-
-        ~Cleanup() {
-            std::error_code error;
-            std::filesystem::remove_all(value, error);
-        }
-    } cleanup{scratch};
-    std::wstring system(32768, L'\0');
-    const auto length = GetSystemDirectoryW(system.data(), static_cast<UINT>(system.size()));
-    need(length && length < system.size(), "QNX_IMPORT_SYSTEM_DIRECTORY");
-    system.resize(length);
-    auto utf8 = [](const std::filesystem::path &path) {
-        const auto value = path.u8string();
-
-        return std::string(value.begin(), value.end());
-    };
-    ProcessSpec command;
-    command.executable = std::filesystem::path(system) / L"tar.exe";
-    command.arguments = {"-xf",         utf8(file),        "-C",
-                         utf8(scratch), "--no-same-owner", "--no-same-permissions",
-                         "--",          selected};
-    command.directory = stage;
-    command.output = scratch / "extract.log";
-    const auto result = execute(command, 300000, 65536);
-    need(!result.timed_out && result.exit_code == 0, "QNX_IMPORT_SYSTEM_TAR");
-    const auto extracted = scratch / std::filesystem::path(selected);
-    ordinary(extracted);
-    need(std::filesystem::is_regular_file(extracted) &&
-                 std::filesystem::hard_link_count(extracted) == 1 &&
-                 std::filesystem::file_size(extracted) == bytes,
-         "QNX_IMPORT_TAR_EXTENT");
-
-    for (const auto &item : std::filesystem::recursive_directory_iterator(scratch)) {
-        need(!item.is_symlink() && (item.is_directory() ||
-                                    (item.is_regular_file() &&
-                                     (item.path() == extracted || item.path() == command.output))),
-             "QNX_IMPORT_TAR_INVENTORY");
-    }
-
-    std::ifstream input(extracted, std::ios::binary);
-    need(bool(input), "QNX_IMPORT_TAR_OPEN");
-    append(input, output, bytes, stage, reserve);
-#else
-    // Linux test hosts use the portable ZIP reader of the Android images.
-    const auto scratch = stage / ("entry-" + random_token());
-    extract_pinned_zip_members(file, std::string(archive_sha256), {{selected, 0, bytes}}, scratch,
-                               bytes, reserve);
-    std::ifstream input(scratch, std::ios::binary);
-    need(bool(input), "QNX_IMPORT_ENTRY_OPEN");
-    append(input, output, bytes, stage, reserve);
-    input.close();
-    std::filesystem::remove(scratch);
-#endif
 }
+#endif
 } // namespace
 
 Json import_qnx_update(const std::filesystem::path &file, std::string_view archive_sha256,
@@ -332,6 +269,29 @@ Json import_qnx_update(const std::filesystem::path &file, std::string_view archi
             }
         }
     } cleanup{output, published};
+#ifndef __APPLE__
+    // Validate and stream the entire selected set in one pass over the pinned ZIP.
+    std::map<std::string, std::filesystem::path> staged_entries;
+    std::vector<ZipTreeEntry> batch;
+
+    for (const auto &name : selected) {
+        const auto path = stage / ("entry-" + std::to_string(batch.size()));
+        staged_entries.emplace(name, path);
+        batch.push_back({name, path, entries.at(name).bytes});
+    }
+    extract_pinned_zip_tree(file, std::string(archive_sha256), batch, reserve);
+#endif
+    const auto materialize_entry = [&](const std::string &name, const std::filesystem::path &path) {
+#ifdef __APPLE__
+        std::ofstream extracted(path, std::ios::binary);
+        need(bool(extracted), "QNX_IMPORT_ENTRY_OPEN");
+        selected_entry(file, name, entries.at(name).bytes, extracted, stage, reserve);
+        extracted.close();
+        need(bool(extracted), "QNX_IMPORT_ENTRY_CLOSE");
+#else
+        std::filesystem::rename(staged_entries.at(name), path);
+#endif
+    };
     Json records = Json::object();
 
     for (auto item = originals.begin(); item != originals.end(); ++item) {
@@ -345,12 +305,7 @@ Json import_qnx_update(const std::filesystem::path &file, std::string_view archi
             for (const auto &name : update.at("entries")) {
                 const auto value = name.get<std::string>();
                 const auto part = stage / (item.key() + ".patch" + std::to_string(index));
-                std::ofstream extracted(part, std::ios::binary);
-                need(bool(extracted), "QNX_IMPORT_SEGMENT_OPEN");
-                selected_entry(file, archive_sha256, value, entries.at(value).bytes, extracted,
-                               stage, reserve);
-                extracted.close();
-                need(bool(extracted), "QNX_IMPORT_SEGMENT_CLOSE");
+                materialize_entry(value, part);
                 segments.push_back({part, sha256_file(part),
                                     update.at("segment_bytes").at(index).get<std::uint64_t>(),
                                     index});
@@ -376,17 +331,32 @@ Json import_qnx_update(const std::filesystem::path &file, std::string_view archi
         }
 
         const auto patch = stage / (item.key() + ".stream");
-        std::ofstream stream(patch, std::ios::binary);
-        need(bool(stream), "QNX_IMPORT_STREAM_OPEN");
+        const auto &names = update.at("entries");
 
-        for (const auto &name : update.at("entries")) {
-            const auto value = name.get<std::string>();
-            selected_entry(file, archive_sha256, value, entries.at(value).bytes, stream, stage,
-                           reserve);
+        if (names.size() == 1) {
+            materialize_entry(names.front().get<std::string>(), patch);
+        } else {
+            std::ofstream stream(patch, std::ios::binary);
+            need(bool(stream), "QNX_IMPORT_STREAM_OPEN");
+
+            for (const auto &name : names) {
+                const auto value = name.get<std::string>();
+#ifdef __APPLE__
+                selected_entry(file, value, entries.at(value).bytes, stream, stage, reserve);
+#else
+                const auto &part = staged_entries.at(value);
+                std::ifstream input(part, std::ios::binary);
+                need(bool(input), "QNX_IMPORT_ENTRY_OPEN");
+                append(input, stream, entries.at(value).bytes, stage, reserve);
+                input.close();
+                std::filesystem::remove(part);
+#endif
+            }
+
+            stream.close();
+            need(bool(stream), "QNX_IMPORT_STREAM_CLOSE");
         }
 
-        stream.close();
-        need(bool(stream), "QNX_IMPORT_STREAM_CLOSE");
         const auto target = output / item.key();
         const auto bytes = definition.at("bytes").get<std::uint64_t>();
         const auto image_pin = definition.at("sha256").get<std::string>();
