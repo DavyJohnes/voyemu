@@ -43,9 +43,25 @@ jobs:
             - name: Build the guest Java twice
               run: |
                   out="$PWD/.local/build/android-java"
+                  # Each retry reuses the recipe's SHA256-verified download cache on this runner.
                   for copy in asset repeat; do
-                      java -Xmx1g -cp "$out/classes:.local/toolchains/java/libraries/*:.local/toolchains/java-sdk/build-tools/36.1.0/lib/*" \
-                          com.voyemu.prepare.GuestJavaRecipe "$PWD" "$PWD/.local/toolchains/java-sdk" "$out/$copy"
+                      for delay in 30 60 120 0; do
+                          if java -Xmx1g -cp "$out/classes:.local/toolchains/java/libraries/*:.local/toolchains/java-sdk/build-tools/36.1.0/lib/*" \
+                              com.voyemu.prepare.GuestJavaRecipe "$PWD" "$PWD/.local/toolchains/java-sdk" "$out/$copy" \
+                              > "$out/recipe.log" 2>&1; then
+                              cat "$out/recipe.log"
+                              break
+                          else
+                              status=$?
+                          fi
+                          cat "$out/recipe.log"
+                          if [[ "$delay" == 0 ]] || ! grep -Fxq 'Exception in thread "main" com.voyemu.prepare.Failure: Pinned download returned HTTP 429' "$out/recipe.log"; then
+                              exit "$status"
+                          fi
+                          rmdir "$out/$copy"
+                          echo "Pinned download returned HTTP 429. Retrying in $delay seconds."
+                          sleep "$delay"
+                      done
                   done
                   diff -r "$out/asset" "$out/repeat"
             - name: Check the guest Java against the pin
