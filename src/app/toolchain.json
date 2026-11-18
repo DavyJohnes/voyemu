@@ -301,16 +301,16 @@
         },
         "assets": {
             "darwin-arm64": {
-                "url": "https://github.com/voyemu/voyemu/releases/download/java-runtime-c7407d0f/java-runtime-darwin-arm64.zip",
-                "sha256": "efbb210a7e49cc370762269233f1572a080c3a069106451c6422a6334c32e3f9"
+                "url": "https://github.com/voyemu/voyemu/releases/download/java-runtime-63d17686/java-runtime-darwin-arm64.zip",
+                "sha256": "5a87d705d263150268794c238f85ae45812ca98b107ff3cd291cb57dcc66bd68"
             },
             "linux-x64": {
-                "url": "https://github.com/voyemu/voyemu/releases/download/java-runtime-c7407d0f/java-runtime-linux-x64.zip",
-                "sha256": "0b53578c680a0de0f8e5c72f39ed4b8bcae18fb35e6b07f924a9f397605f83bc"
+                "url": "https://github.com/voyemu/voyemu/releases/download/java-runtime-63d17686/java-runtime-linux-x64.zip",
+                "sha256": "21e0d6b419d121ad53015667437bb4b882c0dcf586495e08c4a91c96984ced4c"
             },
             "win32-x64": {
-                "url": "https://github.com/voyemu/voyemu/releases/download/java-runtime-c7407d0f/java-runtime-win32-x64.zip",
-                "sha256": "cf72b6399cfb221f7d0026cd637085cb87dcb78f6ceffca51508ad0f0210cb09"
+                "url": "https://github.com/voyemu/voyemu/releases/download/java-runtime-63d17686/java-runtime-win32-x64.zip",
+                "sha256": "08b854d029fb7449f1a8e5311c6dbe617871c62af97801b342925c2b474c044e"
             }
         }
     },

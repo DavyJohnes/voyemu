@@ -218,6 +218,9 @@ public final class JavaRuntimeBuild {
                         "--add-modules",
                         String.join(",", modules(pins)),
                         "--strip-java-debug-attributes",
+                        // These two jlink plugins can run in either order and change the generated files.
+                        "--disable-plugin",
+                        "generate-jli-classes",
                         "--no-header-files",
                         "--no-man-pages",
                         "--output",
