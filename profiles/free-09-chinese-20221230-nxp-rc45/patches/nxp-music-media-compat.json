@@ -1,0 +1,273 @@
+{
+  "schema": 1,
+  "api": 28,
+  "calls": [
+    {
+      "operation": "addDex",
+      "args": [
+        "nxp-music-media-compat/src"
+      ]
+    },
+    {
+      "operation": "editMethod",
+      "args": [
+        "Lcom/qinggan/music/dao/MusicDAOImpl;->getAlbumData(Lcom/qinggan/music/audiocom/External;Landroid/net/Uri;Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;)Ljava/util/List;",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-virtual/range {v2 .. v7}, Landroid/content/ContentResolver;->query(Landroid/net/Uri;[Ljava/lang/String;Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;)Landroid/database/Cursor;"
+              ],
+              "with": [
+                "invoke-static/range {v2 .. v7}, Lcom/voyemu/output/NxpMusicMedia;->query(Landroid/content/ContentResolver;Landroid/net/Uri;[Ljava/lang/String;Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;)Landroid/database/Cursor;"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "editMethod",
+      "args": [
+        "Lcom/qinggan/music/dao/MusicDAOImpl;->getArtistData(Lcom/qinggan/music/audiocom/External;Landroid/net/Uri;Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;)Ljava/util/List;",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-virtual/range {v2 .. v7}, Landroid/content/ContentResolver;->query(Landroid/net/Uri;[Ljava/lang/String;Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;)Landroid/database/Cursor;"
+              ],
+              "with": [
+                "invoke-static/range {v2 .. v7}, Lcom/voyemu/output/NxpMusicMedia;->query(Landroid/content/ContentResolver;Landroid/net/Uri;[Ljava/lang/String;Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;)Landroid/database/Cursor;"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "editMethod",
+      "args": [
+        "Lcom/qinggan/music/dao/MusicDAOImpl;->getAudioData(Lcom/qinggan/music/audiocom/External;Landroid/net/Uri;Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;)Ljava/util/List;",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-virtual/range {v10 .. v15}, Landroid/content/ContentResolver;->query(Landroid/net/Uri;[Ljava/lang/String;Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;)Landroid/database/Cursor;"
+              ],
+              "with": [
+                "invoke-static/range {v10 .. v15}, Lcom/voyemu/output/NxpMusicMedia;->query(Landroid/content/ContentResolver;Landroid/net/Uri;[Ljava/lang/String;Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;)Landroid/database/Cursor;"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "editMethod",
+      "args": [
+        "Lcom/qinggan/music/dao/MusicDAOImpl;->getAlbumImage(Lcom/qinggan/music/audiocom/External;Landroid/net/Uri;Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-virtual/range {v1 .. v6}, Landroid/content/ContentResolver;->query(Landroid/net/Uri;[Ljava/lang/String;Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;)Landroid/database/Cursor;"
+              ],
+              "with": [
+                "invoke-static/range {v1 .. v6}, Lcom/voyemu/output/NxpMusicMedia;->query(Landroid/content/ContentResolver;Landroid/net/Uri;[Ljava/lang/String;Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;)Landroid/database/Cursor;"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "editMethod",
+      "args": [
+        "Lcom/qinggan/music/helper/playlist/USBPlayListOperate;->getUsbHost(Ljava/lang/String;)Ljava/lang/String;",
+        {
+          "edits": [
+            {
+              "before": [
+                "iget-object v0, p0, Lcom/qinggan/music/helper/playlist/USBPlayListOperate;->mContext:Landroid/content/Context;"
+              ],
+              "insert": [
+                "if-nez p1, :voyemu_uuid_known",
+                "const-string v0, \"\"",
+                "return-object v0",
+                ":voyemu_uuid_known"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "editMethod",
+      "args": [
+        "Lcom/qinggan/app/music/fragment/uranus4/MusicSourceBaseFragment;->initView()V",
+        {
+          "edits": [
+            {
+              "before": [
+                "new-instance v0, Lcom/qinggan/music/async/SmartSerialExecutor;"
+              ],
+              "insert": [
+                "iget-object v0, p0, Lcom/qinggan/app/music/fragment/uranus4/MusicSourceBaseFragment;->dataBinding:Landroidx/databinding/ViewDataBinding;",
+                "invoke-virtual {v0}, Landroidx/databinding/ViewDataBinding;->getRoot()Landroid/view/View;",
+                "move-result-object v0",
+                "invoke-static {v0}, Lcom/voyemu/output/NxpMusicStorage;->attach(Landroid/view/View;)V"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "editMethod",
+      "args": [
+        "Lcom/qinggan/music/bean/Module$7;->getMusicList()Lcom/qinggan/music/bean/MusicPlayList;",
+        {
+          "edits": [
+            {
+              "replace": [
+                "new-instance v0, Lcom/qinggan/music/bean/MusicPlayList;",
+                "invoke-direct {v0}, Lcom/qinggan/music/bean/MusicPlayList;-><init>()V"
+              ],
+              "with": [
+                "sget-object v0, Lcom/qinggan/music/audiocom/External;->USB:Lcom/qinggan/music/audiocom/External;",
+                "invoke-virtual {v0}, Lcom/qinggan/music/audiocom/External;->getPlayList()Lcom/qinggan/music/bean/MusicPlayList;",
+                "move-result-object v0"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "editMethod",
+      "args": [
+        "Lcom/qinggan/music/playengine/manager/PlayerEngineManager;->selectPlayer(Lcom/qinggan/music/audio/IMusicEntry;)Lcom/qinggan/music/audio/IAudioPlayer;",
+        {
+          "edits": [
+            {
+              "before": [
+                "const/4 v0, 0x0"
+              ],
+              "insert": [
+                "if-eqz p1, :voyemu_original_player",
+                "invoke-virtual {p1}, Lcom/qinggan/music/audio/IMusicEntry;->getSrc()Lcom/qinggan/music/bean/MusicSrc;",
+                "move-result-object v0",
+                "sget-object v1, Lcom/qinggan/music/bean/MusicSrc;->USB:Lcom/qinggan/music/bean/MusicSrc;",
+                "if-ne v0, v1, :voyemu_original_player",
+                "invoke-virtual {p1}, Lcom/qinggan/music/audio/IMusicEntry;->getLocalPath()Ljava/lang/String;",
+                "move-result-object v0",
+                "invoke-static {v0}, Lcom/voyemu/output/NxpMusicPcm;->isSupportedWave(Ljava/lang/String;)Z",
+                "move-result v0",
+                "if-eqz v0, :voyemu_original_player",
+                "iget-object v0, p0, Lcom/qinggan/music/playengine/manager/PlayerEngineManager;->mQGQgMediaPlayerEngine:Lcom/qinggan/music/playengine/QGMediaPlayerEngine;",
+                "return-object v0",
+                "nop",
+                ":voyemu_original_player"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "editMethod",
+      "args": [
+        "Lcom/qinggan/music/service/MusicServiceInterfaceImpl;->getLastMemoryModule(Lcom/qinggan/music/netmusicservice/bean/LastPlayStateEntry;ZZ)Lcom/qinggan/music/bean/Module;",
+        {
+          "edits": [
+            {
+              "before": [
+                "iget-object v1, p0, Lcom/qinggan/music/service/MusicServiceInterfaceImpl;->usbModuleList:Ljava/util/List;"
+              ],
+              "insert": [
+                "if-nez v0, :voyemu_lmm_module_present",
+                "sget-object v0, Lcom/qinggan/music/bean/Module;->LABLE_LOCAL:Lcom/qinggan/music/bean/Module;",
+                ":voyemu_lmm_module_present"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "editMethod",
+      "args": [
+        "Lcom/qinggan/music/service/MusicServiceInterfaceImpl;->isUsbExist(Lcom/qinggan/music/audio/IMusicEntry;)Z",
+        {
+          "edits": [
+            {
+              "before": [
+                "sget-object v0, Lcom/qinggan/music/service/MusicServiceInterfaceImpl;->TAG:Ljava/lang/String;"
+              ],
+              "insert": [
+                "if-eqz p1, :voyemu_original_usb_entry",
+                "invoke-virtual {p1}, Lcom/qinggan/music/audio/IMusicEntry;->getSrc()Lcom/qinggan/music/bean/MusicSrc;",
+                "move-result-object v0",
+                "sget-object v1, Lcom/qinggan/music/bean/MusicSrc;->USB:Lcom/qinggan/music/bean/MusicSrc;",
+                "if-ne v0, v1, :voyemu_original_usb_entry",
+                "invoke-virtual {p1}, Lcom/qinggan/music/audio/IMusicEntry;->getUri()Ljava/lang/String;",
+                "move-result-object v0",
+                "invoke-static {v0}, Lcom/voyemu/output/NxpMusicPcm;->isMountedSharedWave(Ljava/lang/String;)Z",
+                "move-result v0",
+                "if-eqz v0, :voyemu_original_usb_entry",
+                "const/4 v0, 0x1",
+                "return v0",
+                ":voyemu_original_usb_entry"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "editMethod",
+      "args": [
+        "Lcom/qinggan/music/service/MusicServiceInterfaceImpl;->onKeyEvent(I)V",
+        {
+          "edits": [
+            {
+              "before": [
+                "if-nez p1, :cond_16a"
+              ],
+              "insert": [
+                "if-nez p1, :voyemu_key_storage_checked",
+                "invoke-virtual {p0}, Lcom/qinggan/music/service/MusicServiceInterfaceImpl;->getCurrentMusic()Lcom/qinggan/music/audio/IMusicEntry;",
+                "move-result-object p1",
+                "invoke-direct {p0, p1}, Lcom/qinggan/music/service/MusicServiceInterfaceImpl;->isUsbExist(Lcom/qinggan/music/audio/IMusicEntry;)Z",
+                "move-result p1",
+                ":voyemu_key_storage_checked"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "editMethod",
+      "args": [
+        "Lcom/qinggan/music/service/MusicServiceInterfaceImpl;->actionPause()V",
+        {
+          "edits": [
+            {
+              "before": [
+                "if-eqz v1, :cond_97"
+              ],
+              "insert": [
+                "if-nez v1, :voyemu_pause_storage_checked",
+                "invoke-direct {p0, v0}, Lcom/qinggan/music/service/MusicServiceInterfaceImpl;->isUsbExist(Lcom/qinggan/music/audio/IMusicEntry;)Z",
+                "move-result v1",
+                ":voyemu_pause_storage_checked"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "constants": {}
+}

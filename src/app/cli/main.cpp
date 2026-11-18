@@ -1,0 +1,164 @@
+#include "cli_commands.hpp"
+#include "version.hpp"
+
+namespace {
+void interrupt(int) {
+    voyemu::cli::interrupted = true;
+}
+} // namespace
+
+std::atomic<bool> voyemu::cli::interrupted = false;
+
+// NOLINTNEXTLINE(bugprone-exception-escape): only unreachable nlohmann::json invariants escape.
+int main(int argc, char **argv) {
+#ifdef _WIN32
+    if (argc > 1 && std::string_view(argv[1]) == "_wine-native") {
+        return voyemu::wine_native_proxy_main(argc - 1, argv + 1);
+    }
+#endif
+#ifdef VOYEMU_HAS_GRAPHICS
+    if (argc > 1 && std::string_view(argv[1]) == "_graphics") {
+        return voyemu::graphics_main(argc - 1, argv + 1);
+    }
+#endif
+#ifdef VOYEMU_HAS_WINDOW
+    if (argc > 1 && std::string_view(argv[1]) == "_window") {
+        return voyemu::window_main(argc - 1, argv + 1);
+    }
+#endif
+    std::signal(SIGINT, interrupt);
+    std::signal(SIGTERM, interrupt);
+#ifndef _WIN32
+    // A broken local channel is an I/O error; it must not orphan the owned VMs.
+    std::signal(SIGPIPE, SIG_IGN);
+#endif
+    const auto language = voyemu::cli::select_language(
+            argc, argv,
+            [](const char *name) {
+                return std::getenv(name);
+            },
+            voyemu::os::user_interface_language);
+    try {
+        auto args = voyemu::cli::parse(argc, argv, voyemu::os::executable_path());
+        using voyemu::Json;
+
+        if (!args.private_start && args.command != "test" && args.command != "_supervise") {
+            voyemu::logging::human_console(true);
+        }
+
+        const auto public_command = args.command;
+        const auto emit = [&](const Json &value) {
+            if (args.private_start) {
+                std::cout << value.dump(2) << '\n';
+            } else {
+                std::cout << voyemu::human_cli_output(public_command, value, args.profile,
+                                                      args.machine_path, args.verbose, language);
+            }
+        };
+
+        if (args.command == "help" || args.command == "--help") {
+            std::cout << voyemu::cli_help(language);
+
+            return 0;
+        }
+
+        if (args.command == "--version") {
+            std::cout << "Voyemu " << voyemu::version() << '\n';
+
+            return 0;
+        }
+
+        if (args.command == "test") {
+            return voyemu::cli::test_command(args);
+        }
+
+        if (args.command == "list") {
+            return voyemu::cli::list_command(args, emit);
+        }
+
+        if (args.command == "_supervise") {
+            return voyemu::cli::supervise(args, voyemu::os::executable_path());
+        }
+
+        if (args.root.empty()) {
+            throw voyemu::cli::LocalizedError("PROJECT_ROOT", "error.project_root");
+        }
+
+        if (args.command == "fetch") {
+            return voyemu::cli::fetch_command(args, emit);
+        }
+
+        if (args.command == "deps") {
+            return voyemu::cli::deps_command(args, emit);
+        }
+
+        if (args.command == "build") {
+            return voyemu::cli::build_command(args, emit);
+        }
+
+        // Without an installable QNX engine a machine starts without its cluster unless
+        // --cluster=on asks for it.
+        if ((args.command == "start" || args.command == "restart") && args.cluster &&
+            !args.cluster_explicit && args.multimedia &&
+            !voyemu::qnx_host_unavailable(args.root).empty()) {
+            args.cluster = false;
+            std::cerr << voyemu::cli::message(language, "output.qnx_host_unavailable") << '\n';
+        }
+
+        if (args.command == "start" || args.command == "restart") {
+            voyemu::ensure_private_directory(
+                    voyemu::native_current_active_directory(args.root, args.profile, args.machine));
+        }
+
+        if (args.command == "check") {
+            return voyemu::cli::check_command(args, emit);
+        }
+
+        if (args.command == "restart") {
+            if (const auto failed = voyemu::cli::restart_command(args, emit)) {
+                return *failed;
+            }
+        }
+
+        if (args.command == "status" || args.command == "stop" || args.command == "patch") {
+            return voyemu::cli::session_command(args, emit);
+        }
+
+        if (args.command == "start") {
+            return voyemu::cli::start_command(args, emit);
+        }
+
+        throw voyemu::cli::LocalizedError("CLI_COMMAND", "error.unknown_command_generic");
+    } catch (const std::exception &error) {
+        if (argc > 1 && std::string_view(argv[1]) == "test") {
+            std::string message = error.what(), code(voyemu::message_code(message));
+
+            if (code.empty()) {
+                code = "TEST_ARGUMENT";
+                message = "Invalid JSON automation arguments";
+            }
+
+            std::cout << voyemu::Json{{"schema", 1},
+                                      {"request_id", nullptr},
+                                      {"ok", false},
+                                      {"error",
+                                       {{"code", code},
+                                        {"message", message},
+                                        {"retryable", false},
+                                        {"outcome", "not_started"}}}}
+                                 .dump()
+                      << '\n';
+
+            return 4;
+        }
+
+        if (argc > 1 &&
+            (std::string_view(argv[1]) == "_start" || std::string_view(argv[1]) == "_supervise")) {
+            std::cerr << voyemu::Json{{"ok", false}, {"error", error.what()}}.dump() << '\n';
+        } else {
+            std::cerr << voyemu::human_cli_error(error, language);
+        }
+
+        return 4;
+    }
+}

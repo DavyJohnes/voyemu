@@ -1,0 +1,46 @@
+{
+  "api": 28,
+  "calls": [
+    {
+      "args": [
+        "Lcom/qinggan/setting/netlib/utils/NetworkMgr$getAPState$1;->run()V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-virtual {v0}, Landroid/net/wifi/WifiManager;->getWifiApState()I",
+                "move-result v0"
+              ],
+              "with": [
+                "const/16 v0, 0xd"
+              ]
+            }
+          ]
+        }
+      ],
+      "operation": "editMethod"
+    },
+    {
+      "args": [
+        "Lcom/qinggan/setting/netlib/utils/NetworkMgr$softApCb$1;->onStateChanged(II)V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "const-string v3, \"onStateChanged: state \""
+              ],
+              "with": [
+                "const/16 p1, 0xd",
+                "const/4 p2, 0x0",
+                "const-string v3, \"onStateChanged: state \""
+              ]
+            }
+          ]
+        }
+      ],
+      "operation": "editMethod"
+    }
+  ],
+  "constants": {},
+  "schema": 1
+}

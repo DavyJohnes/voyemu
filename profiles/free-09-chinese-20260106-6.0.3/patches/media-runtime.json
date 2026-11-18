@@ -1,0 +1,83 @@
+{
+  "api": 28,
+  "calls": [],
+  "constants": {
+    "applicationEdit": [
+      "Lcom/qinggan/media/MediaApplication;->onCreate()V",
+      {
+        "registers": 3,
+        "body": [
+          "invoke-super {p0}, Lcom/qinggan/theme/SkinQGApplication;->onCreate()V",
+          "sput-object p0, Lcom/qinggan/app/service/utils/ContextUtils;->context:Landroid/content/Context;",
+          "sput-object p0, Lcom/qinggan/media/helper/utils/SkinQGAppUtils;->application:Lcom/qinggan/theme/SkinQGApplication;",
+          "const/4 v0, 0x1",
+          "const-string v1, \"QgMedia-release-signed.apk\"",
+          ".line 56",
+          "invoke-virtual {p0, v1, v0}, Lcom/qinggan/media/MediaApplication;->initSkinForApk(Ljava/lang/String;Z)V",
+          ".line 57",
+          "invoke-static {}, Lcom/qinggan/QGMskin/manager/loader/QGMSkinManager;->getInstance()Lcom/qinggan/QGMskin/manager/loader/QGMSkinManager;",
+          "move-result-object v0",
+          "invoke-virtual {v0, p0, v1}, Lcom/qinggan/QGMskin/manager/loader/QGMSkinManager;->init(Lcom/qinggan/theme/SkinQGApplication;Ljava/lang/String;)V",
+          "invoke-direct {p0}, Lcom/qinggan/media/MediaApplication;->initWindowSkinUpdate()V",
+          "invoke-static {p0}, Lcom/qinggan/account/AccountSPHelper;->init(Landroid/app/Application;)V",
+          "invoke-static {}, Lcom/qinggan/app/mediaCentre/MediaManager;->getInstance()Lcom/qinggan/app/mediaCentre/MediaManager;",
+          "invoke-static {p0}, Lcom/qingang/asgard/media/general/manager/MediaKeyManager;->getInstance(Landroid/content/Context;)Lcom/qingang/asgard/media/general/manager/MediaKeyManager;",
+          "return-void"
+        ]
+      }
+    ]
+  },
+  "schema": 1,
+  "contract": {
+    "schema": 1,
+    "original_sha256": "4bc4c964d939541f6e11f4634df3d07bca06fb5dae3490e7284edf95d4c15e3f",
+    "removed_arm32_libraries": [
+      "lib/armeabi-v7a/lib2496p2p.so",
+      "lib/armeabi-v7a/libQPlayer.so",
+      "lib/armeabi-v7a/libSuperSound3.so",
+      "lib/armeabi-v7a/libcrypto_1_1.so",
+      "lib/armeabi-v7a/libdeStream.so",
+      "lib/armeabi-v7a/libkaolafmffmpeg.so",
+      "lib/armeabi-v7a/libkaolafmplayer.so",
+      "lib/armeabi-v7a/libkaolafmsdl.so",
+      "lib/armeabi-v7a/libkaolafmse.so",
+      "lib/armeabi-v7a/libkaolafmsoundtouch.so",
+      "lib/armeabi-v7a/libkpk.so",
+      "lib/armeabi-v7a/libkwbase.so",
+      "lib/armeabi-v7a/libkwffmpeg.so",
+      "lib/armeabi-v7a/libkwffutil.so",
+      "lib/armeabi-v7a/libkwinfodecode.so",
+      "lib/armeabi-v7a/libkwplayer.so",
+      "lib/armeabi-v7a/libkwsdl.so",
+      "lib/armeabi-v7a/libmusic3d.so",
+      "lib/armeabi-v7a/libopenal.so",
+      "lib/armeabi-v7a/libopenalwrapper.so",
+      "lib/armeabi-v7a/libp2p.so",
+      "lib/armeabi-v7a/libqcOpenSSL.so",
+      "lib/armeabi-v7a/libssl_1_1.so",
+      "lib/armeabi-v7a/libtmefriendship.so"
+    ],
+    "scope": "retain OEM UI/SRC/key handling and USB queue/session; platform USB decoding; unavailable cloud/BT backends remain bounded adapters",
+    "shared_libraries": [
+      "QGAPI",
+      "QGMOD",
+      "QGVehicle"
+    ],
+    "browser_classes": {
+      "com.qinggan.media.btmusic.BTMediaBrowserService": "replace",
+      "com.qinggan.media.radio.LocalRadioBrowserService": "replace",
+      "com.qinggan.media.hmly.HmlyMediaBrowserService": "replace",
+      "com.qinggan.media.cloudlisten.CloudListenBrowserService": "replace",
+      "com.qinggan.tencent.wecarflow.WecarFlowBrowserService": "replace",
+      "com.qinggan.media.StubMediaService": "add",
+      "com.qinggan.media.StubMediaService$1": "add",
+      "com.qinggan.media.StubMediaService$2": "add",
+      "com.qinggan.media.kwmusic.KwMusicMediaBrowserService": "add"
+    },
+    "added_browser_services": [
+      "com.qinggan.media.usbmusic.LocalMedia1BrowserService",
+      "com.qinggan.media.usbmusic.LocalMedia2BrowserService",
+      "com.qinggan.media.kwmusic.KwMusicMediaBrowserService"
+    ]
+  }
+}

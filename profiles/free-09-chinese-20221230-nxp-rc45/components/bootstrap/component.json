@@ -1,0 +1,9 @@
+{
+  "type": "apk",
+  "minSdk": 28,
+  "targetSdk": 28,
+  "sign": "platform",
+  "sourceFiles": {
+    "src/com/voyemu/output/BootReceiver.java": "voyemu/profiles/free-09-chinese-20260106-6.0.3/components/bootstrap/src/com/voyemu/output/BootReceiver.java"
+  }
+}

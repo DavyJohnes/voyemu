@@ -1,0 +1,12 @@
+{
+  "type": "jar",
+  "minSdk": 28,
+  "output": "dpm.jar",
+  "frameworkBase": {
+    "jar": "/system/framework/dpm.jar",
+    "oat": "/system/framework/oat/arm64/dpm.odex",
+    "oat_sha256": "70eaf3a74cf10b8a341d20fec3349475fd41f51c2fc1ac63bea2914879aeac88",
+    "vdex": "/system/framework/oat/arm64/dpm.vdex",
+    "vdex_sha256": "1b73c52d2ebb9a09ceb877f370ec53f2b8c5ed6299633c483193bbfed2cc692c"
+  }
+}

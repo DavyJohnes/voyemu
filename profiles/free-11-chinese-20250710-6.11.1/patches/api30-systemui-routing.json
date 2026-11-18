@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "api": 30,
+  "calls": [
+    {
+      "operation": "routeSystemUi",
+      "args": []
+    }
+  ],
+  "constants": {
+    "original_sha256_allowlist": [
+      "0d5e7a4c4556c19aa417cef3ded9bc0824f58e36346109e75ce0197643ce05fd"
+    ]
+  }
+}

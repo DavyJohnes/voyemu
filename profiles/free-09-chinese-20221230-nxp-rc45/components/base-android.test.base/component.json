@@ -1,0 +1,12 @@
+{
+  "type": "jar",
+  "minSdk": 28,
+  "output": "android.test.base.jar",
+  "frameworkBase": {
+    "jar": "/system/framework/android.test.base.jar",
+    "oat": "/system/framework/arm64/boot-android.test.base.oat",
+    "oat_sha256": "e2d27799ccbef8cfa51aab264d1b130381e9e25857bbd85ef7a0252e865fa3b0",
+    "vdex": "/system/framework/boot-android.test.base.vdex",
+    "vdex_sha256": "e58697d0434ad28ff187c1746e721ac3c71ee4e0670f414c74512f5e77135836"
+  }
+}

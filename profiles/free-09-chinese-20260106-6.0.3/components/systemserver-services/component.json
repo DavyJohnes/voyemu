@@ -1,0 +1,14 @@
+{
+  "type": "jar",
+  "minSdk": 28,
+  "output": "services.jar",
+  "frameworkBase": {
+    "jar": "/system/framework/services.jar",
+    "oat": "/system/framework/oat/arm64/services.odex",
+    "oat_sha256": "8e32a37b4afd3a3082a9aca4a808dc99df31cd078b9d14909e10d23183393251",
+    "vdex": "/system/framework/oat/arm64/services.vdex",
+    "vdex_sha256": "6dfaf9793c0a3ed4253891d121b6670ddc0d6d0ed4ea9ef53534cf7712aa6135",
+    "systemServer": true,
+    "startupAudioZero": true
+  }
+}

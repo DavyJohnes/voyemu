@@ -1,0 +1,1553 @@
+{
+    "type": "native",
+    "minSdk": 28,
+    "output": "libemulator_multidisplay_jni.so",
+    "guestLibs": [
+        "/system/lib64/libandroid_runtime.so",
+        "/system/lib64/libgui.so",
+        "/system/lib64/libui.so",
+        "/system/lib64/libutils.so",
+        "/system/lib64/libnativehelper.so",
+        "/system/lib64/libbinder.so",
+        "/system/lib64/liblog.so"
+    ],
+    "externalSources": {
+        "include/ar/android_runtime/AndroidRuntime.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/base/+/refs/tags/android-9.0.0_r1/core/jni/include/android_runtime/AndroidRuntime.h?format=TEXT",
+            "sha256": "dce768825311163f5bc3ac4b9d616869fe792941085e1e191285c7eb6e7254d8"
+        },
+        "include/ar/android_runtime/Log.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/base/+/refs/tags/android-9.0.0_r1/core/jni/include/android_runtime/Log.h?format=TEXT",
+            "sha256": "3be76ba0ce72021a2f06a9af20200d92bc5093a9bd38f0893913bff5fe4d1b48"
+        },
+        "include/ar/android_runtime/android_app_NativeActivity.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/base/+/refs/tags/android-9.0.0_r1/core/jni/include/android_runtime/android_app_NativeActivity.h?format=TEXT",
+            "sha256": "adae4feeb3c19895da27f2ff620f8fa39489ed53f44819c268db2a3a43474d1d"
+        },
+        "include/ar/android_runtime/android_content_res_Configuration.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/base/+/refs/tags/android-9.0.0_r1/core/jni/include/android_runtime/android_content_res_Configuration.h?format=TEXT",
+            "sha256": "7a1464cb5e14c71e61df731fcd3ae08852ab29717021150ed66bb273a76baf1c"
+        },
+        "include/ar/android_runtime/android_graphics_SurfaceTexture.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/base/+/refs/tags/android-9.0.0_r1/core/jni/include/android_runtime/android_graphics_SurfaceTexture.h?format=TEXT",
+            "sha256": "1ea3d67326171390b15d228e578c1fa06132a0b78f9b6047c16420ac04c969b2"
+        },
+        "include/ar/android_runtime/android_hardware_HardwareBuffer.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/base/+/refs/tags/android-9.0.0_r1/core/jni/include/android_runtime/android_hardware_HardwareBuffer.h?format=TEXT",
+            "sha256": "e146c81ad43ea580db86215b29ac7dcae7f1520fb1113f064dc2a026b3ad0ce6"
+        },
+        "include/ar/android_runtime/android_hardware_camera2_CameraMetadata.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/base/+/refs/tags/android-9.0.0_r1/core/jni/include/android_runtime/android_hardware_camera2_CameraMetadata.h?format=TEXT",
+            "sha256": "cb47f534ec7849dd4b4ef878e876578f27d5c42cb95c26743140efa37c972b54"
+        },
+        "include/ar/android_runtime/android_util_AssetManager.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/base/+/refs/tags/android-9.0.0_r1/core/jni/include/android_runtime/android_util_AssetManager.h?format=TEXT",
+            "sha256": "3367feafe4a8e6f5713b7c06e5acd7f1cd7646d725d01b6717fb23041164596c"
+        },
+        "include/ar/android_runtime/android_view_InputQueue.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/base/+/refs/tags/android-9.0.0_r1/core/jni/include/android_runtime/android_view_InputQueue.h?format=TEXT",
+            "sha256": "781d268f0b93c12489bec51f18c4c9f3f47dc5eb9579e21c49ac223ac604a8f4"
+        },
+        "include/ar/android_runtime/android_view_Surface.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/base/+/refs/tags/android-9.0.0_r1/core/jni/include/android_runtime/android_view_Surface.h?format=TEXT",
+            "sha256": "85bacf7c24ad87404d893728928609f2cab2bf1d38cc30446ba7f091566365e0"
+        },
+        "include/ar/android_runtime/android_view_SurfaceSession.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/base/+/refs/tags/android-9.0.0_r1/core/jni/include/android_runtime/android_view_SurfaceSession.h?format=TEXT",
+            "sha256": "16cbc4eb1e4e75bc4bc9228e8509d9f106dfb2f8c483396112e03e93bd7bd3b6"
+        },
+        "include/baseinc/android-base/chrono_utils.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/base/include/android-base/chrono_utils.h?format=TEXT",
+            "sha256": "ae1bc4bf7a548065f47d7e0774f6340ca4d55aa035a6d44893570733bb67dda5"
+        },
+        "include/baseinc/android-base/endian.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/base/include/android-base/endian.h?format=TEXT",
+            "sha256": "cb913af041c1da383e96fd04475b8618a11704cda7851966e6977644fed587bd"
+        },
+        "include/baseinc/android-base/errors.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/base/include/android-base/errors.h?format=TEXT",
+            "sha256": "54cd2d10193fd430bc2e6f5facc4530f494638414fa227620604cbcf608229a3"
+        },
+        "include/baseinc/android-base/file.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/base/include/android-base/file.h?format=TEXT",
+            "sha256": "80bb8989980c2be131caf8097d0ea6236fcbe62a8b5374ab71cb8e13d63a45f2"
+        },
+        "include/baseinc/android-base/logging.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/base/include/android-base/logging.h?format=TEXT",
+            "sha256": "a788e0c97dd325eba2764fb30818de0e471303c5c3aab1d89cfe70b0e8bace7a"
+        },
+        "include/baseinc/android-base/macros.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/base/include/android-base/macros.h?format=TEXT",
+            "sha256": "240c40a76f23a0e8956acfea5ed267a19658362abbf8e631d80a0c1f8516ad8e"
+        },
+        "include/baseinc/android-base/memory.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/base/include/android-base/memory.h?format=TEXT",
+            "sha256": "3e0335e4c479f6fdf08f2e20658004160d0d6a00d1177bffb2fe35772015a3ad"
+        },
+        "include/baseinc/android-base/parsedouble.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/base/include/android-base/parsedouble.h?format=TEXT",
+            "sha256": "6cff296d4ec00ee4541c9cea75df33899a85d5099d0505b40fe68ba1d6b14830"
+        },
+        "include/baseinc/android-base/parseint.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/base/include/android-base/parseint.h?format=TEXT",
+            "sha256": "f3db54681a5a68ad3804ebf7c855e973c12bbce5f1f425028a76eab4e97ce2a1"
+        },
+        "include/baseinc/android-base/parsenetaddress.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/base/include/android-base/parsenetaddress.h?format=TEXT",
+            "sha256": "3d1a61562d14795bebedb010be1bcebb9f58bcd354e709f8300393b1c4f6e924"
+        },
+        "include/baseinc/android-base/properties.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/base/include/android-base/properties.h?format=TEXT",
+            "sha256": "b0d0d3e8f913e0c45ef48751335f771e1124878503b911c103e3222b8d48d427"
+        },
+        "include/baseinc/android-base/quick_exit.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/base/include/android-base/quick_exit.h?format=TEXT",
+            "sha256": "42374fc0c957cf63214f853a870a1ddf165a573d388a7e97597c94a8aa6241b3"
+        },
+        "include/baseinc/android-base/scopeguard.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/base/include/android-base/scopeguard.h?format=TEXT",
+            "sha256": "78b0cc2c622c687f456918bffe6ef52c6d2a9df9ca3065333d3843002760c129"
+        },
+        "include/baseinc/android-base/stringprintf.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/base/include/android-base/stringprintf.h?format=TEXT",
+            "sha256": "bd99bc71f9537a03408026a7018ce42dc9b1f94d091dabd74e9247803438d62d"
+        },
+        "include/baseinc/android-base/strings.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/base/include/android-base/strings.h?format=TEXT",
+            "sha256": "c3ff539830a4f78f435a5572cbf868f3ea23013a198c08953f2867d6e74424fd"
+        },
+        "include/baseinc/android-base/test_utils.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/base/include/android-base/test_utils.h?format=TEXT",
+            "sha256": "595c85d28e841d041b4b456048240fe6197075ff9329ac4a41fee919a228f620"
+        },
+        "include/baseinc/android-base/thread_annotations.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/base/include/android-base/thread_annotations.h?format=TEXT",
+            "sha256": "6a3c5cefdddbcfcf1d5592c0a1689f9f3cbe0c06e7a9df352699ae874c3ebdc9"
+        },
+        "include/baseinc/android-base/unique_fd.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/base/include/android-base/unique_fd.h?format=TEXT",
+            "sha256": "254d2f79ee9694b8beb2038d9a05287a6e014fe82277f0eca5f223865a258159"
+        },
+        "include/baseinc/android-base/utf8.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/base/include/android-base/utf8.h?format=TEXT",
+            "sha256": "6ce10c57daf248fe6f1143f756b4f943d0c49871aec699a3166533a4cad335c5"
+        },
+        "include/binder/binder/ActivityManager.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/ActivityManager.h?format=TEXT",
+            "sha256": "601a01af5580e85546b12351e5c2c42af8381873c6dd6b2c3a48255abf6a197f"
+        },
+        "include/binder/binder/AppOpsManager.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/AppOpsManager.h?format=TEXT",
+            "sha256": "24ab74d1be033501af16d1663cc157875244fb8de7f77a6c736b604f20b200bb"
+        },
+        "include/binder/binder/Binder.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/Binder.h?format=TEXT",
+            "sha256": "8437a0b5204e3e68f0264dd652a779c3850f691e8ebb9dafa19dc4567824f592"
+        },
+        "include/binder/binder/BinderService.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/BinderService.h?format=TEXT",
+            "sha256": "3690f1b843e809fbba6b54457cf0c44a92f486da22244961cb5af3cb3643ab9c"
+        },
+        "include/binder/binder/BpBinder.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/BpBinder.h?format=TEXT",
+            "sha256": "729644e6bd4ba07efef8b717a3cd8c4f2905623dd33c180405ab26b93422bcab"
+        },
+        "include/binder/binder/BufferedTextOutput.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/BufferedTextOutput.h?format=TEXT",
+            "sha256": "21d16d34c5fd57030ad898f7b4c658f56a0cb16ddc187acbb514abaed91d3524"
+        },
+        "include/binder/binder/Debug.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/Debug.h?format=TEXT",
+            "sha256": "21635a04cd4365eba0dfd5c516dec3cb44d9c5e12e119c0aa19e908120bcd638"
+        },
+        "include/binder/binder/IActivityManager.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/IActivityManager.h?format=TEXT",
+            "sha256": "cac2545cb4546e4304933fd2559ad6783e79a10b46ae3ba03c339695a9c069a3"
+        },
+        "include/binder/binder/IAppOpsCallback.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/IAppOpsCallback.h?format=TEXT",
+            "sha256": "cdd7ca13b6cfcf0d378a9a16ba5b253bf8470ea73982f48b0583ac4be26bd5cc"
+        },
+        "include/binder/binder/IAppOpsService.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/IAppOpsService.h?format=TEXT",
+            "sha256": "65fc43d07094284470134d2b9a8027654309d5be999fa8fe4872125e1261b17d"
+        },
+        "include/binder/binder/IBatteryStats.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/IBatteryStats.h?format=TEXT",
+            "sha256": "cfcdb7d989f88859e982c32085505a7c80e3a795191c473df34f5f1330aae6ce"
+        },
+        "include/binder/binder/IBinder.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/IBinder.h?format=TEXT",
+            "sha256": "1aa7e78c867ace889ac774b1ab9c8208bb1fd93a3b1a1729b0d5d6fc8a1cba17"
+        },
+        "include/binder/binder/IInterface.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/IInterface.h?format=TEXT",
+            "sha256": "56a0c5f6b3b144afbe9782bdf96857d763d783ee3023c480c4643f41622bee0e"
+        },
+        "include/binder/binder/IMediaResourceMonitor.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/IMediaResourceMonitor.h?format=TEXT",
+            "sha256": "daed8ddd3b0b1b0c1946875f1d6a44ca634138fbc9d8e2190ae26f86af0abf75"
+        },
+        "include/binder/binder/IMemory.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/IMemory.h?format=TEXT",
+            "sha256": "ece43abfc05623430347e622f088daabfe61582ec9543b47cc3c2f2f73b2edd6"
+        },
+        "include/binder/binder/IPCThreadState.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/IPCThreadState.h?format=TEXT",
+            "sha256": "d5bdffe1bc8461722cccc6df0f938b1b51e59efbcd1aa288a708cefa7aecba96"
+        },
+        "include/binder/binder/IPermissionController.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/IPermissionController.h?format=TEXT",
+            "sha256": "26b2a6f8b898ea4ff094e48643c96a5d448501c7a376d43204b10eec0f47e5f9"
+        },
+        "include/binder/binder/IProcessInfoService.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/IProcessInfoService.h?format=TEXT",
+            "sha256": "33ec7bfeb8c2a91f51f500c7ccfa2bed075c3a6d48465d5985efc5aac46bf474"
+        },
+        "include/binder/binder/IResultReceiver.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/IResultReceiver.h?format=TEXT",
+            "sha256": "1c6f9c2ebfafce445e5fec5183fbbd90c86a21e1143f2cb94764a1fafa3e27c0"
+        },
+        "include/binder/binder/IServiceManager.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/IServiceManager.h?format=TEXT",
+            "sha256": "4926548e33c5c94092438ef8c46b29787eb0c04f943775b49bda4ffae072462a"
+        },
+        "include/binder/binder/IShellCallback.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/IShellCallback.h?format=TEXT",
+            "sha256": "8190c4c7023b0fd7b33fd8bc1a87751c9f6c8da610d52114bbfadefb426b165e"
+        },
+        "include/binder/binder/IUidObserver.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/IUidObserver.h?format=TEXT",
+            "sha256": "cab91fac3dc82b81ddbc1e89367888d881ec99a546623dc040d1cd682d970b1d"
+        },
+        "include/binder/binder/IpPrefix.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/IpPrefix.h?format=TEXT",
+            "sha256": "dbe123fae13a09c60b2ea9ef7cda38c9a47af931ebed9e979dc8232a45e7ece1"
+        },
+        "include/binder/binder/Map.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/Map.h?format=TEXT",
+            "sha256": "ff2c58d623fb745ac86c92b0fbf311dec873c2ac755f8be18c1079acb0c7f4fa"
+        },
+        "include/binder/binder/MemoryBase.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/MemoryBase.h?format=TEXT",
+            "sha256": "91e920eb91a889b7ebe4f75cf93d85974f15f56830bd74446274c297e45ebb1b"
+        },
+        "include/binder/binder/MemoryDealer.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/MemoryDealer.h?format=TEXT",
+            "sha256": "8cf74c5338330969b464814205322180d0b1f227fddfec5c2b710297868acce9"
+        },
+        "include/binder/binder/MemoryHeapBase.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/MemoryHeapBase.h?format=TEXT",
+            "sha256": "20ff33d9c67fc9f1dda1185a0c22233ba76fe802d9cd0baa1dc4d605866c2de5"
+        },
+        "include/binder/binder/Parcel.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/Parcel.h?format=TEXT",
+            "sha256": "4191519207bd15cb74a6659a3056520ff41d3359fc534ea03b211e7af2aa0d43"
+        },
+        "include/binder/binder/Parcelable.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/Parcelable.h?format=TEXT",
+            "sha256": "7778fa197fc0fff2d010c04af8dea47d8eebd6422150e7458f968e24dd03ea7e"
+        },
+        "include/binder/binder/PermissionCache.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/PermissionCache.h?format=TEXT",
+            "sha256": "2d2aaf9d26a039d9ab0a308cb6037d66aede6f90135565faa707ee83e531b64b"
+        },
+        "include/binder/binder/PermissionController.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/PermissionController.h?format=TEXT",
+            "sha256": "2d42aef2eaf7acf981a82771a3f9bf1824a8ed0fa221b5b7b91cc493346a0491"
+        },
+        "include/binder/binder/PersistableBundle.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/PersistableBundle.h?format=TEXT",
+            "sha256": "4d897cf8d0bb27550d8ba6c11d5d7b984779329a5ea2f952fe5034b1855d9140"
+        },
+        "include/binder/binder/ProcessInfoService.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/ProcessInfoService.h?format=TEXT",
+            "sha256": "a4ea725c9a8ff2f2c3c19346d87fcf7784a0ee427cad5e48ae5e577cb0a020fd"
+        },
+        "include/binder/binder/ProcessState.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/ProcessState.h?format=TEXT",
+            "sha256": "8b58aeb942c412bb2e6a7ccf905823bd90bc60cec185287edd37ca6dde57c677"
+        },
+        "include/binder/binder/SafeInterface.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/SafeInterface.h?format=TEXT",
+            "sha256": "89594cee4566b5ba7c3f046331e03461487276f1146d9490ec37b66c04f07c62"
+        },
+        "include/binder/binder/Status.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/Status.h?format=TEXT",
+            "sha256": "e773ec037e9e3c7e41b3ebd0c064d4b93f168efd29876811cda755bde7432064"
+        },
+        "include/binder/binder/TextOutput.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/TextOutput.h?format=TEXT",
+            "sha256": "b12af838c93c8629884a93a650dda8eb9021f106d86e5f756ff3dddb10e30a1f"
+        },
+        "include/binder/binder/Value.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/Value.h?format=TEXT",
+            "sha256": "4d40e5aa42c83af01203a86a5ddc4bf0c8588b68e0425cd54ba08e9ee5ca0a78"
+        },
+        "include/binder/private/binder/ParcelValTypes.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/private/binder/ParcelValTypes.h?format=TEXT",
+            "sha256": "1ccc79666f60554c27fa21eb5a37f52e6033b95e1cfd198a5a34ef04c55e6601"
+        },
+        "include/binder/private/binder/Static.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/private/binder/Static.h?format=TEXT",
+            "sha256": "9f0bac6cbbb47753363a143650d372f88f3ca7f81dbe37b2184ed114ca12c9ee"
+        },
+        "include/binder/private/binder/binder_module.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/private/binder/binder_module.h?format=TEXT",
+            "sha256": "71429cefb5bfef145a95d3950bbc9a101417dbce5fbe13e9e974f65ed52b74d1"
+        },
+        "include/bqroot/android/hardware/graphics/bufferqueue/1.0/Android.bp": {
+            "url": "https://android.googlesource.com/platform/hardware/interfaces/+/refs/tags/android-9.0.0_r1/graphics/bufferqueue/1.0/Android.bp?format=TEXT",
+            "sha256": "04c6b64f773f7c6a165eecf48a550e95f2cb384973f6886adff080807035a082"
+        },
+        "include/bqroot/android/hardware/graphics/bufferqueue/1.0/IGraphicBufferProducer.hal": {
+            "url": "https://android.googlesource.com/platform/hardware/interfaces/+/refs/tags/android-9.0.0_r1/graphics/bufferqueue/1.0/IGraphicBufferProducer.hal?format=TEXT",
+            "sha256": "190ea4898809de6cf379afe318f5fa9564686157b24d9a2d7f5698b0c977d8b2"
+        },
+        "include/bqroot/android/hardware/graphics/bufferqueue/1.0/IProducerListener.hal": {
+            "url": "https://android.googlesource.com/platform/hardware/interfaces/+/refs/tags/android-9.0.0_r1/graphics/bufferqueue/1.0/IProducerListener.hal?format=TEXT",
+            "sha256": "b8a75617b9ec12bea641f3a73d4025a33e8b9a2f9169dd46094af56adf9249c5"
+        },
+        "include/cb2023/gralloc_cb_bp.h": {
+            "url": "https://android.googlesource.com/platform/hardware/google/gfxstream/+/47a058affc29984ec29e47d11efa8d900a977678/guest/shared/gralloc_cb/include/gralloc_cb_bp.h?format=TEXT",
+            "sha256": "6d2814d5aaaafe83620c5037893e2634ae1b1021f7f8a2c6047c29e2b93b77fc"
+        },
+        "include/cb2023/qemu_pipe_bp.h": {
+            "url": "https://android.googlesource.com/platform/hardware/google/gfxstream/+/47a058affc29984ec29e47d11efa8d900a977678/guest/shared/qemupipe/include/qemu_pipe_bp.h?format=TEXT",
+            "sha256": "1dcad14b719e54f1eb6bece6a11cd87ad6f4c2fb69b70ba072e68091d4c130b8"
+        },
+        "include/cb2023/qemu_pipe_types_bp.h": {
+            "url": "https://android.googlesource.com/platform/hardware/google/gfxstream/+/47a058affc29984ec29e47d11efa8d900a977678/guest/shared/qemupipe/include-types/qemu_pipe_types_bp.h?format=TEXT",
+            "sha256": "d15abb665076ba7f4e9dac867b16ab4bbcd53a061dee18c1471136fd85b4bd25"
+        },
+        "include/cutils/atomic.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/libcutils/include/cutils/atomic.h?format=TEXT",
+            "sha256": "7d092a456839e930cf3dee8038d31b8edb7745097fd9813f910a2f6433909dc0"
+        },
+        "include/cutils/bitops.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/libcutils/include/cutils/bitops.h?format=TEXT",
+            "sha256": "98cc23dc740cf827c27804f3f221abe7842c5c157cbb5f7a579294fe0c1b9dcd"
+        },
+        "include/cutils/compiler.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/libcutils/include/cutils/compiler.h?format=TEXT",
+            "sha256": "b544a1f41e0ec7592773af661cd21ba53c3e1165dd4a67c32d6cd9d79cf2abd6"
+        },
+        "include/cutils/native_handle.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/libcutils/include/cutils/native_handle.h?format=TEXT",
+            "sha256": "a41ac0296d0ed09b034a8759753cab9369d14a9441d0ef1682ef8a95d5f01ea3"
+        },
+        "include/cutils/sockets.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/libcutils/include/cutils/sockets.h?format=TEXT",
+            "sha256": "4f5387794b639ca73e1ac38906aa4e49074df20336d37640c8fd5360b269a0bb"
+        },
+        "include/cutils/trace.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/libcutils/include/cutils/trace.h?format=TEXT",
+            "sha256": "fc324720d9458ff8a1990eafaeb5b401c8779816a9d976e3c8fe6717f43e962b"
+        },
+        "include/goldfish-p/gralloc_priv.h": {
+            "url": "https://android.googlesource.com/device/generic/goldfish/+/refs/tags/android-9.0.0_r1/gralloc/gralloc_priv.h?format=TEXT",
+            "sha256": "41072abce5bbd23438e3f779b6e59e1aa2fc9bd215e971cb6e44e4aab33cca7c"
+        },
+        "include/goldfish-p/qemu.h": {
+            "url": "https://android.googlesource.com/device/generic/goldfish/+/refs/tags/android-9.0.0_r1/include/qemu.h?format=TEXT",
+            "sha256": "1b3351629622b3b71e91e9726cbaf5f2c54fca0e7b52c3480646afef60937a92"
+        },
+        "include/goldfish-p/qemu_pipe.h": {
+            "url": "https://android.googlesource.com/device/generic/goldfish/+/refs/tags/android-9.0.0_r1/include/qemu_pipe.h?format=TEXT",
+            "sha256": "6337591ec55c0b3bf38933cf4289b97d3a51c8508847625f178dc007a55eebc9"
+        },
+        "include/goldfish-p/qemud.h": {
+            "url": "https://android.googlesource.com/device/generic/goldfish/+/refs/tags/android-9.0.0_r1/include/qemud.h?format=TEXT",
+            "sha256": "f88f06a7f7a27b985034955e781aa0b84c29132bafa1a7be84469049020d766a"
+        },
+        "include/gui/BufferHubConsumer.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/BufferHubConsumer.h?format=TEXT",
+            "sha256": "2354aeeef04779e1b4b1bd001f500bbbe55be1416a98f4ef4e05534279ebb836"
+        },
+        "include/gui/BufferHubProducer.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/BufferHubProducer.h?format=TEXT",
+            "sha256": "fff9b4b400fe6171f2520927aac9a7afcf0d2d1a94ce299842439322b4f44917"
+        },
+        "include/gui/BufferItem.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/BufferItem.h?format=TEXT",
+            "sha256": "83642c1a9f5f7c40388d623fabddea8b368c8e19d23c70e7d5cef8ebede22039"
+        },
+        "include/gui/BufferItemConsumer.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/BufferItemConsumer.h?format=TEXT",
+            "sha256": "0ad0c5e763fc443b5574c415a864c60745ed80034423cedc25448d472cee1ca1"
+        },
+        "include/gui/BufferQueue.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/BufferQueue.h?format=TEXT",
+            "sha256": "fa21c9874b5f38b57ec42ef1a970dcd589cb478c4ec2592992076058e8b979f9"
+        },
+        "include/gui/BufferQueueConsumer.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/BufferQueueConsumer.h?format=TEXT",
+            "sha256": "e74beeacfdd3d43b629068f5a1857929a279fa983fa410b1e8f0bfec75e75cce"
+        },
+        "include/gui/BufferQueueCore.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/BufferQueueCore.h?format=TEXT",
+            "sha256": "434ae0ed1cae971acdfb6bb1612e42eec2ebbad3a1881371cfeb3bd7867426a4"
+        },
+        "include/gui/BufferQueueDefs.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/BufferQueueDefs.h?format=TEXT",
+            "sha256": "bbf1b6773600b67ead7ea7001c5ea6e20ae09f53d1c71f4939f2c71a00d47152"
+        },
+        "include/gui/BufferQueueProducer.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/BufferQueueProducer.h?format=TEXT",
+            "sha256": "901eefcb584588d58d4e3d26c0cea15498d6f896029e218b51d07bd059fcc445"
+        },
+        "include/gui/BufferSlot.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/BufferSlot.h?format=TEXT",
+            "sha256": "927217ecf39ce642cac405d52a23c459e7f5d8f34fb2a170641a91d74dff220c"
+        },
+        "include/gui/ConsumerBase.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/ConsumerBase.h?format=TEXT",
+            "sha256": "a7c4f9f133d622a04bbbb7f2313c99f01707377fe018f97b55bf06ae339e39cd"
+        },
+        "include/gui/CpuConsumer.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/CpuConsumer.h?format=TEXT",
+            "sha256": "10d5750e2661df795f168c3a1cf5dbe3cf2ce87ae29985a713af7537f5229c37"
+        },
+        "include/gui/DisplayEventReceiver.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/DisplayEventReceiver.h?format=TEXT",
+            "sha256": "f6b160acd9af67bcb38314e933667a8c752cf85191e04725b13e84f6634f5fe7"
+        },
+        "include/gui/FrameTimestamps.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/FrameTimestamps.h?format=TEXT",
+            "sha256": "ae44b63c43e360d1c4cc9f0541d1eca8c338cb7eee7d2fdc4428e47c9e6e521c"
+        },
+        "include/gui/GLConsumer.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/GLConsumer.h?format=TEXT",
+            "sha256": "4a1320b4d26e34869f2c654787e7e69112e3f4e0ba64a1f3c64f48857d96ad95"
+        },
+        "include/gui/GuiConfig.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/GuiConfig.h?format=TEXT",
+            "sha256": "7e2756965873ef04d7a5e9c74d129f987c7bda68cc6c2bcf1621ec7f607d8655"
+        },
+        "include/gui/HdrMetadata.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/HdrMetadata.h?format=TEXT",
+            "sha256": "a4d3a9928304f80e2dc3c21b1b0086f1bea9a81e76bc89e2b93b088642748bcb"
+        },
+        "include/gui/IConsumerListener.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/IConsumerListener.h?format=TEXT",
+            "sha256": "a8253efd094c1129760fb3cd08842711a8ed1467589fe5d6c18fccdb2406ecc8"
+        },
+        "include/gui/IDisplayEventConnection.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/IDisplayEventConnection.h?format=TEXT",
+            "sha256": "c8ef7cf3175f86443239d4fee3cdd2dc9558387170ebda4debfaf577d0a9780c"
+        },
+        "include/gui/IGraphicBufferConsumer.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/IGraphicBufferConsumer.h?format=TEXT",
+            "sha256": "39963553955538cc36a2c52667c0a02dac6530e2614e61627302e0c38202b3e1"
+        },
+        "include/gui/IGraphicBufferProducer.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/IGraphicBufferProducer.h?format=TEXT",
+            "sha256": "e22ef7c4c034acbeae6103a9af335dd61fa6cbb4a65bd3a0e16f395cd11cbfc6"
+        },
+        "include/gui/IProducerListener.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/IProducerListener.h?format=TEXT",
+            "sha256": "dfe0652c0e5e76f067974169a9b74f6fe37811cb150a51b2dec06f542b669c00"
+        },
+        "include/gui/ISurfaceComposer.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/ISurfaceComposer.h?format=TEXT",
+            "sha256": "df6f41e702b9475daca2146937519986d50fe0f2b5e7366fb20a74aa60ed66b2"
+        },
+        "include/gui/ISurfaceComposerClient.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/ISurfaceComposerClient.h?format=TEXT",
+            "sha256": "c5d7af0d8d7e5870c24a788bd8375b6ca39edf9edcf34184c6cc75cb45fb5337"
+        },
+        "include/gui/LayerDebugInfo.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/LayerDebugInfo.h?format=TEXT",
+            "sha256": "d3c2658bab3904eeba9a4468b8d4fa031605744472aab0d0497b402a146fbcbb"
+        },
+        "include/gui/LayerState.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/LayerState.h?format=TEXT",
+            "sha256": "fbc2728dddc699217d08f2308d586cf771205dd1dc13b779ba00522294e5e4c5"
+        },
+        "include/gui/OccupancyTracker.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/OccupancyTracker.h?format=TEXT",
+            "sha256": "c205d4ee514760131a9de5a79cb6e3406ac8aab9c4ce710d8b665875fdc12c66"
+        },
+        "include/gui/StreamSplitter.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/StreamSplitter.h?format=TEXT",
+            "sha256": "e126e8f6dc76e9f5ac8ceeb24f1c1add7d77b5d53e9b7281d37593d8e7bae956"
+        },
+        "include/gui/Surface.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/Surface.h?format=TEXT",
+            "sha256": "995dc2c686ce80a8dda88b9c3321450a4fe2dc6df4a8d284dd68d06c1169d0e5"
+        },
+        "include/gui/SurfaceComposerClient.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/SurfaceComposerClient.h?format=TEXT",
+            "sha256": "9509a5c3735cd7a41091aaae4948c6cbe053cd47d6761fce815c8e97c27e9344"
+        },
+        "include/gui/SurfaceControl.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/SurfaceControl.h?format=TEXT",
+            "sha256": "bf5525ff58547fc0f747fcff771c34a13c650eb60c0074f3d0779d0f6fc744f4"
+        },
+        "include/gui/bufferqueue/1.0/B2HProducerListener.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/bufferqueue/1.0/B2HProducerListener.h?format=TEXT",
+            "sha256": "147dadfee0a4369187901639f701295873048049c8b4260fc8076dc581efba7f"
+        },
+        "include/gui/bufferqueue/1.0/H2BGraphicBufferProducer.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/bufferqueue/1.0/H2BGraphicBufferProducer.h?format=TEXT",
+            "sha256": "1b99ac1835e1de1cd9a966bf5b2eb9589c5662fd131f913869f34296ad6bfb65"
+        },
+        "include/gui/view/Surface.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/view/Surface.h?format=TEXT",
+            "sha256": "bae5ef909c38de9c187ff15f9c41283f6142476c3c7f5facef68767b62132470"
+        },
+        "include/hidlroot/hidl/HidlInternal.h": {
+            "url": "https://android.googlesource.com/platform/system/libhidl/+/refs/tags/android-9.0.0_r1/base/include/hidl/HidlInternal.h?format=TEXT",
+            "sha256": "303fccde31b55e3af14816039ccbeb8bb3cf850e8dda1e7c15b9385504eac737"
+        },
+        "include/hidlroot/hidl/HidlSupport.h": {
+            "url": "https://android.googlesource.com/platform/system/libhidl/+/refs/tags/android-9.0.0_r1/base/include/hidl/HidlSupport.h?format=TEXT",
+            "sha256": "4c6adb3221bcf562e9a6ae3504e4ea6bca4df9338603f9f1171b00d4cab8f352"
+        },
+        "include/hidlroot/hidl/HybridInterface.h": {
+            "url": "https://android.googlesource.com/platform/system/libhidl/+/refs/tags/android-9.0.0_r1/transport/token/1.0/utils/include/hidl/HybridInterface.h?format=TEXT",
+            "sha256": "009fca9b1eda77e8abe40ae14cccb7e398838c4084cc23a0c1f1322d7ddb11d8"
+        },
+        "include/hidlroot/hidl/MQDescriptor.h": {
+            "url": "https://android.googlesource.com/platform/system/libhidl/+/refs/tags/android-9.0.0_r1/base/include/hidl/MQDescriptor.h?format=TEXT",
+            "sha256": "19075083a3dfefa2a22d38bb4f376ce753f61817126989f66f4809a29b40af6c"
+        },
+        "include/hidlroot/hidl/Status.h": {
+            "url": "https://android.googlesource.com/platform/system/libhidl/+/refs/tags/android-9.0.0_r1/base/include/hidl/Status.h?format=TEXT",
+            "sha256": "84d3b4f5f2955e5e03187311138c311be625ef285b6456e18df12c3d8a021fd9"
+        },
+        "include/hidlroot/hidl/TaskRunner.h": {
+            "url": "https://android.googlesource.com/platform/system/libhidl/+/refs/tags/android-9.0.0_r1/base/include/hidl/TaskRunner.h?format=TEXT",
+            "sha256": "2d54370d50b31d6eb4176c9cc65325467f7a7579e90d47b9d6029e882e47ca75"
+        },
+        "include/hwinc/hardware/activity_recognition.h": {
+            "url": "https://android.googlesource.com/platform/hardware/libhardware/+/refs/tags/android-9.0.0_r1/include/hardware/activity_recognition.h?format=TEXT",
+            "sha256": "8f2804c7aa48a83696766d8fcbbb662289ca50be2c38d15ae1d9144ceed82910"
+        },
+        "include/hwinc/hardware/audio.h": {
+            "url": "https://android.googlesource.com/platform/hardware/libhardware/+/refs/tags/android-9.0.0_r1/include/hardware/audio.h?format=TEXT",
+            "sha256": "dbbbd3a18502fb3f286e46107f6bf182dd889b07ce71336060e2a412a18300c0"
+        },
+        "include/hwinc/hardware/audio_alsaops.h": {
+            "url": "https://android.googlesource.com/platform/hardware/libhardware/+/refs/tags/android-9.0.0_r1/include/hardware/audio_alsaops.h?format=TEXT",
+            "sha256": "78146ac91dd44a124815d8a1e77cd3f4fb95deb06969ab850212a6545d1468a9"
+        },
+        "include/hwinc/hardware/audio_effect.h": {
+            "url": "https://android.googlesource.com/platform/hardware/libhardware/+/refs/tags/android-9.0.0_r1/include/hardware/audio_effect.h?format=TEXT",
+            "sha256": "54f4e5cb963f4c636d4902b42ca736502245db25256f3c51f00097f93055eb49"
+        },
+        "include/hwinc/hardware/audio_policy.h": {
+            "url": "https://android.googlesource.com/platform/hardware/libhardware/+/refs/tags/android-9.0.0_r1/include/hardware/audio_policy.h?format=TEXT",
+            "sha256": "5e189fedb3cb863bf0d3a9b4e0900a943f7eddc737095406fca90535754e55a6"
+        },
+        "include/hwinc/hardware/bluetooth.h": {
+            "url": "https://android.googlesource.com/platform/hardware/libhardware/+/refs/tags/android-9.0.0_r1/include/hardware/bluetooth.h?format=TEXT",
+            "sha256": "cc1c21384d88cb46674925eb0ce2b29ea60ce5f34dc5aa0d078fe815862e849a"
+        },
+        "include/hwinc/hardware/boot_control.h": {
+            "url": "https://android.googlesource.com/platform/hardware/libhardware/+/refs/tags/android-9.0.0_r1/include/hardware/boot_control.h?format=TEXT",
+            "sha256": "44a3447c4310e5a5e58dba8a975f48f6137f5058f9f36b61c3dd335a3d8679e7"
+        },
+        "include/hwinc/hardware/camera.h": {
+            "url": "https://android.googlesource.com/platform/hardware/libhardware/+/refs/tags/android-9.0.0_r1/include/hardware/camera.h?format=TEXT",
+            "sha256": "f470417bc0a35c37de55636bf27e72dab7715e069bdbb37d24a93df740a91bd8"
+        },
+        "include/hwinc/hardware/camera2.h": {
+            "url": "https://android.googlesource.com/platform/hardware/libhardware/+/refs/tags/android-9.0.0_r1/include/hardware/camera2.h?format=TEXT",
+            "sha256": "7e6f45d6e2a3048ff1bfa2054096c8f5bf4269a6077bca0017f34d0032d165d8"
+        },
+        "include/hwinc/hardware/camera3.h": {
+            "url": "https://android.googlesource.com/platform/hardware/libhardware/+/refs/tags/android-9.0.0_r1/include/hardware/camera3.h?format=TEXT",
+            "sha256": "5e8b82c2cefc10a5c1b128531bf7c7d25697e09e76638e6bb351d2588aaad44d"
+        },
+        "include/hwinc/hardware/camera_common.h": {
+            "url": "https://android.googlesource.com/platform/hardware/libhardware/+/refs/tags/android-9.0.0_r1/include/hardware/camera_common.h?format=TEXT",
+            "sha256": "bdba52f6c5cd15956cafc69d0ad1591fbec6bf1e01a076bc4f086280525580b4"
+        },
+        "include/hwinc/hardware/consumerir.h": {
+            "url": "https://android.googlesource.com/platform/hardware/libhardware/+/refs/tags/android-9.0.0_r1/include/hardware/consumerir.h?format=TEXT",
+            "sha256": "7b6428bf2b4e1efa11ba445263f54a59666b4d2c5b8de173ffa062fdfa725e9a"
+        },
+        "include/hwinc/hardware/context_hub.h": {
+            "url": "https://android.googlesource.com/platform/hardware/libhardware/+/refs/tags/android-9.0.0_r1/include/hardware/context_hub.h?format=TEXT",
+            "sha256": "0154cffc956dc62482208197fd9d48ac4275e18efc6d75dc75732f2ca7c3c7ad"
+        },
+        "include/hwinc/hardware/fb.h": {
+            "url": "https://android.googlesource.com/platform/hardware/libhardware/+/refs/tags/android-9.0.0_r1/include/hardware/fb.h?format=TEXT",
+            "sha256": "2b23a40596f20c85d59dda0bd68869be87019043f99f6360a0bcc2814353870f"
+        },
+        "include/hwinc/hardware/fingerprint.h": {
+            "url": "https://android.googlesource.com/platform/hardware/libhardware/+/refs/tags/android-9.0.0_r1/include/hardware/fingerprint.h?format=TEXT",
+            "sha256": "b6697482de719075cf4bcf9d04d7bf2e5d1d90279cddd07a0a183ab981baad6b"
+        },
+        "include/hwinc/hardware/fused_location.h": {
+            "url": "https://android.googlesource.com/platform/hardware/libhardware/+/refs/tags/android-9.0.0_r1/include/hardware/fused_location.h?format=TEXT",
+            "sha256": "6bf6b96e085b0740ac77a8c5e7d3ae0edbdac48ac03aeb1eed4f7f47b3d50a77"
+        },
+        "include/hwinc/hardware/gatekeeper.h": {
+            "url": "https://android.googlesource.com/platform/hardware/libhardware/+/refs/tags/android-9.0.0_r1/include/hardware/gatekeeper.h?format=TEXT",
+            "sha256": "aa1dac53dee8e9ab012343a1cd7cea4d0a9c19786d0529eabc313e28954c086d"
+        },
+        "include/hwinc/hardware/gps.h": {
+            "url": "https://android.googlesource.com/platform/hardware/libhardware/+/refs/tags/android-9.0.0_r1/include/hardware/gps.h?format=TEXT",
+            "sha256": "d71e8cb7c0116f19d54b45deabd5cd29a5f087e7dc4612d6a30e416827e9ff05"
+        },
+        "include/hwinc/hardware/gps_internal.h": {
+            "url": "https://android.googlesource.com/platform/hardware/libhardware/+/refs/tags/android-9.0.0_r1/include/hardware/gps_internal.h?format=TEXT",
+            "sha256": "b54fa63043d9787793e9f11218f34dcd86149276fce57d514f2eb1c19bc3fecd"
+        },
+        "include/hwinc/hardware/gralloc.h": {
+            "url": "https://android.googlesource.com/platform/hardware/libhardware/+/refs/tags/android-9.0.0_r1/include/hardware/gralloc.h?format=TEXT",
+            "sha256": "0a11f494b3977978c318177b88a38e0164f23ed33d6d5ef08fb65dfb185ecb6b"
+        },
+        "include/hwinc/hardware/gralloc1.h": {
+            "url": "https://android.googlesource.com/platform/hardware/libhardware/+/refs/tags/android-9.0.0_r1/include/hardware/gralloc1.h?format=TEXT",
+            "sha256": "19e9f8acac6ab89d8ec11aefa1e6e0aa6ca49b73f2c6fd17cb7bc487b5841ee6"
+        },
+        "include/hwinc/hardware/hardware.h": {
+            "url": "https://android.googlesource.com/platform/hardware/libhardware/+/refs/tags/android-9.0.0_r1/include/hardware/hardware.h?format=TEXT",
+            "sha256": "05cc2f0108d6c87e36384380559943d34acd104e3c2ade9aeba4415cfb23aee8"
+        },
+        "include/hwinc/hardware/hdmi_cec.h": {
+            "url": "https://android.googlesource.com/platform/hardware/libhardware/+/refs/tags/android-9.0.0_r1/include/hardware/hdmi_cec.h?format=TEXT",
+            "sha256": "6fd24fb77c23ffaea1a0235ff4ab040905c34038dbd932bd4cd033a00709a6c5"
+        },
+        "include/hwinc/hardware/hw_auth_token.h": {
+            "url": "https://android.googlesource.com/platform/hardware/libhardware/+/refs/tags/android-9.0.0_r1/include/hardware/hw_auth_token.h?format=TEXT",
+            "sha256": "d292585d8a3b7e5c49333a1279dcd7a0abc798b8eb4b30a286e45c615a1d1569"
+        },
+        "include/hwinc/hardware/hwcomposer.h": {
+            "url": "https://android.googlesource.com/platform/hardware/libhardware/+/refs/tags/android-9.0.0_r1/include/hardware/hwcomposer.h?format=TEXT",
+            "sha256": "e7632e93e090e3d0321315766abde924bbfd7f405471cbd188545b1a80e1298a"
+        },
+        "include/hwinc/hardware/hwcomposer2.h": {
+            "url": "https://android.googlesource.com/platform/hardware/libhardware/+/refs/tags/android-9.0.0_r1/include/hardware/hwcomposer2.h?format=TEXT",
+            "sha256": "ded4274fc2dfcfdeffb780cd4b3a9aa8ef8d3db6659a9555dac476132f9797f7"
+        },
+        "include/hwinc/hardware/hwcomposer_defs.h": {
+            "url": "https://android.googlesource.com/platform/hardware/libhardware/+/refs/tags/android-9.0.0_r1/include/hardware/hwcomposer_defs.h?format=TEXT",
+            "sha256": "1156aa822d361538e4d39fcb5e642815b7270fbd55ab86df5525ad321c0859b9"
+        },
+        "include/hwinc/hardware/input.h": {
+            "url": "https://android.googlesource.com/platform/hardware/libhardware/+/refs/tags/android-9.0.0_r1/include/hardware/input.h?format=TEXT",
+            "sha256": "db9a1d53260b3d1e24a5a005819d324353a7d870c0c31b03cce0f709c88b353b"
+        },
+        "include/hwinc/hardware/keymaster0.h": {
+            "url": "https://android.googlesource.com/platform/hardware/libhardware/+/refs/tags/android-9.0.0_r1/include/hardware/keymaster0.h?format=TEXT",
+            "sha256": "5ae10a9f4ba21bf973175384d56db5aeb25e48427a1bf3ebe3a92179e5556841"
+        },
+        "include/hwinc/hardware/keymaster1.h": {
+            "url": "https://android.googlesource.com/platform/hardware/libhardware/+/refs/tags/android-9.0.0_r1/include/hardware/keymaster1.h?format=TEXT",
+            "sha256": "d03c41a950c429c5fa966604122ce4ae08cb08ca4af28f5d681fcf41e7779d4d"
+        },
+        "include/hwinc/hardware/keymaster2.h": {
+            "url": "https://android.googlesource.com/platform/hardware/libhardware/+/refs/tags/android-9.0.0_r1/include/hardware/keymaster2.h?format=TEXT",
+            "sha256": "f0d8e457cf930a0f4ef752bc84bcaf72a54ec52a08d1b67938c4efb93612950d"
+        },
+        "include/hwinc/hardware/keymaster_common.h": {
+            "url": "https://android.googlesource.com/platform/hardware/libhardware/+/refs/tags/android-9.0.0_r1/include/hardware/keymaster_common.h?format=TEXT",
+            "sha256": "8931d6ae354cda308a4568673fc98cec5347faa3badb2df9f730b7aa96b91261"
+        },
+        "include/hwinc/hardware/keymaster_defs.h": {
+            "url": "https://android.googlesource.com/platform/hardware/libhardware/+/refs/tags/android-9.0.0_r1/include/hardware/keymaster_defs.h?format=TEXT",
+            "sha256": "7ca40f9f8c0b0c06069adeb6ee174d7cec776d22db8ef7ebfd1472dc0d78d543"
+        },
+        "include/hwinc/hardware/lights.h": {
+            "url": "https://android.googlesource.com/platform/hardware/libhardware/+/refs/tags/android-9.0.0_r1/include/hardware/lights.h?format=TEXT",
+            "sha256": "bb538c0774a7652d6bc39fdc63fdd640d48e491ea60419b7ec0ae0b3247eef99"
+        },
+        "include/hwinc/hardware/local_time_hal.h": {
+            "url": "https://android.googlesource.com/platform/hardware/libhardware/+/refs/tags/android-9.0.0_r1/include/hardware/local_time_hal.h?format=TEXT",
+            "sha256": "c91617587fb97638d41cf755b686927f227b5a111dc80fea113852cae2f8ff5b"
+        },
+        "include/hwinc/hardware/memtrack.h": {
+            "url": "https://android.googlesource.com/platform/hardware/libhardware/+/refs/tags/android-9.0.0_r1/include/hardware/memtrack.h?format=TEXT",
+            "sha256": "190d5111194ac4fc871365dcbcc089dea2ce17bbe7f0a93d2c05ff844615a6da"
+        },
+        "include/hwinc/hardware/nfc.h": {
+            "url": "https://android.googlesource.com/platform/hardware/libhardware/+/refs/tags/android-9.0.0_r1/include/hardware/nfc.h?format=TEXT",
+            "sha256": "b255e030d9cac0ebc3ff701a89fe787c0b9c8be590f94f768a115e9e991180f9"
+        },
+        "include/hwinc/hardware/nfc_tag.h": {
+            "url": "https://android.googlesource.com/platform/hardware/libhardware/+/refs/tags/android-9.0.0_r1/include/hardware/nfc_tag.h?format=TEXT",
+            "sha256": "42a9d32d2a7dccc4148e98c91242a6451bb42a466daf2895bfb20dace5052893"
+        },
+        "include/hwinc/hardware/nvram.h": {
+            "url": "https://android.googlesource.com/platform/hardware/libhardware/+/refs/tags/android-9.0.0_r1/include/hardware/nvram.h?format=TEXT",
+            "sha256": "6c1485cee87f7f62fadacc4f80810bdfe1e01c4f90d1f052d0402ae7f7bdabf0"
+        },
+        "include/hwinc/hardware/nvram_defs.h": {
+            "url": "https://android.googlesource.com/platform/hardware/libhardware/+/refs/tags/android-9.0.0_r1/include/hardware/nvram_defs.h?format=TEXT",
+            "sha256": "9e5734db179d38f44221ddc2dba5e31874325ffc8e8375315db8feb17bca652f"
+        },
+        "include/hwinc/hardware/power.h": {
+            "url": "https://android.googlesource.com/platform/hardware/libhardware/+/refs/tags/android-9.0.0_r1/include/hardware/power.h?format=TEXT",
+            "sha256": "59d3d262a5f36f30e1b0d36d16894729c63f84114a944484b688eb6c77977d2b"
+        },
+        "include/hwinc/hardware/radio.h": {
+            "url": "https://android.googlesource.com/platform/hardware/libhardware/+/refs/tags/android-9.0.0_r1/include/hardware/radio.h?format=TEXT",
+            "sha256": "dc09de2e993aa3e69bd939fcc685ab73acd57089b58cf377e09d090ddc06cb55"
+        },
+        "include/hwinc/hardware/sensors.h": {
+            "url": "https://android.googlesource.com/platform/hardware/libhardware/+/refs/tags/android-9.0.0_r1/include/hardware/sensors.h?format=TEXT",
+            "sha256": "cea4854ec5f87dd42793dce372c81e2c4235e7e2dc081da8ce5ab81893a790d0"
+        },
+        "include/hwinc/hardware/sound_trigger.h": {
+            "url": "https://android.googlesource.com/platform/hardware/libhardware/+/refs/tags/android-9.0.0_r1/include/hardware/sound_trigger.h?format=TEXT",
+            "sha256": "86efb9b7556719c6fb6e8379a793eddfdfbf4c15bbf82221d3f48c8f81db1b59"
+        },
+        "include/hwinc/hardware/thermal.h": {
+            "url": "https://android.googlesource.com/platform/hardware/libhardware/+/refs/tags/android-9.0.0_r1/include/hardware/thermal.h?format=TEXT",
+            "sha256": "b70d9df6d3a97cd3e6ef2d123838008f1a03028af7c231a5ee9e0f1afe335182"
+        },
+        "include/hwinc/hardware/tv_input.h": {
+            "url": "https://android.googlesource.com/platform/hardware/libhardware/+/refs/tags/android-9.0.0_r1/include/hardware/tv_input.h?format=TEXT",
+            "sha256": "6d82518d2b748a34335e07fe8e17b160f5f6735427f9d5f682d6724adf8efd2d"
+        },
+        "include/hwinc/hardware/vibrator.h": {
+            "url": "https://android.googlesource.com/platform/hardware/libhardware/+/refs/tags/android-9.0.0_r1/include/hardware/vibrator.h?format=TEXT",
+            "sha256": "893f5e7278fdf3b54689b86d7d83622ce882a5a272aeecf2b74e2d017d5f785c"
+        },
+        "include/hwinc/hardware/vr.h": {
+            "url": "https://android.googlesource.com/platform/hardware/libhardware/+/refs/tags/android-9.0.0_r1/include/hardware/vr.h?format=TEXT",
+            "sha256": "440f041943a35b4d79ab89702eb63904fb41893d77cec641438cc0b1e519559a"
+        },
+        "include/inc/binder/ActivityManager.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/ActivityManager.h?format=TEXT",
+            "sha256": "601a01af5580e85546b12351e5c2c42af8381873c6dd6b2c3a48255abf6a197f"
+        },
+        "include/inc/binder/AppOpsManager.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/AppOpsManager.h?format=TEXT",
+            "sha256": "24ab74d1be033501af16d1663cc157875244fb8de7f77a6c736b604f20b200bb"
+        },
+        "include/inc/binder/Binder.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/Binder.h?format=TEXT",
+            "sha256": "8437a0b5204e3e68f0264dd652a779c3850f691e8ebb9dafa19dc4567824f592"
+        },
+        "include/inc/binder/BinderService.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/BinderService.h?format=TEXT",
+            "sha256": "3690f1b843e809fbba6b54457cf0c44a92f486da22244961cb5af3cb3643ab9c"
+        },
+        "include/inc/binder/BpBinder.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/BpBinder.h?format=TEXT",
+            "sha256": "729644e6bd4ba07efef8b717a3cd8c4f2905623dd33c180405ab26b93422bcab"
+        },
+        "include/inc/binder/BufferedTextOutput.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/BufferedTextOutput.h?format=TEXT",
+            "sha256": "21d16d34c5fd57030ad898f7b4c658f56a0cb16ddc187acbb514abaed91d3524"
+        },
+        "include/inc/binder/Debug.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/Debug.h?format=TEXT",
+            "sha256": "21635a04cd4365eba0dfd5c516dec3cb44d9c5e12e119c0aa19e908120bcd638"
+        },
+        "include/inc/binder/IActivityManager.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/IActivityManager.h?format=TEXT",
+            "sha256": "cac2545cb4546e4304933fd2559ad6783e79a10b46ae3ba03c339695a9c069a3"
+        },
+        "include/inc/binder/IAppOpsCallback.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/IAppOpsCallback.h?format=TEXT",
+            "sha256": "cdd7ca13b6cfcf0d378a9a16ba5b253bf8470ea73982f48b0583ac4be26bd5cc"
+        },
+        "include/inc/binder/IAppOpsService.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/IAppOpsService.h?format=TEXT",
+            "sha256": "65fc43d07094284470134d2b9a8027654309d5be999fa8fe4872125e1261b17d"
+        },
+        "include/inc/binder/IBatteryStats.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/IBatteryStats.h?format=TEXT",
+            "sha256": "cfcdb7d989f88859e982c32085505a7c80e3a795191c473df34f5f1330aae6ce"
+        },
+        "include/inc/binder/IBinder.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/IBinder.h?format=TEXT",
+            "sha256": "1aa7e78c867ace889ac774b1ab9c8208bb1fd93a3b1a1729b0d5d6fc8a1cba17"
+        },
+        "include/inc/binder/IInterface.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/IInterface.h?format=TEXT",
+            "sha256": "56a0c5f6b3b144afbe9782bdf96857d763d783ee3023c480c4643f41622bee0e"
+        },
+        "include/inc/binder/IMediaResourceMonitor.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/IMediaResourceMonitor.h?format=TEXT",
+            "sha256": "daed8ddd3b0b1b0c1946875f1d6a44ca634138fbc9d8e2190ae26f86af0abf75"
+        },
+        "include/inc/binder/IMemory.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/IMemory.h?format=TEXT",
+            "sha256": "ece43abfc05623430347e622f088daabfe61582ec9543b47cc3c2f2f73b2edd6"
+        },
+        "include/inc/binder/IPCThreadState.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/IPCThreadState.h?format=TEXT",
+            "sha256": "d5bdffe1bc8461722cccc6df0f938b1b51e59efbcd1aa288a708cefa7aecba96"
+        },
+        "include/inc/binder/IPermissionController.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/IPermissionController.h?format=TEXT",
+            "sha256": "26b2a6f8b898ea4ff094e48643c96a5d448501c7a376d43204b10eec0f47e5f9"
+        },
+        "include/inc/binder/IProcessInfoService.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/IProcessInfoService.h?format=TEXT",
+            "sha256": "33ec7bfeb8c2a91f51f500c7ccfa2bed075c3a6d48465d5985efc5aac46bf474"
+        },
+        "include/inc/binder/IResultReceiver.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/IResultReceiver.h?format=TEXT",
+            "sha256": "1c6f9c2ebfafce445e5fec5183fbbd90c86a21e1143f2cb94764a1fafa3e27c0"
+        },
+        "include/inc/binder/IServiceManager.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/IServiceManager.h?format=TEXT",
+            "sha256": "4926548e33c5c94092438ef8c46b29787eb0c04f943775b49bda4ffae072462a"
+        },
+        "include/inc/binder/IShellCallback.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/IShellCallback.h?format=TEXT",
+            "sha256": "8190c4c7023b0fd7b33fd8bc1a87751c9f6c8da610d52114bbfadefb426b165e"
+        },
+        "include/inc/binder/IUidObserver.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/IUidObserver.h?format=TEXT",
+            "sha256": "cab91fac3dc82b81ddbc1e89367888d881ec99a546623dc040d1cd682d970b1d"
+        },
+        "include/inc/binder/IpPrefix.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/IpPrefix.h?format=TEXT",
+            "sha256": "dbe123fae13a09c60b2ea9ef7cda38c9a47af931ebed9e979dc8232a45e7ece1"
+        },
+        "include/inc/binder/Map.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/Map.h?format=TEXT",
+            "sha256": "ff2c58d623fb745ac86c92b0fbf311dec873c2ac755f8be18c1079acb0c7f4fa"
+        },
+        "include/inc/binder/MemoryBase.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/MemoryBase.h?format=TEXT",
+            "sha256": "91e920eb91a889b7ebe4f75cf93d85974f15f56830bd74446274c297e45ebb1b"
+        },
+        "include/inc/binder/MemoryDealer.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/MemoryDealer.h?format=TEXT",
+            "sha256": "8cf74c5338330969b464814205322180d0b1f227fddfec5c2b710297868acce9"
+        },
+        "include/inc/binder/MemoryHeapBase.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/MemoryHeapBase.h?format=TEXT",
+            "sha256": "20ff33d9c67fc9f1dda1185a0c22233ba76fe802d9cd0baa1dc4d605866c2de5"
+        },
+        "include/inc/binder/Parcel.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/Parcel.h?format=TEXT",
+            "sha256": "4191519207bd15cb74a6659a3056520ff41d3359fc534ea03b211e7af2aa0d43"
+        },
+        "include/inc/binder/Parcelable.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/Parcelable.h?format=TEXT",
+            "sha256": "7778fa197fc0fff2d010c04af8dea47d8eebd6422150e7458f968e24dd03ea7e"
+        },
+        "include/inc/binder/PermissionCache.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/PermissionCache.h?format=TEXT",
+            "sha256": "2d2aaf9d26a039d9ab0a308cb6037d66aede6f90135565faa707ee83e531b64b"
+        },
+        "include/inc/binder/PermissionController.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/PermissionController.h?format=TEXT",
+            "sha256": "2d42aef2eaf7acf981a82771a3f9bf1824a8ed0fa221b5b7b91cc493346a0491"
+        },
+        "include/inc/binder/PersistableBundle.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/PersistableBundle.h?format=TEXT",
+            "sha256": "4d897cf8d0bb27550d8ba6c11d5d7b984779329a5ea2f952fe5034b1855d9140"
+        },
+        "include/inc/binder/ProcessInfoService.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/ProcessInfoService.h?format=TEXT",
+            "sha256": "a4ea725c9a8ff2f2c3c19346d87fcf7784a0ee427cad5e48ae5e577cb0a020fd"
+        },
+        "include/inc/binder/ProcessState.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/ProcessState.h?format=TEXT",
+            "sha256": "8b58aeb942c412bb2e6a7ccf905823bd90bc60cec185287edd37ca6dde57c677"
+        },
+        "include/inc/binder/SafeInterface.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/SafeInterface.h?format=TEXT",
+            "sha256": "89594cee4566b5ba7c3f046331e03461487276f1146d9490ec37b66c04f07c62"
+        },
+        "include/inc/binder/Status.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/Status.h?format=TEXT",
+            "sha256": "e773ec037e9e3c7e41b3ebd0c064d4b93f168efd29876811cda755bde7432064"
+        },
+        "include/inc/binder/TextOutput.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/TextOutput.h?format=TEXT",
+            "sha256": "b12af838c93c8629884a93a650dda8eb9021f106d86e5f756ff3dddb10e30a1f"
+        },
+        "include/inc/binder/Value.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/binder/include/binder/Value.h?format=TEXT",
+            "sha256": "4d40e5aa42c83af01203a86a5ddc4bf0c8588b68e0425cd54ba08e9ee5ca0a78"
+        },
+        "include/inc/gui/BufferHubConsumer.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/BufferHubConsumer.h?format=TEXT",
+            "sha256": "2354aeeef04779e1b4b1bd001f500bbbe55be1416a98f4ef4e05534279ebb836"
+        },
+        "include/inc/gui/BufferHubProducer.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/BufferHubProducer.h?format=TEXT",
+            "sha256": "fff9b4b400fe6171f2520927aac9a7afcf0d2d1a94ce299842439322b4f44917"
+        },
+        "include/inc/gui/BufferItem.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/BufferItem.h?format=TEXT",
+            "sha256": "83642c1a9f5f7c40388d623fabddea8b368c8e19d23c70e7d5cef8ebede22039"
+        },
+        "include/inc/gui/BufferItemConsumer.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/BufferItemConsumer.h?format=TEXT",
+            "sha256": "0ad0c5e763fc443b5574c415a864c60745ed80034423cedc25448d472cee1ca1"
+        },
+        "include/inc/gui/BufferQueue.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/BufferQueue.h?format=TEXT",
+            "sha256": "fa21c9874b5f38b57ec42ef1a970dcd589cb478c4ec2592992076058e8b979f9"
+        },
+        "include/inc/gui/BufferQueueConsumer.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/BufferQueueConsumer.h?format=TEXT",
+            "sha256": "e74beeacfdd3d43b629068f5a1857929a279fa983fa410b1e8f0bfec75e75cce"
+        },
+        "include/inc/gui/BufferQueueCore.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/BufferQueueCore.h?format=TEXT",
+            "sha256": "434ae0ed1cae971acdfb6bb1612e42eec2ebbad3a1881371cfeb3bd7867426a4"
+        },
+        "include/inc/gui/BufferQueueDefs.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/BufferQueueDefs.h?format=TEXT",
+            "sha256": "bbf1b6773600b67ead7ea7001c5ea6e20ae09f53d1c71f4939f2c71a00d47152"
+        },
+        "include/inc/gui/BufferQueueProducer.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/BufferQueueProducer.h?format=TEXT",
+            "sha256": "901eefcb584588d58d4e3d26c0cea15498d6f896029e218b51d07bd059fcc445"
+        },
+        "include/inc/gui/BufferSlot.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/BufferSlot.h?format=TEXT",
+            "sha256": "927217ecf39ce642cac405d52a23c459e7f5d8f34fb2a170641a91d74dff220c"
+        },
+        "include/inc/gui/ConsumerBase.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/ConsumerBase.h?format=TEXT",
+            "sha256": "a7c4f9f133d622a04bbbb7f2313c99f01707377fe018f97b55bf06ae339e39cd"
+        },
+        "include/inc/gui/CpuConsumer.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/CpuConsumer.h?format=TEXT",
+            "sha256": "10d5750e2661df795f168c3a1cf5dbe3cf2ce87ae29985a713af7537f5229c37"
+        },
+        "include/inc/gui/DisplayEventReceiver.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/DisplayEventReceiver.h?format=TEXT",
+            "sha256": "f6b160acd9af67bcb38314e933667a8c752cf85191e04725b13e84f6634f5fe7"
+        },
+        "include/inc/gui/FrameTimestamps.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/FrameTimestamps.h?format=TEXT",
+            "sha256": "ae44b63c43e360d1c4cc9f0541d1eca8c338cb7eee7d2fdc4428e47c9e6e521c"
+        },
+        "include/inc/gui/GLConsumer.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/GLConsumer.h?format=TEXT",
+            "sha256": "4a1320b4d26e34869f2c654787e7e69112e3f4e0ba64a1f3c64f48857d96ad95"
+        },
+        "include/inc/gui/GuiConfig.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/GuiConfig.h?format=TEXT",
+            "sha256": "7e2756965873ef04d7a5e9c74d129f987c7bda68cc6c2bcf1621ec7f607d8655"
+        },
+        "include/inc/gui/HdrMetadata.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/HdrMetadata.h?format=TEXT",
+            "sha256": "a4d3a9928304f80e2dc3c21b1b0086f1bea9a81e76bc89e2b93b088642748bcb"
+        },
+        "include/inc/gui/IConsumerListener.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/IConsumerListener.h?format=TEXT",
+            "sha256": "a8253efd094c1129760fb3cd08842711a8ed1467589fe5d6c18fccdb2406ecc8"
+        },
+        "include/inc/gui/IDisplayEventConnection.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/IDisplayEventConnection.h?format=TEXT",
+            "sha256": "c8ef7cf3175f86443239d4fee3cdd2dc9558387170ebda4debfaf577d0a9780c"
+        },
+        "include/inc/gui/IGraphicBufferConsumer.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/IGraphicBufferConsumer.h?format=TEXT",
+            "sha256": "39963553955538cc36a2c52667c0a02dac6530e2614e61627302e0c38202b3e1"
+        },
+        "include/inc/gui/IGraphicBufferProducer.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/IGraphicBufferProducer.h?format=TEXT",
+            "sha256": "e22ef7c4c034acbeae6103a9af335dd61fa6cbb4a65bd3a0e16f395cd11cbfc6"
+        },
+        "include/inc/gui/IProducerListener.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/IProducerListener.h?format=TEXT",
+            "sha256": "dfe0652c0e5e76f067974169a9b74f6fe37811cb150a51b2dec06f542b669c00"
+        },
+        "include/inc/gui/ISurfaceComposer.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/ISurfaceComposer.h?format=TEXT",
+            "sha256": "df6f41e702b9475daca2146937519986d50fe0f2b5e7366fb20a74aa60ed66b2"
+        },
+        "include/inc/gui/ISurfaceComposerClient.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/ISurfaceComposerClient.h?format=TEXT",
+            "sha256": "c5d7af0d8d7e5870c24a788bd8375b6ca39edf9edcf34184c6cc75cb45fb5337"
+        },
+        "include/inc/gui/LayerDebugInfo.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/LayerDebugInfo.h?format=TEXT",
+            "sha256": "d3c2658bab3904eeba9a4468b8d4fa031605744472aab0d0497b402a146fbcbb"
+        },
+        "include/inc/gui/LayerState.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/LayerState.h?format=TEXT",
+            "sha256": "fbc2728dddc699217d08f2308d586cf771205dd1dc13b779ba00522294e5e4c5"
+        },
+        "include/inc/gui/OccupancyTracker.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/OccupancyTracker.h?format=TEXT",
+            "sha256": "c205d4ee514760131a9de5a79cb6e3406ac8aab9c4ce710d8b665875fdc12c66"
+        },
+        "include/inc/gui/StreamSplitter.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/StreamSplitter.h?format=TEXT",
+            "sha256": "e126e8f6dc76e9f5ac8ceeb24f1c1add7d77b5d53e9b7281d37593d8e7bae956"
+        },
+        "include/inc/gui/Surface.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/Surface.h?format=TEXT",
+            "sha256": "995dc2c686ce80a8dda88b9c3321450a4fe2dc6df4a8d284dd68d06c1169d0e5"
+        },
+        "include/inc/gui/SurfaceComposerClient.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/SurfaceComposerClient.h?format=TEXT",
+            "sha256": "9509a5c3735cd7a41091aaae4948c6cbe053cd47d6761fce815c8e97c27e9344"
+        },
+        "include/inc/gui/SurfaceControl.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/SurfaceControl.h?format=TEXT",
+            "sha256": "bf5525ff58547fc0f747fcff771c34a13c650eb60c0074f3d0779d0f6fc744f4"
+        },
+        "include/inc/gui/bufferqueue/1.0/B2HProducerListener.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/bufferqueue/1.0/B2HProducerListener.h?format=TEXT",
+            "sha256": "147dadfee0a4369187901639f701295873048049c8b4260fc8076dc581efba7f"
+        },
+        "include/inc/gui/bufferqueue/1.0/H2BGraphicBufferProducer.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/bufferqueue/1.0/H2BGraphicBufferProducer.h?format=TEXT",
+            "sha256": "1b99ac1835e1de1cd9a966bf5b2eb9589c5662fd131f913869f34296ad6bfb65"
+        },
+        "include/inc/gui/view/Surface.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/gui/include/gui/view/Surface.h?format=TEXT",
+            "sha256": "bae5ef909c38de9c187ff15f9c41283f6142476c3c7f5facef68767b62132470"
+        },
+        "include/inc/ui/ANativeObjectBase.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/ui/include/ui/ANativeObjectBase.h?format=TEXT",
+            "sha256": "251c95b18cf98ee7835e1c988eee6a04ef2b61904e6109152960e007a1ca0643"
+        },
+        "include/inc/ui/BufferQueueDefs.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/ui/include/ui/BufferQueueDefs.h?format=TEXT",
+            "sha256": "0fdb9499cfe2cf21daa641fc888ffeb3f65bca8da3bed42e9aa6e123d450ed21"
+        },
+        "include/inc/ui/ColorSpace.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/ui/include/ui/ColorSpace.h?format=TEXT",
+            "sha256": "dfeb2f5f8027abfa154d449a02cae46638d3a01f549d61e16875b4fdd0ef6eb7"
+        },
+        "include/inc/ui/DebugUtils.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/ui/include/ui/DebugUtils.h?format=TEXT",
+            "sha256": "5567893fdfced3b42f936a0c4195e34bc49196cabaa8f7c15aa3a6e9c83b0534"
+        },
+        "include/inc/ui/DetachedBufferHandle.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/ui/include/ui/DetachedBufferHandle.h?format=TEXT",
+            "sha256": "6516bfe171b112e6703158d2c37f15e679b0c2a812c7a2e800b2fe82458230b2"
+        },
+        "include/inc/ui/DisplayInfo.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/ui/include/ui/DisplayInfo.h?format=TEXT",
+            "sha256": "61642ea83485789fa1b70c1dfab4701904c4b860228747aa6c1b4e3ded968cf3"
+        },
+        "include/inc/ui/DisplayStatInfo.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/ui/include/ui/DisplayStatInfo.h?format=TEXT",
+            "sha256": "1ed9cbf4eea47415b6f901c18ea75fa7fd902e0f9db9a6106a75d8b7aa0c0d4d"
+        },
+        "include/inc/ui/Fence.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/ui/include/ui/Fence.h?format=TEXT",
+            "sha256": "7535d83184b37d9833c489084079d8745fb1531ac801afdf3dd8e367309fb2e1"
+        },
+        "include/inc/ui/FenceTime.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/ui/include/ui/FenceTime.h?format=TEXT",
+            "sha256": "146a3ab0de73445e9f48f3fcf2de4150e07a5fffe549003239e11b2d94ec7029"
+        },
+        "include/inc/ui/FloatRect.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/ui/include/ui/FloatRect.h?format=TEXT",
+            "sha256": "d71513dbcd27915fcb72749f0a627b4e77d0d40cff90f8c208204b0ee858a729"
+        },
+        "include/inc/ui/FrameStats.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/ui/include/ui/FrameStats.h?format=TEXT",
+            "sha256": "4e1d7021067efaa29bd14a649b5d99c2601cb7ed147be6caaeb028afd4a66106"
+        },
+        "include/inc/ui/Gralloc2.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/ui/include/ui/Gralloc2.h?format=TEXT",
+            "sha256": "a05027579fd0898b5ce64f1790b6528955e3097065239a834110133980ab90c1"
+        },
+        "include/inc/ui/GraphicBuffer.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/ui/include/ui/GraphicBuffer.h?format=TEXT",
+            "sha256": "0d7bf9302973864d9cdf783b49afde8f9503203372651945b3d5dc79ae62d978"
+        },
+        "include/inc/ui/GraphicBufferAllocator.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/ui/include/ui/GraphicBufferAllocator.h?format=TEXT",
+            "sha256": "5765c52f038380b119d3bc36d2a3845131faa13457410fade9a67920700ef00e"
+        },
+        "include/inc/ui/GraphicBufferMapper.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/ui/include/ui/GraphicBufferMapper.h?format=TEXT",
+            "sha256": "8ce716171a45e13e6be1f8f99aae933d375ca8e9c9773c2da3871075d0b1147e"
+        },
+        "include/inc/ui/GraphicTypes.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/ui/include/ui/GraphicTypes.h?format=TEXT",
+            "sha256": "e3980c48fea26be0a818851004490ee5ff48cafbae5209ee228247b183ce3d6b"
+        },
+        "include/inc/ui/HdrCapabilities.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/ui/include/ui/HdrCapabilities.h?format=TEXT",
+            "sha256": "dd0f2952461bd5714f0cb54b10701c0061c9487a3e233dc04343726d4e707b35"
+        },
+        "include/inc/ui/PixelFormat.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/ui/include/ui/PixelFormat.h?format=TEXT",
+            "sha256": "785dcfb20695fe4011ee27fbec7851f3daf27b017222da73899cb319e144b037"
+        },
+        "include/inc/ui/Point.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/ui/include/ui/Point.h?format=TEXT",
+            "sha256": "5438f5663a08f1753ef45d4712fea3c491e537d4ba50ae0c87611d0aaa51b842"
+        },
+        "include/inc/ui/Rect.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/ui/include/ui/Rect.h?format=TEXT",
+            "sha256": "447debea2e683109c10a8d2009a51d8264c72bbd6c290b16b77ea5b5b2c4d53c"
+        },
+        "include/inc/ui/Region.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/ui/include/ui/Region.h?format=TEXT",
+            "sha256": "5d82196699cce00c8e3d1b2031a62714c1305e0c369d1c04b4edaa52c57e3d98"
+        },
+        "include/inc/ui/UiConfig.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/ui/include/ui/UiConfig.h?format=TEXT",
+            "sha256": "37ff2e9ce8ff9f0d4152ac0fe26fb3634d00481bee74a35ad52ce33be49ea022"
+        },
+        "include/libutils/utils/AndroidThreads.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/libutils/include/utils/AndroidThreads.h?format=TEXT",
+            "sha256": "0d7008101b551b6e6568e005168b7758129d8688d86ebc77faf87225058cbee5"
+        },
+        "include/libutils/utils/Atomic.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/libutils/include/utils/Atomic.h?format=TEXT",
+            "sha256": "ad9b77d0f773513dd74d170925acd91adf07c5277bdd9f754e8363c837565a7b"
+        },
+        "include/libutils/utils/BitSet.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/libutils/include/utils/BitSet.h?format=TEXT",
+            "sha256": "790786a80e71ce29aeaf3bc4e66dfabb1b4381ba75c8ba563301c8bf0167f04c"
+        },
+        "include/libutils/utils/ByteOrder.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/libutils/include/utils/ByteOrder.h?format=TEXT",
+            "sha256": "5ad866b8ce16fde3478fe8ee61830a5562677926e401bebabb613ad4a56fed49"
+        },
+        "include/libutils/utils/CallStack.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/libutils/include/utils/CallStack.h?format=TEXT",
+            "sha256": "18d8b6d380b3ad3ce01434ce8bff4a54df69747d6548effb2747a33b733c4cbe"
+        },
+        "include/libutils/utils/Compat.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/libutils/include/utils/Compat.h?format=TEXT",
+            "sha256": "64dc73025f359099a87bb82e54707b94687a6df75c18e666ba458068db5ceb08"
+        },
+        "include/libutils/utils/Condition.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/libutils/include/utils/Condition.h?format=TEXT",
+            "sha256": "3940ac155375e1b6eb8f6c8d0f37bbef9e7462c8d0d98ad7cba23fc5e07f0ec5"
+        },
+        "include/libutils/utils/Debug.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/libutils/include/utils/Debug.h?format=TEXT",
+            "sha256": "a9db998cd2082180d5fe30a5aab0da85372a0f11a1bbfbfcc72abca5d4cfe825"
+        },
+        "include/libutils/utils/Endian.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/libutils/include/utils/Endian.h?format=TEXT",
+            "sha256": "7d8249ec3b5c3f8f2a158f746602bdf521b85dba9b9fe3bb13f4bf01ef691f16"
+        },
+        "include/libutils/utils/Errors.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/libutils/include/utils/Errors.h?format=TEXT",
+            "sha256": "de2e6637bcb715fab116797fd2f8f800dc3c2d0c71451c3cf95b7ca23af7edfe"
+        },
+        "include/libutils/utils/FastStrcmp.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/libutils/include/utils/FastStrcmp.h?format=TEXT",
+            "sha256": "e34d87a7d09dc0f33bc700a2df8837c70820e7736ef372a4bc95f72254338e0f"
+        },
+        "include/libutils/utils/FileMap.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/libutils/include/utils/FileMap.h?format=TEXT",
+            "sha256": "0942ad12a82663da633dc065ea23e1d93c59ee815053b33ab67c98fe1f14e9ba"
+        },
+        "include/libutils/utils/Flattenable.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/libutils/include/utils/Flattenable.h?format=TEXT",
+            "sha256": "d1196f2b120c1bb053ed6203f70ea254d9fe96d45dd424a6f373d55f96e91637"
+        },
+        "include/libutils/utils/Functor.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/libutils/include/utils/Functor.h?format=TEXT",
+            "sha256": "e25634f05c461008b24cc3b7ad316a90f6220392c5e04821bdbb369829313b28"
+        },
+        "include/libutils/utils/JenkinsHash.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/libutils/include/utils/JenkinsHash.h?format=TEXT",
+            "sha256": "945d3a562cf24f6d5d065d3517609c87792eda505a3f41dca01ff895b3d28bb9"
+        },
+        "include/libutils/utils/KeyedVector.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/libutils/include/utils/KeyedVector.h?format=TEXT",
+            "sha256": "68acb38c2b8e3be7efc44dea2c8427d39812c2b67c710278928fbd3a7f89962b"
+        },
+        "include/libutils/utils/LightRefBase.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/libutils/include/utils/LightRefBase.h?format=TEXT",
+            "sha256": "25b146baaa67194c3a7d441c6b6ccaa1a1dd6aeee5f938046c20a7571d0f197a"
+        },
+        "include/libutils/utils/List.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/libutils/include/utils/List.h?format=TEXT",
+            "sha256": "9ddff9ca2b637ad7cc81895ce6ca26ea3c3ee67e25e6cc102b619d565b6cf144"
+        },
+        "include/libutils/utils/Looper.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/libutils/include/utils/Looper.h?format=TEXT",
+            "sha256": "fbea2d343f62c165f6fb94d7143ede9a493f286b995793198aa8c184b9c147f1"
+        },
+        "include/libutils/utils/LruCache.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/libutils/include/utils/LruCache.h?format=TEXT",
+            "sha256": "8b9b4134c5ec3f3e74fb9ba897b7264a8293df36dbb1dd67a07d30aab3cc24ba"
+        },
+        "include/libutils/utils/Mutex.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/libutils/include/utils/Mutex.h?format=TEXT",
+            "sha256": "f16aa481f35bd9b8e3bd1167d15e6ebc660fbad54f1f263e983abb161e2b777c"
+        },
+        "include/libutils/utils/NativeHandle.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/libutils/include/utils/NativeHandle.h?format=TEXT",
+            "sha256": "60b2408ecaf07b42564e856045a8eeea1b59f4844711350fdb6c9738613d2e7c"
+        },
+        "include/libutils/utils/Printer.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/libutils/include/utils/Printer.h?format=TEXT",
+            "sha256": "ca9661912f114d3b38eb3df97addad70fdb3ef08983eaab520e25f33390cef5a"
+        },
+        "include/libutils/utils/ProcessCallStack.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/libutils/include/utils/ProcessCallStack.h?format=TEXT",
+            "sha256": "8422f951e6c839a0f7b0834f336b5c721e274240f201a35707f5436565c3e743"
+        },
+        "include/libutils/utils/PropertyMap.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/libutils/include/utils/PropertyMap.h?format=TEXT",
+            "sha256": "199d6f35a7f6b70b9b6258c1a78d7671b9253a53171f2a624943851344c427c5"
+        },
+        "include/libutils/utils/RWLock.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/libutils/include/utils/RWLock.h?format=TEXT",
+            "sha256": "72ca0d3cde78dde27a8043a7c52c6fd10a588906edf047abb94ee4d36cb0f96d"
+        },
+        "include/libutils/utils/RefBase.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/libutils/include/utils/RefBase.h?format=TEXT",
+            "sha256": "b0f6235a748244df25b0b490bb75f9e16bf75af72e6b6d9e68efd8067527efd3"
+        },
+        "include/libutils/utils/Singleton.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/libutils/include/utils/Singleton.h?format=TEXT",
+            "sha256": "94dd0f9d6b3b7b5b2261280c00e50cffee2be58861c2264422e9f04fed6d2503"
+        },
+        "include/libutils/utils/SortedVector.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/libutils/include/utils/SortedVector.h?format=TEXT",
+            "sha256": "c6f685bafa563e562b8ff8aa3e55256f2b365be7d7159e0643e23ab1c8872997"
+        },
+        "include/libutils/utils/StopWatch.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/libutils/include/utils/StopWatch.h?format=TEXT",
+            "sha256": "e523ae0bbc4d565aebeb9f00b55c4b7482b3ef45145671eef9457e06f0b008be"
+        },
+        "include/libutils/utils/String16.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/libutils/include/utils/String16.h?format=TEXT",
+            "sha256": "28a80d8a26eb56532a4a21994abd2f29ee0ad09e711451429dc46ed8cf050925"
+        },
+        "include/libutils/utils/String8.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/libutils/include/utils/String8.h?format=TEXT",
+            "sha256": "d54d0f72bbb70313fc6d0c2a4407ed710305714fc1bd59dad7bef8dc3e8e242d"
+        },
+        "include/libutils/utils/StrongPointer.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/libutils/include/utils/StrongPointer.h?format=TEXT",
+            "sha256": "94c4cc0187ad65d03e9186b0f901d6f9742dc8382598c7a5d3a6c503b2faa609"
+        },
+        "include/libutils/utils/SystemClock.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/libutils/include/utils/SystemClock.h?format=TEXT",
+            "sha256": "39b93032b3bac489a600787d96a50bac0f78af33444243264cb529a5b534f107"
+        },
+        "include/libutils/utils/Thread.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/libutils/include/utils/Thread.h?format=TEXT",
+            "sha256": "190cd36a09dfcbd437eeaaf0bd5a9d8f14031ef75b33eca194fead6153104baa"
+        },
+        "include/libutils/utils/ThreadDefs.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/libutils/include/utils/ThreadDefs.h?format=TEXT",
+            "sha256": "224c683cc083845f3c01c20cd8700c95b16e807a6dfcf04614d56329dbec0b6d"
+        },
+        "include/libutils/utils/Timers.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/libutils/include/utils/Timers.h?format=TEXT",
+            "sha256": "2bb6416ee7ca1ad5ec2f8abc11b9b18b4c1432e5ea0e2de6e8a7fa712a97688e"
+        },
+        "include/libutils/utils/Tokenizer.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/libutils/include/utils/Tokenizer.h?format=TEXT",
+            "sha256": "8df5e4dfbe6fb974a7131ce6705a6fffad737e58222d3da907aa468a1fda13ec"
+        },
+        "include/libutils/utils/Trace.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/libutils/include/utils/Trace.h?format=TEXT",
+            "sha256": "9270cb896832a96971b3844b208815be315c418a35e76ee6b9e5c9343d500884"
+        },
+        "include/libutils/utils/TypeHelpers.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/libutils/include/utils/TypeHelpers.h?format=TEXT",
+            "sha256": "dcafb0b241b34f5a1d1f82b13245340223bf4c7cc8dbc643237e2602d6485359"
+        },
+        "include/libutils/utils/Unicode.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/libutils/include/utils/Unicode.h?format=TEXT",
+            "sha256": "9c3797a6331e8d91fb88d2f31fee3870d072d122fd29d28102f5c7f53bd0fbba"
+        },
+        "include/libutils/utils/Vector.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/libutils/include/utils/Vector.h?format=TEXT",
+            "sha256": "8a12d9fe525b1b1d79ba56a5a9dd3203d3a31fd9e97c63bea88932d471a26b84"
+        },
+        "include/libutils/utils/VectorImpl.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/libutils/include/utils/VectorImpl.h?format=TEXT",
+            "sha256": "8e5ad3d424683f9b79a2e076f84e13323d2a67237a85631dc8b3e32e932f1896"
+        },
+        "include/libutils/utils/misc.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/libutils/include/utils/misc.h?format=TEXT",
+            "sha256": "5cf50dfb32b97484c271f0613b39a204dbb4b3644d2e790801b7e3f72f953adc"
+        },
+        "include/libutils/utils/threads.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/libutils/include/utils/threads.h?format=TEXT",
+            "sha256": "5041ef681318648bbe35dee6c703823a693270c104f3592a9ce7bdcb956dfbeb"
+        },
+        "include/math/math/TMatHelpers.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/math/include/math/TMatHelpers.h?format=TEXT",
+            "sha256": "7280cc0b94b56590fdbd01a81c5e00b4ec9905d03b664a359657eb3366ffc84e"
+        },
+        "include/math/math/TQuatHelpers.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/math/include/math/TQuatHelpers.h?format=TEXT",
+            "sha256": "a321822713462aa8471ec902bfcd8227fda1da3adba5513c43bff55327ea33b0"
+        },
+        "include/math/math/TVecHelpers.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/math/include/math/TVecHelpers.h?format=TEXT",
+            "sha256": "71ac0a3626e0172a702f607542ab73adc4fbeb773ab23cbd31aed12f76f4f431"
+        },
+        "include/math/math/half.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/math/include/math/half.h?format=TEXT",
+            "sha256": "3ffc20e5c25b196a5292cd057b677139adbc074ca9165e50ba020f997f51ab43"
+        },
+        "include/math/math/mat2.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/math/include/math/mat2.h?format=TEXT",
+            "sha256": "a9f35ece8473ab673309d1a3e9c2dd87b0c658f0ff2dc0a5c0f5882d801acef7"
+        },
+        "include/math/math/mat3.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/math/include/math/mat3.h?format=TEXT",
+            "sha256": "a1553b1543b2581170c303954eb243ff22783975b22234e1d13d2e6c54debcf7"
+        },
+        "include/math/math/mat4.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/math/include/math/mat4.h?format=TEXT",
+            "sha256": "7b262a9a007174b511a5f25bc4308d1cdb7e392dbff2bf46535492dd5e092b72"
+        },
+        "include/math/math/quat.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/math/include/math/quat.h?format=TEXT",
+            "sha256": "c3457e44f3740e738be33728424486a89848dfaf2fdb28e29bc33b015aec4419"
+        },
+        "include/math/math/scalar.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/math/include/math/scalar.h?format=TEXT",
+            "sha256": "415f7165061493f5c213a7004d81e0cc43e3bfd2d2319abec0b0f236b55ccce0"
+        },
+        "include/math/math/vec2.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/math/include/math/vec2.h?format=TEXT",
+            "sha256": "2febb2509fde51c6f08d6ddbadf8b1e776b86487cd355078e36cd49d26529f89"
+        },
+        "include/math/math/vec3.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/math/include/math/vec3.h?format=TEXT",
+            "sha256": "c07043d76baac0634bcb487917c6081ce20609f1272e1e1d7f47ff33483a43f8"
+        },
+        "include/math/math/vec4.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/math/include/math/vec4.h?format=TEXT",
+            "sha256": "9c2182e9c25eb5445e47ae85ee95ed60366a379c391d246bd570a8ed59359fce"
+        },
+        "include/nb/nativebase/nativebase.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/nativebase/include/nativebase/nativebase.h?format=TEXT",
+            "sha256": "5fa086053493b18e057d513f8d5cde6fe144988874ad1f3b9d504f9b017c419f"
+        },
+        "include/nhw/nativehelper/AsynchronousCloseMonitor.h": {
+            "url": "https://android.googlesource.com/platform/libnativehelper/+/refs/tags/android-9.0.0_r1/include/nativehelper/AsynchronousCloseMonitor.h?format=TEXT",
+            "sha256": "459b8efe4750819e75cba46d7440e62f5b10488a058398896a46c6baa1b78298"
+        },
+        "include/nhw/nativehelper/JNIHelp.h": {
+            "url": "https://android.googlesource.com/platform/libnativehelper/+/refs/tags/android-9.0.0_r1/include/nativehelper/JNIHelp.h?format=TEXT",
+            "sha256": "644bfa2fca1f83fe67de5c998d90bb624f360b36b4c77789d6e4164cc762530e"
+        },
+        "include/nhw/nativehelper/JniConstants.h": {
+            "url": "https://android.googlesource.com/platform/libnativehelper/+/refs/tags/android-9.0.0_r1/include/nativehelper/JniConstants.h?format=TEXT",
+            "sha256": "868b53fd61a8a0e6f29d0decce9ec8d8e614313de0b35ae14a9eabe80871b2f3"
+        },
+        "include/nhw/nativehelper/JniInvocation.h": {
+            "url": "https://android.googlesource.com/platform/libnativehelper/+/refs/tags/android-9.0.0_r1/include/nativehelper/JniInvocation.h?format=TEXT",
+            "sha256": "089242f29bea6c57023e8dda7a65b51192beb4a5d55189de255f7b26a0088b1a"
+        },
+        "include/nhw/nativehelper/ScopedBytes.h": {
+            "url": "https://android.googlesource.com/platform/libnativehelper/+/refs/tags/android-9.0.0_r1/include/nativehelper/ScopedBytes.h?format=TEXT",
+            "sha256": "d699b4a48a7139dead2ace2153629caffd2710f88ec057a53ad299aee3da60ae"
+        },
+        "include/nhw/nativehelper/ScopedLocalFrame.h": {
+            "url": "https://android.googlesource.com/platform/libnativehelper/+/refs/tags/android-9.0.0_r1/include/nativehelper/ScopedLocalFrame.h?format=TEXT",
+            "sha256": "6d90085364add570b1be21611db26a98daaa9f81ce91d9745e35548374c3576e"
+        },
+        "include/nhw/nativehelper/ScopedLocalRef.h": {
+            "url": "https://android.googlesource.com/platform/libnativehelper/+/refs/tags/android-9.0.0_r1/include/nativehelper/ScopedLocalRef.h?format=TEXT",
+            "sha256": "c9bf9f88ea4feb2e7b856ba6e1c9b0c5255c44139f8ffb1b47e3475192bfe7d2"
+        },
+        "include/nhw/nativehelper/ScopedPrimitiveArray.h": {
+            "url": "https://android.googlesource.com/platform/libnativehelper/+/refs/tags/android-9.0.0_r1/include/nativehelper/ScopedPrimitiveArray.h?format=TEXT",
+            "sha256": "c18f521658d98650a300a519e8778f8ce99c40a6da95d2ecf88c97cba1c4b7a1"
+        },
+        "include/nhw/nativehelper/ScopedStringChars.h": {
+            "url": "https://android.googlesource.com/platform/libnativehelper/+/refs/tags/android-9.0.0_r1/include/nativehelper/ScopedStringChars.h?format=TEXT",
+            "sha256": "d1088c7578f91dbdf609757a199dcf41015a483666f3f6d2b05f3309e3db6059"
+        },
+        "include/nhw/nativehelper/ScopedUtfChars.h": {
+            "url": "https://android.googlesource.com/platform/libnativehelper/+/refs/tags/android-9.0.0_r1/include/nativehelper/ScopedUtfChars.h?format=TEXT",
+            "sha256": "c21ead5a033bda739a79c322adf729cf23ae65c95dfcafb0944672c5e4a25f6a"
+        },
+        "include/nhw/nativehelper/UniquePtr.h": {
+            "url": "https://android.googlesource.com/platform/libnativehelper/+/refs/tags/android-9.0.0_r1/include/nativehelper/UniquePtr.h?format=TEXT",
+            "sha256": "c27b511698acbe4110ed48645da689df24e9cb31e36da79e15b133b6520d42a4"
+        },
+        "include/nhw/nativehelper/toStringArray.h": {
+            "url": "https://android.googlesource.com/platform/libnativehelper/+/refs/tags/android-9.0.0_r1/include/nativehelper/toStringArray.h?format=TEXT",
+            "sha256": "5ccbcd33b00005d9f5407c858c1d31d6d888babdde53473d9bc04bf5696412f0"
+        },
+        "include/nhw/nhw/nativehelper/AsynchronousCloseMonitor.h": {
+            "url": "https://android.googlesource.com/platform/libnativehelper/+/refs/tags/android-9.0.0_r1/include/nativehelper/AsynchronousCloseMonitor.h?format=TEXT",
+            "sha256": "459b8efe4750819e75cba46d7440e62f5b10488a058398896a46c6baa1b78298"
+        },
+        "include/nhw/nhw/nativehelper/JNIHelp.h": {
+            "url": "https://android.googlesource.com/platform/libnativehelper/+/refs/tags/android-9.0.0_r1/include/nativehelper/JNIHelp.h?format=TEXT",
+            "sha256": "644bfa2fca1f83fe67de5c998d90bb624f360b36b4c77789d6e4164cc762530e"
+        },
+        "include/nhw/nhw/nativehelper/JniConstants.h": {
+            "url": "https://android.googlesource.com/platform/libnativehelper/+/refs/tags/android-9.0.0_r1/include/nativehelper/JniConstants.h?format=TEXT",
+            "sha256": "868b53fd61a8a0e6f29d0decce9ec8d8e614313de0b35ae14a9eabe80871b2f3"
+        },
+        "include/nhw/nhw/nativehelper/JniInvocation.h": {
+            "url": "https://android.googlesource.com/platform/libnativehelper/+/refs/tags/android-9.0.0_r1/include/nativehelper/JniInvocation.h?format=TEXT",
+            "sha256": "089242f29bea6c57023e8dda7a65b51192beb4a5d55189de255f7b26a0088b1a"
+        },
+        "include/nhw/nhw/nativehelper/ScopedBytes.h": {
+            "url": "https://android.googlesource.com/platform/libnativehelper/+/refs/tags/android-9.0.0_r1/include/nativehelper/ScopedBytes.h?format=TEXT",
+            "sha256": "d699b4a48a7139dead2ace2153629caffd2710f88ec057a53ad299aee3da60ae"
+        },
+        "include/nhw/nhw/nativehelper/ScopedLocalFrame.h": {
+            "url": "https://android.googlesource.com/platform/libnativehelper/+/refs/tags/android-9.0.0_r1/include/nativehelper/ScopedLocalFrame.h?format=TEXT",
+            "sha256": "6d90085364add570b1be21611db26a98daaa9f81ce91d9745e35548374c3576e"
+        },
+        "include/nhw/nhw/nativehelper/ScopedLocalRef.h": {
+            "url": "https://android.googlesource.com/platform/libnativehelper/+/refs/tags/android-9.0.0_r1/include/nativehelper/ScopedLocalRef.h?format=TEXT",
+            "sha256": "c9bf9f88ea4feb2e7b856ba6e1c9b0c5255c44139f8ffb1b47e3475192bfe7d2"
+        },
+        "include/nhw/nhw/nativehelper/ScopedPrimitiveArray.h": {
+            "url": "https://android.googlesource.com/platform/libnativehelper/+/refs/tags/android-9.0.0_r1/include/nativehelper/ScopedPrimitiveArray.h?format=TEXT",
+            "sha256": "c18f521658d98650a300a519e8778f8ce99c40a6da95d2ecf88c97cba1c4b7a1"
+        },
+        "include/nhw/nhw/nativehelper/ScopedStringChars.h": {
+            "url": "https://android.googlesource.com/platform/libnativehelper/+/refs/tags/android-9.0.0_r1/include/nativehelper/ScopedStringChars.h?format=TEXT",
+            "sha256": "d1088c7578f91dbdf609757a199dcf41015a483666f3f6d2b05f3309e3db6059"
+        },
+        "include/nhw/nhw/nativehelper/ScopedUtfChars.h": {
+            "url": "https://android.googlesource.com/platform/libnativehelper/+/refs/tags/android-9.0.0_r1/include/nativehelper/ScopedUtfChars.h?format=TEXT",
+            "sha256": "c21ead5a033bda739a79c322adf729cf23ae65c95dfcafb0944672c5e4a25f6a"
+        },
+        "include/nhw/nhw/nativehelper/UniquePtr.h": {
+            "url": "https://android.googlesource.com/platform/libnativehelper/+/refs/tags/android-9.0.0_r1/include/nativehelper/UniquePtr.h?format=TEXT",
+            "sha256": "c27b511698acbe4110ed48645da689df24e9cb31e36da79e15b133b6520d42a4"
+        },
+        "include/nhw/nhw/nativehelper/toStringArray.h": {
+            "url": "https://android.googlesource.com/platform/libnativehelper/+/refs/tags/android-9.0.0_r1/include/nativehelper/toStringArray.h?format=TEXT",
+            "sha256": "5ccbcd33b00005d9f5407c858c1d31d6d888babdde53473d9bc04bf5696412f0"
+        },
+        "include/nwinc/system/window.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/nativewindow/include/system/window.h?format=TEXT",
+            "sha256": "ac96b4cb07f90a51a6bdf504688d84838db781fa2a94d9ee80fd8ac92cefbe4b"
+        },
+        "include/nwinc/vndk/window.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/nativewindow/include/vndk/window.h?format=TEXT",
+            "sha256": "5c81f666eeb212babba542ee4123d81e5ec79437c7186453bbfd6141f3dfb07a"
+        },
+        "include/system/graphics.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/libsystem/include/system/graphics.h?format=TEXT",
+            "sha256": "a0079cf6d4a628b7beaf9c49ec4fb80f1df8e416d02c973d147a4013a3823a47"
+        },
+        "include/system/thread_defs.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-9.0.0_r1/libsystem/include/system/thread_defs.h?format=TEXT",
+            "sha256": "61bfca4ee0e3c9bc6515a973d7f9a71a4f1712eb3d09f72053fbcdb52713c2e1"
+        },
+        "include/ui/ANativeObjectBase.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/ui/include/ui/ANativeObjectBase.h?format=TEXT",
+            "sha256": "251c95b18cf98ee7835e1c988eee6a04ef2b61904e6109152960e007a1ca0643"
+        },
+        "include/ui/BufferQueueDefs.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/ui/include/ui/BufferQueueDefs.h?format=TEXT",
+            "sha256": "0fdb9499cfe2cf21daa641fc888ffeb3f65bca8da3bed42e9aa6e123d450ed21"
+        },
+        "include/ui/ColorSpace.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/ui/include/ui/ColorSpace.h?format=TEXT",
+            "sha256": "dfeb2f5f8027abfa154d449a02cae46638d3a01f549d61e16875b4fdd0ef6eb7"
+        },
+        "include/ui/DebugUtils.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/ui/include/ui/DebugUtils.h?format=TEXT",
+            "sha256": "5567893fdfced3b42f936a0c4195e34bc49196cabaa8f7c15aa3a6e9c83b0534"
+        },
+        "include/ui/DetachedBufferHandle.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/ui/include/ui/DetachedBufferHandle.h?format=TEXT",
+            "sha256": "6516bfe171b112e6703158d2c37f15e679b0c2a812c7a2e800b2fe82458230b2"
+        },
+        "include/ui/DisplayInfo.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/ui/include/ui/DisplayInfo.h?format=TEXT",
+            "sha256": "61642ea83485789fa1b70c1dfab4701904c4b860228747aa6c1b4e3ded968cf3"
+        },
+        "include/ui/DisplayStatInfo.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/ui/include/ui/DisplayStatInfo.h?format=TEXT",
+            "sha256": "1ed9cbf4eea47415b6f901c18ea75fa7fd902e0f9db9a6106a75d8b7aa0c0d4d"
+        },
+        "include/ui/Fence.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/ui/include/ui/Fence.h?format=TEXT",
+            "sha256": "7535d83184b37d9833c489084079d8745fb1531ac801afdf3dd8e367309fb2e1"
+        },
+        "include/ui/FenceTime.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/ui/include/ui/FenceTime.h?format=TEXT",
+            "sha256": "146a3ab0de73445e9f48f3fcf2de4150e07a5fffe549003239e11b2d94ec7029"
+        },
+        "include/ui/FloatRect.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/ui/include/ui/FloatRect.h?format=TEXT",
+            "sha256": "d71513dbcd27915fcb72749f0a627b4e77d0d40cff90f8c208204b0ee858a729"
+        },
+        "include/ui/FrameStats.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/ui/include/ui/FrameStats.h?format=TEXT",
+            "sha256": "4e1d7021067efaa29bd14a649b5d99c2601cb7ed147be6caaeb028afd4a66106"
+        },
+        "include/ui/Gralloc2.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/ui/include/ui/Gralloc2.h?format=TEXT",
+            "sha256": "a05027579fd0898b5ce64f1790b6528955e3097065239a834110133980ab90c1"
+        },
+        "include/ui/GraphicBuffer.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/ui/include/ui/GraphicBuffer.h?format=TEXT",
+            "sha256": "0d7bf9302973864d9cdf783b49afde8f9503203372651945b3d5dc79ae62d978"
+        },
+        "include/ui/GraphicBufferAllocator.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/ui/include/ui/GraphicBufferAllocator.h?format=TEXT",
+            "sha256": "5765c52f038380b119d3bc36d2a3845131faa13457410fade9a67920700ef00e"
+        },
+        "include/ui/GraphicBufferMapper.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/ui/include/ui/GraphicBufferMapper.h?format=TEXT",
+            "sha256": "8ce716171a45e13e6be1f8f99aae933d375ca8e9c9773c2da3871075d0b1147e"
+        },
+        "include/ui/GraphicTypes.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/ui/include/ui/GraphicTypes.h?format=TEXT",
+            "sha256": "e3980c48fea26be0a818851004490ee5ff48cafbae5209ee228247b183ce3d6b"
+        },
+        "include/ui/HdrCapabilities.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/ui/include/ui/HdrCapabilities.h?format=TEXT",
+            "sha256": "dd0f2952461bd5714f0cb54b10701c0061c9487a3e233dc04343726d4e707b35"
+        },
+        "include/ui/PixelFormat.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/ui/include/ui/PixelFormat.h?format=TEXT",
+            "sha256": "785dcfb20695fe4011ee27fbec7851f3daf27b017222da73899cb319e144b037"
+        },
+        "include/ui/Point.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/ui/include/ui/Point.h?format=TEXT",
+            "sha256": "5438f5663a08f1753ef45d4712fea3c491e537d4ba50ae0c87611d0aaa51b842"
+        },
+        "include/ui/Rect.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/ui/include/ui/Rect.h?format=TEXT",
+            "sha256": "447debea2e683109c10a8d2009a51d8264c72bbd6c290b16b77ea5b5b2c4d53c"
+        },
+        "include/ui/Region.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/ui/include/ui/Region.h?format=TEXT",
+            "sha256": "5d82196699cce00c8e3d1b2031a62714c1305e0c369d1c04b4edaa52c57e3d98"
+        },
+        "include/ui/UiConfig.h": {
+            "url": "https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-9.0.0_r1/libs/ui/include/ui/UiConfig.h?format=TEXT",
+            "sha256": "37ff2e9ce8ff9f0d4152ac0fe26fb3634d00481bee74a35ad52ce33be49ea022"
+        },
+        "src/com_android_emulator_multidisplay.cpp": {
+            "url": "https://raw.githubusercontent.com/LineageOS/android_device_generic_goldfish/4ad4ff5687375ead782a35add22b8f16563fc123/MultiDisplayProvider/jni/com_android_emulator_multidisplay.cpp",
+            "sha256": "dde79c5238d88bd22d11f140050d7a6ee83681720d58fd99988df07134f3dd7a"
+        },
+        "src/qemu_pipe_common.cpp": {
+            "url": "https://android.googlesource.com/platform/hardware/google/gfxstream/+/47a058affc29984ec29e47d11efa8d900a977678/guest/shared/qemupipe/qemu_pipe_common.cpp?format=TEXT",
+            "sha256": "70835e3f306d15a9fe7520999449fc0862766e47acb4a7eab3bb369ba3e63a79"
+        },
+        "src/qemu_pipe_guest.cpp": {
+            "url": "https://android.googlesource.com/platform/hardware/google/gfxstream/+/47a058affc29984ec29e47d11efa8d900a977678/guest/shared/qemupipe/qemu_pipe_guest.cpp?format=TEXT",
+            "sha256": "0a349d4d8e4d3fce10302bcb3410165dff2793e6bd8e9d09d07a4de120e8a15b"
+        },
+        "include/hwinc/hardware/gnss-base.h": {
+            "url": "https://android.googlesource.com/platform/hardware/libhardware/+/refs/tags/android-9.0.0_r61/include/hardware/gnss-base.h?format=TEXT",
+            "sha256": "e5dd9399eb17136c40620bd2a657cf6beb3d837db73aa1db356094d94357aefd"
+        },
+        "include/hwinc/hardware/nfc-base.h": {
+            "url": "https://android.googlesource.com/platform/hardware/libhardware/+/refs/tags/android-9.0.0_r61/include/hardware/nfc-base.h?format=TEXT",
+            "sha256": "3676e3b5618c23f78b63869ac5871a5527805e811b335c62bb45ddeac254c1e1"
+        },
+        "include/hwinc/hardware/sensors-base.h": {
+            "url": "https://android.googlesource.com/platform/hardware/libhardware/+/refs/tags/android-9.0.0_r61/include/hardware/sensors-base.h?format=TEXT",
+            "sha256": "df4cf554848ea284185d6d68e54ffd43866f24a554884f35ebc1fd0ce305a45d"
+        },
+        "include/system/graphics-base.h": {
+            "url": "https://android.googlesource.com/platform/system/core/+/refs/tags/android-8.1.0_r18/libsystem/include/system/graphics-base.h?format=TEXT",
+            "sha256": "3e14644a44edb344d3f40073a722cf171597191c6c549ebee4b7b2d481c9e25d"
+        }
+    },
+    "upstreamEdits": "upstream.edits.json"
+}

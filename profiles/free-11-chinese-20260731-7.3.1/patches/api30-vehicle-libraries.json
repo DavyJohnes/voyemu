@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "api": 30,
+  "constants": {
+    "original_sha256_allowlist": [
+      "b7b80ed1ff6b7b054d6035c6e39e7c04d97e9f2d906cd42f82f9da3a61e2fa2b",
+      "f37a53f1397678af472a87d89d903ba8f6ed6ac892d83ae3117b57bbe3b21360"
+    ]
+  },
+  "calls": [
+    {
+      "operation": "useLibraries",
+      "args": [
+        [
+          "QGAPI",
+          "QGMOD",
+          "QGVehicle"
+        ]
+      ]
+    }
+  ]
+}

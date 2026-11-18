@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "api": 30,
+  "calls": [
+    {
+      "operation": "guardMusicFullscreen",
+      "args": []
+    }
+  ],
+  "constants": {
+    "original_sha256_allowlist": [
+      "5c4d5470b552c69575d5ea285220249ef2ec54ba79160bc6d004199232b0c389"
+    ]
+  }
+}

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.qinggan.providers.settings"
+    android:sharedUserId="android.uid.system">
+
+    <uses-sdk android:minSdkVersion="28" android:targetSdkVersion="28" />
+
+    <permission
+        android:name="com.qinggan.permission.WRITE_SETTINGS"
+        android:protectionLevel="signature" />
+
+    <application
+        android:label="QGSettings Stub"
+        android:directBootAware="true">
+
+        <provider
+            android:name="com.qinggan.providers.settings.QGSettingsProvider"
+            android:authorities="qinggan.settings"
+            android:exported="true"
+            android:writePermission="com.qinggan.permission.WRITE_SETTINGS" />
+    </application>
+
+</manifest>

@@ -1,0 +1,92 @@
+# Reproducible e2fsprogs image helpers for preparation. A tag e2fs-helpers-<sha8> builds the linux-x64,
+# darwin-arm64 and win32-x64 helpers twice, checks them against the pins in src/app/toolchain.json and publishes
+# them as the release assets that preparation downloads.
+name: e2fs-helpers
+
+on:
+    push:
+        tags: ["e2fs-helpers-*"]
+    workflow_dispatch:
+
+permissions:
+    contents: read
+
+jobs:
+    build:
+        name: Build ${{ github.ref_name }}
+        runs-on: ubuntu-24.04
+        timeout-minutes: 60
+        outputs:
+            tag: ${{ steps.select.outputs.tag }}
+        steps:
+            - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+              with:
+                  persist-credentials: false
+            - name: Check selection fixtures
+              run: bash src/dev/ci/e2fs-helpers-select.test.sh
+            - name: Select the pinned helpers
+              id: select
+              run: bash src/dev/ci/e2fs-helpers-select.sh .local/build/e2fs-helpers/SHA256SUMS
+            # Restores or installs Zig, CMake and the JDK of the linux set; the recipe downloads the pinned e2fsprogs tarball.
+            - uses: ./.github/actions/toolchains
+              with:
+                  set: linux
+            - name: Build every helper twice
+              run: |
+                  out=.local/build/e2fs-helpers
+                  # Each build runs in its own randomly named directory.
+                  for target in darwin-arm64 linux-x64 win32-x64; do
+                      cmake -DVOYEMU_E2FS_TARGET="$target" -DVOYEMU_E2FS_OUTPUT="$PWD/$out/asset" \
+                          -P src/app/prepare/e2fsprogs_build.cmake
+                      # Invalid ambient flags must not affect the recipe or its output bytes.
+                      env CPPFLAGS='-include /voyemu-ambient-header-must-not-exist.h' \
+                          LDFLAGS='-Wl,--voyemu-ambient-linker-must-not-exist' \
+                          PKG_CONFIG_PATH="$PWD/$out/missing-pkg-config" \
+                          PKG_CONFIG_LIBDIR="$PWD/$out/missing-pkg-config" \
+                          cmake -DVOYEMU_E2FS_TARGET="$target" -DVOYEMU_E2FS_OUTPUT="$PWD/$out/repeat" \
+                              -P src/app/prepare/e2fsprogs_build.cmake
+                  done
+                  diff -r "$out/asset" "$out/repeat"
+            - name: Check the helpers against the pins
+              run: |
+                  cd .local/build/e2fs-helpers
+                  (cd asset && sha256sum -c ../SHA256SUMS)
+                  cp SHA256SUMS asset/
+            - name: Run the helper behavior tests with the Linux helpers
+              run: |
+                  out="$PWD/.local/build/e2fs-helpers/asset"
+                  work="$PWD/.local/build/e2fs-helpers/tests"
+                  chmod +x "$out"/*-linux-x64
+                  # The A9 fixture compiles a Java 25 class with the pinned JDK of the linux set.
+                  export JAVA_HOME="$PWD/$(jq -er .optionalTools.linuxBuild.jdk.directory src/app/toolchain.json)"
+                  bash src/app/prepare/api30_root_layout_helper.test.sh "$out/api30-root-layout-linux-x64" \
+                      /sbin/mke2fs /sbin/debugfs "$work/api30"
+                  bash src/app/prepare/a9_offline_labels_helper.test.sh "$out/a9-offline-labels-linux-x64" \
+                      /sbin/mke2fs /sbin/debugfs /sbin/e2fsck "$work/a9"
+            - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+              with:
+                  name: ${{ steps.select.outputs.tag }}
+                  path: .local/build/e2fs-helpers/asset/
+                  if-no-files-found: error
+
+    release:
+        name: Release ${{ needs.build.outputs.tag }}
+        needs: build
+        if: github.ref_type == 'tag'
+        runs-on: ubuntu-24.04
+        timeout-minutes: 10
+        permissions:
+            contents: write
+        steps:
+            - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+              with:
+                  name: ${{ needs.build.outputs.tag }}
+                  path: asset
+            - name: Create the release with the helpers
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  TAG: ${{ needs.build.outputs.tag }}
+              run: |
+                  gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --title "$TAG" \
+                      --notes "Reproducible e2fsprogs image helpers built at $GITHUB_SHA by src/app/prepare/e2fsprogs_build.cmake from the pinned e2fsprogs release tarball and the helper sources with the pinned Zig. NOTICE is the e2fsprogs license notice." \
+                      asset/*

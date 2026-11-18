@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.qinggan.qingai.voiceclone"
+    android:sharedUserId="android.uid.system">
+
+    <uses-sdk android:minSdkVersion="28" android:targetSdkVersion="28" />
+
+    <application android:label="VoiceCloneProviderStub" android:allowBackup="false">
+        <provider
+            android:name="com.qinggan.qingai.clone.provider.VoiceCloneContentProvider"
+            android:authorities="com.qinggan.qingai.clone.voice"
+            android:exported="true" />
+    </application>
+</manifest>

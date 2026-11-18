@@ -1,0 +1,6 @@
+{
+    "type": "jar",
+    "minSdk": 28,
+    "output": "QGVehicle.jar",
+    "frameworkOriginal": "OEMFramework"
+}

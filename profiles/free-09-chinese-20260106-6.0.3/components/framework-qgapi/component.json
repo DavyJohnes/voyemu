@@ -1,0 +1,6 @@
+{
+    "type": "jar",
+    "minSdk": 28,
+    "output": "QGAPI.jar",
+    "frameworkOriginal": "OEMFramework"
+}

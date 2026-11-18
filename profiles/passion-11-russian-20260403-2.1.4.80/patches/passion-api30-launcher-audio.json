@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "api": 30,
+  "calls": [
+    {
+      "operation": "guardPassionLauncherAudio",
+      "args": []
+    }
+  ],
+  "constants": {
+    "original_sha256_allowlist": [
+      "4032f14c0fc49fd52514737309d2af67c9d4ff9340dd534874f46cbe2e748c00"
+    ]
+  }
+}

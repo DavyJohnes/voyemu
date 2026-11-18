@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "api": 30,
+  "constants": {
+    "original_sha256_allowlist": [
+      "533a0b0dc5ccbe91a42847fac20c5735bd8d78a28bbb980a6bf365dd5ed0fba0"
+    ]
+  },
+  "calls": [
+    {
+      "operation": "guardMediaCloudAvailability",
+      "args": []
+    }
+  ]
+}

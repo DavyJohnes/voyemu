@@ -1,0 +1,127 @@
+#include "adas_ecu.hpp"
+#include <cassert>
+#include <exception>
+#include <iostream>
+using namespace voyemu;
+using namespace std::chrono_literals;
+
+int main() try {
+    auto ready = apply_patch(initial_state(),
+                             {{"gear", 3}, {"gear_valid", 1}, {"speed", 80}, {"soc", 62}});
+    auto now = AdasEcu::Clock::time_point{} + 10s;
+    AdasEcu ecu;
+    std::uint32_t sequence = 0;
+    Json state = ready;
+    auto click = [&](std::string id, std::chrono::milliseconds duration = 100ms) {
+        auto down = ecu.input(state, ++sequence, id, "down", "ui-a", now);
+        assert(down.receipt["outcome"] == "held" && down.patch.empty());
+        auto up = ecu.input(state, ++sequence, id, "up", "ui-a", now + duration);
+        now += duration + 10ms;
+
+        if (!up.patch.empty()) {
+            state = apply_patch(state, up.patch);
+        }
+
+        assert(up.receipt["after_revision"] == state["sequence"]);
+
+        return up;
+    };
+    auto acc = click("acc");
+
+    assert(acc.receipt["outcome"] == "applied" && state["raw_oem"]["acc_mode"] == 3 &&
+           state["raw_oem"]["mpc_icaSts"] == 1 && state["raw_oem"]["mrr_vSetDis"] == 160 &&
+           state["raw_oem"]["time_gap_set"] == 1);
+    auto before = state;
+    click("cruise_up");
+    assert(state["raw_oem"]["mrr_vSetDis"] == 162);
+    click("cruise_down");
+    assert(state["raw_oem"]["mrr_vSetDis"] == 160);
+    auto up = click("cruise_up", 1000ms);
+    assert(up.receipt["press_kind"] == "long" && state["raw_oem"]["mrr_vSetDis"] == 170);
+    click("cruise_down", 1200ms);
+    assert(state["raw_oem"]["mrr_vSetDis"] == 160);
+    click("distance");
+    assert(state["raw_oem"]["time_gap_set"] == 2);
+    click("distance");
+    assert(state["raw_oem"]["time_gap_set"] == 3);
+    click("distance");
+    assert(state["raw_oem"]["time_gap_set"] == 1);
+    click("ica");
+    assert(state["raw_oem"]["mpc_icaSts"] == 3 && state["raw_oem"]["acc_mode"] == 3);
+    click("acc");
+    assert(state["raw_oem"]["mpc_icaSts"] == 1);
+    click("cancel");
+    assert(state["raw_oem"]["acc_mode"] == 0 && state["raw_oem"]["mpc_icaSts"] == 1 &&
+           state["raw_oem"]["mrr_vSetDis"] == 160);
+    auto inactive = click("cruise_down");
+    assert(inactive.receipt["outcome"] == "no-change");
+    click("cruise_up");
+    assert(state["raw_oem"]["acc_mode"] == 3 && state["raw_oem"]["mrr_vSetDis"] == 160);
+
+    for (const auto &[name, value] : before["raw_oem"].items()) {
+        if (name != "acc_mode" && name != "mpc_icaSts" && name != "mrr_vSetDis" &&
+            name != "time_gap_set") {
+            assert(state["raw_oem"][name] == value);
+        }
+    }
+
+    auto brake = apply_patch(state, {{"vcu_brakePedalPressed", 1}});
+    auto reconciled = ecu.reconcile(brake);
+    assert(reconciled.receipt["reason"] == "brake-pressed" && reconciled.patch["acc_mode"] == 2 &&
+           apply_patch(brake, reconciled.patch)["raw_oem"]["mpc_icaSts"] == 1);
+    state = apply_patch(state, {{"gear", 0}});
+    auto standby = click("ica");
+    assert(standby.receipt["reason"] == "gear-not-drive" && state["raw_oem"]["acc_mode"] == 2 &&
+           state["raw_oem"]["mpc_icaSts"] == 2);
+    state = apply_patch(state, {{"cfg_tja_assis", 0}});
+    auto unavailable = click("ica");
+    assert(unavailable.receipt["outcome"] == "unavailable" && unavailable.patch.empty());
+    state = apply_patch(state, {{"cfg_acc", 0}});
+    assert(click("acc").receipt["reason"] == "acc-feature-disabled");
+    assert(click("distance").receipt["outcome"] == "unavailable");
+    state = apply_patch(ready, {{"acc_mode", 3}, {"mpc_icaSts", 1}, {"mrr_vSetDis", 260}});
+    auto bounded = click("cruise_up");
+    assert(bounded.receipt["reason"] == "target-bound" && bounded.patch.empty());
+    state = apply_patch(state, {{"mrr_vSetDis", 60}});
+    assert(click("cruise_down").receipt["reason"] == "target-bound");
+    state = apply_patch(state, {{"mrr_vSetDis", 161}});
+    assert(click("cruise_up").receipt["reason"] == "target-outside-policy");
+    state = apply_patch(state, {{"acc_mode", 7}});
+    auto fault = click("cancel");
+    assert(fault.receipt["outcome"] == "unavailable" && state["raw_oem"]["acc_mode"] == 7);
+    state = ready;
+    auto original = state;
+    auto held = ecu.input(state, ++sequence, "acc", "down", "ui-a", now);
+    assert(held.receipt["outcome"] == "held");
+    auto replay = ecu.input(state, sequence, "acc", "down", "ui-a", now + 10ms);
+    assert(replay.receipt["reason"] == "replayed-sequence");
+    auto foreign = ecu.input(state, ++sequence, "acc", "up", "ui-b", now + 20ms);
+    assert(foreign.receipt["reason"] == "release-owner-mismatch");
+    auto cancelled = ecu.input(state, ++sequence, "acc", "cancel", "ui-a", now + 30ms);
+    assert(cancelled.receipt["outcome"] == "cancelled" && state == original);
+    ecu.input(state, ++sequence, "acc", "down", "ui-a", now);
+    auto reverse = ecu.input(state, ++sequence, "acc", "up", "ui-a", now - 1ms);
+    assert(reverse.receipt["reason"] == "non-monotonic-time");
+    ecu.input(state, ++sequence, "acc", "down", "ui-a", now);
+    ecu.cancel_all();
+    ++sequence;
+    assert(ecu.input(state, sequence, "acc", "up", "ui-a", now + 20ms).receipt["reason"] ==
+           "release-owner-mismatch");
+    AdasEcu recovered;
+    state = apply_patch(
+            ready, {{"acc_mode", 0}, {"mpc_icaSts", 1}, {"mrr_vSetDis", 180}, {"time_gap_set", 2}});
+    recovered.input(state, 1, "cruise_up", "down", "ui-new", now);
+    auto resumed = recovered.input(state, 2, "cruise_up", "up", "ui-new", now + 100ms);
+    assert(resumed.patch["acc_mode"] == 3 && !resumed.patch.contains("mrr_vSetDis") &&
+           !resumed.patch.contains("speed"));
+    ++sequence;
+    assert(!ecu.input(state, sequence, "voice", "down", "ui-a", now).handled);
+    assert(AdasEcu::policy()["input_kind"] == "simulated-ecu" &&
+           AdasEcu::policy()["hold_repeat"] == false);
+    std::cout
+            << "ADAS physical phases, telemetry encoding, readiness, replay/owner/cancel, limits and recovery passed\n";
+} catch (const std::exception &error) {
+    std::cerr << error.what() << '\n';
+
+    return 1;
+}

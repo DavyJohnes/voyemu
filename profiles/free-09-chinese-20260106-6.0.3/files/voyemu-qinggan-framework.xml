@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<permissions>
+    <library name="QGAPI" file="/system/framework/QGAPI.jar" />
+    <library name="QGMOD" file="/system/framework/QGMOD.jar" />
+    <library name="QGVehicle" file="/system/framework/QGVehicle.jar" />
+</permissions>

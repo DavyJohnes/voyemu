@@ -1,0 +1,27 @@
+{
+  "api": 28,
+  "calls": [
+    {
+      "args": [
+        "Lcom/qinggan/util/NetUtil;->isNetworkConnected(Landroid/content/Context;)Z",
+        {
+          "edits": [
+            {
+              "replace": [
+                "const/16 v4, 0x9",
+                "invoke-virtual {v3, v4}, Landroid/net/ConnectivityManager;->getNetworkInfo(I)Landroid/net/NetworkInfo;"
+              ],
+              "with": [
+                "const/16 v4, 0x1",
+                "invoke-virtual {v3, v4}, Landroid/net/ConnectivityManager;->getNetworkInfo(I)Landroid/net/NetworkInfo;"
+              ]
+            }
+          ]
+        }
+      ],
+      "operation": "editMethod"
+    }
+  ],
+  "constants": {},
+  "schema": 1
+}

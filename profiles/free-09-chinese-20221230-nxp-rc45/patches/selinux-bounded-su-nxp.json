@@ -1,0 +1,16 @@
+{
+  "api": 28,
+  "calls": [],
+  "constants": {
+    "CARVEOUT": [
+      "(allow su system_data_file (file (relabelfrom)))",
+      "(allow su system_app_data_file (file (relabelto setattr unlink open write append)))",
+      "(allow su wallpaper_file (file (relabelto setattr open write append)))",
+      "(allow su system_server (binder (call)))",
+      "(allow su traced_enabled_prop (property_service (set)))"
+    ],
+    "MARKER": "; voyemu NXP bounded su",
+    "PERMISSIVE": "(typepermissive su)"
+  },
+  "schema": 1
+}

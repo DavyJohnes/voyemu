@@ -1,0 +1,37 @@
+# Voyemu C, C++ and Objective-C++ checks run by the tidy-check target. Headers are checked only under
+# src/, without pinned third-party code. Fix-its stay unformatted; the format target formats them.
+# Reserved identifier checking is disabled for feature-test macros. Signed bitwise checking is
+# disabled: C++20 defines two's-complement bitwise and shift results, while the check reports every
+# byte promoted to int and the signed flag constants of POSIX, Win32, SDL and Dear ImGui.
+---
+Checks: >
+  -*,
+  readability-braces-around-statements,
+  readability-else-after-return,
+  readability-redundant-control-flow,
+  bugprone-*,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-narrowing-conversions,
+  -bugprone-reserved-identifier,
+  -bugprone-signed-bitwise,
+  modernize-use-nullptr,
+  modernize-use-override,
+  hicpp-no-assembler
+WarningsAsErrors: '*'
+HeaderFilterRegex: '[/\\]src[/\\](app|dev|guest)[/\\]'
+ExcludeHeaderFilterRegex: '[/\\]src[/\\]app[/\\]third_party[/\\]'
+CheckOptions:
+  # Constant products are evaluated by the compiler, which rejects overflow.
+  bugprone-implicit-widening-of-multiplication-result.IgnoreConstantIntExpr: true
+  # QNX guest programs are single translation units over their .c parts, and white-box tests
+  # include the unit under test to reach its static functions.
+  bugprone-suspicious-include.IgnoredRegex: '\.(c|test\.cpp)$|(adb_host|graphics_main|qnx_windows_process_probe)\.cpp$'
+  # An intentionally empty handler states its reason in a comment that starts with "Ignored:".
+  bugprone-empty-catch.IgnoreCatchWithKeywords: '@TODO;@FIXME;Ignored:'
+  # value() checks engagement and throws; only unchecked dereferences are reported.
+  bugprone-unchecked-optional-access.IgnoreValueCalls: true
+  # The check already ignores std::bad_alloc; libc++ reports oversized allocations with these.
+  bugprone-exception-escape.IgnoredExceptions: 'bad_array_new_length,length_error'
+  # QNX6 images and guest cores are built in memory and reach tens of MiB.
+  bugprone-string-constructor.LargeLengthThreshold: 67108864
+FormatStyle: none

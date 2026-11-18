@@ -1,0 +1,11 @@
+# Text always uses LF
+* text=auto eol=lf
+*.json text eol=lf
+*.md text eol=lf
+
+# Binary files are never normalized; local inputs are excluded by .gitignore
+*.apk -text
+*.jar -text
+*.so -text
+*.zip -text
+*.img -text

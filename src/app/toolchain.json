@@ -1,0 +1,1105 @@
+{
+    "schema": 1,
+    "e2fsprogs": {
+        "version": "1.47.4",
+        "url": "https://downloads.sourceforge.net/project/e2fsprogs/e2fsprogs/v1.47.4/e2fsprogs-1.47.4.tar.gz",
+        "sha256": "2cec05f39c20ee621f14926195664e66e6017190ac8e4bbdb16d86082e43c5da",
+        "helpers": {
+            "darwin-arm64": {
+                "a9-offline-labels": {
+                    "url": "https://github.com/voyemu/voyemu/releases/download/e2fs-helpers-1ff7107f/a9-offline-labels-darwin-arm64",
+                    "sha256": "05651736f53dc892cdc464fdd947b4755c147085599764401338ec0c4c5d6294"
+                },
+                "api30-root-layout": {
+                    "url": "https://github.com/voyemu/voyemu/releases/download/e2fs-helpers-1ff7107f/api30-root-layout-darwin-arm64",
+                    "sha256": "a27b219e62263b28bf9ce40c2405af5156d36a84133983a239a784680f6d6b35"
+                }
+            },
+            "linux-x64": {
+                "a9-offline-labels": {
+                    "url": "https://github.com/voyemu/voyemu/releases/download/e2fs-helpers-1ff7107f/a9-offline-labels-linux-x64",
+                    "sha256": "cc42f32fb819452a7c76bd6ec30b858f6312bf777e4f0c31d827cf29b7464cfe"
+                },
+                "api30-root-layout": {
+                    "url": "https://github.com/voyemu/voyemu/releases/download/e2fs-helpers-1ff7107f/api30-root-layout-linux-x64",
+                    "sha256": "fd10623bbeb6ebb7f59115cd865b35faf61a7cc1ec24ae075e782e2c7580ed2d"
+                }
+            },
+            "win32-x64": {
+                "a9-offline-labels": {
+                    "url": "https://github.com/voyemu/voyemu/releases/download/e2fs-helpers-1ff7107f/a9-offline-labels-win32-x64",
+                    "sha256": "16f5644d42c4a6d4966e6be8f966f60ea79b7526707a3adc816265de4572cd79"
+                },
+                "api30-root-layout": {
+                    "url": "https://github.com/voyemu/voyemu/releases/download/e2fs-helpers-1ff7107f/api30-root-layout-win32-x64",
+                    "sha256": "ab0ed08fa9a208cb4910eed8175bae0b37f7003e6f5f58f65317bdee6d7872fe"
+                }
+            }
+        }
+    },
+    "qnxGuestModules": {
+        "sa8155-qinggan09": {
+            "initialNativeState": {},
+            "files": {
+                "front.so": {
+                    "url": "https://github.com/voyemu/voyemu/releases/download/qnx-guest-7a6686a3/sa8155-qinggan09-front.so",
+                    "sha256": "32fad9c35d98db51bb33167e542e3df32487c4cb60d169d9acebe344de34e2b9"
+                },
+                "observer.so": {
+                    "url": "https://github.com/voyemu/voyemu/releases/download/qnx-guest-7a6686a3/sa8155-qinggan09-observer.so",
+                    "sha256": "3ba316bf2b5ffd7292ca5a2e8eaaa16a428fa1fcc8a71e751c0a7ad74e937cc5"
+                },
+                "virtual_wfd.so": {
+                    "url": "https://github.com/voyemu/voyemu/releases/download/qnx-guest-7a6686a3/sa8155-qinggan09-virtual_wfd.so",
+                    "sha256": "5aeaf419acbe25f44a5bf393ecbe9b00c24e3d6d444bb92fe1006dd1fc83eed3"
+                },
+                "readstub.bin": {
+                    "url": "https://github.com/voyemu/voyemu/releases/download/qnx-guest-7a6686a3/sa8155-qinggan09-readstub.bin",
+                    "sha256": "9df19b08fdf35b39cd2e8f30cd4d678baa05946829130174a7c6d33de1069ff7"
+                },
+                "qnx-ipl-virt.bin": {
+                    "url": "https://github.com/voyemu/voyemu/releases/download/qnx-guest-7a6686a3/sa8155-qinggan09-qnx-ipl-virt.bin",
+                    "sha256": "923213787f5d049536bc7abf0fc3e57d9cf06acef7da6c26275266545224ad11"
+                },
+                "qnx-ifs2-restore.bin": {
+                    "url": "https://github.com/voyemu/voyemu/releases/download/qnx-guest-7a6686a3/sa8155-qinggan09-qnx-ifs2-restore.bin",
+                    "sha256": "340d484fa81e7219b4905154df22255ed539567e8d730ce977ad9d40a8a3643a"
+                }
+            }
+        },
+        "sa8155-qinggan11-731": {
+            "initialNativeState": {
+                "eps_calibrationFlag": 1
+            },
+            "files": {
+                "front.so": {
+                    "url": "https://github.com/voyemu/voyemu/releases/download/qnx-guest-7a6686a3/sa8155-qinggan11-731-front.so",
+                    "sha256": "3fc20af9914aa473a19bfb9db2430f952aefca5584fb9bfa313bff797fd32333"
+                },
+                "observer.so": {
+                    "url": "https://github.com/voyemu/voyemu/releases/download/qnx-guest-7a6686a3/sa8155-qinggan11-731-observer.so",
+                    "sha256": "3ba316bf2b5ffd7292ca5a2e8eaaa16a428fa1fcc8a71e751c0a7ad74e937cc5"
+                },
+                "virtual_wfd.so": {
+                    "url": "https://github.com/voyemu/voyemu/releases/download/qnx-guest-7a6686a3/sa8155-qinggan11-731-virtual_wfd.so",
+                    "sha256": "5aeaf419acbe25f44a5bf393ecbe9b00c24e3d6d444bb92fe1006dd1fc83eed3"
+                },
+                "readstub.bin": {
+                    "url": "https://github.com/voyemu/voyemu/releases/download/qnx-guest-7a6686a3/sa8155-qinggan11-731-readstub.bin",
+                    "sha256": "9df19b08fdf35b39cd2e8f30cd4d678baa05946829130174a7c6d33de1069ff7"
+                },
+                "qnx-ipl-virt.bin": {
+                    "url": "https://github.com/voyemu/voyemu/releases/download/qnx-guest-7a6686a3/sa8155-qinggan11-731-qnx-ipl-virt.bin",
+                    "sha256": "dd529f8904c688c3acd1c20ac41189b3040038eb4ab16632beea8d813db494a4"
+                },
+                "qnx-ifs2-restore.bin": {
+                    "url": "https://github.com/voyemu/voyemu/releases/download/qnx-guest-7a6686a3/sa8155-qinggan11-731-qnx-ifs2-restore.bin",
+                    "sha256": "40f1e305df9ab2642351b1cdd192d85c1e02d759d18482d27a85ef5c86d77f02"
+                },
+                "qnx-pl011-console.bin": {
+                    "url": "https://github.com/voyemu/voyemu/releases/download/qnx-guest-7a6686a3/sa8155-qinggan11-731-qnx-pl011-console.bin",
+                    "sha256": "24afb56593764d8ba78de9c21a7faef4fcba39aeef6905009d6af777b2c6652e"
+                }
+            }
+        },
+        "sa8155-qinggan11-611": {
+            "initialNativeState": {
+                "eps_calibrationFlag": 1
+            },
+            "files": {
+                "front.so": {
+                    "url": "https://github.com/voyemu/voyemu/releases/download/qnx-guest-7a6686a3/sa8155-qinggan11-611-front.so",
+                    "sha256": "7100f1aead1f22e72f7f53de86fa5b025a8332d4fdd3e9c6066fb1e959d1df12"
+                },
+                "observer.so": {
+                    "url": "https://github.com/voyemu/voyemu/releases/download/qnx-guest-7a6686a3/sa8155-qinggan11-611-observer.so",
+                    "sha256": "3ba316bf2b5ffd7292ca5a2e8eaaa16a428fa1fcc8a71e751c0a7ad74e937cc5"
+                },
+                "virtual_wfd.so": {
+                    "url": "https://github.com/voyemu/voyemu/releases/download/qnx-guest-7a6686a3/sa8155-qinggan11-611-virtual_wfd.so",
+                    "sha256": "5aeaf419acbe25f44a5bf393ecbe9b00c24e3d6d444bb92fe1006dd1fc83eed3"
+                },
+                "readstub.bin": {
+                    "url": "https://github.com/voyemu/voyemu/releases/download/qnx-guest-7a6686a3/sa8155-qinggan11-611-readstub.bin",
+                    "sha256": "9df19b08fdf35b39cd2e8f30cd4d678baa05946829130174a7c6d33de1069ff7"
+                },
+                "qnx-ipl-virt.bin": {
+                    "url": "https://github.com/voyemu/voyemu/releases/download/qnx-guest-7a6686a3/sa8155-qinggan11-611-qnx-ipl-virt.bin",
+                    "sha256": "dd529f8904c688c3acd1c20ac41189b3040038eb4ab16632beea8d813db494a4"
+                },
+                "qnx-ifs2-restore.bin": {
+                    "url": "https://github.com/voyemu/voyemu/releases/download/qnx-guest-7a6686a3/sa8155-qinggan11-611-qnx-ifs2-restore.bin",
+                    "sha256": "40f1e305df9ab2642351b1cdd192d85c1e02d759d18482d27a85ef5c86d77f02"
+                },
+                "qnx-pl011-console.bin": {
+                    "url": "https://github.com/voyemu/voyemu/releases/download/qnx-guest-7a6686a3/sa8155-qinggan11-611-qnx-pl011-console.bin",
+                    "sha256": "24afb56593764d8ba78de9c21a7faef4fcba39aeef6905009d6af777b2c6652e"
+                }
+            }
+        },
+        "sa8155-passion-21480": {
+            "initialNativeState": {},
+            "files": {
+                "front.so": {
+                    "url": "https://github.com/voyemu/voyemu/releases/download/qnx-guest-7a6686a3/sa8155-passion-21480-front.so",
+                    "sha256": "6792440595b454b83ddebd4233f0540f723a03664f89c06b5ec674c78957873d"
+                },
+                "bounded.so": {
+                    "url": "https://github.com/voyemu/voyemu/releases/download/qnx-guest-7a6686a3/sa8155-passion-21480-bounded.so",
+                    "sha256": "706837f8148f4d66bc247fa12a9108d0e7b4de559468ce5139fd2c2b035289bb"
+                },
+                "ram64.so": {
+                    "url": "https://github.com/voyemu/voyemu/releases/download/qnx-guest-7a6686a3/sa8155-passion-21480-ram64.so",
+                    "sha256": "a46d53fbe1ea7988ba371c29346f8731105c55ffc68b90e260ed32f0b9b26a7b"
+                },
+                "virtual_wfd.so": {
+                    "url": "https://github.com/voyemu/voyemu/releases/download/qnx-guest-7a6686a3/sa8155-passion-21480-virtual_wfd.so",
+                    "sha256": "5aeaf419acbe25f44a5bf393ecbe9b00c24e3d6d444bb92fe1006dd1fc83eed3"
+                },
+                "readstub.bin": {
+                    "url": "https://github.com/voyemu/voyemu/releases/download/qnx-guest-7a6686a3/sa8155-passion-21480-readstub.bin",
+                    "sha256": "f42193e05bce0086d1fa4ef8f7baacf1b01a60f8ca4afe6348e342661edd68cf"
+                },
+                "qnx-ipl-virt.bin": {
+                    "url": "https://github.com/voyemu/voyemu/releases/download/qnx-guest-7a6686a3/sa8155-passion-21480-qnx-ipl-virt.bin",
+                    "sha256": "2c556d75351c0bffd35038bf3b1cff019a165e967988839a63351bf55e0c76e7"
+                },
+                "qnx-ifs2-restore.bin": {
+                    "url": "https://github.com/voyemu/voyemu/releases/download/qnx-guest-7a6686a3/sa8155-passion-21480-qnx-ifs2-restore.bin",
+                    "sha256": "40f1e305df9ab2642351b1cdd192d85c1e02d759d18482d27a85ef5c86d77f02"
+                },
+                "qnx-pl011-console.bin": {
+                    "url": "https://github.com/voyemu/voyemu/releases/download/qnx-guest-7a6686a3/sa8155-passion-21480-qnx-pl011-console.bin",
+                    "sha256": "24afb56593764d8ba78de9c21a7faef4fcba39aeef6905009d6af777b2c6652e"
+                },
+                "qnx-passion-ifs2-copy.bin": {
+                    "url": "https://github.com/voyemu/voyemu/releases/download/qnx-guest-7a6686a3/sa8155-passion-21480-qnx-passion-ifs2-copy.bin",
+                    "sha256": "c5fc787c631eb2a03376c4b759f22b7343f4de07700c114cb968d0bf1d61cc81"
+                }
+            }
+        }
+    },
+    "androidJava": {
+        "url": "https://github.com/voyemu/voyemu/releases/download/android-java-7fe9f786/android-java.zip",
+        "sha256": "c04a3cc9d77be5f3b9ad6284ffe3eaf63e8a3c832f0023a1d80cb333a5fafab4"
+    },
+    "androidNativeComponents": {
+        "free-09-chinese-20221230-nxp-rc45/qg-runtime": {
+            "url": "https://github.com/voyemu/voyemu/releases/download/android-native-fb251cf9/free-09-chinese-20221230-nxp-rc45-qg-runtime-libqg_runtime.so",
+            "sha256": "17ca298e3db09d06303f6a0d392f6bb4c199311a6367dca61ed79caff91cdd9d"
+        },
+        "free-09-chinese-20221230-nxp-rc45/multidisplay-jni": {
+            "url": "https://github.com/voyemu/voyemu/releases/download/android-native-fb251cf9/free-09-chinese-20221230-nxp-rc45-multidisplay-jni-libemulator_multidisplay_jni.so",
+            "sha256": "4ac14e818f813bc73a87e06275aa0291c007c322f9c56eec5adde9cb112083dc"
+        },
+        "free-09-chinese-20221230-nxp-rc45/multidisplay-shim": {
+            "url": "https://github.com/voyemu/voyemu/releases/download/android-native-fb251cf9/free-09-chinese-20221230-nxp-rc45-multidisplay-shim-libemulator_md_shim.so",
+            "sha256": "c947b51dbe077e3d01cded595a3f041089dc85e788ea319dad6d17dfbf4f47bd"
+        },
+        "free-09-chinese-20221230-nxp-rc45/qgime-handwrite": {
+            "url": "https://github.com/voyemu/voyemu/releases/download/android-native-fb251cf9/free-09-chinese-20221230-nxp-rc45-qgime-handwrite-libjni_qgHandWrite.so",
+            "sha256": "3fbec5cb99c106d685ee5cc3d15067b8646cd54a726cd7981356b111f3ae664c"
+        },
+        "free-09-chinese-20221230-nxp-rc45/qgime-pinyin": {
+            "url": "https://github.com/voyemu/voyemu/releases/download/android-native-fb251cf9/free-09-chinese-20221230-nxp-rc45-qgime-pinyin-libjni_qgime.so",
+            "sha256": "841f52334cdd55340a75dc7e11ce3f331843312a358e65e695811e390e9b0ae8"
+        },
+        "free-09-chinese-20260106-6.0.3/qg-runtime": {
+            "url": "https://github.com/voyemu/voyemu/releases/download/android-native-fb251cf9/free-09-chinese-20260106-6.0.3-qg-runtime-libqg_runtime.so",
+            "sha256": "17ca298e3db09d06303f6a0d392f6bb4c199311a6367dca61ed79caff91cdd9d"
+        },
+        "free-09-chinese-20260106-6.0.3/can-simulator": {
+            "url": "https://github.com/voyemu/voyemu/releases/download/android-native-fb251cf9/free-09-chinese-20260106-6.0.3-can-simulator-voyemu-can-model",
+            "sha256": "6e4c6f68bd3734c30f359845089bfd5503ba4ff2074afc9187df71892426d65e"
+        },
+        "free-09-chinese-20260106-6.0.3/early-inputs": {
+            "url": "https://github.com/voyemu/voyemu/releases/download/android-native-fb251cf9/free-09-chinese-20260106-6.0.3-early-inputs-voyemu-early-inputs",
+            "sha256": "60917b81d8c0f87db2ad80ff7983d766b13590b072950df9554805e81bf63df3"
+        },
+        "free-09-chinese-20260106-6.0.3/multidisplay-shim": {
+            "url": "https://github.com/voyemu/voyemu/releases/download/android-native-fb251cf9/free-09-chinese-20260106-6.0.3-multidisplay-shim-libemulator_md_shim.so",
+            "sha256": "c947b51dbe077e3d01cded595a3f041089dc85e788ea319dad6d17dfbf4f47bd"
+        },
+        "free-09-chinese-20260106-6.0.3/multidisplay-jni": {
+            "url": "https://github.com/voyemu/voyemu/releases/download/android-native-fb251cf9/free-09-chinese-20260106-6.0.3-multidisplay-jni-libemulator_multidisplay_jni.so",
+            "sha256": "4ac14e818f813bc73a87e06275aa0291c007c322f9c56eec5adde9cb112083dc"
+        },
+        "free-09-chinese-20260106-6.0.3/qgime-handwrite": {
+            "url": "https://github.com/voyemu/voyemu/releases/download/android-native-fb251cf9/free-09-chinese-20260106-6.0.3-qgime-handwrite-libjni_qgHandWrite.so",
+            "sha256": "3fbec5cb99c106d685ee5cc3d15067b8646cd54a726cd7981356b111f3ae664c"
+        },
+        "free-09-chinese-20260106-6.0.3/qgime-pinyin": {
+            "url": "https://github.com/voyemu/voyemu/releases/download/android-native-fb251cf9/free-09-chinese-20260106-6.0.3-qgime-pinyin-libjni_qgime.so",
+            "sha256": "841f52334cdd55340a75dc7e11ce3f331843312a358e65e695811e390e9b0ae8"
+        },
+        "free-09-chinese-20260106-6.0.3/can-model-observer": {
+            "url": "https://github.com/voyemu/voyemu/releases/download/android-native-fb251cf9/free-09-chinese-20260106-6.0.3-can-model-observer-voyemu-can-model-observer",
+            "sha256": "6fec6e83351938a496e57bba98afc53ed7637781acbbe2b05b2ada1ba35d4151"
+        },
+        "free-11-chinese-20250710-6.11.1/early-inputs": {
+            "url": "https://github.com/voyemu/voyemu/releases/download/android-native-fb251cf9/free-11-chinese-20250710-6.11.1-early-inputs-voyemu-early-inputs",
+            "sha256": "e8a9c96a9697e9a6c82707add9712818cb70c09d0f5e6122b92d52604eb9b879"
+        },
+        "free-11-chinese-20250710-6.11.1/can-model-observer": {
+            "url": "https://github.com/voyemu/voyemu/releases/download/android-native-fb251cf9/free-11-chinese-20250710-6.11.1-can-model-observer-voyemu-can-model-observer",
+            "sha256": "ee12141dd0156b47f32b823d91bc1db36ca5d236ae7b51735f64e8b4bb8326f2"
+        },
+        "free-11-chinese-20250710-6.11.1/can-simulator": {
+            "url": "https://github.com/voyemu/voyemu/releases/download/android-native-fb251cf9/free-11-chinese-20250710-6.11.1-can-simulator-voyemu-can-model",
+            "sha256": "9c99379ac09399d06bffd8a5be1073988704b04919a8c2b0776c1a3dd1eec86c"
+        },
+        "free-11-chinese-20250710-6.11.1/qg-runtime": {
+            "url": "https://github.com/voyemu/voyemu/releases/download/android-native-fb251cf9/free-11-chinese-20250710-6.11.1-qg-runtime-libqg_runtime.so",
+            "sha256": "17ca298e3db09d06303f6a0d392f6bb4c199311a6367dca61ed79caff91cdd9d"
+        },
+        "free-11-chinese-20260731-7.3.1/qg-runtime": {
+            "url": "https://github.com/voyemu/voyemu/releases/download/android-native-fb251cf9/free-11-chinese-20260731-7.3.1-qg-runtime-libqg_runtime.so",
+            "sha256": "17ca298e3db09d06303f6a0d392f6bb4c199311a6367dca61ed79caff91cdd9d"
+        },
+        "free-11-chinese-20260731-7.3.1/can-simulator": {
+            "url": "https://github.com/voyemu/voyemu/releases/download/android-native-fb251cf9/free-11-chinese-20260731-7.3.1-can-simulator-voyemu-can-model",
+            "sha256": "9c99379ac09399d06bffd8a5be1073988704b04919a8c2b0776c1a3dd1eec86c"
+        },
+        "free-11-chinese-20260731-7.3.1/early-inputs": {
+            "url": "https://github.com/voyemu/voyemu/releases/download/android-native-fb251cf9/free-11-chinese-20260731-7.3.1-early-inputs-voyemu-early-inputs",
+            "sha256": "e8a9c96a9697e9a6c82707add9712818cb70c09d0f5e6122b92d52604eb9b879"
+        },
+        "free-11-chinese-20260731-7.3.1/can-model-observer": {
+            "url": "https://github.com/voyemu/voyemu/releases/download/android-native-fb251cf9/free-11-chinese-20260731-7.3.1-can-model-observer-voyemu-can-model-observer",
+            "sha256": "ee12141dd0156b47f32b823d91bc1db36ca5d236ae7b51735f64e8b4bb8326f2"
+        }
+    },
+    "java": {
+        "version": "25.0.5",
+        "release": 8
+    },
+    "javaHelper": {
+        "url": "https://github.com/voyemu/voyemu/releases/download/java-helper-4b266973/java-helper.zip",
+        "sha256": "d52f0edbbf375053a337a8edc9661e4018ed74773b4029bb25aae6ece730e279"
+    },
+    "javaRuntime": {
+        "version": "25.0.5+8",
+        "modules": [
+            "java.base",
+            "java.logging",
+            "java.net.http",
+            "jdk.unsupported"
+        ],
+        "jmods": {
+            "darwin-arm64": {
+                "url": "https://github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.5%2B8/OpenJDK25U-jmods_aarch64_mac_hotspot_25.0.5_8.tar.gz",
+                "sha256": "7a6f29625e7df123f33ad8b0d2253fc2d786bad74fe34c1f36346ee676abed53"
+            },
+            "linux-x64": {
+                "url": "https://github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.5%2B8/OpenJDK25U-jmods_x64_linux_hotspot_25.0.5_8.tar.gz",
+                "sha256": "7f29246c5da4e4b0b0737f22001c6369dfb6913630bea2c3f49127ce53c98a0c"
+            },
+            "win32-x64": {
+                "url": "https://github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.5%2B8/OpenJDK25U-jmods_x64_windows_hotspot_25.0.5_8.zip",
+                "sha256": "09a8df20d57da0f4807e219798f0e76c0a24c70dc23595115f8cf26c53fd2727"
+            }
+        },
+        "assets": {
+            "darwin-arm64": {
+                "url": "https://github.com/voyemu/voyemu/releases/download/java-runtime-c7407d0f/java-runtime-darwin-arm64.zip",
+                "sha256": "efbb210a7e49cc370762269233f1572a080c3a069106451c6422a6334c32e3f9"
+            },
+            "linux-x64": {
+                "url": "https://github.com/voyemu/voyemu/releases/download/java-runtime-c7407d0f/java-runtime-linux-x64.zip",
+                "sha256": "0b53578c680a0de0f8e5c72f39ed4b8bcae18fb35e6b07f924a9f397605f83bc"
+            },
+            "win32-x64": {
+                "url": "https://github.com/voyemu/voyemu/releases/download/java-runtime-c7407d0f/java-runtime-win32-x64.zip",
+                "sha256": "cf72b6399cfb221f7d0026cd637085cb87dcb78f6ceffca51508ad0f0210cb09"
+            }
+        }
+    },
+    "sdk": {
+        "commandLineTools": "19.0",
+        "platformTools": "36.0.0",
+        "emulator": "36.3.10",
+        "buildTools": "36.1.0",
+        "compileSdk": 34,
+        "platformRevision": "3",
+        "platformJar": {
+            "sha256": "6cea1df3efb77103ac3e2beb9bf4718964b0e0869ab16d39d29d5cbae1c147ad",
+            "bytes": 26361808
+        },
+        "runtimeFilePins": {
+            "darwin": {
+                "arm64": {
+                    "platformToolsVersion": "36.0.0",
+                    "emulatorVersion": "36.3.10",
+                    "platformToolsArchiveSha256": "d3e9fa1df3345cf728586908426615a60863d2632f73f1ce14f0f1349ef000fd",
+                    "emulatorArchiveSha256": "f285a4974c3352a1c0026ae76fe53b06a02d71d0e13ebbab79a928af1f86d3a2",
+                    "files": {
+                        "platform-tools/adb": "0e8bb380b1993eac9d2433a05d92a33035971cd25542b1c36b3537ddd6defe94",
+                        "emulator/emulator": "ef55321a27b3aaaa33f43d6555774546c807fbc8e7028f7fee40e2dae590023d",
+                        "emulator/qemu-img": "b8114a2ad5a1323a95497410eb24f2f52b731695ae54f2e3e8f01c4b2063f4bd",
+                        "emulator/qemu/darwin-aarch64/qemu-system-aarch64": "43a4249f8c3c7b93e2e25cbe31ae8120dfc8f61c177e55729a2cad5fdef4303b",
+                        "emulator/qemu/darwin-aarch64/qemu-system-aarch64-headless": "f25edcd582d594447e65bbc4b8907675986850e970c6e71c2eeca97e0209b180",
+                        "emulator/bin64/e2fsck": "eaf7bb8d08b46b72f67b7e33b49f7dcdfb2a1c12924356c1f0b552a6a00f4319",
+                        "emulator/lib64/gles_angle/libEGL.dylib": "0d7cc32aebe18e3dc12656a122af6a923a41c7178b5d60c4dbea476dc55cd7a2",
+                        "emulator/lib64/gles_angle/libGLESv2.dylib": "0d4eefcdaf24f9eac7194171403ad8ebcd73bd4d94bc23d932099ef9fd12b7f3"
+                    }
+                }
+            },
+            "linux": {
+                "x64": {
+                    "emulatorVersion": "36.3.10",
+                    "emulatorArchiveSha256": "c8ab9ffbc4c2d11c02e06e81a9d9f81970177dc5ab599e3a30eb08a4a5496a67",
+                    "files": {
+                        "emulator/lib64/gles_angle/libEGL.so": "47c86444df8aa5309e98ecd2946760281bfd1a036be22b8a61fa1a10886e2902",
+                        "emulator/lib64/gles_angle/libGLESv2.so": "8286cae2fec6022fcd6f5c73fbc9e5713291691b1fef87622366541c89da2cc8",
+                        "emulator/lib64/gles_angle/libvulkan.so.1": "dd2c8c5a1410f58b793745dccf3de599c81f92e950d3a1ac6c4ad85823b51217"
+                    }
+                }
+            },
+            "win32": {
+                "x64": {
+                    "emulatorVersion": "36.3.10",
+                    "emulatorArchiveSha256": "fbd5e54c868f66de78fa3a8b811daaa58262caddf8920271a63f77386cce21ca",
+                    "files": {
+                        "emulator/bin64/e2fsck.exe": "924135d3c8d48ddbda9cc9691f491fbfa0b5f9f6edbe40abc09ffb4f1dcb5d55",
+                        "emulator/source.properties": "29bd3ff3cad33cd40ae43b89ac53bb7728037ab3bf4d69e27a0defd8082ce540",
+                        "emulator/lib64/gles_angle/d3dcompiler_47.dll": "e55f571a1b980ec2f1a84671c05d46a79de48117e87cb0d8c911dc2f4ccbcf13",
+                        "emulator/lib64/gles_angle/libEGL.dll": "931f5576260c77f06dd9a8dc17d762af19656c869f0b185c17dbe6f612273326",
+                        "emulator/lib64/gles_angle/libGLESv2.dll": "e7b36bec7d7d40a7380aecf9a0781e35c15417a75305f593aea7dff904e48829",
+                        "emulator/lib64/gles_angle/vk_swiftshader.dll": "97a3b554b1cc7a9508285809c8ea4f3d4ec16514168d174e0dc157744a510314",
+                        "emulator/lib64/gles_angle/vk_swiftshader_icd.json": "32d83ff113fef532a9f97e0d2831f8656628ab1c99e9060f0332b1532839afd9",
+                        "emulator/lib64/gles_angle/vulkan-1.dll": "e30437780debf5f1ad1c446f1ebd70c59763111b501ad347c474059f728d868e"
+                    },
+                    "fileBytes": {
+                        "emulator/source.properties": 103,
+                        "emulator/lib64/gles_angle/d3dcompiler_47.dll": 4917400,
+                        "emulator/lib64/gles_angle/libEGL.dll": 470168,
+                        "emulator/lib64/gles_angle/libGLESv2.dll": 12488856,
+                        "emulator/lib64/gles_angle/vk_swiftshader.dll": 4323992,
+                        "emulator/lib64/gles_angle/vk_swiftshader_icd.json": 106,
+                        "emulator/lib64/gles_angle/vulkan-1.dll": 934040
+                    }
+                }
+            }
+        },
+        "archives": {
+            "darwin": {
+                "commandLineTools": {
+                    "url": "https://dl.google.com/android/repository/commandlinetools-mac-13114758_latest.zip",
+                    "sha256": "5673201e6f3869f418eeed3b5cb6c4be7401502bd0aae1b12a29d164d647a54e"
+                },
+                "platformTools": {
+                    "url": "https://dl.google.com/android/repository/platform-tools_r36.0.0-darwin.zip",
+                    "sha256": "d3e9fa1df3345cf728586908426615a60863d2632f73f1ce14f0f1349ef000fd"
+                },
+                "emulatorByArch": {
+                    "arm64": {
+                        "url": "https://dl.google.com/android/repository/emulator-darwin_aarch64-14472402.zip",
+                        "sha256": "f285a4974c3352a1c0026ae76fe53b06a02d71d0e13ebbab79a928af1f86d3a2"
+                    },
+                    "x64": {
+                        "url": "https://dl.google.com/android/repository/emulator-darwin_x64-14472402.zip",
+                        "sha256": "a01025b471a9ac0ef0fbd59febd0c1cfdeb2e889cc6fedc7ea881239bd8bb9a4"
+                    }
+                },
+                "buildTools": {
+                    "url": "https://dl.google.com/android/repository/build-tools_r36.1_macosx.zip",
+                    "sha256": "cc56be1d4ea95041f32f4ebf3a4f5c6b990c7749d706852395006b5654eb82ff"
+                },
+                "previousBuildTools": {
+                    "version": "34.0.0",
+                    "url": "https://dl.google.com/android/repository/build-tools_r34-macosx.zip",
+                    "sha256": "76bf668fe037b1a69197e298ddae5633d4d7f0f41af7ed17e537c80c1ed8a6f3"
+                },
+                "platform": {
+                    "url": "https://dl.google.com/android/repository/platform-34-ext7_r03.zip",
+                    "sha256": "16fdb74c55e59ae3ef52def135aec713508467bd56d7dabcd8c9be31fa8b20f3"
+                },
+                "ndk": {
+                    "url": "https://dl.google.com/android/repository/android-ndk-r29-darwin.zip",
+                    "sha256": "ce5e4b100ec5fe5be4eb3edcb2c02528824ff9cda3860f5304619be6c3da34d3",
+                    "archive_bytes": 1049519838,
+                    "inventory_sha256": "2aff1d0cd1d5595e93559662dd6c54dd452557915a27318f1cbaa510e04cf8e7"
+                },
+                "cmake": {
+                    "url": "https://dl.google.com/android/repository/cmake-3.22.1-darwin.zip",
+                    "sha256": "c25d4072e70bbae1bfb0483a85c9237e4c7ceebfd67fe77bbe87d79571f0394f"
+                }
+            },
+            "linux": {
+                "commandLineTools": {
+                    "url": "https://dl.google.com/android/repository/commandlinetools-linux-13114758_latest.zip",
+                    "sha256": "7ec965280a073311c339e571cd5de778b9975026cfcbe79f2b1cdcb1e15317ee"
+                },
+                "platformTools": {
+                    "url": "https://dl.google.com/android/repository/platform-tools_r36.0.0-linux.zip",
+                    "sha256": "0ead642c943ffe79701fccca8f5f1c69c4ce4f43df2eefee553f6ccb27cbfbe8"
+                },
+                "emulator": {
+                    "url": "https://dl.google.com/android/repository/emulator-linux_x64-14472402.zip",
+                    "sha256": "c8ab9ffbc4c2d11c02e06e81a9d9f81970177dc5ab599e3a30eb08a4a5496a67"
+                },
+                "buildTools": {
+                    "url": "https://dl.google.com/android/repository/build-tools_r36.1_linux.zip",
+                    "sha256": "a7b5889e4a79fcf3b0976bef40d401f4240fb1eed891d9d91169da1111e11d78"
+                },
+                "platform": {
+                    "url": "https://dl.google.com/android/repository/platform-34-ext7_r03.zip",
+                    "sha256": "16fdb74c55e59ae3ef52def135aec713508467bd56d7dabcd8c9be31fa8b20f3"
+                },
+                "ndk": {
+                    "url": "https://dl.google.com/android/repository/android-ndk-r29-linux.zip",
+                    "sha256": "4abbbcdc842f3d4879206e9695d52709603e52dd68d3c1fff04b3b5e7a308ecf",
+                    "archive_bytes": 783549481,
+                    "inventory_sha256": "f95b9b4bf38b06f50ebf0dc898caa74c258309d54c8e979870fc8fd46d2476fd"
+                },
+                "cmake": {
+                    "url": "https://dl.google.com/android/repository/cmake-3.22.1-linux.zip",
+                    "sha256": "9196644852a978012caf7a4067ba1898debf6cc204c3341562771e31080d6869"
+                }
+            },
+            "win32": {
+                "commandLineTools": {
+                    "url": "https://dl.google.com/android/repository/commandlinetools-win-13114758_latest.zip",
+                    "sha256": "98b565cb657b012dae6794cefc0f66ae1efb4690c699b78a614b4a6a3505b003"
+                },
+                "platformTools": {
+                    "url": "https://dl.google.com/android/repository/platform-tools_r36.0.0-win.zip",
+                    "sha256": "12c2841f354e92a0eb2fd7bf6f0f9bf8538abce7bd6b060ac8349d6f6a61107c"
+                },
+                "emulator": {
+                    "url": "https://dl.google.com/android/repository/emulator-windows_x64-14472402.zip",
+                    "sha256": "fbd5e54c868f66de78fa3a8b811daaa58262caddf8920271a63f77386cce21ca"
+                },
+                "buildTools": {
+                    "url": "https://dl.google.com/android/repository/build-tools_r36.1_windows.zip",
+                    "sha256": "23189d2d52b40a070a05e9cf7e497c9563f67fee76902e8fd3135ef29ef4dbeb"
+                },
+                "previousBuildTools": {
+                    "version": "34.0.0",
+                    "url": "https://dl.google.com/android/repository/build-tools_r34-windows.zip",
+                    "sha256": "9be665ad74ef22bf0e489b37db465074484df79b95f26d759945d5c25a47b326"
+                },
+                "platform": {
+                    "url": "https://dl.google.com/android/repository/platform-34-ext7_r03.zip",
+                    "sha256": "16fdb74c55e59ae3ef52def135aec713508467bd56d7dabcd8c9be31fa8b20f3"
+                },
+                "ndk": {
+                    "url": "https://dl.google.com/android/repository/android-ndk-r29-windows.zip",
+                    "sha256": "4f83a1a87ea0d33ae2b43812ce27b768be949bc78acf90b955134d19e3068f1c",
+                    "archive_bytes": 833850862,
+                    "inventory_sha256": "be066a5eeccc3f6c743e92ba4187e48d5432c8399caaea3902eec19d33b5d6d0"
+                },
+                "cmake": {
+                    "url": "https://dl.google.com/android/repository/cmake-3.22.1-windows.zip",
+                    "sha256": "c9a9d568452a20cf27d703cb21ef9529dd67bda6be048c4d4b884acb3ac3a2b8"
+                }
+            }
+        }
+    },
+    "native": {
+        "ndk": "29.0.14206865",
+        "cmake": "3.22.1",
+        "ninja": "1.10.2"
+    },
+    "optionalTools": {
+        "jars": {
+            "apktool": {
+                "version": "2.12.1",
+                "sha256": "66cf4524a4a45a7f56567d08b2c9b6ec237bcdd78cee69fd4a59c8a0243aeafa",
+                "url": "https://github.com/iBotPeaches/Apktool/releases/download/v2.12.1/apktool_2.12.1.jar"
+            },
+            "smali": {
+                "version": "2.5.2",
+                "sha256": "9544299578b16f771d8aa8eaefe0d3718ca03478c16f3c356f2fcf1366bfb116",
+                "url": "https://bitbucket.org/JesusFreke/smali/downloads/smali-2.5.2.jar"
+            },
+            "baksmali": {
+                "version": "2.5.2",
+                "sha256": "d3116248cce4f82ec5a31eb7f95ee75daff42ddf6eed0ab573973dc53fbad2e5",
+                "url": "https://bitbucket.org/JesusFreke/smali/downloads/baksmali-2.5.2.jar"
+            }
+        },
+        "clangFormat": {
+            "version": "23.1.3",
+            "directory": ".local/toolchains/clang-format-23.1.3",
+            "binary": "clang_format/data/bin/clang-format",
+            "archives": {
+                "darwin-arm64": {
+                    "url": "https://files.pythonhosted.org/packages/47/a5/2007b7a7a53dfe417e66d0a6b38b2f87f16391bfe6fe522d436d1e50be1c/clang_format-23.1.3-py2.py3-none-macosx_11_0_arm64.whl",
+                    "sha256": "79f53ac55434af6dda88eb90eeb65d903ff920c910f78041de41e3ca666dfba5"
+                },
+                "win32-x64": {
+                    "url": "https://files.pythonhosted.org/packages/23/a6/90148f91544e3c056e78c514f0e764c1b44d50a33344c83fd03011ea97c8/clang_format-23.1.3-py2.py3-none-win_amd64.whl",
+                    "sha256": "6c2b74c3a3e942ec172d768e7b945f8e136db05a7b735d49ecfc69bda97643ad"
+                },
+                "linux-x64": {
+                    "url": "https://files.pythonhosted.org/packages/11/d1/658d3da4dcbca98620956868c7cf6f4ba19fccecbdfc30cc055e19c9d4a7/clang_format-23.1.3-py2.py3-none-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+                    "sha256": "58bf1804216501669832a39f2415e14284337438a062ff564729792adec664ac"
+                }
+            }
+        },
+        "clangTidy": {
+            "version": "23.1.3",
+            "directory": ".local/toolchains/clang-tidy-23.1.3",
+            "binary": "clang_tidy/data/bin/clang-tidy",
+            "archives": {
+                "darwin-arm64": {
+                    "url": "https://files.pythonhosted.org/packages/26/42/65a2c5ee9be88b81d3890df15fd1af7f5bbab72a16ccf4d302454385e067/clang_tidy-23.1.3-py2.py3-none-macosx_11_0_arm64.whl",
+                    "sha256": "cbd31dea271cee7ed5b5048847e73b8208c8dde90e321e09c20d9146011f8ff2"
+                },
+                "win32-x64": {
+                    "url": "https://files.pythonhosted.org/packages/ac/f0/cd5021e635cebaf42c696c46ecc583d77b4e3a396a1a58cdadb8b99c4ef2/clang_tidy-23.1.3-py2.py3-none-win_amd64.whl",
+                    "sha256": "cf0d0e671f707b5a668c035382b964056067076445e87b736b19ff482229010a"
+                },
+                "linux-x64": {
+                    "url": "https://files.pythonhosted.org/packages/7a/f0/5d684465b0727e3d5364de38cead2775f73ff35f63694176a0694c2ab943/clang_tidy-23.1.3-py2.py3-none-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+                    "sha256": "6b2558bc396a6e792190700134609e041f657d7f8d15385e8b0aa66f5ffe21b5"
+                }
+            }
+        },
+        "uncrustify": {
+            "version": "0.83.0",
+            "url": "https://github.com/uncrustify/uncrustify/releases/download/uncrustify-0.83.0/uncrustify-0.83.0.tar.gz",
+            "sha256": "0aed2c5df101d5108b9cc8d6da0dddfad1286a66b49c794e38b2a6d0d868393e",
+            "directory": ".local/toolchains/uncrustify-0.83.0",
+            "binary": "bin/uncrustify",
+            "binaries": {
+                "darwin-arm64": {
+                    "url": "https://github.com/voyemu/voyemu/releases/download/uncrustify-0.83.0-405b19fa/uncrustify-0.83.0-darwin-arm64",
+                    "sha256": "0bba90dad401a4d262610b6fd52dc7616237fe5a5cc7f46bb43fdcc81f5267a4"
+                },
+                "linux-x64": {
+                    "url": "https://github.com/voyemu/voyemu/releases/download/uncrustify-0.83.0-405b19fa/uncrustify-0.83.0-linux-x64",
+                    "sha256": "720864f66624b3dfbe9ec70735913e17a6056c160f84064bf6271ba4edf338e4"
+                },
+                "win32-x64": {
+                    "url": "https://github.com/voyemu/voyemu/releases/download/uncrustify-0.83.0-405b19fa/uncrustify-0.83.0-win32-x64.exe",
+                    "sha256": "655256ad0012afabd462a0ae5c2109a7ac01857dc079fd9639979b889dd1a80a"
+                }
+            }
+        },
+        "googleJavaFormat": {
+            "version": "2.0.0",
+            "directory": ".local/toolchains/google-java-format-2.0.0",
+            "binary": "google-java-format",
+            "binaries": {
+                "darwin-arm64": {
+                    "url": "https://github.com/google/google-java-format/releases/download/v2.0.0/google-java-format_darwin-arm64",
+                    "sha256": "04b13ad486bcc29ef64f7168c2d3eb330e73ae458610ba5bcf44f6018b655dc4"
+                },
+                "win32-x64": {
+                    "url": "https://github.com/google/google-java-format/releases/download/v2.0.0/google-java-format_windows-x86-64.exe",
+                    "sha256": "6e757021d3b5a8133ca3b5b1915c4cf38dc46ad0886bc9059fcc2ccb7b6036e5"
+                },
+                "linux-x64": {
+                    "url": "https://github.com/google/google-java-format/releases/download/v2.0.0/google-java-format_linux-x86-64",
+                    "sha256": "c351f587e6dd1f11836be7296894ea2ab3bd91847dbd14101f4f04d390380fe9"
+                }
+            }
+        },
+        "checkstyle": {
+            "version": "12.3.1",
+            "directory": ".local/toolchains/checkstyle-12.3.1",
+            "jar": "checkstyle-12.3.1-all.jar",
+            "url": "https://github.com/checkstyle/checkstyle/releases/download/checkstyle-12.3.1/checkstyle-12.3.1-all.jar",
+            "sha256": "4ecdfa8504452e1557d2e2c364085f0ae5703b67ec9c759976ca378d41cb8f7a"
+        },
+        "errorProne": {
+            "version": "2.52.0",
+            "directory": ".local/toolchains/error-prone-2.52.0",
+            "jars": {
+                "core": {
+                    "jar": "error_prone_core-2.52.0-with-dependencies.jar",
+                    "url": "https://repo1.maven.org/maven2/com/google/errorprone/error_prone_core/2.52.0/error_prone_core-2.52.0-with-dependencies.jar",
+                    "sha256": "3efb5a1d65ebcb68dd8dfb228f0c05943a551b5d740455bf166df6e0e302b6bb"
+                },
+                "dataflow": {
+                    "jar": "dataflow-errorprone-3.41.0-eisop1.jar",
+                    "url": "https://repo1.maven.org/maven2/io/github/eisop/dataflow-errorprone/3.41.0-eisop1/dataflow-errorprone-3.41.0-eisop1.jar",
+                    "sha256": "10434fba4e53f55fa9c76904cde414b918932548c9dfc4e2d634ac05ff7a7d10"
+                }
+            }
+        },
+        "linuxBuild": {
+            "zig": {
+                "version": "0.15.2",
+                "directory": ".local/toolchains/zig-0.15.2",
+                "url": "https://ziglang.org/download/0.15.2/zig-x86_64-linux-0.15.2.tar.xz",
+                "sha256": "02aa270f183da276e5b5920b1dac44a63f1a49e55050ebde3aecc9eb82f93239"
+            },
+            "cmake": {
+                "version": "3.31.10",
+                "directory": ".local/toolchains/cmake-3.31.10",
+                "url": "https://github.com/Kitware/CMake/releases/download/v3.31.10/cmake-3.31.10-linux-x86_64.tar.gz",
+                "sha256": "3cb3dd247b6a1de2d0f4b20c6fd4326c9024e894cebc9dc8699758887e566ca7"
+            },
+            "ninja": {
+                "version": "1.13.1",
+                "directory": ".local/toolchains/ninja-1.13.1",
+                "url": "https://github.com/ninja-build/ninja/releases/download/v1.13.1/ninja-linux.zip",
+                "sha256": "0830252db77884957a1a4b87b05a1e2d9b5f658b8367f82999a941884cbe0238"
+            },
+            "wine": {
+                "version": "11.0.0.0~noble-1",
+                "directory": ".local/toolchains/wine-11.0",
+                "packages": [
+                    {
+                        "url": "https://dl.winehq.org/wine-builds/ubuntu/pool/main/w/wine/wine-stable-amd64_11.0.0.0~noble-1_amd64.deb",
+                        "sha256": "6cb835e2171b5572b17f1c06729735c2c7e40178239d7fa6c29ef14bd9b40d16"
+                    },
+                    {
+                        "url": "https://dl.winehq.org/wine-builds/ubuntu/pool/main/w/wine/wine-stable_11.0.0.0~noble-1_amd64.deb",
+                        "sha256": "04e7b4b995262c734019099d93277d8f219f7d180ebb65b5ccb3df7f97be1078"
+                    }
+                ]
+            },
+            "jdk": {
+                "version": "25.0.5+8",
+                "directory": ".local/toolchains/jdk-25.0.5+8",
+                "url": "https://github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.5%2B8/OpenJDK25U-jdk_x64_linux_hotspot_25.0.5_8.tar.gz",
+                "sha256": "68982529869257d0ee6b824ec5aa270ff8b118bb438670da0b97ebdab178d7fb"
+            }
+        },
+        "windowsBuild": {
+            "zig": {
+                "version": "0.15.2",
+                "directory": ".local/toolchains/zig-0.15.2",
+                "url": "https://ziglang.org/download/0.15.2/zig-x86_64-windows-0.15.2.zip",
+                "sha256": "3a0ed1e8799a2f8ce2a6e6290a9ff22e6906f8227865911fb7ddedc3cc14cb0c"
+            },
+            "cmake": {
+                "version": "3.31.10",
+                "directory": ".local/toolchains/cmake-3.31.10",
+                "url": "https://github.com/Kitware/CMake/releases/download/v3.31.10/cmake-3.31.10-windows-x86_64.zip",
+                "sha256": "13d1a463d7130df5339baedd63d8ae990aaf385062b2f42f372796143ae94086"
+            },
+            "ninja": {
+                "version": "1.13.1",
+                "directory": ".local/toolchains/ninja-1.13.1",
+                "url": "https://github.com/ninja-build/ninja/releases/download/v1.13.1/ninja-win.zip",
+                "sha256": "26a40fa8595694dec2fad4911e62d29e10525d2133c9a4230b66397774ae25bf"
+            },
+            "jdk": {
+                "version": "25.0.5+8",
+                "directory": ".local/toolchains/jdk-25.0.5+8",
+                "url": "https://github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.5%2B8/OpenJDK25U-jdk_x64_windows_hotspot_25.0.5_8.zip",
+                "sha256": "636bdc13dc649ddc7d5921c5c7d23cca6e44fd19d662b45cc9c02135a6c96c42"
+            }
+        },
+        "macosBuild": {
+            "zig": {
+                "version": "0.15.2",
+                "directory": ".local/toolchains/zig-0.15.2",
+                "url": "https://ziglang.org/download/0.15.2/zig-aarch64-macos-0.15.2.tar.xz",
+                "sha256": "3cc2bab367e185cdfb27501c4b30b1b0653c28d9f73df8dc91488e66ece5fa6b"
+            },
+            "cmake": {
+                "version": "3.31.10",
+                "directory": ".local/toolchains/cmake-3.31.10",
+                "url": "https://github.com/Kitware/CMake/releases/download/v3.31.10/cmake-3.31.10-macos-universal.tar.gz",
+                "sha256": "be9f3faeeaf7921cc2d77cea711dd5e6f72c63af2810cacd9205b3ce8d1593c9"
+            },
+            "ninja": {
+                "version": "1.13.1",
+                "directory": ".local/toolchains/ninja-1.13.1",
+                "url": "https://github.com/ninja-build/ninja/releases/download/v1.13.1/ninja-mac.zip",
+                "sha256": "da7797794153629aca5570ef7c813342d0be214ba84632af886856e8f0063dd9"
+            },
+            "jdk": {
+                "version": "25.0.5+8",
+                "directory": ".local/toolchains/jdk-25.0.5+8",
+                "url": "https://github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.5%2B8/OpenJDK25U-jdk_aarch64_mac_hotspot_25.0.5_8.tar.gz",
+                "sha256": "36dc14d797aaff6d89aab302cd053fdba6207dfdcf772052fa7b023a94b0e857"
+            }
+        },
+        "kernelBuild": {
+            "releaseBase": "https://github.com/voyemu/voyemu/releases/download/",
+            "sources": {
+                "sed": {
+                    "version": "4.10",
+                    "directory": ".local/toolchains/kernel-host/gnu-sed-4.10-b8e72182b2ec",
+                    "url": "https://ftp.gnu.org/gnu/sed/sed-4.10.tar.xz",
+                    "sha256": "b8e72182b2ec96a3574e2998c47b7aaa64cc20ce000d8e9ac313cc07cecf28c7"
+                },
+                "gzip": {
+                    "version": "1.15",
+                    "directory": ".local/toolchains/kernel-host/gnu-gzip-1.15-9aa0cc780dec",
+                    "url": "https://ftp.gnu.org/gnu/gzip/gzip-1.15.tar.xz",
+                    "sha256": "9aa0cc780dec156b8282844833b342ab7cb08c25d2cd9a1869cdd0df31deff48"
+                },
+                "openssl": {
+                    "version": "3.6.5",
+                    "directory": ".local/toolchains/kernel-host/openssl-3.6.5-a2157c2830ef",
+                    "url": "https://github.com/openssl/openssl/releases/download/openssl-3.6.5/openssl-3.6.5.tar.gz",
+                    "sha256": "a2157c2830efdec3788939b00c9b0638306d3f0bbb76dc4832ee503bb397df98"
+                }
+            },
+            "androidBuildTools": {
+                "commit": "c0548a1a6126997440a0157f96c2c10c6623b1f0",
+                "directory": ".local/toolchains/kernel-host/android-build-tools-c0548a1a6126",
+                "applets": [
+                    "find",
+                    "tar",
+                    "echo",
+                    "date"
+                ],
+                "hosts": {
+                    "darwin-x86_64": [
+                        {
+                            "file": "lib64/libcrypto-host.dylib",
+                            "git_blob": "1024245bfe7dd8a6e3a66257be76bbc65db91138",
+                            "sha256": "702bcfb63f25011c08edfebe89c470d7c5097aa3a06418459331fe2de2fbb69b",
+                            "url": "https://android.googlesource.com/platform/prebuilts/build-tools/+/c0548a1a6126997440a0157f96c2c10c6623b1f0/darwin-x86/lib64/libcrypto-host.dylib?format=TEXT",
+                            "mode": 33261
+                        },
+                        {
+                            "file": "lib64/libz-host.dylib",
+                            "git_blob": "11a294e1f3fee48b6fa4cb391fb3b8d0da81d7be",
+                            "sha256": "f9882b534c94335c4c7f664edff52055aace7b7ea4be4fe16fce8f9b71ec4daa",
+                            "url": "https://android.googlesource.com/platform/prebuilts/build-tools/+/c0548a1a6126997440a0157f96c2c10c6623b1f0/darwin-x86/lib64/libz-host.dylib?format=TEXT",
+                            "mode": 33261
+                        },
+                        {
+                            "file": "bin/toybox",
+                            "git_blob": "b173f58e749593059ff65380e38db4d348958e41",
+                            "sha256": "d1ba6bfc22ee30e271923f302c4edb636446ff8f71e94faf0d9eaaba8d4c028c",
+                            "url": "https://android.googlesource.com/platform/prebuilts/build-tools/+/c0548a1a6126997440a0157f96c2c10c6623b1f0/darwin-x86/bin/toybox?format=TEXT",
+                            "mode": 33261
+                        },
+                        {
+                            "file": "lib64/libc++.dylib",
+                            "git_blob": "3ad357677124e5566565989390fc3753fc7530b8",
+                            "sha256": "1311a5156717b3aa750a1874055ed35fe8543b67bf3fc8e736a6efccd6ecea66",
+                            "url": "https://android.googlesource.com/platform/prebuilts/build-tools/+/c0548a1a6126997440a0157f96c2c10c6623b1f0/darwin-x86/lib64/libc++.dylib?format=TEXT",
+                            "mode": 33261
+                        },
+                        {
+                            "file": "bin/bison",
+                            "git_blob": "634baa463389210d21fbaf7135e430eb3b72807d",
+                            "sha256": "0370bcccf834c77c16f66bc8324ee2d8a8e428e486e535ef019122ee66c5bc06",
+                            "url": "https://android.googlesource.com/platform/prebuilts/build-tools/+/c0548a1a6126997440a0157f96c2c10c6623b1f0/darwin-x86/bin/bison?format=TEXT",
+                            "mode": 33261
+                        },
+                        {
+                            "file": "bin/flex",
+                            "git_blob": "4521c74b606ab0b3a4982abad99d126866b4a8f4",
+                            "sha256": "667602e3a6a45a25a554a2307b27f425b79d54a9a824efaa01883319a28166f7",
+                            "url": "https://android.googlesource.com/platform/prebuilts/build-tools/+/c0548a1a6126997440a0157f96c2c10c6623b1f0/darwin-x86/bin/flex?format=TEXT",
+                            "mode": 33261
+                        },
+                        {
+                            "file": "bin/m4",
+                            "git_blob": "dc1fa272f61c426832cec2c7d6d396b9919ad527",
+                            "sha256": "21fd9b2d33883df735a7b184b286df091676fc22a26ffcce36a33f3d7d1d9e12",
+                            "url": "https://android.googlesource.com/platform/prebuilts/build-tools/+/c0548a1a6126997440a0157f96c2c10c6623b1f0/darwin-x86/bin/m4?format=TEXT",
+                            "mode": 33261
+                        },
+                        {
+                            "file": "bin/xz",
+                            "git_blob": "76698f9b56da2e009e252f7051f337d00c538665",
+                            "sha256": "02592918335b2b2163c7e3c3f53f5821ce64db503024747a97e5d9b49267d6f8",
+                            "url": "https://android.googlesource.com/platform/prebuilts/build-tools/+/c0548a1a6126997440a0157f96c2c10c6623b1f0/darwin-x86/bin/xz?format=TEXT",
+                            "mode": 33261
+                        }
+                    ],
+                    "linux-x86_64": [
+                        {
+                            "file": "lib64/libcrypto-host.so",
+                            "git_blob": "51f4650c70bc73f398e688f1ac4d030e577dc4b1",
+                            "sha256": "e68562cc96b3165e55951040985e905203fe30368d51eae3f3a6a65b46335ca5",
+                            "url": "https://android.googlesource.com/platform/prebuilts/build-tools/+/c0548a1a6126997440a0157f96c2c10c6623b1f0/linux-x86/lib64/libcrypto-host.so?format=TEXT",
+                            "mode": 33261
+                        },
+                        {
+                            "file": "lib64/libz-host.so",
+                            "git_blob": "e65351d18e261e5d5878831c64f148fa242b77e0",
+                            "sha256": "cc86bec7ec4c4bd4e8169885ea278bcc9de90f9319b0d0c8f5e64c227c5e2f65",
+                            "url": "https://android.googlesource.com/platform/prebuilts/build-tools/+/c0548a1a6126997440a0157f96c2c10c6623b1f0/linux-x86/lib64/libz-host.so?format=TEXT",
+                            "mode": 33261
+                        },
+                        {
+                            "file": "bin/toybox",
+                            "git_blob": "34e53baad0c9e50be6002842fdb7f875d15e962a",
+                            "sha256": "050405ff2c3abd85109585996da6c6b4dd019085499be664c5f93cd088726513",
+                            "url": "https://android.googlesource.com/platform/prebuilts/build-tools/+/c0548a1a6126997440a0157f96c2c10c6623b1f0/linux-x86/bin/toybox?format=TEXT",
+                            "mode": 33261
+                        },
+                        {
+                            "file": "lib64/libc++.so",
+                            "git_blob": "dcc6ea14e7134e101a3411e610619c777509c8dd",
+                            "sha256": "b4bf6891d676b4679512db9b2a09a57b4a1579cf99e8c5f8edcf90e9e14b3489",
+                            "url": "https://android.googlesource.com/platform/prebuilts/build-tools/+/c0548a1a6126997440a0157f96c2c10c6623b1f0/linux-x86/lib64/libc++.so?format=TEXT",
+                            "mode": 33261
+                        },
+                        {
+                            "file": "bin/bison",
+                            "git_blob": "be5dcef65ac9d20bb0f5a9461f0e0f1a04607b8d",
+                            "sha256": "19af6850f2f8cd542153e93ebe8f8a96d99f23f38be2ea7b8f8e2f025e72cd57",
+                            "url": "https://android.googlesource.com/platform/prebuilts/build-tools/+/c0548a1a6126997440a0157f96c2c10c6623b1f0/linux-x86/bin/bison?format=TEXT",
+                            "mode": 33261
+                        },
+                        {
+                            "file": "bin/flex",
+                            "git_blob": "fac0e11787215fed47a639bc91e56a7ed152d1d9",
+                            "sha256": "214f74c389893f02596c20e741d093efd90fe00acf1ca7a005218746e11b9165",
+                            "url": "https://android.googlesource.com/platform/prebuilts/build-tools/+/c0548a1a6126997440a0157f96c2c10c6623b1f0/linux-x86/bin/flex?format=TEXT",
+                            "mode": 33261
+                        },
+                        {
+                            "file": "bin/m4",
+                            "git_blob": "6939c8d845ef43c4f824432b3fd0f87d1dbd1058",
+                            "sha256": "60bbcc7a238600080de82b2fe8f05532fa10221b3c06237839c837b8a98dfa3c",
+                            "url": "https://android.googlesource.com/platform/prebuilts/build-tools/+/c0548a1a6126997440a0157f96c2c10c6623b1f0/linux-x86/bin/m4?format=TEXT",
+                            "mode": 33261
+                        },
+                        {
+                            "file": "bin/xz",
+                            "git_blob": "a54a5b479056a0e1550af6c0be44e91514b85b0a",
+                            "sha256": "6150921a4fcf0677cbe271e63538344a78fdc66bfd4ec55182ef611193cee6f8",
+                            "url": "https://android.googlesource.com/platform/prebuilts/build-tools/+/c0548a1a6126997440a0157f96c2c10c6623b1f0/linux-x86/bin/xz?format=TEXT",
+                            "mode": 33261
+                        }
+                    ]
+                },
+                "common": [
+                    {
+                        "file": "common/bison/NOTICE",
+                        "git_blob": "94a9ed024d3859793618152ea559a168bbcbb5e2",
+                        "sha256": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903",
+                        "url": "https://android.googlesource.com/platform/prebuilts/build-tools/+/c0548a1a6126997440a0157f96c2c10c6623b1f0/common/bison/NOTICE?format=TEXT",
+                        "mode": 33188
+                    },
+                    {
+                        "file": "common/bison/README.md",
+                        "git_blob": "94e9891b3ed59341c78710941f931064d4197e82",
+                        "sha256": "7f00d9b4706b2b7be8dd7a5d376df80d33cf28244a5108afa1d992b5b65464f3",
+                        "url": "https://android.googlesource.com/platform/prebuilts/build-tools/+/c0548a1a6126997440a0157f96c2c10c6623b1f0/common/bison/README.md?format=TEXT",
+                        "mode": 33188
+                    },
+                    {
+                        "file": "common/bison/bison-default.css",
+                        "git_blob": "68df166ae514fed0bc45da870c8efb4d3fc49d2d",
+                        "sha256": "56cd0516c1707ad687867fab3ed26241b17bcbb8b48d4e59f329f692e9fcfe87",
+                        "url": "https://android.googlesource.com/platform/prebuilts/build-tools/+/c0548a1a6126997440a0157f96c2c10c6623b1f0/common/bison/bison-default.css?format=TEXT",
+                        "mode": 33188
+                    },
+                    {
+                        "file": "common/bison/local.mk",
+                        "git_blob": "f82aee7ef55e65561d14a488a6dd59ccd0a59698",
+                        "sha256": "8b3e38992c6bf1c30ced52679f70f32fe24d614dd8908ba0c18643f97c5f88e5",
+                        "url": "https://android.googlesource.com/platform/prebuilts/build-tools/+/c0548a1a6126997440a0157f96c2c10c6623b1f0/common/bison/local.mk?format=TEXT",
+                        "mode": 33188
+                    },
+                    {
+                        "file": "common/bison/m4sugar/foreach.m4",
+                        "git_blob": "7093d0fcc4e858a997be57094ddf5df7d4103713",
+                        "sha256": "3f8db35b5c9b463eed07f1934691ffcee641820daf9127315a2349f8e276f32c",
+                        "url": "https://android.googlesource.com/platform/prebuilts/build-tools/+/c0548a1a6126997440a0157f96c2c10c6623b1f0/common/bison/m4sugar/foreach.m4?format=TEXT",
+                        "mode": 33188
+                    },
+                    {
+                        "file": "common/bison/m4sugar/m4sugar.m4",
+                        "git_blob": "bbd695836a27d9ab0598c34c6473955ee69f9084",
+                        "sha256": "7b08f9324e913b0e9b0fbde86ce107ff1025488b6654d36c826ca4c0e559a50c",
+                        "url": "https://android.googlesource.com/platform/prebuilts/build-tools/+/c0548a1a6126997440a0157f96c2c10c6623b1f0/common/bison/m4sugar/m4sugar.m4?format=TEXT",
+                        "mode": 33188
+                    },
+                    {
+                        "file": "common/bison/skeletons/README-D.txt",
+                        "git_blob": "214e309923b632c4d82561231775e1008de7728e",
+                        "sha256": "b4528f36efcb183c3eb4df1934828a6f35acc058514ebbc5c006761ced79411c",
+                        "url": "https://android.googlesource.com/platform/prebuilts/build-tools/+/c0548a1a6126997440a0157f96c2c10c6623b1f0/common/bison/skeletons/README-D.txt?format=TEXT",
+                        "mode": 33188
+                    },
+                    {
+                        "file": "common/bison/skeletons/bison.m4",
+                        "git_blob": "7ca8497b357b6460a7cf64181603fd953d812860",
+                        "sha256": "44fe5512af4d8c933da7b85389d3a3f1154d31bef6f2b0e7c06542152f04fd9f",
+                        "url": "https://android.googlesource.com/platform/prebuilts/build-tools/+/c0548a1a6126997440a0157f96c2c10c6623b1f0/common/bison/skeletons/bison.m4?format=TEXT",
+                        "mode": 33188
+                    },
+                    {
+                        "file": "common/bison/skeletons/c++-skel.m4",
+                        "git_blob": "1c3721cdbbb9cf8fe6ff9764d6f816b7a7f31d34",
+                        "sha256": "55121cc394d6a9198a7d103b789fbce4f70dd1077b33350eb518a46a2ed256d8",
+                        "url": "https://android.googlesource.com/platform/prebuilts/build-tools/+/c0548a1a6126997440a0157f96c2c10c6623b1f0/common/bison/skeletons/c++-skel.m4?format=TEXT",
+                        "mode": 33188
+                    },
+                    {
+                        "file": "common/bison/skeletons/c++.m4",
+                        "git_blob": "3e2e4df425c7eaeda186e472dff78621f82b92ba",
+                        "sha256": "f2df6fe5bc5fabfbb28b1ccd5aed0d9c74f741afde1ebe721264094d7e29015a",
+                        "url": "https://android.googlesource.com/platform/prebuilts/build-tools/+/c0548a1a6126997440a0157f96c2c10c6623b1f0/common/bison/skeletons/c++.m4?format=TEXT",
+                        "mode": 33188
+                    },
+                    {
+                        "file": "common/bison/skeletons/c-like.m4",
+                        "git_blob": "8d891b67ef97b09a121f0487f00c7a25c3578317",
+                        "sha256": "3a8bdf30d0fa40d276f7445d0285f7fb6fd616cba868f70b06403ad15f1273fd",
+                        "url": "https://android.googlesource.com/platform/prebuilts/build-tools/+/c0548a1a6126997440a0157f96c2c10c6623b1f0/common/bison/skeletons/c-like.m4?format=TEXT",
+                        "mode": 33188
+                    },
+                    {
+                        "file": "common/bison/skeletons/c-skel.m4",
+                        "git_blob": "2a21cfc7d0d596387c5821c450dd6abdf661ae09",
+                        "sha256": "d4fa8967c89298645ba73ae54dcbe8b4ef3da9cb9d5a1c5f64e27286d8a1d57e",
+                        "url": "https://android.googlesource.com/platform/prebuilts/build-tools/+/c0548a1a6126997440a0157f96c2c10c6623b1f0/common/bison/skeletons/c-skel.m4?format=TEXT",
+                        "mode": 33188
+                    },
+                    {
+                        "file": "common/bison/skeletons/c.m4",
+                        "git_blob": "4b2c094620044964c997b41631a098f5ba8fbe26",
+                        "sha256": "40615712683b7b3931f6f2e90bf992a20899206587a8a6c4b106d4fc51f6d020",
+                        "url": "https://android.googlesource.com/platform/prebuilts/build-tools/+/c0548a1a6126997440a0157f96c2c10c6623b1f0/common/bison/skeletons/c.m4?format=TEXT",
+                        "mode": 33188
+                    },
+                    {
+                        "file": "common/bison/skeletons/d-skel.m4",
+                        "git_blob": "1705d84dac9c72abd9d3d16221f40e5bf8c69aa5",
+                        "sha256": "87a3d749b5286f61c1fce6bd1d6e59d3707de0527e035ae06f07c29b2d587418",
+                        "url": "https://android.googlesource.com/platform/prebuilts/build-tools/+/c0548a1a6126997440a0157f96c2c10c6623b1f0/common/bison/skeletons/d-skel.m4?format=TEXT",
+                        "mode": 33188
+                    },
+                    {
+                        "file": "common/bison/skeletons/d.m4",
+                        "git_blob": "2d29127c2d5f79fdf53319a17e42b1e5e8df40b7",
+                        "sha256": "5428cd41f38f4b949abeae6e11b370105b88a7cb3311b178bf8cb308afe5a75d",
+                        "url": "https://android.googlesource.com/platform/prebuilts/build-tools/+/c0548a1a6126997440a0157f96c2c10c6623b1f0/common/bison/skeletons/d.m4?format=TEXT",
+                        "mode": 33188
+                    },
+                    {
+                        "file": "common/bison/skeletons/glr.c",
+                        "git_blob": "945ff0ac8330394f3219691d4d5416cfffa149d7",
+                        "sha256": "2d592e1c476c872ea6eac17a90e00247d55f605d4b11602077514aa9d3ff8402",
+                        "url": "https://android.googlesource.com/platform/prebuilts/build-tools/+/c0548a1a6126997440a0157f96c2c10c6623b1f0/common/bison/skeletons/glr.c?format=TEXT",
+                        "mode": 33188
+                    },
+                    {
+                        "file": "common/bison/skeletons/glr.cc",
+                        "git_blob": "343b52efd02d523444b510ba4c09640dd9a46e92",
+                        "sha256": "1ee5cc5bf8b01e8bb2ee5f109856026dfbcf86e04894163050af389a8bba0c6d",
+                        "url": "https://android.googlesource.com/platform/prebuilts/build-tools/+/c0548a1a6126997440a0157f96c2c10c6623b1f0/common/bison/skeletons/glr.cc?format=TEXT",
+                        "mode": 33188
+                    },
+                    {
+                        "file": "common/bison/skeletons/java-skel.m4",
+                        "git_blob": "922f1a81217fb05b940535ff85d0ac3a778fe650",
+                        "sha256": "089a35ea585d1e2080b1c39c7880e7c877fda7f12e19b4a0c87f9e705f25b406",
+                        "url": "https://android.googlesource.com/platform/prebuilts/build-tools/+/c0548a1a6126997440a0157f96c2c10c6623b1f0/common/bison/skeletons/java-skel.m4?format=TEXT",
+                        "mode": 33188
+                    },
+                    {
+                        "file": "common/bison/skeletons/java.m4",
+                        "git_blob": "edf23a92d3bde7734b41b8d2ae2832bb887bdca6",
+                        "sha256": "22023f9cba0866bfa55024cdb12d691197566dffe8d5f30a6c36d0aed5a93b3f",
+                        "url": "https://android.googlesource.com/platform/prebuilts/build-tools/+/c0548a1a6126997440a0157f96c2c10c6623b1f0/common/bison/skeletons/java.m4?format=TEXT",
+                        "mode": 33188
+                    },
+                    {
+                        "file": "common/bison/skeletons/lalr1.cc",
+                        "git_blob": "d245796b3afdeae1e38f681cb6806efdd501a85d",
+                        "sha256": "6b0537c0b043545ec720d7e2ab64b93443456da6a29c8f4da3e7bdc0a7db70bf",
+                        "url": "https://android.googlesource.com/platform/prebuilts/build-tools/+/c0548a1a6126997440a0157f96c2c10c6623b1f0/common/bison/skeletons/lalr1.cc?format=TEXT",
+                        "mode": 33188
+                    },
+                    {
+                        "file": "common/bison/skeletons/lalr1.d",
+                        "git_blob": "5aa2fb6e7d3d09c3c672440f0ccb74bd644cd3cb",
+                        "sha256": "6f3087037595210c94451e020013ba8c1f1d7e990b583d6e3f9c541144ecce9d",
+                        "url": "https://android.googlesource.com/platform/prebuilts/build-tools/+/c0548a1a6126997440a0157f96c2c10c6623b1f0/common/bison/skeletons/lalr1.d?format=TEXT",
+                        "mode": 33188
+                    },
+                    {
+                        "file": "common/bison/skeletons/lalr1.java",
+                        "git_blob": "9ec0806b875a5b792c8d8a33ab1c9d5a3573bace",
+                        "sha256": "bc9f229ac7edb6d0c8c3b4786a2264a099711e8f2142612a7ac4a17c56ff7e52",
+                        "url": "https://android.googlesource.com/platform/prebuilts/build-tools/+/c0548a1a6126997440a0157f96c2c10c6623b1f0/common/bison/skeletons/lalr1.java?format=TEXT",
+                        "mode": 33188
+                    },
+                    {
+                        "file": "common/bison/skeletons/location.cc",
+                        "git_blob": "02583798f61e2f167dbefaeb71f485dc06671dfb",
+                        "sha256": "aa3ac829d14d0afc2f550a7ecf4d8cf2d0fff7ec06b744a93b4c4f6c0be92f18",
+                        "url": "https://android.googlesource.com/platform/prebuilts/build-tools/+/c0548a1a6126997440a0157f96c2c10c6623b1f0/common/bison/skeletons/location.cc?format=TEXT",
+                        "mode": 33188
+                    },
+                    {
+                        "file": "common/bison/skeletons/stack.hh",
+                        "git_blob": "cb52bcc271316158b16947b3c827de937bd69186",
+                        "sha256": "a273068143adb62b21a11c599ea59f0af3cdf97a412ac46c583f19fff4dd00ce",
+                        "url": "https://android.googlesource.com/platform/prebuilts/build-tools/+/c0548a1a6126997440a0157f96c2c10c6623b1f0/common/bison/skeletons/stack.hh?format=TEXT",
+                        "mode": 33188
+                    },
+                    {
+                        "file": "common/bison/skeletons/variant.hh",
+                        "git_blob": "be4a3ce7f88edf26834a9a1868041628519017eb",
+                        "sha256": "55616d214dfe120f77e8f8082900301301072086a4ed5be6d12e11f931477045",
+                        "url": "https://android.googlesource.com/platform/prebuilts/build-tools/+/c0548a1a6126997440a0157f96c2c10c6623b1f0/common/bison/skeletons/variant.hh?format=TEXT",
+                        "mode": 33188
+                    },
+                    {
+                        "file": "common/bison/skeletons/yacc.c",
+                        "git_blob": "2830c1dec6c5f46bd3debf4fe3c61a6bb0c267bd",
+                        "sha256": "94d8d8c703df26b452f5019a05755f73b49dbb877ae627d25ec7dbd801ca5421",
+                        "url": "https://android.googlesource.com/platform/prebuilts/build-tools/+/c0548a1a6126997440a0157f96c2c10c6623b1f0/common/bison/skeletons/yacc.c?format=TEXT",
+                        "mode": 33188
+                    },
+                    {
+                        "file": "common/bison/xslt/bison.xsl",
+                        "git_blob": "5c1a358fa987d3241b9c3f16a20ff0fb11172f5b",
+                        "sha256": "99e5f9947ea79985fa77e70dd96be55dd0f967a26205d868d7ee4b956efad87d",
+                        "url": "https://android.googlesource.com/platform/prebuilts/build-tools/+/c0548a1a6126997440a0157f96c2c10c6623b1f0/common/bison/xslt/bison.xsl?format=TEXT",
+                        "mode": 33188
+                    },
+                    {
+                        "file": "common/bison/xslt/xml2dot.xsl",
+                        "git_blob": "0a7419f588d778291da6d63a1aa560368ddf00e3",
+                        "sha256": "4ef2eb2a51444a4e8d9978cabb145860b661b4b29225e54ededa32b003cb40e9",
+                        "url": "https://android.googlesource.com/platform/prebuilts/build-tools/+/c0548a1a6126997440a0157f96c2c10c6623b1f0/common/bison/xslt/xml2dot.xsl?format=TEXT",
+                        "mode": 33188
+                    },
+                    {
+                        "file": "common/bison/xslt/xml2text.xsl",
+                        "git_blob": "72b56e719429f5c2b927ab4602fc55c7e6a6493d",
+                        "sha256": "60847776fad596876896539b030fd3303299b0d340d76a78a5d42baea1ee9b18",
+                        "url": "https://android.googlesource.com/platform/prebuilts/build-tools/+/c0548a1a6126997440a0157f96c2c10c6623b1f0/common/bison/xslt/xml2text.xsl?format=TEXT",
+                        "mode": 33188
+                    },
+                    {
+                        "file": "common/bison/xslt/xml2xhtml.xsl",
+                        "git_blob": "087b0358ccbca848ad7317a43331c800cce31c91",
+                        "sha256": "64115213f4fd59598727809463f61fa67c5d802a6c5892aae76221b373a1c957",
+                        "url": "https://android.googlesource.com/platform/prebuilts/build-tools/+/c0548a1a6126997440a0157f96c2c10c6623b1f0/common/bison/xslt/xml2xhtml.xsl?format=TEXT",
+                        "mode": 33188
+                    }
+                ]
+            }
+        }
+    },
+    "signing": {
+        "platform": {
+            "key": {
+                "url": "https://android.googlesource.com/platform/build/+/refs/tags/android-9.0.0_r61/target/product/security/platform.pk8?format=TEXT",
+                "sha256": "1ad8ef556870edb70f69a9d3c112544c07de5162ba440d84d33f8bb0c5962875"
+            },
+            "cert": {
+                "url": "https://android.googlesource.com/platform/build/+/refs/tags/android-9.0.0_r61/target/product/security/platform.x509.pem?format=TEXT",
+                "sha256": "9837de028f460c35cc8d3fa45f14eecce30f6fbfe4b93d399aef1acb80c20d14"
+            }
+        }
+    },
+    "qnxUpdateCodec": {
+        "darwin": {
+            "file": ".local/toolchains/native-sdk/emulator/lib64/vulkan/libzstd.1.dylib",
+            "sha256": "e41bada27a4cd54e44628d9c437c63faa9618a186f5959826524b10eb0cb4e0f"
+        },
+        "win32": {
+            "file": ".local/toolchains/qnx-windows-11.1.0/libzstd.dll",
+            "sha256": "b95c223a9548a9ecf51377c962e0bc8f0c51eb0c6f67a296dbc885996f0dd40d"
+        },
+        "linux": {
+            "file": ".local/toolchains/native-sdk/emulator/lib64/libzstd.so",
+            "sha256": "bde0d2542b2e2ceec745dc2b79e1d97d433de7c9e9cbed7bba030f065f2e68b1"
+        }
+    }
+}

@@ -1,0 +1,15 @@
+{
+  "api": 28,
+  "calls": [
+    {
+      "args": [
+        [
+          "QGAPI"
+        ]
+      ],
+      "operation": "useLibraries"
+    }
+  ],
+  "constants": {},
+  "schema": 1
+}

@@ -1,0 +1,51 @@
+# Voyemu formula of the voyemu/homebrew-tap tap, written by src/dev/release/homebrew.sh from the release
+# archives of github.com/@REPOSITORY@; install with `brew install voyemu/tap/voyemu`.
+class Voyemu < Formula
+  desc "Emulator of the multimedia and instrument cluster of Android-based Voyah vehicles"
+  homepage "https://voyemu.com"
+  version "@VERSION@"
+  license "MIT"
+
+  on_macos do
+    on_arm do
+      url "https://github.com/@REPOSITORY@/releases/download/v@VERSION@/voyemu-@VERSION@-macos-arm64.tar.xz"
+      sha256 "@MACOS_ARM64_SHA256@"
+    end
+  end
+
+  on_linux do
+    on_intel do
+      url "https://github.com/@REPOSITORY@/releases/download/v@VERSION@/voyemu-@VERSION@-linux-x64.tar.xz"
+      sha256 "@LINUX_X64_SHA256@"
+    end
+  end
+
+  def install
+    libexec.install "voyemu", "profiles"
+    pkgshare.install "notices"
+    # The launcher finds its installation root from its own location: var/voyemu holds the launcher
+    # beside profiles/, and .local/ and machines/ there outlive upgrades of the keg.
+    bin.install_symlink var/"voyemu/voyemu"
+  end
+
+  def post_install
+    root = var/"voyemu"
+    root.mkpath
+    rm_r root/"profiles" if (root/"profiles").exist?
+    cp_r libexec/"profiles", root
+    # A new file, so a running session keeps the launcher it started with.
+    rm root/"voyemu" if (root/"voyemu").exist?
+    cp libexec/"voyemu", root
+  end
+
+  def caveats
+    <<~EOS
+      Tools, firmware inputs and prepared machines are kept in
+        #{var}/voyemu
+    EOS
+  end
+
+  test do
+    assert_equal "Voyemu #{version}", shell_output("#{bin}/voyemu --version").strip
+  end
+end

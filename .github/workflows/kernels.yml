@@ -1,0 +1,90 @@
+# Reproducible development kernels. A tag kernel-<name>-<sha8> builds that kernel, checks the
+# Image against the profile pin and publishes it as the release asset the profiles download.
+name: kernels
+
+on:
+    push:
+        tags: ["kernel-*"]
+    workflow_dispatch:
+        inputs:
+            kernel:
+                description: Kernel recipe to build
+                type: choice
+                options: [qinggan-09, qinggan-11]
+
+permissions:
+    contents: read
+
+jobs:
+    build:
+        name: Build ${{ github.event.inputs.kernel || github.ref_name }}
+        runs-on: ubuntu-24.04
+        timeout-minutes: 300
+        outputs:
+            tag: ${{ steps.select.outputs.tag }}
+        steps:
+            - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+              with:
+                  persist-credentials: false
+            - name: Check kernel selection fixtures
+              run: bash src/dev/ci/kernel-select.test.sh
+            - name: Select recipe and expected pin
+              id: select
+              env:
+                  INPUT_KERNEL: ${{ github.event.inputs.kernel }}
+              run: bash src/dev/ci/kernel-select.sh
+            # Restores or installs the JDK, Zig, the NDK host toolchain, the kernel source and the API 30 emulator
+            # images, and restores the host tools and clang that the build stage installs.
+            - uses: ./.github/actions/toolchains
+              with:
+                  set: kernel-${{ steps.select.outputs.kernel }}
+            - name: Build and publish locally
+              run: |
+                  # Kbuild takes the shell, perl, bc, cpio and file utilities from the host.
+                  for tool in bash perl bc cpio; do command -v "$tool"; done
+                  recipe="profiles/common-${{ steps.select.outputs.kernel }}/components/kernel"
+                  work="$PWD/.local/build/kernel/work"
+                  base=()
+                  if [[ "${{ steps.select.outputs.kernel }}" == qinggan-11 ]]; then
+                      base=("$PWD/.local/build/kernel/base")
+                  fi
+                  src/prepare/kernel/kernel-tool.sh "$recipe" prepare "$PWD" "$work" "${base[@]}"
+                  src/prepare/kernel/kernel-tool.sh "$recipe" build "$PWD" "$work" 4
+                  src/prepare/kernel/kernel-tool.sh "$recipe" publish "$PWD" "$work"
+            - name: Check the Image against the profile pin
+              run: |
+                  sha="${{ steps.select.outputs.sha }}"
+                  built=$(jq -er .sha256 .local/build/kernel/work/development-kernel.json)
+                  echo "Built Image $built; profile pin $sha"
+                  [[ "$built" == "$sha" ]] || { echo "Built Image differs from the profile pin" >&2; exit 1; }
+                  image=".local/profiles/common/development-kernel/$sha/Image"
+                  echo "$sha  $image" | sha256sum -c -
+                  mkdir -p .local/build/kernel/asset
+                  cp "$image" .local/profiles/common/development-kernel/$sha/build.json .local/build/kernel/work/development-kernel.json .local/build/kernel/asset/
+            - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+              with:
+                  name: ${{ steps.select.outputs.tag }}
+                  path: .local/build/kernel/asset/
+                  if-no-files-found: error
+
+    release:
+        name: Release ${{ needs.build.outputs.tag }}
+        needs: build
+        if: github.ref_type == 'tag'
+        runs-on: ubuntu-24.04
+        timeout-minutes: 10
+        permissions:
+            contents: write
+        steps:
+            - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+              with:
+                  name: ${{ needs.build.outputs.tag }}
+                  path: asset
+            - name: Create the release with the Image asset
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  TAG: ${{ needs.build.outputs.tag }}
+              run: |
+                  gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --title "$TAG" \
+                      --notes "Reproducible development kernel built from the recipe at $GITHUB_SHA. Source: the pinned upstream commit and the patches in the recipe; see build.json." \
+                      asset/Image asset/build.json asset/development-kernel.json

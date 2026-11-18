@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "api": 30,
+  "calls": [
+    {
+      "operation": "guardKeyIngress",
+      "args": []
+    }
+  ],
+  "constants": {
+    "original_sha256_allowlist": [
+      "951abb4f86540663fd654138b7e58cd0226d5dfa0470a4f5e85384bcdedbb78e"
+    ]
+  }
+}

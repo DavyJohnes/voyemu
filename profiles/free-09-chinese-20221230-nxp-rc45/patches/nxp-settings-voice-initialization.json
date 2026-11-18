@@ -1,0 +1,29 @@
+{
+  "schema": 1,
+  "api": 28,
+  "calls": [
+    {
+      "operation": "editMethod",
+      "args": [
+        "Lcom/qinggan/app/setting/module/voice/presenter/VoicePresenter;-><init>(Landroid/content/Context;Lcom/qinggan/app/setting/module/voice/IVoiceView;)V",
+        {
+          "edits": [
+            {
+              "before": [
+                "return-void"
+              ],
+              "insert": [
+                "invoke-static {}, Lcom/qinggan/speech/WakeupManager;->getInstance()Lcom/qinggan/speech/WakeupManager;",
+                "move-result-object v0",
+                "iput-object v0, p0, Lcom/qinggan/app/setting/module/voice/presenter/VoicePresenter;->mWakeupManager:Lcom/qinggan/speech/WakeupManager;"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "constants": {
+    "INPUT_SHA256": "b3a79c9cb737b5c84256c98b9e00553467bc9fda43b975398a7284a0a9cac741"
+  }
+}

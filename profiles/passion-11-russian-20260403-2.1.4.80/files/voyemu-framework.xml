@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<permissions>
+    <library name="android.car" file="/system/framework/android.car.jar" />
+    <library name="voyemu.platform.callbacks" file="/system/framework/voyemu-platform-callbacks.jar" />
+    <library name="voyemu.window" file="/system/framework/voyemu-window.jar" />
+    <library name="voyemu.mega" file="/system/framework/voyemu-mega.jar" />
+    <privapp-permissions package="com.voyah.os.carlauncher">
+        <permission name="android.permission.INTERACT_ACROSS_USERS" />
+        <permission name="android.permission.READ_PRIVILEGED_PHONE_STATE" />
+        <permission name="android.permission.CHANGE_CONFIGURATION" />
+        <permission name="android.permission.WRITE_SECURE_SETTINGS" />
+    </privapp-permissions>
+    <privapp-permissions package="com.mega.car">
+        <permission name="android.permission.SET_TIME" />
+        <permission name="android.permission.LOCAL_MAC_ADDRESS" />
+        <permission name="android.permission.SET_TIME_ZONE" />
+        <permission name="android.permission.INTERACT_ACROSS_USERS" />
+    </privapp-permissions>
+    <privapp-permissions package="com.mega.nexus.server">
+        <permission name="android.permission.FORCE_STOP_PACKAGES" />
+        <permission name="android.permission.REAL_GET_TASKS" />
+        <permission name="android.permission.INTERACT_ACROSS_USERS" />
+    </privapp-permissions>
+    <privapp-permissions package="com.voyah.btphone">
+        <permission name="android.permission.CONTROL_INCALL_EXPERIENCE" />
+    </privapp-permissions>
+    <privapp-permissions package="com.android.car.settings">
+        <permission name="android.permission.BACKUP" />
+        <permission name="android.permission.BLUETOOTH_PRIVILEGED" />
+        <permission name="android.permission.DELETE_CACHE_FILES" />
+        <permission name="android.permission.DUMP" />
+        <permission name="android.permission.FORCE_STOP_PACKAGES" />
+        <permission name="android.permission.GET_ACCOUNTS_PRIVILEGED" />
+        <permission name="android.permission.MANAGE_USERS" />
+        <permission name="android.permission.MASTER_CLEAR" />
+        <permission name="android.permission.MOUNT_UNMOUNT_FILESYSTEMS" />
+        <permission name="android.permission.OVERRIDE_WIFI_CONFIG" />
+        <permission name="android.permission.REBOOT" />
+        <permission name="android.permission.WRITE_SECURE_SETTINGS" />
+    </privapp-permissions>
+    <privapp-permissions package="com.voyemu.passion.phone">
+        <permission name="android.permission.MODIFY_PHONE_STATE" />
+    </privapp-permissions>
+</permissions>

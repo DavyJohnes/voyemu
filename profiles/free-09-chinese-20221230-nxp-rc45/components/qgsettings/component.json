@@ -1,0 +1,10 @@
+{
+  "type": "apk",
+  "minSdk": 28,
+  "targetSdk": 28,
+  "sign": "platform",
+  "sourceFiles": {
+    "AndroidManifest.xml": "voyemu/profiles/common/components/qgsettings-api28-baseline/AndroidManifest.xml",
+    "src/com/qinggan/providers/settings/QGSettingsProvider.java": "voyemu/profiles/common/components/qgsettings-api28-baseline/src/com/qinggan/providers/settings/QGSettingsProvider.java"
+  }
+}

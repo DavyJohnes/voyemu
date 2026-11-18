@@ -1,0 +1,12 @@
+{
+  "type": "jar",
+  "minSdk": 28,
+  "output": "apache-xml.jar",
+  "frameworkBase": {
+    "jar": "/system/framework/apache-xml.jar",
+    "oat": "/system/framework/arm64/boot-apache-xml.oat",
+    "oat_sha256": "22b0b0c7fa0769b2fdf36fc31c37bb3c882f6379cfe1f5807f4848171b8c1fac",
+    "vdex": "/system/framework/boot-apache-xml.vdex",
+    "vdex_sha256": "a00d6b71bafdcc135ce7f5d1be023feccd5adc3072dbc27afac965de098b0e64"
+  }
+}

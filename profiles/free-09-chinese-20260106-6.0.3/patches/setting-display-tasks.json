@@ -1,0 +1,27 @@
+{
+  "api": 28,
+  "calls": [
+    {
+      "args": [
+        "launcher-display-routing/src"
+      ],
+      "operation": "addDex"
+    },
+    {
+      "args": [
+        "Lcom/qinggan/os/ServiceManager;->getDpyTopAppInfo(Landroid/content/Context;II)Ljava/lang/String;",
+        {
+          "registers": 3,
+          "body": [
+            "invoke-static {p0, p1, p2}, Lcom/voyemu/output/DisplayTasks;->getTopAppInfo(Landroid/content/Context;II)Ljava/lang/String;",
+            "move-result-object p0",
+            "return-object p0"
+          ]
+        }
+      ],
+      "operation": "editMethod"
+    }
+  ],
+  "constants": {},
+  "schema": 1
+}

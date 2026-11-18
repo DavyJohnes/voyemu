@@ -1,0 +1,18 @@
+# Lists tracked and new non-ignored project files without changing the Git index.
+function(voyemu_source_files output root)
+    execute_process(COMMAND git ls-files --cached --others --exclude-standard -- ${ARGN} WORKING_DIRECTORY "${root}"
+        OUTPUT_VARIABLE files RESULT_VARIABLE result)
+    if(NOT result EQUAL 0)
+        message(FATAL_ERROR "git ls-files failed in ${root}")
+    endif()
+    string(REPLACE "\n" ";" files "${files}")
+    list(REMOVE_ITEM files "")
+    list(REMOVE_DUPLICATES files)
+    set(existing)
+    foreach(file IN LISTS files)
+        if(EXISTS "${root}/${file}" AND NOT IS_DIRECTORY "${root}/${file}")
+            list(APPEND existing "${file}")
+        endif()
+    endforeach()
+    set(${output} "${existing}" PARENT_SCOPE)
+endfunction()

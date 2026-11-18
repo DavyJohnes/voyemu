@@ -1,0 +1,36 @@
+{
+  "type": "jar",
+  "minSdk": 28,
+  "output": "VoyemuNxpSystemUiRuntimeC.jar",
+  "donorDex": {
+    "original": "Setting",
+    "sha256": "b3a79c9cb737b5c84256c98b9e00553467bc9fda43b975398a7284a0a9cac741",
+    "dex": "classes2.dex",
+    "classes": [
+      "com.qinggan.system.AreaFocusModel$1",
+      "com.qinggan.system.AreaFocusModel",
+      "com.qinggan.system.IDirectionEventListener$Stub$Proxy",
+      "com.qinggan.system.IDirectionEventListener$Stub",
+      "com.qinggan.system.IDirectionEventListener",
+      "com.qinggan.system.IKeyManagerCallback$Stub$Proxy",
+      "com.qinggan.system.IKeyManagerCallback$Stub",
+      "com.qinggan.system.IKeyManagerCallback",
+      "com.qinggan.system.IKeyManagerService$Stub$Proxy",
+      "com.qinggan.system.IKeyManagerService$Stub",
+      "com.qinggan.system.IKeyManagerService",
+      "com.qinggan.system.KeyManager$1",
+      "com.qinggan.system.KeyManager$2",
+      "com.qinggan.system.KeyManager$3",
+      "com.qinggan.system.KeyManager$4",
+      "com.qinggan.system.KeyManager$5",
+      "com.qinggan.system.KeyManager$6",
+      "com.qinggan.system.KeyManager$7",
+      "com.qinggan.system.KeyManager$OnInitListener",
+      "com.qinggan.system.KeyManager$OnKeyEventListener",
+      "com.qinggan.system.KeyManager",
+      "com.qinggan.system.QGKeyEvent$1",
+      "com.qinggan.system.QGKeyEvent",
+      "com.qinggan.util.VehicleHelper"
+    ]
+  }
+}

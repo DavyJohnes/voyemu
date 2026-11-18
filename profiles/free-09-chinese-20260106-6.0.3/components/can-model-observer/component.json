@@ -1,0 +1,7 @@
+{
+  "type": "native",
+  "minSdk": 28,
+  "outputType": "executable",
+  "output": "voyemu-can-model-observer",
+  "libs": []
+}

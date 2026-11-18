@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "windows_media_http2": {
+    "scope": "Static HTTP-only loopback transport for the existing SDK media RPC client",
+    "curl": {
+      "version": "8.23.0",
+      "url": "https://github.com/curl/curl/releases/download/curl-8_23_0/curl-8.23.0.tar.xz",
+      "sha256": "8dadd7d2536a314f982ad05a651b713f426bf7d02cc2c76cffb9796f2218e6c5",
+      "checksum_source": "https://api.github.com/repos/curl/curl/releases/tags/curl-8_23_0",
+      "license": "curl",
+      "notice": "licenses/curl-COPYING"
+    },
+    "nghttp2": {
+      "version": "1.70.0",
+      "url": "https://github.com/nghttp2/nghttp2/releases/download/v1.70.0/nghttp2-1.70.0.tar.xz",
+      "sha256": "e05cb1388eaca3830aded4ccf20044b6e1ac1a61411dcca11b0437c4285c8bc2",
+      "checksum_source": "https://github.com/nghttp2/nghttp2/releases/download/v1.70.0/checksums.txt",
+      "license": "MIT",
+      "notice": "licenses/nghttp2-COPYING"
+    }
+  }
+}

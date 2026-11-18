@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "api": 30,
+  "constants": {
+    "original_sha256_allowlist": [
+      "83fe6f4fd7a02135fb84e02ef8298cefa42365e970f0760a3b90a60de9582aac"
+    ]
+  },
+  "calls": [
+    {
+      "operation": "guardAudioPolicy",
+      "args": []
+    },
+    {
+      "operation": "useLibraries",
+      "args": [
+        [
+          "QGAPI"
+        ]
+      ]
+    }
+  ],
+  "helperSources": [
+    "src/guest/android/oem/audio/OemAudioPolicy.java",
+    "src/guest/android/oem/audio/OemAudioPolicyUnavailable.java"
+  ]
+}

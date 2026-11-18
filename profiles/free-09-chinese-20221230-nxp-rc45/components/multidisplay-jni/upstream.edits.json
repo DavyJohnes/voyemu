@@ -1,0 +1,315 @@
+{
+  "version": 1,
+  "files": [
+    {
+      "path": "include/system/graphics.h",
+      "resultSha256": "a8e953ec08ae931c30a87ede7ba10ff467d1f0cdbac864b759cd3206bd7ee675",
+      "edits": [
+        {
+          "startLine": 28,
+          "deleteCount": 1,
+          "insert": []
+        },
+        {
+          "startLine": 17,
+          "deleteCount": 0,
+          "insert": [
+            {
+              "text": "// Modified by Voyemu: pinned subset of the system/graphics.h API surface used by the emulator multi-display library.\n\n"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/com_android_emulator_multidisplay.cpp",
+      "resultSha256": "9e7ed0fe79211c33c2c4e70266ecc9b90df4182a8f41bf9f8bf6d4ca55ff07d0",
+      "edits": [
+        {
+          "startLine": 28,
+          "deleteCount": 1,
+          "insert": []
+        },
+        {
+          "startLine": 33,
+          "deleteCount": 1,
+          "insert": [
+            {
+              "text": "\n"
+            }
+          ]
+        },
+        {
+          "startLine": 63,
+          "deleteCount": 0,
+          "insert": [
+            {
+              "text": "    // voyemu: hold the previous buffer acquired while processing the next one,\n"
+            },
+            {
+              "text": "    // so SurfaceFlinger must dequeue a *different* slot for each new frame\n"
+            },
+            {
+              "text": "    // (different slot => different hostHandle => fresh BIND => host panel repaints).\n"
+            },
+            {
+              "text": "    sp<GraphicBuffer> mPrevBuf;\n"
+            },
+            {
+              "text": "    int mPrevSlot = -1;\n"
+            }
+          ]
+        },
+        {
+          "startLine": 69,
+          "deleteCount": 4,
+          "insert": [
+            {
+              "text": "            // voyemu: real A9 ranchu layout (magic 0xABFABFAB, sizeof 0x60):\n"
+            },
+            {
+              "text": "            // the host ColorBuffer handle created via renderControl is stored\n"
+            },
+            {
+              "text": "            // at +0x58 (see gralloc.ranchu.so: str w0, [x23, #0x58]); +0x18 is\n"
+            },
+            {
+              "text": "            // a constant 512 and NOT the host handle.\n"
+            },
+            {
+              "text": "            const uint32_t realCb = reinterpret_cast<const uint32_t*>(b->handle)[22];\n"
+            },
+            {
+              "text": "            if (mCb != realCb) { // re-BIND when the real host handle changes\n"
+            },
+            {
+              "text": "                ALOGI(\"bind display %u cb %u\", mId, realCb);\n"
+            },
+            {
+              "text": "                mCb = realCb;\n"
+            }
+          ]
+        },
+        {
+          "startLine": 82,
+          "deleteCount": 1,
+          "insert": [
+            {
+              "text": "        // release the buffer from the *previous* frame, keep this one held\n"
+            },
+            {
+              "text": "        if (mPrevBuf.get() && mPrevSlot >= 0) {\n"
+            },
+            {
+              "text": "            BufferItem prev;\n"
+            },
+            {
+              "text": "            prev.mSlot = mPrevSlot;\n"
+            },
+            {
+              "text": "            prev.mGraphicBuffer = mPrevBuf;\n"
+            },
+            {
+              "text": "            prev.mFence = Fence::NO_FENCE;\n"
+            },
+            {
+              "text": "            mConsumer->releaseBuffer(prev);\n"
+            },
+            {
+              "text": "            mPrevBuf.clear();\n"
+            },
+            {
+              "text": "            mPrevSlot = -1;\n"
+            },
+            {
+              "copy": {
+                "startLine": 78,
+                "lineCount": 1
+              }
+            },
+            {
+              "text": "        if (b) {\n"
+            },
+            {
+              "text": "            mPrevBuf = bufferItem.mGraphicBuffer;\n"
+            },
+            {
+              "text": "            mPrevSlot = bufferItem.mSlot;\n"
+            },
+            {
+              "text": "        } else {\n"
+            },
+            {
+              "text": "            mConsumer->releaseBuffer(bufferItem);\n"
+            },
+            {
+              "copy": {
+                "startLine": 78,
+                "lineCount": 1
+              }
+            }
+          ]
+        },
+        {
+          "startLine": 101,
+          "deleteCount": 1,
+          "insert": [
+            {
+              "text": "    // voyemu: request consumer-side bufferCount so SF rotates buffers between frames\n"
+            },
+            {
+              "text": "    // instead of compositing every frame into the single same buffer\n"
+            },
+            {
+              "text": "    // (single buffer => same hostHandle => host panel never repaints).\n"
+            },
+            {
+              "text": "    bufferItemConsumer = new BufferItemConsumer(consumer, GRALLOC_USAGE_HW_RENDER, 3);\n"
+            }
+          ]
+        },
+        {
+          "startLine": 18,
+          "deleteCount": 0,
+          "insert": [
+            {
+              "text": "// Modified by Voyemu: rebuilt against the API 28 guest; buffer and display plumbing adapted for the emulator multi-display pipe.\n\n"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/qemu_pipe_common.cpp",
+      "resultSha256": "435e73d532a54f745b38cc2acc0d839d586c152f5f1e6141ec42f6bc02fada65",
+      "edits": [
+        {
+          "startLine": 17,
+          "deleteCount": 0,
+          "insert": [
+            {
+              "text": "namespace android {\n"
+            },
+            {
+              "text": "// voyemu: A9 libutils lacks sp_report_race (added in R); the shell stub\n"
+            },
+            {
+              "text": "// libemulator_md_shim.so used to provide it via a DT_SONAME retarget hack.\n"
+            },
+            {
+              "text": "// Defining it here keeps the library self-contained.\n"
+            },
+            {
+              "text": "void sp_report_race() {}\n"
+            },
+            {
+              "copy": {
+                "startLine": 29,
+                "lineCount": 1
+              }
+            },
+            {
+              "text": "\n"
+            }
+          ]
+        },
+        {
+          "startLine": 15,
+          "deleteCount": 0,
+          "insert": [
+            {
+              "text": "// Modified by Voyemu: pinned qemu_pipe definitions for the emulator multi-display pipe.\n\n"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/qemu_pipe_guest.cpp",
+      "resultSha256": "97407ecad1e1353f81c961cd948562c0f143e3bd37bcd69708c484e83a5e7c02",
+      "edits": [
+        {
+          "startLine": 112,
+          "deleteCount": 7,
+          "insert": [
+            {
+              "text": "    // voyemu A9 guest: classic goldfish pipe device always, vsock not supported.\n"
+            },
+            {
+              "text": "    fd = open_verbose_path(\"/dev/goldfish_pipe\", flags);\n"
+            },
+            {
+              "copy": {
+                "startLine": 123,
+                "lineCount": 1
+              }
+            }
+          ]
+        },
+        {
+          "startLine": 127,
+          "deleteCount": 1,
+          "insert": [
+            {
+              "copy": {
+                "startLine": 114,
+                "lineCount": 1
+              }
+            },
+            {
+              "copy": {
+                "startLine": 115,
+                "lineCount": 1
+              }
+            },
+            {
+              "copy": {
+                "startLine": 116,
+                "lineCount": 1
+              }
+            },
+            {
+              "copy": {
+                "startLine": 117,
+                "lineCount": 1
+              }
+            },
+            {
+              "copy": {
+                "startLine": 93,
+                "lineCount": 1
+              }
+            },
+            {
+              "copy": {
+                "startLine": 119,
+                "lineCount": 1
+              }
+            },
+            {
+              "copy": {
+                "startLine": 58,
+                "lineCount": 1
+              }
+            },
+            {
+              "text": "\n"
+            },
+            {
+              "text": "    ALOGE(\"%s:%d: goldfish_pipe and vsock paths failed\",\n"
+            }
+          ]
+        },
+        {
+          "startLine": 17,
+          "deleteCount": 0,
+          "insert": [
+            {
+              "text": "// Modified by Voyemu: guest side of the emulator multi-display pipe adapted for API 28.\n\n"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "type": "apk",
+  "minSdk": 28,
+  "targetSdk": 28,
+  "sign": "platform",
+  "donorDex": {
+    "original": "QGAPI",
+    "dex": "classes.dex",
+    "classes": [
+      "com.qinggan.power.IPowerManagerListener",
+      "com.qinggan.system.IPowerManagerService"
+    ]
+  },
+  "secondDonorDex": {
+    "original": "MusicConcate",
+    "dex": "classes2.dex",
+    "classes": [
+      "com.qinggan.carsignal.CarSignalCommType",
+      "com.qinggan.carsignal.diagnostic.DiagnosticInfo",
+      "com.qinggan.carsignal.ICarSignalService",
+      "com.qinggan.carsignal.ICarSignalServiceCallBack"
+    ]
+  },
+  "sourceFiles": {
+    "src/com/voyemu/oem/CarSignalStub.java": "voyemu/profiles/common/components/carsignal/src/com/voyemu/oem/CarSignalStub.java",
+    "src/com/voyemu/oem/ScreenDisplayTarget.java": "voyemu/profiles/common/components/oem-power/src/com/voyemu/oem/ScreenDisplayTarget.java",
+    "src/com/voyemu/oem/ScreenPowerState.java": "voyemu/profiles/common/components/oem-power/src/com/voyemu/oem/ScreenPowerState.java",
+    "src/compile-only/com/qinggan/carsignal/ICarSignalService.java": "voyemu/profiles/common/components/carsignal/src/compile-only/com/qinggan/carsignal/ICarSignalService.java",
+    "src/compile-only/com/qinggan/carsignal/ICarSignalServiceCallBack.java": "voyemu/profiles/common/components/carsignal/src/compile-only/com/qinggan/carsignal/ICarSignalServiceCallBack.java",
+    "src/compile-only/com/qinggan/carsignal/diagnostic/DiagnosticInfo.java": "voyemu/profiles/common/components/carsignal/src/compile-only/com/qinggan/carsignal/diagnostic/DiagnosticInfo.java"
+  }
+}

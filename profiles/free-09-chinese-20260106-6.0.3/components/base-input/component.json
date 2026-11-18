@@ -1,0 +1,12 @@
+{
+  "type": "jar",
+  "minSdk": 28,
+  "output": "input.jar",
+  "frameworkBase": {
+    "jar": "/system/framework/input.jar",
+    "oat": "/system/framework/oat/arm64/input.odex",
+    "oat_sha256": "a27a8775f661f42a0022dd4a440e166c188fd1757aa79315813a4d673f33ccf0",
+    "vdex": "/system/framework/oat/arm64/input.vdex",
+    "vdex_sha256": "47d45508eab714a33a461caf9670295556f8ab7b7beb358a184f3da0b3b94fb7"
+  }
+}

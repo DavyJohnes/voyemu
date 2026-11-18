@@ -1,0 +1,19 @@
+{
+  "api": 28,
+  "calls": [
+    {
+      "args": [
+        "lib/armeabi-v7a/libBugly.so"
+      ],
+      "operation": "removeEntry"
+    },
+    {
+      "args": [
+        "lib/armeabi-v7a/libpl_droidsonroids_gif.so"
+      ],
+      "operation": "removeEntry"
+    }
+  ],
+  "constants": {},
+  "schema": 1
+}

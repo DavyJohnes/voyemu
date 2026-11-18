@@ -1,0 +1,12 @@
+{
+  "type": "jar",
+  "minSdk": 28,
+  "output": "conscrypt.jar",
+  "frameworkBase": {
+    "jar": "/system/framework/conscrypt.jar",
+    "oat": "/system/framework/arm64/boot-conscrypt.oat",
+    "oat_sha256": "64d12ad1d24de3c4598c5be11caa88ac3462c385509e27ee26cf08046031c9a3",
+    "vdex": "/system/framework/boot-conscrypt.vdex",
+    "vdex_sha256": "fbdd705b48dacf3276b4b67e30898e1606ebf3fe1fa5ac32b90767a458cd594f"
+  }
+}

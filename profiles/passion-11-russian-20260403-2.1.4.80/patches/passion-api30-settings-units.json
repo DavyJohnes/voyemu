@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "api": 30,
+  "constants": {
+    "original_sha256_allowlist": ["8d7798dd439ffa39d8af491ff23458d321c8c7659b53ea3672ab4d199189e4b4"]
+  },
+  "calls": [{"operation": "guardPassionSettingsUnits", "args": []}]
+}

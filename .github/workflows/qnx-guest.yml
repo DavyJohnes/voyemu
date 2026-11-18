@@ -1,0 +1,79 @@
+# QNX guest modules for preparation. A tag qnx-guest-<sha8> builds the module sets of the four QNX adapters
+# twice with the pinned Zig, checks them against the qnxGuestModules pins in src/app/toolchain.json and
+# publishes them as the release assets that preparation downloads.
+name: qnx-guest
+
+on:
+    push:
+        tags: ["qnx-guest-*"]
+    workflow_dispatch:
+
+permissions:
+    contents: read
+
+jobs:
+    build:
+        name: Build ${{ github.ref_name }}
+        runs-on: ubuntu-24.04
+        timeout-minutes: 90
+        outputs:
+            tag: ${{ steps.select.outputs.tag }}
+        steps:
+            - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+              with:
+                  persist-credentials: false
+            - name: Check selection fixtures
+              run: bash src/dev/ci/qnx-guest-select.test.sh
+            - name: Select the pinned modules
+              id: select
+              run: bash src/dev/ci/qnx-guest-select.sh .local/build/qnx-guest/SHA256SUMS
+            # Restores or installs Zig, CMake, Ninja and the JDK of the linux set; the recipe downloads the pinned headers.
+            - uses: ./.github/actions/toolchains
+              with:
+                  set: linux
+            # The recipe is build_qnx_guest_recipe of the launcher sources, run by the qnx_guest_build test.
+            - name: Build the recipe runner
+              run: |
+                  cmake -S src/app -B .local/build/qnx-guest/build -G Ninja \
+                      -DCMAKE_TOOLCHAIN_FILE="$PWD/src/dev/toolchains/zig-linux-x64.cmake" -DBUILD_TESTING=ON -DVOYEMU_BUILD_CLUSTER=OFF
+                  cmake --build .local/build/qnx-guest/build --target qnx_guest_build_test --parallel 4
+            - name: Build every module set twice
+              run: |
+                  out="$PWD/.local/build/qnx-guest"
+                  for copy in asset repeat; do
+                      "$out/build/qnx_guest_build_test" --recipe "$PWD" "$out/$copy"
+                  done
+                  diff -r "$out/asset" "$out/repeat"
+            - name: Check the modules against the pins
+              run: |
+                  cd .local/build/qnx-guest
+                  (cd asset && sha256sum -c ../SHA256SUMS)
+                  test "$(find asset -type f | wc -l)" -eq "$(wc -l < SHA256SUMS)"
+                  cp SHA256SUMS asset/
+            - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+              with:
+                  name: ${{ steps.select.outputs.tag }}
+                  path: .local/build/qnx-guest/asset/
+                  if-no-files-found: error
+
+    release:
+        name: Release ${{ needs.build.outputs.tag }}
+        needs: build
+        if: github.ref_type == 'tag'
+        runs-on: ubuntu-24.04
+        timeout-minutes: 10
+        permissions:
+            contents: write
+        steps:
+            - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+              with:
+                  name: ${{ needs.build.outputs.tag }}
+                  path: asset
+            - name: Create the release with the modules
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  TAG: ${{ needs.build.outputs.tag }}
+              run: |
+                  gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --title "$TAG" \
+                      --notes "QNX guest modules built at $GITHUB_SHA by build_qnx_guest_recipe from src/guest/qnx and the pinned Khronos headers with the pinned Zig; no OEM input. Assets are <adapter>-<file>." \
+                      asset/*

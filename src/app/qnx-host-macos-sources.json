@@ -1,0 +1,51 @@
+{
+  "schema": 1,
+  "sources": [
+    {
+      "name": "glib-formula",
+      "url": "https://raw.githubusercontent.com/Homebrew/homebrew-core/550d1a4e5c2da2dd3c8c630e43b1ef9a84afd700/Formula/g/glib.rb",
+      "sha256": "b1e77191c8a81816e4451be8159f571d744b0380318fc57c32f675e14796578f"
+    },
+    {
+      "name": "dtc-formula",
+      "url": "https://raw.githubusercontent.com/Homebrew/homebrew-core/e74189c88d5ba145eea31c325de1385b81f04a08/Formula/d/dtc.rb",
+      "sha256": "0996948d0919552f834245870a8fba81871c583becd2c3c16a15544927fc9060"
+    },
+    {
+      "name": "pcre2-formula",
+      "url": "https://raw.githubusercontent.com/Homebrew/homebrew-core/151cba496ddaff3a48177a9ce01078efe8f3bd0b/Formula/p/pcre2.rb",
+      "sha256": "2dcb74b4bc19dc81ace51feac7bb626b679c7b730eca1d3492d73fe822134fb8"
+    },
+    {
+      "name": "gettext-formula",
+      "url": "https://raw.githubusercontent.com/Homebrew/homebrew-core/e78efec19efcedc6b8ebd17aed6690b067db35ce/Formula/g/gettext.rb",
+      "sha256": "9c90f7cf5a45c828e2a66d9339b25b781302cf49316e939d029e6079e1b9d916"
+    },
+    {
+      "name": "glib-homebrew-patch",
+      "url": "https://raw.githubusercontent.com/Homebrew/homebrew-core/550d1a4e5c2da2dd3c8c630e43b1ef9a84afd700/Patches/glib/hardcoded-paths.diff",
+      "sha256": "d846efd0bf62918350da94f850db33b0f8727fece9bfaf8164566e3094e80c97"
+    },
+    {
+      "name": "gobject-introspection",
+      "url": "https://download.gnome.org/sources/gobject-introspection/1.86/gobject-introspection-1.86.0.tar.xz",
+      "sha256": "920d1a3fcedeadc32acff95c2e203b319039dd4b4a08dd1a2dfd283d19c0b9ae"
+    }
+  ],
+  "packages": {
+    "91df2202a093cd00b90fa9919f1c1e61e8f78d8ddd9a307009af6d4007072180": [
+      "glib-formula",
+      "glib-homebrew-patch",
+      "gobject-introspection"
+    ],
+    "2b800aed01f5ebfc9cbb685536ad1625d1d702ab850bd34639865d3457c4f2e8": [
+      "dtc-formula"
+    ],
+    "0ec47d18c50f5770db2b3f07b5b85644284cc6ee8e07e23b11d2727e95932b77": [
+      "pcre2-formula"
+    ],
+    "98a116d35792ccd730360ffc8c0d8fc5799b2282b96bb7696192c573f064a331": [
+      "gettext-formula"
+    ]
+  }
+}

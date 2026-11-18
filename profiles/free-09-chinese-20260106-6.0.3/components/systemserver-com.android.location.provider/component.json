@@ -1,0 +1,13 @@
+{
+  "type": "jar",
+  "minSdk": 28,
+  "output": "com.android.location.provider.jar",
+  "frameworkBase": {
+    "jar": "/system/framework/com.android.location.provider.jar",
+    "oat": "/system/framework/oat/arm64/com.android.location.provider.odex",
+    "oat_sha256": "55bbca3b6b648477e17a755b29b062549a1a866df28e10e365487e1f4119134e",
+    "vdex": "/system/framework/oat/arm64/com.android.location.provider.vdex",
+    "vdex_sha256": "9b1a79e89f0fc9478a8ff7158a9541661dc8c866c3b0ffbe71d9ed566fa8a059",
+    "systemServer": true
+  }
+}

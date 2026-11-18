@@ -1,0 +1,13 @@
+{
+  "type": "jar",
+  "minSdk": 28,
+  "output": "framework.jar",
+  "frameworkBase": {
+    "jar": "/system/framework/framework.jar",
+    "oat": "/system/framework/arm64/boot-framework.oat",
+    "oat_sha256": "5a68aafb1962b922f44b201b2048eb378b9b6f1305b517be60d5878c5df69c2a",
+    "vdex": "/system/framework/boot-framework.vdex",
+    "vdex_sha256": "b39d531b3d336df9e64cced0518a0261d4fe6f4f772a971ca02468733008d687",
+    "bridge": "component:view-observation"
+  }
+}

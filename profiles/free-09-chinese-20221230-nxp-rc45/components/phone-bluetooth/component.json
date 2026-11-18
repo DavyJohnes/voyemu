@@ -1,0 +1,6 @@
+{
+  "type": "jar",
+  "minSdk": 28,
+  "compileOnly": "src/stub-cls",
+  "output": "Ivt8BluetoothAdapter.jar"
+}

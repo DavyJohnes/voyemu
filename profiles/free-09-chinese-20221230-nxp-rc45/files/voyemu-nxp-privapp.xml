@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<permissions>
+    <privapp-permissions package="com.qinggan.app.launcher">
+        <permission name="android.permission.BIND_APPWIDGET"/>
+    </privapp-permissions>
+</permissions>

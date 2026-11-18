@@ -1,0 +1,52 @@
+{
+  "api": 28,
+  "calls": [
+    {
+      "args": [
+        "camera-capabilities/src"
+      ],
+      "operation": "addDex"
+    }
+  ],
+  "constants": {
+    "edits": [
+      {
+        "after": "175df818230d6bd84f2abd218bf069faea1af2e64aefc33643c60afda91d3875",
+        "before": "0133b33efa435f0e1f66a6421cf012d0a275680bdc2f218251e85f57c3bf9fe7",
+        "deleteCount": 47,
+        "directory": "common",
+        "name": "SupportUtils",
+        "startLine": 280,
+        "text": ".method public static isSupportDvr()Z\n    .registers 1\n\n    invoke-static {}, Lcom/voyemu/oem/CameraCapabilities;->isSupportDvr()Z\n\n    move-result v0\n\n    return v0\n.end method\n"
+      },
+      {
+        "after": "5800970b458034ba7fa9baf5f8a333cb4571de763fc6f99fcf48113c82340a23",
+        "before": "fa187d60d1e205909c02b1cf295110975b7061b242df0a7b703a43319231c458",
+        "deleteCount": 33,
+        "directory": "common",
+        "name": "CameraUtil",
+        "startLine": 2549,
+        "text": ".method public static setDmsInCameraAppUsing(I)V\n    .registers 1\n\n    invoke-static {p0}, Lcom/voyemu/oem/CameraCapabilities;->setDmsInCameraAppUsing(I)V\n\n    return-void\n.end method\n"
+      },
+      {
+        "after": "5a2040225ade01b3398b875079a97924bbb9b39c55f6f13410b648cca7548ded",
+        "before": "e4d22a7128218c1de64a3159136514fa9a8f55582080c5d762f20a54fa7be804",
+        "deleteCount": 1,
+        "directory": "activity",
+        "name": "RecordVideoActivity",
+        "startLine": 10016,
+        "text": "    const-string p1, \"Voyemu virtual back camera default: dvr\"\n"
+      },
+      {
+        "after": "d754bf3b5b185c136ef80b9b21067512c68fca371d892df3bed29e2c6d43b9ca",
+        "before": "02ea306eeca64774ebba64b94642c3dd0101196fc3d580fe11c7c68c2b963405",
+        "deleteCount": 37,
+        "directory": "common",
+        "name": "DaoUtil",
+        "startLine": 879,
+        "text": ".method public static getLatestSource()Ljava/io/File;\n    .registers 1\n\n    invoke-static {}, Lcom/voyemu/oem/CameraCapabilities;->getLatestSource()Ljava/io/File;\n\n    move-result-object v0\n\n    return-object v0\n.end method\n"
+      }
+    ]
+  },
+  "schema": 1
+}

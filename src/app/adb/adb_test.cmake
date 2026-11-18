@@ -1,0 +1,10 @@
+string(RANDOM LENGTH 20 random)
+set(fixture "${CMAKE_CURRENT_BINARY_DIR}/fixture-${test_case}-${random}")
+file(MAKE_DIRECTORY "${fixture}")
+file(CHMOD "${fixture}" PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE)
+execute_process(COMMAND "${test_executable}" "${test_case}" "${fixture}"
+    RESULT_VARIABLE result TIMEOUT 18)
+file(REMOVE_RECURSE "${fixture}")
+if(NOT result STREQUAL "0")
+    message(FATAL_ERROR "Embedded ADB case ${test_case} failed (${result})")
+endif()

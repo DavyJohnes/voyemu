@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.android.car" android:sharedUserId="android.uid.system">
+    <uses-sdk android:minSdkVersion="30" android:targetSdkVersion="30" />
+    <application android:label="Voyemu car availability" android:allowBackup="false" android:directBootAware="true">
+        <service android:name="com.voyemu.oem.car.CarAvailabilityService" android:exported="true" android:directBootAware="true">
+            <intent-filter><action android:name="android.car.ICar" /></intent-filter>
+        </service>
+    </application>
+</manifest>

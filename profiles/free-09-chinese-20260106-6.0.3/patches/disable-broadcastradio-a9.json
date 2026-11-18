@@ -1,0 +1,25 @@
+{
+  "api": 28,
+  "calls": [
+    {
+      "args": [
+        "output",
+        [
+          {
+            "startLine": 3,
+            "deleteCount": 0,
+            "insert": [
+              {
+                "text": "    disabled\n"
+              }
+            ]
+          }
+        ],
+        "d41d6004a1d99a93ee5a76292cea9b79ec4e7b9b1a90084466f9d9a9c29ba442"
+      ],
+      "operation": "editLines"
+    }
+  ],
+  "constants": {},
+  "schema": 1
+}

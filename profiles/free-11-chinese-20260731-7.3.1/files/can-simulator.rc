@@ -1,0 +1,13 @@
+# Candidate for pinned /vendor/etc/init/hw/init.ranchu.rc; verify on first boot.
+on post-fs
+    chown root system /dev/cis_can
+    chmod 0660 /dev/cis_can
+    chown system system /dev/cis_can_model
+    chmod 0600 /dev/cis_can_model
+
+service can-simulator /system/bin/voyemu-can-model
+    user system
+    group system
+    disabled
+    socket voyemu_can_model seqpacket 0660 root system u:object_r:can_simulator_socket:s0
+    socket voyemu_can_observe seqpacket 0600 root root u:object_r:can_simulator_observe_socket:s0

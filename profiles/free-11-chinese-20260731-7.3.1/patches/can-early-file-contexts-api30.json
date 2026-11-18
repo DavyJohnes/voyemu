@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "api": 30,
+  "native": true,
+  "input_sha256": "7fc4c203185a6036dafacc401472a152111b9d313702f28befb1327b5dab1f5e",
+  "output_sha256": "873da6472b242a86d657900bdd90d4fa458dbde615c75ea406c6806f06ce8ecc",
+  "description": "Exact pinned API30 native early input file contexts; appends the registered early input labels on top of the patched simulator file contexts."
+}

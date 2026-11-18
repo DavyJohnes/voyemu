@@ -1,0 +1,16 @@
+# Embed the CLI message catalogs; English is the source of keys and cli_messages tests the others.
+set(voyemu_cli_messages "")
+foreach(language IN ITEMS en ru zh)
+    set(source "${CMAKE_CURRENT_SOURCE_DIR}/cli/messages.${language}.json")
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${source}")
+    file(READ "${source}" catalog)
+    string(JSON type ERROR_VARIABLE invalid TYPE "${catalog}")
+    if(invalid OR NOT type STREQUAL "OBJECT")
+        message(FATAL_ERROR "Invalid CLI message catalog: ${source}")
+    endif()
+    # Byte initializers avoid compiler string-literal limits and preserve UTF-8 verbatim.
+    string(HEX "${catalog}" catalog_hex)
+    string(REGEX REPLACE "(..)" "0x\\1," catalog_bytes "${catalog_hex}")
+    string(APPEND voyemu_cli_messages "static constexpr unsigned char embedded_cli_messages_${language}[]={${catalog_bytes}};\n")
+endforeach()
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/cli_messages.inc" "${voyemu_cli_messages}")

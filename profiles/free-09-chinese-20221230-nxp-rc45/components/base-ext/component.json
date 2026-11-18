@@ -1,0 +1,12 @@
+{
+  "type": "jar",
+  "minSdk": 28,
+  "output": "ext.jar",
+  "frameworkBase": {
+    "jar": "/system/framework/ext.jar",
+    "oat": "/system/framework/arm64/boot-ext.oat",
+    "oat_sha256": "12872ad2a24d8ab0c7bab9bfd50ce6f175b98e47c90724628da71a1131b8dbda",
+    "vdex": "/system/framework/boot-ext.vdex",
+    "vdex_sha256": "90c3c01c2193a3a7754b0dec973c3a54403a1d1d92061ffb8409be9bc4d2fd3d"
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "api": 28,
+  "calls": [
+    {
+      "args": [
+        "src"
+      ],
+      "operation": "addDex"
+    },
+    {
+      "args": [
+        "Lcom/pateo/lightnavi/Session;->setShowPermit(ZZ)V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "if-eq v0, p1, :cond_30"
+              ],
+              "with": [
+                "if-ne v0, p1, :voyemu_permit_update",
+                "if-eqz p2, :cond_30",
+                ":voyemu_permit_update"
+              ]
+            }
+          ]
+        }
+      ],
+      "operation": "editMethod"
+    },
+    {
+      "args": [
+        "Lcom/pateo/lightnavi/SessionManager;->update(Ljava/util/Observable;Ljava/lang/Object;)V",
+        {
+          "edits": [
+            {
+              "before": [
+                "iget-object p1, p0, Lcom/pateo/lightnavi/SessionManager;->mUpdateQueue:Ljava/util/LinkedList;"
+              ],
+              "insert": [
+                "iget-object p1, p0, Lcom/pateo/lightnavi/SessionManager;->mPreference:Landroid/content/SharedPreferences;",
+                "invoke-static {p1, p2}, Lcom/voyemu/oem/NaviConsent;->tryPersist(Landroid/content/SharedPreferences;Ljava/lang/Object;)Z",
+                "move-result p1",
+                "if-nez p1, :cond_11"
+              ]
+            }
+          ]
+        }
+      ],
+      "operation": "editMethod"
+    }
+  ],
+  "constants": {},
+  "schema": 1
+}

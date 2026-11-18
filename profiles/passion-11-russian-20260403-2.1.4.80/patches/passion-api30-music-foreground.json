@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "api": 30,
+  "constants": {
+    "original_sha256_allowlist": [
+      "a3c788860d5df27277d53ffbf838daaefddb6ab098ad52b636671dd70b34765d"
+    ]
+  },
+  "calls": [
+    {
+      "operation": "guardPassionMusicForeground",
+      "args": []
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "api": 30,
+  "constants": {
+    "original_sha256_allowlist": [
+      "972c40dc151a9bc64ab29296176a8575d2521fed78e35c41b64ff5a6bf34c3f1",
+      "3b38818c46903a3786df70793712c2d2d043cfb516279b49fa412acf4a1e9c9c",
+      "b676a3a426ba3b59fabb9d98355ff0e0ac7b07d7ad6545ac44d9cbf85f1700c1",
+      "b3287150827e7fa51072bcbcba257539101cda8433c5f9d3a95f4ca905abd567",
+      "6f96bbeb58bf915b0a2d60817082cdca3523e3a2d00c144544cb92b4e5be6870",
+      "3dfa09d39638888de1f79d679867d1ac57c9a165a0eed6d43b39aedc4be1ea33",
+      "0897ba9e37c3246a81658a9756f148b6dc93285ae724714df4638af015bbaee1"
+    ]
+  },
+  "calls": [
+    {
+      "operation": "useLibraries",
+      "args": [
+        [
+          "QGAPI",
+          "QGMOD",
+          "QGVehicle"
+        ]
+      ]
+    }
+  ]
+}

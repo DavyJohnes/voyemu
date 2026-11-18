@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "api": 30,
+  "constants": {
+    "original_sha256_allowlist": [
+      "648c91cccacae25b6810f93b44bfa2b7aed71cadee44353a964d09658cb8f858"
+    ]
+  },
+  "calls": [
+    {
+      "operation": "routeHiboard",
+      "args": []
+    }
+  ],
+  "helper": "api30-hiboard-routing/src/com/voyemu/output/HiboardRouter.java"
+}

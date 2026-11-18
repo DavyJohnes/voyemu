@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "files": [
+    {
+      "path": "src/com/voyemu/input/WheelInputSession.java",
+      "replacements": [
+        {
+          "before": "            case \"photo\":\n                return 173;",
+          "after": "            case \"photo\":\n                return 142;"
+        }
+      ]
+    },
+    {
+      "path": "src/com/voyemu/input/AudioControl.java",
+      "replacements": [
+        {
+          "before": "contract.getMethod(\"getCurrentAudioPolicyInfo\", int.class, String.class)\n                        .invoke(target, 0, \"com.voyemu.oem\")",
+          "after": "contract.getMethod(\"getCurrentAudioPolicyInfo\", int.class)\n                        .invoke(target, 0)"
+        },
+        {
+          "before": "contract.getMethod(\"getStreamVolume\", int.class, String.class)",
+          "after": "contract.getMethod(\"getStreamVolume\", int.class)"
+        },
+        {
+          "before": "int before = ((Integer) getVolume.invoke(target, stream, \"com.voyemu.oem\")).intValue();",
+          "after": "int before = ((Integer) getVolume.invoke(target, stream)).intValue();"
+        },
+        {
+          "before": "int after = ((Integer) getVolume.invoke(target, stream, \"com.voyemu.oem\")).intValue();",
+          "after": "int after = ((Integer) getVolume.invoke(target, stream)).intValue();"
+        }
+      ]
+    },
+    {
+      "path": "src/com/voyemu/input/KeyEventRouter.java",
+      "replacements": [
+        {
+          "before": "private String mediaOwner = \"com.qinggan.media\";",
+          "after": "private String mediaOwner = \"com.qinggan.app.music\";"
+        }
+      ]
+    }
+  ]
+}

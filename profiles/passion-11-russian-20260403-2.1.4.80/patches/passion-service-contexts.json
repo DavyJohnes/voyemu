@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "profile": "passion-11-russian-20260403-2.1.4.80",
+  "api": 30,
+  "native": true,
+  "input_sha256": "e4a9f3406dc9c3ff5a03c4b478941e02bede17ee95798bdbce1a31cc33f40959",
+  "output_sha256": "25c66b18abdb1bf102f5012387d54336c12a67c80e4ab540b90fdb863c1b82b6",
+  "description": "Exact native Passion API30 service policy: system_app publishes three pinned Binder names, platform_app can only find them; original bytes remain unchanged."
+}

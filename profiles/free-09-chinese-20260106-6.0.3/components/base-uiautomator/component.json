@@ -1,0 +1,12 @@
+{
+  "type": "jar",
+  "minSdk": 28,
+  "output": "uiautomator.jar",
+  "frameworkBase": {
+    "jar": "/system/framework/uiautomator.jar",
+    "oat": "/system/framework/oat/arm64/uiautomator.odex",
+    "oat_sha256": "58f7f8b606d168a4a71abd35f1f8134193be7bc8ab16f7259b120c9672121ae6",
+    "vdex": "/system/framework/oat/arm64/uiautomator.vdex",
+    "vdex_sha256": "a574b5d22e5bb55c3dd3954a2352d6ca7c021ae27302369c1d378eea4f2cc3de"
+  }
+}

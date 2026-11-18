@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "api": 30,
+  "constants": {
+    "original_sha256_allowlist": [
+      "48665cf9d6bb50b49b3aa0b1aa73bdb0ac5d9d7071240c46c7f13d07d4114d7e"
+    ]
+  },
+  "calls": [
+    {
+      "operation": "guardLauncherDvr",
+      "args": []
+    }
+  ],
+  "helper": "api30-launcher-dvr/src/com/voyemu/launcher/DvrAvailability.java"
+}

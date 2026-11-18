@@ -1,0 +1,159 @@
+#pragma once
+#include "model.hpp"
+#include "passion_mcu_property.hpp"
+#include "passion_wheel.hpp"
+#include <filesystem>
+#include <fstream>
+#include <map>
+#include <sstream>
+#include <stdexcept>
+
+namespace voyemu {
+inline constexpr const char *passion_profile_id = "passion-11-russian-20260403-2.1.4.80";
+
+inline void passion_camera_config(const Json &definition,
+                                  std::map<std::string, std::string> &values) {
+    if (definition.value("id", std::string{}) == passion_profile_id) {
+        values["hw.camera.back"] = "emulated";
+        values["hw.camera.front"] = "none";
+    }
+}
+
+inline bool passion_camera_identity(const Json &android) {
+    return android.value("reference_profile", std::string{}) == passion_profile_id ||
+           android.value("presentation_adapter", Json::object()).value("family", std::string{}) ==
+                   passion_profile_id ||
+           android.value("home", Json::object()).value("package", std::string{}) ==
+                   "com.voyah.os.carlauncher";
+}
+
+inline std::string passion_camera_config_text(const Json &android) {
+    const auto path = android.at("config_template").get<std::string>();
+
+    if (!std::filesystem::is_regular_file(std::filesystem::symlink_status(path)) ||
+        std::filesystem::file_size(path) > 65536) {
+        throw VoyemuError("PASSION_CAMERA", "bounded config required");
+    }
+
+    std::ifstream camera_input(path, std::ios::binary);
+
+    if (!camera_input) {
+        throw VoyemuError("PASSION_CAMERA", "config unreadable");
+    }
+
+    return std::string((std::istreambuf_iterator<char>(camera_input)), {});
+}
+
+inline void passion_camera_validate(const Json &android, const std::string &config) {
+    if (android.value("reference_profile", std::string{}) != passion_profile_id ||
+        android.value("presentation_adapter", Json::object()).value("family", std::string{}) !=
+                passion_profile_id) {
+        throw VoyemuError("PASSION_CAMERA", "exact presentation identity required");
+    }
+
+    unsigned back = 0, front = 0;
+    std::istringstream input(config);
+    std::string line;
+
+    while (std::getline(input, line)) {
+        const auto at = line.find('=');
+
+        if (at == std::string::npos) {
+            continue;
+        }
+
+        auto key = line.substr(0, at), value = line.substr(at + 1);
+        auto trim = [](std::string v) {
+            auto first = v.find_first_not_of(" \t\r");
+            auto last = v.find_last_not_of(" \t\r");
+
+            return first == std::string::npos ? std::string{} : v.substr(first, last - first + 1);
+        };
+        key = trim(key);
+        value = trim(value);
+
+        if (key == "hw.camera.back") {
+            ++back;
+
+            if (value != "emulated") {
+                throw VoyemuError("PASSION_CAMERA", "emulated back required");
+            }
+        }
+
+        if (key == "hw.camera.front") {
+            ++front;
+
+            if (value != "none") {
+                throw VoyemuError("PASSION_CAMERA", "front camera disabled");
+            }
+        }
+    }
+
+    if (back != 1 || front != 1) {
+        throw VoyemuError("PASSION_CAMERA", "exact camera config required");
+    }
+
+    for (const auto &arg : android.value("args", Json::array())) {
+        const auto value = arg.get<std::string>();
+
+        if (value.starts_with("-camera-back") || value.starts_with("-camera-front")) {
+            throw VoyemuError("PASSION_CAMERA", "prepared emulated camera override forbidden");
+        }
+    }
+}
+
+inline constexpr const char *passion_home =
+        "com.voyah.os.carlauncher/com.voyah.os.carlauncher.LauncherActivityMain";
+inline constexpr const char *passion_secondary =
+        "com.voyah.os.carlauncher/com.voyah.os.carlauncher.second.LauncherActivityMainSecond";
+
+inline Json passion_startup_values(const Json &definition) {
+    if (definition.value("schema", 0) != 1 ||
+        definition.value("id", std::string{}) != passion_profile_id ||
+        definition.value("status", std::string{}) != "incomplete" ||
+        definition.value("android", Json::object()).value("package", std::string{}) !=
+                "system-images;android-30;default;arm64-v8a" ||
+        definition.value("initial_state", Json::object()) != Json::object()) {
+        throw VoyemuError("PASSION_PRESENTATION",
+                          "exact incomplete API30 source with unsupported vehicle state required");
+    }
+
+    return Json::object();
+}
+
+inline Json passion_presentation_contract(bool mcu = false, bool media_wheel = false) {
+    return {{"family", passion_profile_id},
+            {"secondary_component", passion_secondary},
+            {"bootstrap_component", "com.voyemu/com.voyemu.output.SecondScreenService"},
+            {"vehicle_state", mcu ? "partial-soc" : "unsupported"},
+            {"wheel", media_wheel ? "android-media-keys" : "unsupported"},
+            {"language", "unsupported"}};
+}
+
+inline bool passion_presentation(const Json &android) {
+    if (!android.contains("presentation_adapter")) {
+        return false;
+    }
+
+    if (android.at("presentation_adapter").is_object() &&
+        android.at("presentation_adapter").value("family", std::string{}) ==
+                "free-09-chinese-20221230-nxp-rc45") {
+        return false;
+    }
+
+    passion_wheel_validate(android);
+    const bool media_wheel = android.value("wheel_capability", Json()) ==
+                             passion_wheel_partial_capability();
+
+    if (android.at("presentation_adapter") !=
+                passion_presentation_contract(passion_mcu_available(android), media_wheel) ||
+        android.value("api", 0) != 30 ||
+        android.value("home", Json::object()) !=
+                Json{{"package", "com.voyah.os.carlauncher"}, {"component", passion_home}} ||
+        android.contains("vehicle_adapter") || android.contains("systemui_adapter")) {
+        throw VoyemuError("PASSION_PRESENTATION", "exact API30 OEM presentation contract required");
+    }
+
+    return true;
+}
+} // namespace voyemu

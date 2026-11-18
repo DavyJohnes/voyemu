@@ -1,0 +1,189 @@
+# Voyemu release. A tag v<version> runs the ci checks, builds the launcher of macOS arm64, Linux x64 and,
+# cross-built on Linux, Windows x64 from the pinned toolchains, packs each with the tracked profiles/,
+# the root texts and the notices through src/dev/release/archive.sh, creates the GitHub release with the
+# archives and SHA256SUMS and writes Formula/voyemu.rb of voyemu/homebrew-tap with the
+# HOMEBREW_TAP_TOKEN secret. The tag must name the VOYEMU_VERSION of src/app/CMakeLists.txt. A version
+# with a suffix, such as 1.0.0-beta1, is a prerelease: GitHub marks it so and the tap stays unchanged.
+name: release
+
+on:
+    push:
+        tags: ["v*"]
+
+permissions:
+    contents: read
+
+jobs:
+    checks:
+        name: Checks
+        uses: ./.github/workflows/ci.yml
+
+    build:
+        name: Build ${{ matrix.host }}
+        strategy:
+            fail-fast: true
+            matrix:
+                include:
+                    - { host: linux-x64, runner: ubuntu-24.04, set: linux, toolchain: zig-linux-x64, launcher: voyemu }
+                    - { host: macos-arm64, runner: macos-15, set: macos, toolchain: zig-macos-arm64, launcher: voyemu }
+                    - { host: windows-x64, runner: ubuntu-24.04, set: windows-cross, toolchain: zig-windows-x64, launcher: voyemu.exe }
+        runs-on: ${{ matrix.runner }}
+        timeout-minutes: 60
+        env:
+            TMPDIR: ${{ github.workspace }}/.local/build/tmp/release
+        steps:
+            - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+              with:
+                  persist-credentials: false
+            - run: mkdir -p .local/build/tmp/release
+            - uses: ./.github/actions/toolchains
+              with:
+                  set: ${{ matrix.set }}
+            - if: runner.os == 'macOS'
+              run: sudo xcode-select --switch /Library/Developer/CommandLineTools && xcrun --sdk macosx --show-sdk-path
+            - run: cmake -S src/app -B .local/build/release -G Ninja -DCMAKE_TOOLCHAIN_FILE="$PWD/src/dev/toolchains/${{ matrix.toolchain }}.cmake" -DBUILD_TESTING=OFF
+            - run: cmake --build .local/build/release --target voyemu --parallel 4
+            # The Windows launcher cannot run on the Linux runner; the other two must report the tag version.
+            - if: matrix.host != 'windows-x64'
+              env:
+                  TAG: ${{ github.ref_name }}
+              run: test "$(./.local/build/release/voyemu --version)" = "Voyemu ${TAG#v}"
+            - if: runner.os == 'macOS'
+              run: codesign --verify --strict ./.local/build/release/voyemu
+            - if: matrix.host == 'windows-x64'
+              run: test -z "$(find .local/build/release -name '*.pdb' -print -quit)"
+            - run: cmake --install .local/build/release --component Runtime --prefix "$PWD/.local/build/stage"
+            - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+              with:
+                  name: stage-${{ matrix.host }}
+                  path: |
+                      .local/build/stage/${{ matrix.launcher }}
+                      .local/build/stage/notices/
+                  if-no-files-found: error
+
+    package:
+        name: Package
+        needs: [checks, build]
+        runs-on: ubuntu-24.04
+        timeout-minutes: 30
+        outputs:
+            version: ${{ steps.version.outputs.version }}
+            prerelease: ${{ steps.version.outputs.prerelease }}
+        steps:
+            - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+              with:
+                  persist-credentials: false
+            # The JDK of the linux set provides jar for the Windows zip.
+            - uses: ./.github/actions/toolchains
+              with:
+                  set: linux
+            - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+              with:
+                  pattern: stage-*
+                  path: .local/build/stages
+            - name: Check the version
+              id: version
+              env:
+                  TAG: ${{ github.ref_name }}
+              run: |
+                  version=${TAG#v}
+                  chmod +x .local/build/stages/stage-linux-x64/voyemu
+                  test "$(.local/build/stages/stage-linux-x64/voyemu --version)" = "Voyemu $version"
+                  prerelease=false
+                  if [[ "$version" == *-* ]]; then
+                      prerelease=true
+                  fi
+                  {
+                      echo "version=$version"
+                      echo "prerelease=$prerelease"
+                  } >> "$GITHUB_OUTPUT"
+            - name: Build the archives
+              env:
+                  VERSION: ${{ steps.version.outputs.version }}
+              run: |
+                  export JAR="$PWD/$(jq -er .optionalTools.linuxBuild.jdk.directory src/app/toolchain.json)/bin/jar"
+                  for host in macos-arm64 linux-x64 windows-x64; do
+                      bash src/dev/release/archive.sh "$VERSION" "$host" ".local/build/stages/stage-$host" .local/build/release
+                  done
+                  cd .local/build/release
+                  cat ./*.sha256 > SHA256SUMS
+                  rm ./*.sha256
+                  sha256sum -c SHA256SUMS
+                  cat SHA256SUMS >> "$GITHUB_STEP_SUMMARY"
+            # The formula describes only stable releases.
+            - name: Write the Homebrew formula
+              if: steps.version.outputs.prerelease == 'false'
+              env:
+                  VERSION: ${{ steps.version.outputs.version }}
+              run: bash src/dev/release/homebrew.sh "$VERSION" "$GITHUB_REPOSITORY" .local/build/release/SHA256SUMS .local/build/voyemu.rb
+            - name: Write the release notes
+              env:
+                  VERSION: ${{ steps.version.outputs.version }}
+              run: bash src/dev/release/notes.sh "$VERSION" CHANGELOG.md .local/build/notes.md
+            - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+              with:
+                  name: release
+                  path: |
+                      .local/build/release/
+                      .local/build/voyemu.rb
+                      .local/build/notes.md
+                  if-no-files-found: error
+
+    release:
+        name: Release ${{ github.ref_name }}
+        needs: package
+        runs-on: ubuntu-24.04
+        timeout-minutes: 10
+        permissions:
+            contents: write
+        steps:
+            - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+              with:
+                  name: release
+                  path: release
+            - name: Create the release with the archives
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  TAG: ${{ github.ref_name }}
+                  VERSION: ${{ needs.package.outputs.version }}
+                  PRERELEASE: ${{ needs.package.outputs.prerelease }}
+              run: |
+                  prerelease=()
+                  if [[ "$PRERELEASE" == true ]]; then
+                      prerelease=(--prerelease)
+                  fi
+                  gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --title "Voyemu $VERSION" \
+                      "${prerelease[@]}" --notes-file release/notes.md release/release/*
+
+    homebrew:
+        name: Homebrew formula
+        needs: [package, release]
+        if: needs.package.outputs.prerelease == 'false'
+        runs-on: ubuntu-24.04
+        timeout-minutes: 10
+        steps:
+            - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+              with:
+                  name: release
+                  path: release
+            - name: Commit the formula to voyemu/homebrew-tap
+              env:
+                  TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+                  VERSION: ${{ needs.package.outputs.version }}
+              run: |
+                  if [[ -z "$TOKEN" ]]; then
+                      echo "::notice::HOMEBREW_TAP_TOKEN is not set; Formula/voyemu.rb of voyemu/homebrew-tap stays unchanged"
+                      exit 0
+                  fi
+                  git clone --depth 1 "https://x-access-token:$TOKEN@github.com/voyemu/homebrew-tap.git" tap
+                  mkdir -p tap/Formula
+                  cp release/voyemu.rb tap/Formula/voyemu.rb
+                  cd tap
+                  git add Formula/voyemu.rb
+                  if git diff --cached --quiet; then
+                      echo "Formula/voyemu.rb already describes $VERSION"
+                      exit 0
+                  fi
+                  git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+                      commit -m "voyemu $VERSION"
+                  git push origin HEAD

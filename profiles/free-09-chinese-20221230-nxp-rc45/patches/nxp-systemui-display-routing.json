@@ -1,0 +1,152 @@
+{
+  "schema": 1,
+  "api": 28,
+  "constants": {
+    "INPUT_SHA256": "a20c1ee2c682aad846b93010356d434ef7e43ffb314b21186a91f348ba4c497b"
+  },
+  "calls": [
+    {
+      "operation": "editMethod",
+      "args": [
+        "Lcom/qinggan/systemui/statusbar/phone/PhoneStatusBar;->addStatusBarWindow(Z)V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-interface {p1, v0, v1}, Landroid/view/WindowManager;->addView(Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ],
+              "with": [
+                "invoke-static {p1, v0, v1}, Lcom/voyemu/output/WindowRouter;->addView(Landroid/view/ViewManager;Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ]
+            },
+            {
+              "replace": [
+                "invoke-interface {p1, v0}, Landroid/view/WindowManager;->removeView(Landroid/view/View;)V"
+              ],
+              "with": [
+                "invoke-static {p1, v0}, Lcom/voyemu/output/WindowRouter;->removeView(Landroid/view/ViewManager;Landroid/view/View;)V"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "editMethod",
+      "args": [
+        "Lcom/qinggan/systemui/statusbar/phone/PhoneStatusBar;->addStatusBarWindowSecond(Z)V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-interface {p1, v0, v1}, Landroid/view/WindowManager;->addView(Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ],
+              "with": [
+                "invoke-static {p1, v0, v1}, Lcom/voyemu/output/WindowRouter;->addView(Landroid/view/ViewManager;Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ]
+            },
+            {
+              "replace": [
+                "invoke-interface {p1, v0}, Landroid/view/WindowManager;->removeView(Landroid/view/View;)V"
+              ],
+              "with": [
+                "invoke-static {p1, v0}, Lcom/voyemu/output/WindowRouter;->removeView(Landroid/view/ViewManager;Landroid/view/View;)V"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "editMethod",
+      "args": [
+        "Lcom/qinggan/systemui/statusbar/phone/PhoneStatusBar;->setNavigationBarVisibility(Z)V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-interface {v2, v3, v1}, Landroid/view/WindowManager;->addView(Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ],
+              "with": [
+                "invoke-static {v2, v3, v1}, Lcom/voyemu/output/WindowRouter;->addView(Landroid/view/ViewManager;Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ]
+            },
+            {
+              "replace": [
+                "invoke-interface {v1, v2}, Landroid/view/WindowManager;->removeView(Landroid/view/View;)V"
+              ],
+              "with": [
+                "invoke-static {v1, v2}, Lcom/voyemu/output/WindowRouter;->removeView(Landroid/view/ViewManager;Landroid/view/View;)V"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "editMethod",
+      "args": [
+        "Lcom/qinggan/systemui/statusbar/phone/PhoneStatusBar;->showMuteIcon(Z)V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-interface {p1, v1, v4}, Landroid/view/WindowManager;->addView(Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ],
+              "with": [
+                "invoke-static {p1, v1, v4}, Lcom/voyemu/output/WindowRouter;->addView(Landroid/view/ViewManager;Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "editMethod",
+      "args": [
+        "Lcom/qinggan/systemui/statusbar/phone/PhoneStatusBar;->destroy()V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-interface {v0, v1}, Landroid/view/WindowManager;->removeViewImmediate(Landroid/view/View;)V"
+              ],
+              "with": [
+                "invoke-static {v0, v1}, Lcom/voyemu/output/WindowRouter;->removeViewImmediate(Landroid/view/WindowManager;Landroid/view/View;)V"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "editMethod",
+      "args": [
+        "Lcom/qinggan/systemui/statusbar/views/AirConditionView;->isTopAirCondition()Z",
+        {
+          "edits": [
+            {
+              "before": [
+                "new-instance v1, Ljava/lang/StringBuilder;"
+              ],
+              "insert": [
+                "if-nez v0, :voyemu_top_activity_known",
+                "const/4 v0, 0x0",
+                "return v0",
+                ":voyemu_top_activity_known"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "useLibraries",
+      "args": [
+        [
+          "VoyemuLauncherRouting"
+        ]
+      ]
+    }
+  ]
+}

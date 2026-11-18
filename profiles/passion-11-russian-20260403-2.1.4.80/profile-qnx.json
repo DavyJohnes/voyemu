@@ -1,0 +1,308 @@
+{
+  "schema": 1,
+  "status": "incomplete",
+  "hardware_adapter": "sa8155-passion-21480",
+  "update": {
+    "source": "owner-update",
+    "container": "zip-stored-tgz",
+    "sha256": "a1b651223453ed23d1835a70a5cac64c43247a21165ccd88d56a21cc3215ddb9",
+    "nested_member": "h53y-cdc-8155-H53_8155_OTA_1.4.0_release-soc_ota-user-secure-2.1.4.80-20260403174306.tgz",
+    "nested_sha256": "00d41ae4ff1283040e97276d3b287daf381b2ee9843a7b0f3977ec5b7a06eae4"
+  },
+  "originals": {
+    "mifs_hyp_la.img": {
+      "file": "mifs_hyp_la.img",
+      "bytes": 2254664,
+      "sha256": "1e7c487aae4f4353621f8d0301b352cc974e9037d114ff3ec2556d048512ad28",
+      "acquisition": {
+        "kind": "raw-tar-member",
+        "member": "otaPack/mifs_hyp_la.img"
+      }
+    },
+    "mifs_recovery_hyp_la.img": {
+      "file": "mifs_recovery_hyp_la.img",
+      "bytes": 2330096,
+      "sha256": "8376e6340f719d8a4b6e572fee7a675dd7bd6e88e14c589ba2eba27ee60c239b",
+      "acquisition": {
+        "kind": "raw-tar-member",
+        "member": "otaPack/mifs_recovery_hyp_la.img"
+      }
+    },
+    "ifs2_la.img": {
+      "file": "ifs2_la.img",
+      "bytes": 200925932,
+      "sha256": "1e942ab83e59ab78ff0096f474d3677ba7e83f6a00f86a1ebe9f0ae755a3e157",
+      "acquisition": {
+        "kind": "raw-tar-member",
+        "member": "otaPack/ifs2_la.img"
+      }
+    },
+    "ifs2_recovery_la.img": {
+      "file": "ifs2_recovery_la.img",
+      "bytes": 32080412,
+      "sha256": "1635c921b73544411a08028005b906e677d029c047d2a6e0a041598c9847709c",
+      "acquisition": {
+        "kind": "raw-tar-member",
+        "member": "otaPack/ifs2_recovery_la.img"
+      }
+    },
+    "system_la.img": {
+      "file": "system_la.img",
+      "bytes": 2684354560,
+      "sha256": "9e6395255f9bc51d926fd5ab604612d779de93da59ba71832ee580c8534f42ec",
+      "acquisition": {
+        "kind": "raw-tar-member",
+        "member": "otaPack/system_la.img"
+      }
+    }
+  },
+  "identity": {
+    "abi": "aarch64le",
+    "elf_class": 64,
+    "elf_machine": 183,
+    "firmware_platform": "SA8155P.HYP",
+    "qnx_build_family": "700-SDP",
+    "physical_cpu_count_verified": false
+  },
+  "host_layout": {
+    "startup_offset": 12288,
+    "startup_bytes": 418056,
+    "entry": 2238713856,
+    "load_address": 2238710272,
+    "stream_offset": 430344,
+    "stream_bytes": 1824320,
+    "imagefs_bytes": 4454104,
+    "lzo_blocks": 68,
+    "elf_segment_trimmed": true
+  },
+  "nested_imagefs": {
+    "ifs2_la_img": [
+      {
+        "file": "ifs_startup.img",
+        "offset": 4096,
+        "bytes": 20548012
+      },
+      {
+        "file": "ifs_display.img",
+        "offset": 20553728,
+        "bytes": 10818372
+      },
+      {
+        "file": "ifs_audio_camera.img",
+        "offset": 31375360,
+        "bytes": 44835304
+      },
+      {
+        "file": "ifs_graphics.img",
+        "offset": 76214272,
+        "bytes": 57101532
+      },
+      {
+        "file": "ifs_video.img",
+        "offset": 133316608,
+        "bytes": 61039984
+      },
+      {
+        "file": "ifs_disk.img",
+        "offset": 194359296,
+        "bytes": 6566632
+      }
+    ]
+  },
+  "ram_disk_driver": null,
+  "source_build_verified": false,
+  "guest_boot_verified": false,
+  "exported_frame_verified": false,
+  "remaining": [
+    "qnx6-long-filename-acquisition-support-and-checked-fixtures",
+    "ram-driver-or-explicit-supplemental-original-abi-proof",
+    "source-guarded-passion-startup-and-storage-adapter",
+    "ic-someip-iceoryx-vehicle-signal-contract-and-runtime-service-readiness",
+    "actual-display-dimensions-screen-and-ic-ipc-integration",
+    "complete-current-source-host-preparation-and-launch-contract",
+    "guest-ack-and-original-resolution-frame"
+  ],
+  "cluster_stack": {
+    "kind": "ic-service-qt-mega-ipc",
+    "entry_candidates": [
+      {
+        "file": "usr/bin/ic_service",
+        "bytes": 55586816
+      },
+      {
+        "file": "usr/bin/ic_server",
+        "bytes": 9323928
+      }
+    ],
+    "service_graph": [
+      "slm/service_apps.xml",
+      "slm/ic_qt.xml",
+      "slm/ic_service/ic_service.xml",
+      "slm/ic_qt/ic_qt.xml",
+      "scripts/startup.sh"
+    ],
+    "ipc_library": "lib64/lib_mega_ipc.so",
+    "free_gauge_protocol_compatible": false,
+    "display_dimensions": {
+      "width": 1920,
+      "height": 720,
+      "source": "scripts/startup.sh:QQNX_PHYSICAL_SCREEN_SIZE"
+    },
+    "runtime_entry_verified": false,
+    "compositor": {
+      "file": "usr/bin/ivi_compositor",
+      "bytes": 48629016,
+      "service": "slm/ic_qt/ic_qt.xml"
+    },
+    "vehicle_services": [
+      "usr/bin/ic_service",
+      "usr/bin/ic_server"
+    ],
+    "someip_dependencies": [
+      "someipd-vlan10",
+      "someipd-vlan11",
+      "someipd-vlan12",
+      "someipd-vlan13",
+      "someipd-vlan14"
+    ],
+    "ipc_runtime": "MEGA IPC / iceoryx",
+    "dt_needed": {
+      "/usr/bin/ic_service": [
+        "lib_mega_ipc.so",
+        "libmega_persistent.so",
+        "libsomeip-common.so",
+        "libx4base.so",
+        "libx4serial.so",
+        "libx4someip.so",
+        "libx4someipcfg.so",
+        "libx4someipcore.so",
+        "libslog2.so.1",
+        "libecu_config.so.1",
+        "libjsoncpp.so.19",
+        "libc++.so.1",
+        "libm.so.3",
+        "libc.so.4"
+      ],
+      "/usr/bin/ic_server": [
+        "lib_mega_ipc.so",
+        "libsomeip-common.so",
+        "libx4base.so",
+        "libx4serial.so",
+        "libx4someip.so",
+        "libx4someipcfg.so",
+        "libx4someipcore.so",
+        "libslog2.so.1",
+        "libecu_config.so.1",
+        "libc++.so.1",
+        "libm.so.3",
+        "libc.so.4"
+      ],
+      "/usr/bin/ivi_compositor": [
+        "libslog2.so.1",
+        "libjsoncpp.so.19",
+        "libQt5Charts.so.5",
+        "libQt5Widgets.so.5",
+        "libQt5Quick3D.so.5",
+        "libQt5Quick3DRuntimeRender.so.5",
+        "libQt5Quick3DAssetImport.so.5",
+        "libQt5Quick3DRender.so.5",
+        "libQt5Quick.so.5",
+        "libQt5Quick3DUtils.so.5",
+        "libQt5Multimedia.so.5",
+        "libQt5Gui.so.5",
+        "libQt5QmlModels.so.5",
+        "libQt5Qml.so.5",
+        "libQt5Network.so.5",
+        "libQt5Core.so.5",
+        "libGLESv2.so.1",
+        "libEGL.so.1",
+        "libm.so.3",
+        "libc++.so.1",
+        "libc.so.4"
+      ],
+      "/usr/bin/mcu_service": [
+        "lib_base.so",
+        "lib_mega_ipc.so",
+        "libspi_rpc.so",
+        "libc++.so.1",
+        "libm.so.3",
+        "libc.so.4"
+      ],
+      "/bin/message_center": [
+        "libmrpc.so",
+        "libuhab.so",
+        "libslog2.so.1",
+        "lib_mega_ipc.so",
+        "libc++.so.1",
+        "libm.so.3",
+        "libc.so.4"
+      ]
+    },
+    "entry_and_direct_dependencies_source_verified": true,
+    "qt_library_version": "5.15.15",
+    "direct_dependency_names_available": true,
+    "resource_archive": {
+      "file": "opt/qt/resources.rcc",
+      "bytes": 178281286,
+      "extracted": false
+    },
+    "executable_sha256": {
+      "/usr/bin/ic_service": "7bfeb9d661103d3d6dfdc44ca4bbfb7ff444bc81ab1226f8858f8e8205b9e850",
+      "/usr/bin/ic_server": "be85ea2ccc0ecf69995d8f62732da7ba38c0360584e824f91b37fd7141d03d84",
+      "/usr/bin/ivi_compositor": "bc2406d538b39dbc935076dd7739bed83b439c7bebdbc322affc6c45d7861499",
+      "/usr/bin/mcu_service": "9a51afe0555aeb47a10fd5b121d4000e21dd75c1a467192b643c3436ddf04184",
+      "/bin/message_center": "b8b68367af3f72fbf372752dc538b4e7c2cdc087d97a5509c001512c9ececd95"
+    }
+  },
+  "display_layout": {
+    "image": "ifs2_la.img",
+    "imagefs": "ifs_display.img",
+    "graphics_configuration": "etc/graphics.conf",
+    "screen_library": "lib64/libscreen.so.1",
+    "screen_library_bytes": 98971,
+    "wfd_library": "lib64/libopenwfd_qnx.so",
+    "wfd_library_bytes": 97848,
+    "runtime_slot": "bin/ssplash",
+    "observer_slot": "bin/qditest",
+    "observer_slot_bytes": 21313,
+    "screen_library_sha256": "a6fde359aea19b9a03c782f67fafc300f98224bdba469d41bdae215b578d228e",
+    "wfd_library_sha256": "c6a2aa07e611ac0ecb3fad46a3c851ba73fdc6aa6898d8d44af3a70075b273b6",
+    "display_modes": [
+      {
+        "width": 1920,
+        "height": 720,
+        "refresh_hz": 60
+      },
+      {
+        "width": 1280,
+        "height": 720,
+        "refresh_hz": 60
+      },
+      {
+        "width": 1920,
+        "height": 720,
+        "refresh_hz": 60
+      },
+      {
+        "width": 1920,
+        "height": 720,
+        "refresh_hz": 60
+      }
+    ]
+  },
+  "supplemental_candidates": [
+    {
+      "role": "ram-disk-driver",
+      "status": "static-required-symbols-resolved-runtime-unverified",
+      "source_profile": "free-09-chinese-20260106-6.0.3",
+      "source_original": "ifs2_recovery_la.img",
+      "source_sha256": "d7dd2e04b36d760dd8e95a939e194530e66b24b8ffe77a5f7290684145e76930",
+      "imagefs": "ifs_recovery.img",
+      "file": "bin/devb-ram",
+      "bytes": 22165,
+      "sha256": "53c732c493495256d16ebe39ab0e0a0f2bbdce3b600b45b5e7d770bd02d4f780",
+      "not_in_passion_archive": true,
+      "runtime_accepted": false
+    }
+  ]
+}

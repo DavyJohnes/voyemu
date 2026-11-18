@@ -1,0 +1,4058 @@
+{
+  "source_sha256": "edf512f5d8209b4b3d0b5403e79fc457f811d8795bf64dbcfa31fcdde1a3d4e7",
+  "fields": [
+    {
+      "index": 1,
+      "name": "ign",
+      "bit": 0,
+      "width": 1,
+      "default": 1
+    },
+    {
+      "index": 2,
+      "name": "turn_left",
+      "bit": 1,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 3,
+      "name": "turn_right",
+      "bit": 2,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 4,
+      "name": "pos_lamp",
+      "bit": 3,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 5,
+      "name": "low_beam",
+      "bit": 4,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 6,
+      "name": "high_beam",
+      "bit": 5,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 7,
+      "name": "hcm_adbFuctionStsLt_bak",
+      "bit": 6,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 8,
+      "name": "hcm_adbFuctionStsRt_bak",
+      "bit": 8,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 9,
+      "name": "rear_fog",
+      "bit": 10,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 10,
+      "name": "epb_fault",
+      "bit": 11,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 11,
+      "name": "bcm_DRLStatus",
+      "bit": 13,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 12,
+      "name": "bms_authenticationResult",
+      "bit": 14,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 13,
+      "name": "bcm_tpms_lamp",
+      "bit": 16,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 14,
+      "name": "brake_oil_low",
+      "bit": 18,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 15,
+      "name": "abs_fault",
+      "bit": 19,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 16,
+      "name": "ebd_fault",
+      "bit": 20,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 17,
+      "name": "epb_parking",
+      "bit": 21,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 18,
+      "name": "autohold_lamp",
+      "bit": 23,
+      "width": 3,
+      "default": 0
+    },
+    {
+      "index": 19,
+      "name": "assist_sys_fault",
+      "bit": 26,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 20,
+      "name": "esc_lamp",
+      "bit": 28,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 21,
+      "name": "esc_off",
+      "bit": 30,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 22,
+      "name": "eps_fault",
+      "bit": 31,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 23,
+      "name": "hdc_lamp",
+      "bit": 33,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 24,
+      "name": "acu_driverSeatBeltSts",
+      "bit": 35,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 25,
+      "name": "acu_passengerSeatBeltSts",
+      "bit": 37,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 26,
+      "name": "RearLeftSeatBelt",
+      "bit": 39,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 27,
+      "name": "RearMidSeatBelt",
+      "bit": 41,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 28,
+      "name": "RearRightSeatBelt",
+      "bit": 43,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 29,
+      "name": "acu_warning",
+      "bit": 45,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 30,
+      "name": "fuel_low_alert",
+      "bit": 47,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 31,
+      "name": "mil_lamp",
+      "bit": 49,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 32,
+      "name": "eng_coolant_temp_high",
+      "bit": 51,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 33,
+      "name": "eng_coolant_temp",
+      "bit": 53,
+      "width": 8,
+      "default": 0
+    },
+    {
+      "index": 34,
+      "name": "engine_oil_low",
+      "bit": 61,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 35,
+      "name": "cool_ant_low",
+      "bit": 62,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 36,
+      "name": "dcdc_systemSts",
+      "bit": 64,
+      "width": 4,
+      "default": 0
+    },
+    {
+      "index": 37,
+      "name": "pwr_bat_soc_low",
+      "bit": 68,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 38,
+      "name": "ready_lamp",
+      "bit": 69,
+      "width": 1,
+      "default": 1
+    },
+    {
+      "index": 39,
+      "name": "mcu0_fault",
+      "bit": 70,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 40,
+      "name": "turtle_lamp",
+      "bit": 71,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 41,
+      "name": "vcu_alertLevel",
+      "bit": 73,
+      "width": 3,
+      "default": 0
+    },
+    {
+      "index": 42,
+      "name": "bms_alert",
+      "bit": 76,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 43,
+      "name": "isolationFault",
+      "bit": 78,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 44,
+      "name": "acc_mode",
+      "bit": 80,
+      "width": 3,
+      "default": 0
+    },
+    {
+      "index": 45,
+      "name": "mpc_icaSts",
+      "bit": 83,
+      "width": 3,
+      "default": 0
+    },
+    {
+      "index": 46,
+      "name": "ivi_overspdWarningSet",
+      "bit": 86,
+      "width": 8,
+      "default": 0
+    },
+    {
+      "index": 47,
+      "name": "overspdWarning",
+      "bit": 94,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 48,
+      "name": "mpc_isa_speed_limit",
+      "bit": 96,
+      "width": 6,
+      "default": 0
+    },
+    {
+      "index": 49,
+      "name": "mpc_isaOnOffSts",
+      "bit": 102,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 50,
+      "name": "isa_limit_warning",
+      "bit": 104,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 51,
+      "name": "bcm_pepsPowerMode",
+      "bit": 105,
+      "width": 3,
+      "default": 0
+    },
+    {
+      "index": 52,
+      "name": "reserve_0_5",
+      "bit": 108,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 53,
+      "name": "aeb_sts",
+      "bit": 110,
+      "width": 3,
+      "default": 0
+    },
+    {
+      "index": 54,
+      "name": "mrr_fcwSts",
+      "bit": 113,
+      "width": 3,
+      "default": 0
+    },
+    {
+      "index": 55,
+      "name": "ldws_lamp",
+      "bit": 116,
+      "width": 3,
+      "default": 0
+    },
+    {
+      "index": 56,
+      "name": "esc_hbbSts",
+      "bit": 119,
+      "width": 3,
+      "default": 0
+    },
+    {
+      "index": 57,
+      "name": "asc_ASC_errorSts",
+      "bit": 122,
+      "width": 3,
+      "default": 0
+    },
+    {
+      "index": 58,
+      "name": "vcu_CCStas",
+      "bit": 125,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 59,
+      "name": "charge_lamp",
+      "bit": 127,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 60,
+      "name": "bms_state",
+      "bit": 128,
+      "width": 4,
+      "default": 0
+    },
+    {
+      "index": 61,
+      "name": "mcuf0_overTemperature",
+      "bit": 132,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 62,
+      "name": "vcu_tcmFail",
+      "bit": 133,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 63,
+      "name": "sound_enable",
+      "bit": 134,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 64,
+      "name": "hcm_leftHighBeamFaultSt",
+      "bit": 135,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 65,
+      "name": "hcm_rightHighBeamFaultSt",
+      "bit": 137,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 66,
+      "name": "hcm_leftLowBeamFaultSt",
+      "bit": 138,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 67,
+      "name": "hcm_rightLowBeamFaultSt",
+      "bit": 139,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 68,
+      "name": "hcm_turnLampWarningLt",
+      "bit": 140,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 69,
+      "name": "hcm_turnLampWarningRt",
+      "bit": 141,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 70,
+      "name": "bcm_rllmLeftTurnLampFault",
+      "bit": 142,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 71,
+      "name": "bcm_rrlmRightTurnLampFault",
+      "bit": 143,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 72,
+      "name": "bcm_rmlmleftTurnLampFault",
+      "bit": 144,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 73,
+      "name": "bcm_rmlmrightTurnLampFault",
+      "bit": 145,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 74,
+      "name": "hcm_middleLeftPositionLampFault",
+      "bit": 146,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 75,
+      "name": "hcm_positionLampWarningLt",
+      "bit": 147,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 76,
+      "name": "hcm_middleRightPositionLampFault",
+      "bit": 148,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 77,
+      "name": "hcm_positionLampWarningRt",
+      "bit": 149,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 78,
+      "name": "bcm_rllmPositionLampFault",
+      "bit": 150,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 79,
+      "name": "bcm_rmlmpositionLampFault",
+      "bit": 151,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 80,
+      "name": "bcm_rrlmpositionLampFault",
+      "bit": 152,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 81,
+      "name": "hcm_dayTimeRunningLampWarningLt",
+      "bit": 153,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 82,
+      "name": "hcm_dayTimeRunningLampWarningRt",
+      "bit": 154,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 83,
+      "name": "hcm_alsErrorStsLt",
+      "bit": 155,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 84,
+      "name": "hcm_alsErrorStsRt",
+      "bit": 156,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 85,
+      "name": "bcm_rllmstopLampFault",
+      "bit": 157,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 86,
+      "name": "bcm_rmlmstopLampFault",
+      "bit": 159,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 87,
+      "name": "bcm_rmlmhighStopLampFault",
+      "bit": 160,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 88,
+      "name": "bcm_rrlmstopLampFault",
+      "bit": 161,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 89,
+      "name": "bcm_rllmfogLampFault",
+      "bit": 162,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 90,
+      "name": "bcm_rrlmfogLampFault",
+      "bit": 163,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 91,
+      "name": "bcm_rllmreverseLampFault",
+      "bit": 164,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 92,
+      "name": "bcm_rrlmreverseLampFault",
+      "bit": 165,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 93,
+      "name": "mrr_r1_rearCollisionWarning",
+      "bit": 166,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 94,
+      "name": "esc_hhcActive",
+      "bit": 167,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 95,
+      "name": "bsd_lca_sts",
+      "bit": 168,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 96,
+      "name": "bsd_lca_txt",
+      "bit": 170,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 97,
+      "name": "dow_txt",
+      "bit": 172,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 98,
+      "name": "rcta_txt",
+      "bit": 174,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 99,
+      "name": "rcw_txt",
+      "bit": 176,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 100,
+      "name": "mrr_r1_systemErrorSts",
+      "bit": 178,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 101,
+      "name": "washing_liquid_low",
+      "bit": 180,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 102,
+      "name": "ev_lamp",
+      "bit": 181,
+      "width": 2,
+      "default": 2
+    },
+    {
+      "index": 103,
+      "name": "break_warning",
+      "bit": 183,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 104,
+      "name": "hood",
+      "bit": 184,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 105,
+      "name": "door_fl",
+      "bit": 185,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 106,
+      "name": "door_fr",
+      "bit": 186,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 107,
+      "name": "door_rl",
+      "bit": 187,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 108,
+      "name": "door_rr",
+      "bit": 188,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 109,
+      "name": "tail_gate",
+      "bit": 189,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 110,
+      "name": "fuel_cap",
+      "bit": 190,
+      "width": 1,
+      "default": 1
+    },
+    {
+      "index": 111,
+      "name": "charge_cap",
+      "bit": 191,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 112,
+      "name": "volOrSOCLowAlarm",
+      "bit": 192,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 113,
+      "name": "vcu_batteryOverTemperature",
+      "bit": 194,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 114,
+      "name": "etc_disassemblySts",
+      "bit": 195,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 115,
+      "name": "etc_lockSts",
+      "bit": 196,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 116,
+      "name": "etc_detect",
+      "bit": 197,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 117,
+      "name": "etc_lamp",
+      "bit": 198,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 118,
+      "name": "etc_tranStauts",
+      "bit": 199,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 119,
+      "name": "bms_f003_packOverCrntChg",
+      "bit": 201,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 120,
+      "name": "icm_dmsWearyLeverSts",
+      "bit": 202,
+      "width": 3,
+      "default": 0
+    },
+    {
+      "index": 121,
+      "name": "gsm_warnInformation_bak",
+      "bit": 205,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 122,
+      "name": "gsm_faultLevel",
+      "bit": 207,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 123,
+      "name": "maintenance_sts_km",
+      "bit": 209,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 124,
+      "name": "maintenance_sts_day",
+      "bit": 210,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 125,
+      "name": "remain_maintenance_km",
+      "bit": 211,
+      "width": 9,
+      "default": 0
+    },
+    {
+      "index": 126,
+      "name": "remain_maintenance_days",
+      "bit": 220,
+      "width": 4,
+      "default": 0
+    },
+    {
+      "index": 127,
+      "name": "Maintain_Reminder",
+      "bit": 224,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 128,
+      "name": "maintenance",
+      "bit": 225,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 129,
+      "name": "can_v1_5_bcm_tpmsLFSts",
+      "bit": 227,
+      "width": 3,
+      "default": 0
+    },
+    {
+      "index": 130,
+      "name": "bcm_tyreLFPressure",
+      "bit": 230,
+      "width": 8,
+      "default": 0
+    },
+    {
+      "index": 131,
+      "name": "bcm_tyreLFTemp",
+      "bit": 238,
+      "width": 8,
+      "default": 0
+    },
+    {
+      "index": 132,
+      "name": "can_v1_5_bcm_tpmsRFSts",
+      "bit": 246,
+      "width": 3,
+      "default": 0
+    },
+    {
+      "index": 133,
+      "name": "bcm_tyreRFPressure",
+      "bit": 249,
+      "width": 8,
+      "default": 0
+    },
+    {
+      "index": 134,
+      "name": "bcm_tyreRFTemp",
+      "bit": 257,
+      "width": 8,
+      "default": 0
+    },
+    {
+      "index": 135,
+      "name": "can_v1_5_bcm_tpmsLRSts",
+      "bit": 265,
+      "width": 3,
+      "default": 0
+    },
+    {
+      "index": 136,
+      "name": "bcm_tyreLRPressure",
+      "bit": 268,
+      "width": 8,
+      "default": 0
+    },
+    {
+      "index": 137,
+      "name": "bcm_tyreLRTemp",
+      "bit": 276,
+      "width": 8,
+      "default": 0
+    },
+    {
+      "index": 138,
+      "name": "can_v1_5_bcm_tpmsRRSts",
+      "bit": 284,
+      "width": 3,
+      "default": 0
+    },
+    {
+      "index": 139,
+      "name": "bcm_tyreRRPressure",
+      "bit": 287,
+      "width": 8,
+      "default": 0
+    },
+    {
+      "index": 140,
+      "name": "bcm_tyreRRTemp",
+      "bit": 295,
+      "width": 8,
+      "default": 0
+    },
+    {
+      "index": 141,
+      "name": "reserve_267_5",
+      "bit": 303,
+      "width": 5,
+      "default": 0
+    },
+    {
+      "index": 142,
+      "name": "pos_lamp_tips",
+      "bit": 308,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 143,
+      "name": "bcm_sl_errSts",
+      "bit": 309,
+      "width": 4,
+      "default": 0
+    },
+    {
+      "index": 144,
+      "name": "peps_key_not_incar",
+      "bit": 313,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 145,
+      "name": "peps_key_serch_fail",
+      "bit": 314,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 146,
+      "name": "immo_release",
+      "bit": 315,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 147,
+      "name": "peps_key_close",
+      "bit": 316,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 148,
+      "name": "peps_low_bat",
+      "bit": 317,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 149,
+      "name": "peps_relay_err",
+      "bit": 318,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 150,
+      "name": "epb_text",
+      "bit": 319,
+      "width": 4,
+      "default": 0
+    },
+    {
+      "index": 151,
+      "name": "esc_hhcAvailable",
+      "bit": 323,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 152,
+      "name": "avh_available",
+      "bit": 324,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 153,
+      "name": "avh_stdby",
+      "bit": 325,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 154,
+      "name": "bcm_12VBatterySOC",
+      "bit": 327,
+      "width": 8,
+      "default": 0
+    },
+    {
+      "index": 155,
+      "name": "esc_hdcAvailable",
+      "bit": 335,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 156,
+      "name": "vcu_towMode",
+      "bit": 336,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 157,
+      "name": "vsp_errorIdentification",
+      "bit": 337,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 158,
+      "name": "peps_key_incar",
+      "bit": 338,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 159,
+      "name": "dc_charge_state",
+      "bit": 339,
+      "width": 4,
+      "default": 0
+    },
+    {
+      "index": 160,
+      "name": "ac_charge_state",
+      "bit": 343,
+      "width": 4,
+      "default": 0
+    },
+    {
+      "index": 161,
+      "name": "ac_charge_connect",
+      "bit": 347,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 162,
+      "name": "dc_charge_connect",
+      "bit": 348,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 163,
+      "name": "remain_charge_time",
+      "bit": 349,
+      "width": 10,
+      "default": 0
+    },
+    {
+      "index": 164,
+      "name": "bms_pPack",
+      "bit": 359,
+      "width": 14,
+      "default": 0
+    },
+    {
+      "index": 165,
+      "name": "obc_chargeVoltage",
+      "bit": 373,
+      "width": 17,
+      "default": 0
+    },
+    {
+      "index": 166,
+      "name": "obc_chargeCurrent",
+      "bit": 390,
+      "width": 13,
+      "default": 0
+    },
+    {
+      "index": 167,
+      "name": "vcu_consumpRatio50km",
+      "bit": 403,
+      "width": 8,
+      "default": 0
+    },
+    {
+      "index": 168,
+      "name": "ivi_maxChrgSocSet",
+      "bit": 411,
+      "width": 8,
+      "default": 0
+    },
+    {
+      "index": 169,
+      "name": "bms_chargeFormSts",
+      "bit": 419,
+      "width": 3,
+      "default": 0
+    },
+    {
+      "index": 170,
+      "name": "ivi_ChargeEndTimeHour",
+      "bit": 422,
+      "width": 4,
+      "default": 0
+    },
+    {
+      "index": 171,
+      "name": "ivi_ChargeStartTimeHour",
+      "bit": 426,
+      "width": 4,
+      "default": 0
+    },
+    {
+      "index": 172,
+      "name": "ivi_ChargeEndTimeHalfDay",
+      "bit": 430,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 173,
+      "name": "ivi_ChargeStartTimeHalfDay",
+      "bit": 431,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 174,
+      "name": "ivi_ChargeEndTimeMinute",
+      "bit": 432,
+      "width": 6,
+      "default": 0
+    },
+    {
+      "index": 175,
+      "name": "ivi_ChargeStartTimeMinute",
+      "bit": 438,
+      "width": 6,
+      "default": 0
+    },
+    {
+      "index": 176,
+      "name": "obc_state",
+      "bit": 444,
+      "width": 4,
+      "default": 0
+    },
+    {
+      "index": 177,
+      "name": "reserve_2_8",
+      "bit": 448,
+      "width": 4,
+      "default": 0
+    },
+    {
+      "index": 178,
+      "name": "las_status",
+      "bit": 452,
+      "width": 3,
+      "default": 0
+    },
+    {
+      "index": 179,
+      "name": "left_visualization",
+      "bit": 455,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 180,
+      "name": "right_visualization",
+      "bit": 457,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 181,
+      "name": "lasWarningModeSelection",
+      "bit": 459,
+      "width": 3,
+      "default": 0
+    },
+    {
+      "index": 182,
+      "name": "mpc_laneAssitType",
+      "bit": 462,
+      "width": 3,
+      "default": 0
+    },
+    {
+      "index": 183,
+      "name": "mrr_ccFuntionMode",
+      "bit": 465,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 184,
+      "name": "mpc_LL_Line_Curvature",
+      "bit": 467,
+      "width": 7,
+      "default": 0
+    },
+    {
+      "index": 185,
+      "name": "mpc_RR_Line_Curvature",
+      "bit": 474,
+      "width": 7,
+      "default": 0
+    },
+    {
+      "index": 186,
+      "name": "mpc_LAS_roadCurvature",
+      "bit": 481,
+      "width": 7,
+      "default": 0
+    },
+    {
+      "index": 187,
+      "name": "llane_marker_type",
+      "bit": 488,
+      "width": 3,
+      "default": 0
+    },
+    {
+      "index": 188,
+      "name": "rlane_marker_type",
+      "bit": 491,
+      "width": 3,
+      "default": 0
+    },
+    {
+      "index": 189,
+      "name": "mpc_LL_LaneMarkerType",
+      "bit": 494,
+      "width": 3,
+      "default": 0
+    },
+    {
+      "index": 190,
+      "name": "mpc_RR_LaneMarkerType",
+      "bit": 497,
+      "width": 3,
+      "default": 0
+    },
+    {
+      "index": 191,
+      "name": "llane_distance",
+      "bit": 500,
+      "width": 6,
+      "default": 0
+    },
+    {
+      "index": 192,
+      "name": "rlane_distance",
+      "bit": 506,
+      "width": 6,
+      "default": 0
+    },
+    {
+      "index": 193,
+      "name": "mrr_obj0_wExist",
+      "bit": 512,
+      "width": 3,
+      "default": 0
+    },
+    {
+      "index": 194,
+      "name": "mrr_obj0_TargetType",
+      "bit": 515,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 195,
+      "name": "mrr_obj0_dx",
+      "bit": 517,
+      "width": 8,
+      "default": 0
+    },
+    {
+      "index": 196,
+      "name": "mrr_obj0_dy",
+      "bit": 525,
+      "width": 8,
+      "default": 0
+    },
+    {
+      "index": 197,
+      "name": "mrr_obj0_Vx",
+      "bit": 533,
+      "width": 9,
+      "default": 0
+    },
+    {
+      "index": 198,
+      "name": "mrr_obj1_wExist",
+      "bit": 542,
+      "width": 3,
+      "default": 0
+    },
+    {
+      "index": 199,
+      "name": "mrr_obj1_TargetType",
+      "bit": 545,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 200,
+      "name": "mrr_obj1_dx",
+      "bit": 547,
+      "width": 8,
+      "default": 0
+    },
+    {
+      "index": 201,
+      "name": "mrr_obj1_dy",
+      "bit": 555,
+      "width": 8,
+      "default": 0
+    },
+    {
+      "index": 202,
+      "name": "mrr_obj1_Vx",
+      "bit": 563,
+      "width": 9,
+      "default": 0
+    },
+    {
+      "index": 203,
+      "name": "mrr_obj2_wExist",
+      "bit": 572,
+      "width": 3,
+      "default": 0
+    },
+    {
+      "index": 204,
+      "name": "mrr_obj2_TargetType",
+      "bit": 575,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 205,
+      "name": "mrr_obj2_dx",
+      "bit": 577,
+      "width": 8,
+      "default": 0
+    },
+    {
+      "index": 206,
+      "name": "mrr_obj2_dy",
+      "bit": 585,
+      "width": 8,
+      "default": 0
+    },
+    {
+      "index": 207,
+      "name": "mrr_obj2_Vx",
+      "bit": 593,
+      "width": 9,
+      "default": 0
+    },
+    {
+      "index": 208,
+      "name": "mrr_obj3_wExist",
+      "bit": 602,
+      "width": 3,
+      "default": 0
+    },
+    {
+      "index": 209,
+      "name": "mrr_obj3_TargetType",
+      "bit": 605,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 210,
+      "name": "mrr_obj3_dx",
+      "bit": 607,
+      "width": 8,
+      "default": 0
+    },
+    {
+      "index": 211,
+      "name": "mrr_obj3_dy",
+      "bit": 615,
+      "width": 8,
+      "default": 0
+    },
+    {
+      "index": 212,
+      "name": "mrr_obj3_Vx",
+      "bit": 623,
+      "width": 9,
+      "default": 0
+    },
+    {
+      "index": 213,
+      "name": "mrr_r1_targetStsLR",
+      "bit": 632,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 214,
+      "name": "mrr_r1_targetDangerLevelLR",
+      "bit": 633,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 215,
+      "name": "mrr_r1_targetLongDisLR",
+      "bit": 635,
+      "width": 8,
+      "default": 0
+    },
+    {
+      "index": 216,
+      "name": "mrr_r1_targetLateralDistanceLR",
+      "bit": 643,
+      "width": 8,
+      "default": 0
+    },
+    {
+      "index": 217,
+      "name": "mrr_r1_targetTypeLR",
+      "bit": 651,
+      "width": 3,
+      "default": 0
+    },
+    {
+      "index": 218,
+      "name": "mrr_r1_targetStsRR",
+      "bit": 654,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 219,
+      "name": "mrr_r1_targetDangerLevelRR",
+      "bit": 655,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 220,
+      "name": "mrr_r1_targetLongDisRR",
+      "bit": 657,
+      "width": 8,
+      "default": 0
+    },
+    {
+      "index": 221,
+      "name": "mrr_r1_targetLateralDistanceRR",
+      "bit": 665,
+      "width": 8,
+      "default": 0
+    },
+    {
+      "index": 222,
+      "name": "mrr_r1_targetTypeRR",
+      "bit": 673,
+      "width": 3,
+      "default": 0
+    },
+    {
+      "index": 223,
+      "name": "adas_takeover_req",
+      "bit": 676,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 224,
+      "name": "mpc_text_infor",
+      "bit": 678,
+      "width": 5,
+      "default": 0
+    },
+    {
+      "index": 225,
+      "name": "mrr_vSetDis",
+      "bit": 683,
+      "width": 9,
+      "default": 0
+    },
+    {
+      "index": 226,
+      "name": "time_gap_set",
+      "bit": 692,
+      "width": 3,
+      "default": 0
+    },
+    {
+      "index": 227,
+      "name": "acc_takeover_req",
+      "bit": 695,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 228,
+      "name": "mrr_text_info",
+      "bit": 696,
+      "width": 5,
+      "default": 0
+    },
+    {
+      "index": 229,
+      "name": "pebs_warning",
+      "bit": 701,
+      "width": 3,
+      "default": 0
+    },
+    {
+      "index": 230,
+      "name": "mrr_fcwOnOffSts",
+      "bit": 704,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 231,
+      "name": "vcu_vDisSet",
+      "bit": 706,
+      "width": 8,
+      "default": 0
+    },
+    {
+      "index": 232,
+      "name": "vcu_ccState",
+      "bit": 714,
+      "width": 4,
+      "default": 0
+    },
+    {
+      "index": 233,
+      "name": "wcm_reminder",
+      "bit": 718,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 234,
+      "name": "obc_ccOhm",
+      "bit": 719,
+      "width": 4,
+      "default": 0
+    },
+    {
+      "index": 235,
+      "name": "bcm_readyReq",
+      "bit": 723,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 236,
+      "name": "Tbox_SysErSt",
+      "bit": 724,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 237,
+      "name": "vcu_KL15offReq",
+      "bit": 726,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 238,
+      "name": "reserve_194",
+      "bit": 727,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 239,
+      "name": "ASC_SusTempAdjust",
+      "bit": 728,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 240,
+      "name": "icm_dmsCameraSts",
+      "bit": 729,
+      "width": 3,
+      "default": 0
+    },
+    {
+      "index": 241,
+      "name": "icm_dmsSts",
+      "bit": 732,
+      "width": 3,
+      "default": 0
+    },
+    {
+      "index": 242,
+      "name": "icm_dmsDistractLeverSts",
+      "bit": 735,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 243,
+      "name": "icm_dmsDrvBehaviorMon",
+      "bit": 737,
+      "width": 3,
+      "default": 0
+    },
+    {
+      "index": 244,
+      "name": "bcm_IndicationPressBrake",
+      "bit": 740,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 245,
+      "name": "bcm_LowFrequencyAntennaFault",
+      "bit": 742,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 246,
+      "name": "mpc_isaMode",
+      "bit": 744,
+      "width": 3,
+      "default": 0
+    },
+    {
+      "index": 247,
+      "name": "driving_long_tips",
+      "bit": 747,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 248,
+      "name": "bcm_remoteForbidden",
+      "bit": 748,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 249,
+      "name": "vcu_GearPosNotEqual",
+      "bit": 750,
+      "width": 3,
+      "default": 0
+    },
+    {
+      "index": 250,
+      "name": "pdc_OnOffSts",
+      "bit": 753,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 251,
+      "name": "reserve_3_6",
+      "bit": 755,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 252,
+      "name": "MCU_Software_Project_differ",
+      "bit": 756,
+      "width": 3,
+      "default": 0
+    },
+    {
+      "index": 253,
+      "name": "trip_ax",
+      "bit": 759,
+      "width": 24,
+      "default": 0
+    },
+    {
+      "index": 254,
+      "name": "tripax_avg_pwr",
+      "bit": 783,
+      "width": 11,
+      "default": 0
+    },
+    {
+      "index": 255,
+      "name": "tripax_avg_spd",
+      "bit": 794,
+      "width": 8,
+      "default": 0
+    },
+    {
+      "index": 256,
+      "name": "tripax_avg_fuelconsump",
+      "bit": 802,
+      "width": 8,
+      "default": 0
+    },
+    {
+      "index": 257,
+      "name": "tripax_time_min",
+      "bit": 810,
+      "width": 13,
+      "default": 0
+    },
+    {
+      "index": 258,
+      "name": "trip_fuel",
+      "bit": 823,
+      "width": 24,
+      "default": 0
+    },
+    {
+      "index": 259,
+      "name": "tripfuel_avg_pwr",
+      "bit": 847,
+      "width": 11,
+      "default": 0
+    },
+    {
+      "index": 260,
+      "name": "tripfuel_avg_spd",
+      "bit": 858,
+      "width": 8,
+      "default": 0
+    },
+    {
+      "index": 261,
+      "name": "tripfuel_avg_fuelconsump",
+      "bit": 866,
+      "width": 8,
+      "default": 0
+    },
+    {
+      "index": 262,
+      "name": "tripfuel_time_min",
+      "bit": 874,
+      "width": 13,
+      "default": 0
+    },
+    {
+      "index": 263,
+      "name": "trip_interval_ready",
+      "bit": 887,
+      "width": 24,
+      "default": 0
+    },
+    {
+      "index": 264,
+      "name": "current_trip_avg_pwr",
+      "bit": 911,
+      "width": 11,
+      "default": 0
+    },
+    {
+      "index": 265,
+      "name": "current_trip_avg_spd",
+      "bit": 922,
+      "width": 8,
+      "default": 0
+    },
+    {
+      "index": 266,
+      "name": "current_trip_avg_fuelconsump",
+      "bit": 930,
+      "width": 8,
+      "default": 0
+    },
+    {
+      "index": 267,
+      "name": "current_trip_time_min",
+      "bit": 938,
+      "width": 13,
+      "default": 0
+    },
+    {
+      "index": 268,
+      "name": "trip_interval_charge",
+      "bit": 951,
+      "width": 24,
+      "default": 0
+    },
+    {
+      "index": 269,
+      "name": "last_charge_avg_pwr",
+      "bit": 975,
+      "width": 11,
+      "default": 0
+    },
+    {
+      "index": 270,
+      "name": "last_charge_avg_fuelconsump",
+      "bit": 986,
+      "width": 8,
+      "default": 0
+    },
+    {
+      "index": 271,
+      "name": "last_charge_avg_spd",
+      "bit": 994,
+      "width": 8,
+      "default": 0
+    },
+    {
+      "index": 272,
+      "name": "last_charge_time_min",
+      "bit": 1002,
+      "width": 13,
+      "default": 0
+    },
+    {
+      "index": 273,
+      "name": "vcu_consumpRatioInstant",
+      "bit": 1015,
+      "width": 11,
+      "default": 0
+    },
+    {
+      "index": 274,
+      "name": "vcu_consumpRatioInstant_last1km",
+      "bit": 1026,
+      "width": 11,
+      "default": 0
+    },
+    {
+      "index": 275,
+      "name": "instant_value_unit",
+      "bit": 1037,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 276,
+      "name": "fuel_instant",
+      "bit": 1039,
+      "width": 8,
+      "default": 0
+    },
+    {
+      "index": 277,
+      "name": "fuel_instant_last1km",
+      "bit": 1047,
+      "width": 8,
+      "default": 0
+    },
+    {
+      "index": 278,
+      "name": "instant_value_trip",
+      "bit": 1055,
+      "width": 10,
+      "default": 0
+    },
+    {
+      "index": 279,
+      "name": "rpm",
+      "bit": 1065,
+      "width": 13,
+      "default": 0
+    },
+    {
+      "index": 280,
+      "name": "bms_stEgyFlowSysDischRgn",
+      "bit": 1078,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 281,
+      "name": "bms_stEgyFlowOBCAndBatt",
+      "bit": 1080,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 282,
+      "name": "mcuf0_stEgyFlowAndBatt",
+      "bit": 1082,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 283,
+      "name": "mcur0_stEgyFlowAndBatt",
+      "bit": 1084,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 284,
+      "name": "vcu_stEgyFlowEngAndGenMot",
+      "bit": 1086,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 285,
+      "name": "vcu_stEgyFlowGenMotAndBatt",
+      "bit": 1088,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 286,
+      "name": "remain_mileage_e",
+      "bit": 1090,
+      "width": 11,
+      "default": 0
+    },
+    {
+      "index": 287,
+      "name": "remain_mileage_f",
+      "bit": 1101,
+      "width": 10,
+      "default": 0
+    },
+    {
+      "index": 288,
+      "name": "gear_valid",
+      "bit": 1111,
+      "width": 1,
+      "default": 3
+    },
+    {
+      "index": 289,
+      "name": "gear",
+      "bit": 1112,
+      "width": 8,
+      "default": 2
+    },
+    {
+      "index": 290,
+      "name": "odo",
+      "bit": 1120,
+      "width": 24,
+      "default": 0
+    },
+    {
+      "index": 291,
+      "name": "ambient_temp",
+      "bit": 1144,
+      "width": 8,
+      "default": 0
+    },
+    {
+      "index": 292,
+      "name": "vcu_driveMode",
+      "bit": 1152,
+      "width": 3,
+      "default": 0
+    },
+    {
+      "index": 293,
+      "name": "ivi_naviDirection",
+      "bit": 1155,
+      "width": 4,
+      "default": 0
+    },
+    {
+      "index": 294,
+      "name": "ivi_naviAltitude",
+      "bit": 1159,
+      "width": 7,
+      "default": 0
+    },
+    {
+      "index": 295,
+      "name": "reserve_281_10",
+      "bit": 1166,
+      "width": 10,
+      "default": 0
+    },
+    {
+      "index": 296,
+      "name": "ac_driverTempC_off",
+      "bit": 1176,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 297,
+      "name": "ac_driverTempC",
+      "bit": 1177,
+      "width": 5,
+      "default": 0
+    },
+    {
+      "index": 298,
+      "name": "ivi_timeInfoSecond",
+      "bit": 1182,
+      "width": 6,
+      "default": 0
+    },
+    {
+      "index": 299,
+      "name": "ivi_timeInfoMinute",
+      "bit": 1188,
+      "width": 6,
+      "default": 0
+    },
+    {
+      "index": 300,
+      "name": "ivi_timeInfoHour",
+      "bit": 1194,
+      "width": 5,
+      "default": 0
+    },
+    {
+      "index": 301,
+      "name": "ivi_timeInfoDay",
+      "bit": 1199,
+      "width": 5,
+      "default": 0
+    },
+    {
+      "index": 302,
+      "name": "ivi_timeInfoMonth",
+      "bit": 1204,
+      "width": 4,
+      "default": 0
+    },
+    {
+      "index": 303,
+      "name": "ivi_timeInfoYear",
+      "bit": 1208,
+      "width": 6,
+      "default": 0
+    },
+    {
+      "index": 304,
+      "name": "ivi_timeValid",
+      "bit": 1214,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 305,
+      "name": "nvs_displayReq",
+      "bit": 1215,
+      "width": 3,
+      "default": 0
+    },
+    {
+      "index": 306,
+      "name": "nvs_Sts",
+      "bit": 1218,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 307,
+      "name": "nvs_cameraSts",
+      "bit": 1220,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 308,
+      "name": "nvs_warnningSts",
+      "bit": 1222,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 309,
+      "name": "nvs_textPrompt",
+      "bit": 1223,
+      "width": 4,
+      "default": 0
+    },
+    {
+      "index": 310,
+      "name": "spd_valid",
+      "bit": 1227,
+      "width": 1,
+      "default": 1
+    },
+    {
+      "index": 311,
+      "name": "speed",
+      "bit": 1228,
+      "width": 8,
+      "default": 50
+    },
+    {
+      "index": 312,
+      "name": "fuel_percent",
+      "bit": 1236,
+      "width": 7,
+      "default": 0
+    },
+    {
+      "index": 313,
+      "name": "soc",
+      "bit": 1243,
+      "width": 10,
+      "default": 0
+    },
+    {
+      "index": 314,
+      "name": "soc_warning",
+      "bit": 1253,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 315,
+      "name": "allowed_power",
+      "bit": 1255,
+      "width": 7,
+      "default": 0
+    },
+    {
+      "index": 316,
+      "name": "actual_power",
+      "bit": 1262,
+      "width": 7,
+      "default": 0
+    },
+    {
+      "index": 317,
+      "name": "recovery_power",
+      "bit": 1269,
+      "width": 7,
+      "default": 0
+    },
+    {
+      "index": 318,
+      "name": "bcm_sl_currentPos",
+      "bit": 1276,
+      "width": 2,
+      "default": 1
+    },
+    {
+      "index": 319,
+      "name": "IHBC_status",
+      "bit": 1278,
+      "width": 3,
+      "default": 0
+    },
+    {
+      "index": 320,
+      "name": "poweroff_req",
+      "bit": 1281,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 321,
+      "name": "ivi_languageSet",
+      "bit": 1283,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 322,
+      "name": "swm_Photo",
+      "bit": 1285,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 323,
+      "name": "swm_menu",
+      "bit": 1286,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 324,
+      "name": "swm_OK",
+      "bit": 1287,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 325,
+      "name": "swm_upAdd",
+      "bit": 1288,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 326,
+      "name": "swm_downMinus",
+      "bit": 1289,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 327,
+      "name": "swm_leftLast",
+      "bit": 1290,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 328,
+      "name": "swm_rightNext",
+      "bit": 1291,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 329,
+      "name": "swm_nvsSwitch",
+      "bit": 1292,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 330,
+      "name": "swm_phone",
+      "bit": 1293,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 331,
+      "name": "swm_voice",
+      "bit": 1294,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 332,
+      "name": "ic_bat_voltage",
+      "bit": 1295,
+      "width": 12,
+      "default": 0
+    },
+    {
+      "index": 333,
+      "name": "esc_vehicleSpeed",
+      "bit": 1307,
+      "width": 13,
+      "default": 0
+    },
+    {
+      "index": 334,
+      "name": "nvs_warningXCoordinate",
+      "bit": 1320,
+      "width": 12,
+      "default": 0
+    },
+    {
+      "index": 335,
+      "name": "nvs_warningYCoordinate",
+      "bit": 1332,
+      "width": 10,
+      "default": 0
+    },
+    {
+      "index": 336,
+      "name": "nvs_warningType",
+      "bit": 1342,
+      "width": 3,
+      "default": 0
+    },
+    {
+      "index": 337,
+      "name": "bcm_tpmsLFSts",
+      "bit": 1345,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 338,
+      "name": "bcm_tpmsRFSts",
+      "bit": 1347,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 339,
+      "name": "bcm_PressureWarningLF",
+      "bit": 1349,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 340,
+      "name": "bcm_PressureWarningRF",
+      "bit": 1351,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 341,
+      "name": "bcm_TireTempWarningLF",
+      "bit": 1353,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 342,
+      "name": "bcm_TireTempWarningRF",
+      "bit": 1354,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 343,
+      "name": "bcm_tpmsLFLOW_BATT_Warning",
+      "bit": 1355,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 344,
+      "name": "bcm_tpmsRFLOW_BATT_Warning",
+      "bit": 1356,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 345,
+      "name": "bcm_tpmsLFRAPID_LEAK_Warning",
+      "bit": 1357,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 346,
+      "name": "bcm_tpmsRFRAPID_LEAK_Warning",
+      "bit": 1358,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 347,
+      "name": "bcm_tpmsLRSts",
+      "bit": 1359,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 348,
+      "name": "bcm_tpmsRRSts",
+      "bit": 1361,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 349,
+      "name": "bcm_PressureWarningLR",
+      "bit": 1363,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 350,
+      "name": "bcm_PressureWarningRR",
+      "bit": 1365,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 351,
+      "name": "bcm_TireTempWarningLR",
+      "bit": 1367,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 352,
+      "name": "bcm_TireTempWarningRR",
+      "bit": 1368,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 353,
+      "name": "bcm_tpmsLRLOW_BATT_Warning",
+      "bit": 1369,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 354,
+      "name": "bcm_tpmsRRLOW_BATT_Warning",
+      "bit": 1370,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 355,
+      "name": "bcm_tpmsLRRAPID_LEAK_Warning",
+      "bit": 1371,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 356,
+      "name": "bcm_tpmsRRRAPID_LEAK_Warning",
+      "bit": 1372,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 357,
+      "name": "BMS_ThrmlRunawaySt",
+      "bit": 1373,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 358,
+      "name": "upgradeMCU",
+      "bit": 1375,
+      "width": 8,
+      "default": 0
+    },
+    {
+      "index": 359,
+      "name": "speed10x",
+      "bit": 1383,
+      "width": 12,
+      "default": 5000
+    },
+    {
+      "index": 360,
+      "name": "allowed_power10x",
+      "bit": 1395,
+      "width": 12,
+      "default": 0
+    },
+    {
+      "index": 361,
+      "name": "actual_power10x",
+      "bit": 1407,
+      "width": 12,
+      "default": 0
+    },
+    {
+      "index": 362,
+      "name": "recovery_power10x",
+      "bit": 1419,
+      "width": 12,
+      "default": 0
+    },
+    {
+      "index": 363,
+      "name": "IVI_remainingMileageswitch",
+      "bit": 1431,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 364,
+      "name": "vcu_remainingMileageReal",
+      "bit": 1433,
+      "width": 11,
+      "default": 0
+    },
+    {
+      "index": 365,
+      "name": "vcu_brakePedalPressed",
+      "bit": 1444,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 366,
+      "name": "VCU_StandStillPreheatBattWarn",
+      "bit": 1445,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 367,
+      "name": "VCU_LowTempInhibitPowerUpWarn",
+      "bit": 1446,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 368,
+      "name": "lowBatChargeFault",
+      "bit": 1447,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 369,
+      "name": "tbox_vehicleMode",
+      "bit": 1449,
+      "width": 4,
+      "default": 0
+    },
+    {
+      "index": 370,
+      "name": "OTA_mode",
+      "bit": 1453,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 371,
+      "name": "hcm_adbFuctionStsLt",
+      "bit": 1455,
+      "width": 3,
+      "default": 0
+    },
+    {
+      "index": 372,
+      "name": "hcm_adbFuctionStsRt",
+      "bit": 1458,
+      "width": 3,
+      "default": 0
+    },
+    {
+      "index": 373,
+      "name": "asc_AirPumpOverHeatWarning",
+      "bit": 1461,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 374,
+      "name": "remain_mileage_f_nedc",
+      "bit": 1463,
+      "width": 10,
+      "default": 0
+    },
+    {
+      "index": 375,
+      "name": "gsm_warnInformation",
+      "bit": 1473,
+      "width": 3,
+      "default": 0
+    },
+    {
+      "index": 376,
+      "name": "asc_ascSysSts",
+      "bit": 1476,
+      "width": 3,
+      "default": 0
+    },
+    {
+      "index": 377,
+      "name": "odoRev",
+      "bit": 1479,
+      "width": 24,
+      "default": 100
+    },
+    {
+      "index": 378,
+      "name": "etc_dataSts",
+      "bit": 1503,
+      "width": 8,
+      "default": 0
+    },
+    {
+      "index": 379,
+      "name": "vcu_ExhibitionSts",
+      "bit": 1511,
+      "width": 2,
+      "default": 2
+    },
+    {
+      "index": 380,
+      "name": "fuel_cap_err",
+      "bit": 1513,
+      "width": 2,
+      "default": 1
+    },
+    {
+      "index": 381,
+      "name": "alarm_play_req",
+      "bit": 1515,
+      "width": 12,
+      "default": 1
+    },
+    {
+      "index": 382,
+      "name": "apa_WarningReq",
+      "bit": 1527,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 383,
+      "name": "APA_PDCSysSts",
+      "bit": 1528,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 384,
+      "name": "APA_PDCFailureWarning",
+      "bit": 1530,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 385,
+      "name": "APA_PDCAudibleFrontBeepRate",
+      "bit": 1531,
+      "width": 3,
+      "default": 0
+    },
+    {
+      "index": 386,
+      "name": "APA_PDCAudibleRearBeepRate",
+      "bit": 1534,
+      "width": 3,
+      "default": 0
+    },
+    {
+      "index": 387,
+      "name": "pdc_sysSts",
+      "bit": 1537,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 388,
+      "name": "pdc_failureWarning",
+      "bit": 1539,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 389,
+      "name": "pdc_audibleFrontBeepRate",
+      "bit": 1540,
+      "width": 3,
+      "default": 0
+    },
+    {
+      "index": 390,
+      "name": "pdc_audibleRearBeepRate",
+      "bit": 1543,
+      "width": 3,
+      "default": 0
+    },
+    {
+      "index": 391,
+      "name": "SeatBeltLamp",
+      "bit": 1546,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 392,
+      "name": "SeatBeatFlash",
+      "bit": 1548,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 393,
+      "name": "mrr_r1_leftBSDLCAWarning",
+      "bit": 1549,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 394,
+      "name": "mrr_r1_rightBSDLCAWarning",
+      "bit": 1551,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 395,
+      "name": "mrr_r1_leftDOWWarnning",
+      "bit": 1553,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 396,
+      "name": "mrr_r1_rightDOWWarnning",
+      "bit": 1555,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 397,
+      "name": "mrr_r1_leftRCTAWarnning",
+      "bit": 1557,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 398,
+      "name": "mrr_r1_rightRCTAWarnning",
+      "bit": 1558,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 399,
+      "name": "soc_menu_info",
+      "bit": 1559,
+      "width": 8,
+      "default": 0
+    },
+    {
+      "index": 400,
+      "name": "icyroad_reminder",
+      "bit": 1567,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 401,
+      "name": "vcu_hvilWarningIndicate",
+      "bit": 1569,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 402,
+      "name": "vcu_remainingMileageCLTCWLTC",
+      "bit": 1571,
+      "width": 11,
+      "default": 0
+    },
+    {
+      "index": 403,
+      "name": "Trailer_EnabState_St",
+      "bit": 1582,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 404,
+      "name": "Trailer_EnabState_Prompt",
+      "bit": 1583,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 405,
+      "name": "remain_mileage_f_wltc",
+      "bit": 1585,
+      "width": 10,
+      "default": 0
+    },
+    {
+      "index": 406,
+      "name": "bms_batteryConditionFail",
+      "bit": 1595,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 407,
+      "name": "bms_f054_dcChrgOverTemp",
+      "bit": 1596,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 408,
+      "name": "reset_dsp",
+      "bit": 1597,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 409,
+      "name": "apa_AbortWarningReq",
+      "bit": 1598,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 410,
+      "name": "apa_ActiveWarningReq",
+      "bit": 1599,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 411,
+      "name": "apa_avmSts",
+      "bit": 1600,
+      "width": 4,
+      "default": 0
+    },
+    {
+      "index": 412,
+      "name": "apa_avmHmiIndex",
+      "bit": 1604,
+      "width": 4,
+      "default": 0
+    },
+    {
+      "index": 413,
+      "name": "apa_avmViewMode",
+      "bit": 1608,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 414,
+      "name": "apa_avmDisplayReq",
+      "bit": 1610,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 415,
+      "name": "apa_avmMODSts",
+      "bit": 1612,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 416,
+      "name": "apa_avmTrigByTurnningSts",
+      "bit": 1614,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 417,
+      "name": "apa_avmSingleViewSts",
+      "bit": 1615,
+      "width": 5,
+      "default": 0
+    },
+    {
+      "index": 418,
+      "name": "apa_avmTrajectory_display",
+      "bit": 1620,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 419,
+      "name": "apa_avmAutoswitching_display",
+      "bit": 1621,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 420,
+      "name": "apa_avmCarBodyTransparent",
+      "bit": 1622,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 421,
+      "name": "apa_avmSwSts",
+      "bit": 1623,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 422,
+      "name": "apa_avmMonitVideoOutput",
+      "bit": 1624,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 423,
+      "name": "apa_avmPDCfailureWarn",
+      "bit": 1625,
+      "width": 3,
+      "default": 0
+    },
+    {
+      "index": 424,
+      "name": "avm_sts",
+      "bit": 1628,
+      "width": 4,
+      "default": 0
+    },
+    {
+      "index": 425,
+      "name": "avm_hmiIndex",
+      "bit": 1632,
+      "width": 4,
+      "default": 0
+    },
+    {
+      "index": 426,
+      "name": "avm_viewMode",
+      "bit": 1636,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 427,
+      "name": "avm_displayReq",
+      "bit": 1638,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 428,
+      "name": "avm_MODSts",
+      "bit": 1640,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 429,
+      "name": "avm_trigByTurnningSts",
+      "bit": 1642,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 430,
+      "name": "avm_singleViewSts",
+      "bit": 1643,
+      "width": 5,
+      "default": 0
+    },
+    {
+      "index": 431,
+      "name": "avm_Trajectory_display",
+      "bit": 1648,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 432,
+      "name": "avm_Autoswitching_display",
+      "bit": 1649,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 433,
+      "name": "avm_CarBodyTransparent",
+      "bit": 1650,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 434,
+      "name": "avm_SwSts",
+      "bit": 1651,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 435,
+      "name": "avm_QuitSw",
+      "bit": 1652,
+      "width": 1,
+      "default": 0
+    },
+    {
+      "index": 436,
+      "name": "OBC_halfConnectWarn",
+      "bit": 1653,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 437,
+      "name": "VCU_SOCmodeSet",
+      "bit": 1655,
+      "width": 3,
+      "default": 0
+    },
+    {
+      "index": 438,
+      "name": "trip_ax_rev",
+      "bit": 1658,
+      "width": 20,
+      "default": 0
+    },
+    {
+      "index": 439,
+      "name": "trip_current_rev",
+      "bit": 1678,
+      "width": 20,
+      "default": 0
+    },
+    {
+      "index": 440,
+      "name": "charge_connect_warn",
+      "bit": 1698,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 441,
+      "name": "vcu_textinfo",
+      "bit": 1700,
+      "width": 3,
+      "default": 0
+    },
+    {
+      "index": 442,
+      "name": "reboot_request",
+      "bit": 1838,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 443,
+      "name": "can_msg_timeout_111",
+      "bit": 1840,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 444,
+      "name": "can_msg_timeout_114",
+      "bit": 1842,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 445,
+      "name": "can_msg_timeout_130",
+      "bit": 1844,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 446,
+      "name": "can_msg_timeout_140",
+      "bit": 1846,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 447,
+      "name": "can_msg_timeout_144",
+      "bit": 1848,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 448,
+      "name": "can_msg_timeout_212",
+      "bit": 1850,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 449,
+      "name": "can_msg_timeout_219",
+      "bit": 1852,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 450,
+      "name": "can_msg_timeout_21a",
+      "bit": 1854,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 451,
+      "name": "can_msg_timeout_239",
+      "bit": 1856,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 452,
+      "name": "can_msg_timeout_23b",
+      "bit": 1858,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 453,
+      "name": "can_msg_timeout_241",
+      "bit": 1860,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 454,
+      "name": "can_msg_timeout_2a1",
+      "bit": 1862,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 455,
+      "name": "can_msg_timeout_2a2",
+      "bit": 1864,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 456,
+      "name": "can_msg_timeout_2ac",
+      "bit": 1866,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 457,
+      "name": "can_msg_timeout_2c1",
+      "bit": 1868,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 458,
+      "name": "can_msg_timeout_2c2",
+      "bit": 1870,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 459,
+      "name": "can_msg_timeout_301",
+      "bit": 1872,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 460,
+      "name": "can_msg_timeout_306",
+      "bit": 1874,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 461,
+      "name": "can_msg_timeout_309",
+      "bit": 1876,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 462,
+      "name": "can_msg_timeout_319",
+      "bit": 1878,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 463,
+      "name": "can_msg_timeout_30e",
+      "bit": 1880,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 464,
+      "name": "can_msg_timeout_322",
+      "bit": 1882,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 465,
+      "name": "can_msg_timeout_323",
+      "bit": 1884,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 466,
+      "name": "can_msg_timeout_324",
+      "bit": 1886,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 467,
+      "name": "can_msg_timeout_349",
+      "bit": 1888,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 468,
+      "name": "can_msg_timeout_35a",
+      "bit": 1890,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 469,
+      "name": "can_msg_timeout_36e",
+      "bit": 1892,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 470,
+      "name": "can_msg_timeout_369",
+      "bit": 1894,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 471,
+      "name": "can_msg_timeout_37e",
+      "bit": 1896,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 472,
+      "name": "can_msg_timeout_380",
+      "bit": 1898,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 473,
+      "name": "can_msg_timeout_38d",
+      "bit": 1900,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 474,
+      "name": "can_msg_timeout_394",
+      "bit": 1902,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 475,
+      "name": "can_msg_timeout_396",
+      "bit": 1904,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 476,
+      "name": "can_msg_timeout_3a0",
+      "bit": 1906,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 477,
+      "name": "can_msg_timeout_3a1",
+      "bit": 1908,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 478,
+      "name": "can_msg_timeout_3a9",
+      "bit": 1910,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 479,
+      "name": "can_msg_timeout_3ad",
+      "bit": 1912,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 480,
+      "name": "can_msg_timeout_3ae",
+      "bit": 1914,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 481,
+      "name": "can_msg_timeout_3b6",
+      "bit": 1916,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 482,
+      "name": "can_msg_timeout_3be",
+      "bit": 1918,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 483,
+      "name": "can_msg_timeout_3c1",
+      "bit": 1920,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 484,
+      "name": "can_msg_timeout_3c2",
+      "bit": 1922,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 485,
+      "name": "can_msg_timeout_407",
+      "bit": 1924,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 486,
+      "name": "can_msg_timeout_411",
+      "bit": 1926,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 487,
+      "name": "can_msg_timeout_421",
+      "bit": 1928,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 488,
+      "name": "can_msg_timeout_431",
+      "bit": 1930,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 489,
+      "name": "can_msg_timeout_441",
+      "bit": 1932,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 490,
+      "name": "can_msg_timeout_511",
+      "bit": 1934,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 491,
+      "name": "can_msg_timeout_514",
+      "bit": 1936,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 492,
+      "name": "can_msg_timeout_561",
+      "bit": 1938,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 493,
+      "name": "can_msg_timeout_07e",
+      "bit": 1940,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 494,
+      "name": "can_msg_timeout_0a5",
+      "bit": 1942,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 495,
+      "name": "can_msg_timeout_2fa",
+      "bit": 1944,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 496,
+      "name": "can_msg_timeout_331",
+      "bit": 1946,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 497,
+      "name": "can_msg_timeout_387",
+      "bit": 1948,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 498,
+      "name": "can_msg_timeout_3b5",
+      "bit": 1950,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 499,
+      "name": "can_msg_timeout_3fe",
+      "bit": 1952,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 500,
+      "name": "can_msg_timeout_1A0",
+      "bit": 1954,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 501,
+      "name": "can_msg_timeout_1A3",
+      "bit": 1956,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 502,
+      "name": "can_msg_timeout_35f",
+      "bit": 1958,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 503,
+      "name": "can_msg_timeout_334",
+      "bit": 1960,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 504,
+      "name": "can_msg_timeout_203",
+      "bit": 1962,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 505,
+      "name": "can_msg_timeout_208",
+      "bit": 1964,
+      "width": 2,
+      "default": 0
+    },
+    {
+      "index": 506,
+      "name": "set_byte0",
+      "bit": 2000,
+      "width": 8,
+      "default": 0
+    },
+    {
+      "index": 507,
+      "name": "set_byte1",
+      "bit": 2008,
+      "width": 8,
+      "default": 0
+    },
+    {
+      "index": 508,
+      "name": "set_byte2",
+      "bit": 2016,
+      "width": 8,
+      "default": 0
+    },
+    {
+      "index": 509,
+      "name": "set_byte3",
+      "bit": 2024,
+      "width": 8,
+      "default": 0
+    },
+    {
+      "index": 510,
+      "name": "set_byte4",
+      "bit": 2032,
+      "width": 8,
+      "default": 0
+    },
+    {
+      "index": 511,
+      "name": "set_byte5",
+      "bit": 2040,
+      "width": 8,
+      "default": 0
+    },
+    {
+      "index": 512,
+      "name": "set_byte6",
+      "bit": 2048,
+      "width": 8,
+      "default": 0
+    },
+    {
+      "index": 513,
+      "name": "set_byte7",
+      "bit": 2056,
+      "width": 8,
+      "default": 0
+    },
+    {
+      "index": 514,
+      "name": "set_byte8",
+      "bit": 2064,
+      "width": 8,
+      "default": 0
+    },
+    {
+      "index": 515,
+      "name": "set_byte9",
+      "bit": 2072,
+      "width": 8,
+      "default": 0
+    },
+    {
+      "index": 516,
+      "name": "cfg_driver_mode",
+      "bit": 2080,
+      "width": 2,
+      "default": 1
+    },
+    {
+      "index": 517,
+      "name": "cfg_tbox",
+      "bit": 2082,
+      "width": 2,
+      "default": 1
+    },
+    {
+      "index": 518,
+      "name": "cfg_driver_style",
+      "bit": 2084,
+      "width": 3,
+      "default": 1
+    },
+    {
+      "index": 519,
+      "name": "cfg_hud",
+      "bit": 2087,
+      "width": 1,
+      "default": 1
+    },
+    {
+      "index": 520,
+      "name": "cfg_driver_source",
+      "bit": 2088,
+      "width": 4,
+      "default": 1
+    },
+    {
+      "index": 521,
+      "name": "cfg_wireless_charge",
+      "bit": 2092,
+      "width": 2,
+      "default": 1
+    },
+    {
+      "index": 522,
+      "name": "cfg_glass_cover",
+      "bit": 2094,
+      "width": 2,
+      "default": 1
+    },
+    {
+      "index": 523,
+      "name": "cfg_sunroof_type",
+      "bit": 2096,
+      "width": 2,
+      "default": 1
+    },
+    {
+      "index": 524,
+      "name": "cfg_child_lock",
+      "bit": 2098,
+      "width": 2,
+      "default": 1
+    },
+    {
+      "index": 525,
+      "name": "cfg_driver_seat_heat",
+      "bit": 2100,
+      "width": 1,
+      "default": 1
+    },
+    {
+      "index": 526,
+      "name": "cfg_driver_seat_air",
+      "bit": 2101,
+      "width": 1,
+      "default": 1
+    },
+    {
+      "index": 527,
+      "name": "cfg_driver_seat_massage",
+      "bit": 2102,
+      "width": 1,
+      "default": 1
+    },
+    {
+      "index": 528,
+      "name": "cfg_driver_seat_memory",
+      "bit": 2103,
+      "width": 1,
+      "default": 1
+    },
+    {
+      "index": 529,
+      "name": "cfg_copilot_seat_heat",
+      "bit": 2104,
+      "width": 1,
+      "default": 1
+    },
+    {
+      "index": 530,
+      "name": "cfg_copilot_seat_air",
+      "bit": 2105,
+      "width": 1,
+      "default": 1
+    },
+    {
+      "index": 531,
+      "name": "cfg_copilot_seat_massage",
+      "bit": 2106,
+      "width": 1,
+      "default": 1
+    },
+    {
+      "index": 532,
+      "name": "cfg_copilot_seat_memory",
+      "bit": 2107,
+      "width": 1,
+      "default": 1
+    },
+    {
+      "index": 533,
+      "name": "cfg_seat",
+      "bit": 2108,
+      "width": 3,
+      "default": 1
+    },
+    {
+      "index": 534,
+      "name": "cfg_sound_band",
+      "bit": 2111,
+      "width": 1,
+      "default": 1
+    },
+    {
+      "index": 535,
+      "name": "cfg_charge_port_type",
+      "bit": 2112,
+      "width": 2,
+      "default": 1
+    },
+    {
+      "index": 536,
+      "name": "cfg_gas_port_type",
+      "bit": 2114,
+      "width": 2,
+      "default": 1
+    },
+    {
+      "index": 537,
+      "name": "cfg_speaker",
+      "bit": 2116,
+      "width": 3,
+      "default": 1
+    },
+    {
+      "index": 538,
+      "name": "cfg_air_suspension",
+      "bit": 2119,
+      "width": 1,
+      "default": 1
+    },
+    {
+      "index": 539,
+      "name": "cfg_vehicle_color",
+      "bit": 2120,
+      "width": 4,
+      "default": 1
+    },
+    {
+      "index": 540,
+      "name": "cfg_maintain",
+      "bit": 2124,
+      "width": 2,
+      "default": 1
+    },
+    {
+      "index": 541,
+      "name": "cfg_auto_beam",
+      "bit": 2126,
+      "width": 1,
+      "default": 1
+    },
+    {
+      "index": 542,
+      "name": "cfg_auto_beam_height",
+      "bit": 2127,
+      "width": 1,
+      "default": 1
+    },
+    {
+      "index": 543,
+      "name": "cfg_env_lamp",
+      "bit": 2128,
+      "width": 3,
+      "default": 1
+    },
+    {
+      "index": 544,
+      "name": "cfg_left_right_hand",
+      "bit": 2131,
+      "width": 1,
+      "default": 1
+    },
+    {
+      "index": 545,
+      "name": "cfg_auto_headlight",
+      "bit": 2132,
+      "width": 1,
+      "default": 1
+    },
+    {
+      "index": 546,
+      "name": "cfg_matrix_lamp",
+      "bit": 2133,
+      "width": 1,
+      "default": 1
+    },
+    {
+      "index": 547,
+      "name": "cfg_auto_parking",
+      "bit": 2134,
+      "width": 1,
+      "default": 1
+    },
+    {
+      "index": 548,
+      "name": "cfg_ar",
+      "bit": 2135,
+      "width": 1,
+      "default": 1
+    },
+    {
+      "index": 549,
+      "name": "cfg_sound_position",
+      "bit": 2136,
+      "width": 2,
+      "default": 1
+    },
+    {
+      "index": 550,
+      "name": "cfg_iaqc",
+      "bit": 2138,
+      "width": 1,
+      "default": 1
+    },
+    {
+      "index": 551,
+      "name": "cfg_air_filter",
+      "bit": 2139,
+      "width": 1,
+      "default": 1
+    },
+    {
+      "index": 552,
+      "name": "cfg_air_flesh",
+      "bit": 2140,
+      "width": 1,
+      "default": 1
+    },
+    {
+      "index": 553,
+      "name": "cfg_dvr",
+      "bit": 2141,
+      "width": 1,
+      "default": 1
+    },
+    {
+      "index": 554,
+      "name": "cfg_etc_cfg",
+      "bit": 2142,
+      "width": 1,
+      "default": 1
+    },
+    {
+      "index": 555,
+      "name": "cfg_ac_auto_cycle",
+      "bit": 2143,
+      "width": 1,
+      "default": 1
+    },
+    {
+      "index": 556,
+      "name": "cfg_nvs",
+      "bit": 2144,
+      "width": 1,
+      "default": 1
+    },
+    {
+      "index": 557,
+      "name": "cfg_backmonitor",
+      "bit": 2145,
+      "width": 1,
+      "default": 1
+    },
+    {
+      "index": 558,
+      "name": "cfg_blis",
+      "bit": 2146,
+      "width": 1,
+      "default": 1
+    },
+    {
+      "index": 559,
+      "name": "cfg_ldw",
+      "bit": 2147,
+      "width": 1,
+      "default": 1
+    },
+    {
+      "index": 560,
+      "name": "cfg_pre_crash",
+      "bit": 2148,
+      "width": 2,
+      "default": 1
+    },
+    {
+      "index": 561,
+      "name": "cfg_lka",
+      "bit": 2150,
+      "width": 1,
+      "default": 1
+    },
+    {
+      "index": 562,
+      "name": "cfg_lca",
+      "bit": 2151,
+      "width": 1,
+      "default": 1
+    },
+    {
+      "index": 563,
+      "name": "cfg_acc",
+      "bit": 2152,
+      "width": 2,
+      "default": 1
+    },
+    {
+      "index": 564,
+      "name": "cfg_aeb",
+      "bit": 2154,
+      "width": 1,
+      "default": 1
+    },
+    {
+      "index": 565,
+      "name": "cfg_door_warning",
+      "bit": 2155,
+      "width": 1,
+      "default": 1
+    },
+    {
+      "index": 566,
+      "name": "cfg_traffic_sign",
+      "bit": 2156,
+      "width": 1,
+      "default": 1
+    },
+    {
+      "index": 567,
+      "name": "cfg_isa",
+      "bit": 2157,
+      "width": 1,
+      "default": 1
+    },
+    {
+      "index": 568,
+      "name": "cfg_rcta",
+      "bit": 2158,
+      "width": 1,
+      "default": 1
+    },
+    {
+      "index": 569,
+      "name": "cfg_tja_assis",
+      "bit": 2159,
+      "width": 1,
+      "default": 1
+    },
+    {
+      "index": 570,
+      "name": "cfg_dms_id",
+      "bit": 2160,
+      "width": 1,
+      "default": 1
+    },
+    {
+      "index": 571,
+      "name": "cfg_gesture",
+      "bit": 2161,
+      "width": 1,
+      "default": 1
+    },
+    {
+      "index": 572,
+      "name": "cfg_sale_area",
+      "bit": 2162,
+      "width": 6,
+      "default": 1
+    },
+    {
+      "index": 573,
+      "name": "cfg_screen",
+      "bit": 2168,
+      "width": 2,
+      "default": 1
+    },
+    {
+      "index": 574,
+      "name": "cfg_mrr",
+      "bit": 2170,
+      "width": 1,
+      "default": 1
+    },
+    {
+      "index": 575,
+      "name": "cfg_mpc",
+      "bit": 2171,
+      "width": 1,
+      "default": 1
+    },
+    {
+      "index": 576,
+      "name": "cfg_adas_supplier",
+      "bit": 2172,
+      "width": 4,
+      "default": 0
+    },
+    {
+      "index": 577,
+      "name": "cfg_reserve_12",
+      "bit": 2176,
+      "width": 8,
+      "default": 1
+    },
+    {
+      "index": 578,
+      "name": "cfg_reserve_13",
+      "bit": 2184,
+      "width": 8,
+      "default": 1
+    },
+    {
+      "index": 579,
+      "name": "cfg_reserve_14",
+      "bit": 2192,
+      "width": 8,
+      "default": 1
+    }
+  ]
+}

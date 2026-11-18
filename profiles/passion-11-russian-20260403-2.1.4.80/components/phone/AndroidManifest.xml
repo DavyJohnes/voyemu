@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.voyemu.passion.phone" android:sharedUserId="android.uid.system">
+    <uses-sdk android:minSdkVersion="30" android:targetSdkVersion="30" />
+    <uses-permission android:name="android.permission.CALL_PHONE" />
+    <uses-permission android:name="android.permission.MODIFY_PHONE_STATE" />
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
+    <uses-permission android:name="android.permission.WRITE_CONTACTS" />
+    <application android:label="Voyemu Passion synthetic phone" android:allowBackup="false">
+        <provider android:name="com.voyemu.input.PhoneControlProvider" android:authorities="com.voyemu.input.phone" android:exported="true" android:grantUriPermissions="false" />
+        <service android:name="com.voyemu.passion.phone.PassionConnectionService" android:exported="true" android:permission="android.permission.BIND_TELECOM_CONNECTION_SERVICE">
+            <intent-filter><action android:name="android.telecom.ConnectionService" /></intent-filter>
+        </service>
+    </application>
+</manifest>

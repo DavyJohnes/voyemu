@@ -1,0 +1,11 @@
+cmake_minimum_required(VERSION 3.29)
+# Check CTest's execution receipt, never source text: incomplete selection and skips fail CI.
+file(READ "${RESULT}" receipt)
+string(REGEX MATCHALL "<testcase[ >]" cases "${receipt}")
+list(LENGTH cases count)
+if(NOT count EQUAL 12)
+    message(FATAL_ERROR "Expected 12 source-fixture suites, executed ${count}")
+endif()
+if(receipt MATCHES "<skipped[ />]" OR receipt MATCHES "<failure[ />]")
+    message(FATAL_ERROR "Source-fixture suites must execute successfully without skips")
+endif()

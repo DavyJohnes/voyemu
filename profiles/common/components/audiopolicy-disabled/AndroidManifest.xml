@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.qinggan.audiopolicy.service">
+
+    <uses-sdk android:minSdkVersion="28" android:targetSdkVersion="28" />
+
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+
+    <application android:label="AudioPolicyEmulatorStub" android:allowBackup="false">
+        <!-- Clients (Launcher, com.qinggan.app.music, com.qinggan.media) bind to
+             action com.qinggan.audiopolicy.action.AUDIO_POLICY_SERVICE with
+             package com.qinggan.audiopolicy.service when the qg.audio_policy
+             ServiceManager service is absent. -->
+        <service android:name="com.qinggan.audiopolicy.AudioPolicyStubService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.qinggan.audiopolicy.action.AUDIO_POLICY_SERVICE" />
+            </intent-filter>
+        </service>
+    </application>
+</manifest>

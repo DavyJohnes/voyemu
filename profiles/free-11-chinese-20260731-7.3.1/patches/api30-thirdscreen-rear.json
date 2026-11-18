@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "api": 30,
+  "constants": {
+    "original_sha256_allowlist": [
+      "0897ba9e37c3246a81658a9756f148b6dc93285ae724714df4638af015bbaee1"
+    ]
+  },
+  "calls": [
+    {
+      "operation": "routeRearScreen",
+      "args": []
+    }
+  ],
+  "helper": "api30-thirdscreen-rear/src/com/voyemu/output/RearScreen.java"
+}

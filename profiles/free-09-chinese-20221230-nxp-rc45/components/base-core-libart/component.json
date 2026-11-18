@@ -1,0 +1,12 @@
+{
+  "type": "jar",
+  "minSdk": 28,
+  "output": "core-libart.jar",
+  "frameworkBase": {
+    "jar": "/system/framework/core-libart.jar",
+    "oat": "/system/framework/arm64/boot-core-libart.oat",
+    "oat_sha256": "f88dec8638e773528bfd079a72f2993446e5d3e9244b00bf704f03ea1d37eb49",
+    "vdex": "/system/framework/boot-core-libart.vdex",
+    "vdex_sha256": "d225e7b8948ea3462244d58a20373fa8a89136b328965ae731689c829886f31b"
+  }
+}

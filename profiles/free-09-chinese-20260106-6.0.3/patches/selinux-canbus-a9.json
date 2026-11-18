@@ -1,0 +1,18 @@
+{
+  "api": 28,
+  "calls": [],
+  "constants": {
+    "MARKER": "; voyemu A9 canbus",
+    "RULES": [
+      "(type voyemu_canbus_service)",
+      "(type voyemu_oem_service)",
+      "(typeattributeset service_manager_type (voyemu_canbus_service voyemu_oem_service))",
+      "(allow system_app voyemu_canbus_service (service_manager (add find)))",
+      "(allow system_app voyemu_oem_service (service_manager (add find)))",
+      "(allow platform_app voyemu_canbus_service (service_manager (find)))",
+      "(allow platform_app voyemu_oem_service (service_manager (find)))",
+      "(allow priv_app voyemu_canbus_service (service_manager (find)))"
+    ]
+  },
+  "schema": 1
+}

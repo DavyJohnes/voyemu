@@ -1,0 +1,152 @@
+# Adds the tidy-check target: the pinned clang-tidy checks every Voyemu C, C++ and Objective-C++ source
+# compiled by this build tree with config/config-clang-tidy.yaml and compile_commands.json. The tidy-fix
+# target exports the fix-its of the mechanical checks in voyemu_tidy_fix_checks for the same sources and
+# applies them once with clang-apply-replacements, so headers shared by several sources change once.
+# Scope: src/app, src/dev and src/guest without pinned third-party code; profile components are excluded.
+# Include after all targets; VOYEMU_TIDY_JOBS bounds the parallel clang-tidy processes.
+set(VOYEMU_CLANG_TIDY "" CACHE FILEPATH "clang-tidy 23.1.3 for the tidy-check target; empty selects the pinned tool")
+set(VOYEMU_TIDY_JOBS 4 CACHE STRING "Parallel clang-tidy processes of the tidy-check target")
+set(voyemu_tidy_tool "${VOYEMU_CLANG_TIDY}")
+if(NOT voyemu_tidy_tool)
+    string(JSON voyemu_tidy_directory GET "${voyemu_toolchain_json}" optionalTools clangTidy directory)
+    string(JSON voyemu_tidy_binary GET "${voyemu_toolchain_json}" optionalTools clangTidy binary)
+    set(voyemu_tidy_tool "${voyemu_project_root}/${voyemu_tidy_directory}/${voyemu_tidy_binary}")
+    if(CMAKE_HOST_WIN32)
+        string(APPEND voyemu_tidy_tool ".exe")
+    endif()
+endif()
+set(voyemu_tidy_error "")
+if(NOT EXISTS "${voyemu_tidy_tool}")
+    set(voyemu_tidy_error "clang-tidy not found at ${voyemu_tidy_tool}; install the optionalTools.clangTidy pin from src/app/toolchain.json or pass -DVOYEMU_CLANG_TIDY=<path>")
+else()
+    execute_process(COMMAND "${voyemu_tidy_tool}" --version OUTPUT_VARIABLE voyemu_tidy_version RESULT_VARIABLE voyemu_tidy_result)
+    if(NOT voyemu_tidy_result EQUAL 0 OR NOT voyemu_tidy_version MATCHES "LLVM version 23\\.1\\.3([^0-9]|$)")
+        set(voyemu_tidy_error "clang-tidy 23.1.3 required at ${voyemu_tidy_tool}, found: ${voyemu_tidy_version}")
+    endif()
+endif()
+if(voyemu_tidy_error)
+    foreach(target tidy-check tidy-fix)
+        add_custom_target(${target}
+            COMMAND "${CMAKE_COMMAND}" -E echo "${voyemu_tidy_error}"
+            COMMAND "${CMAKE_COMMAND}" -E false
+            VERBATIM)
+    endforeach()
+    return()
+endif()
+get_filename_component(voyemu_tidy_bin "${voyemu_tidy_tool}" DIRECTORY)
+set(voyemu_tidy_apply "${voyemu_tidy_bin}/clang-apply-replacements")
+if(CMAKE_HOST_WIN32)
+    string(APPEND voyemu_tidy_apply ".exe")
+endif()
+# Checks whose fix-its only restate the same code; bugprone fix-its change behavior and stay manual.
+set(voyemu_tidy_fix_checks "-*,readability-braces-around-statements,readability-else-after-return,readability-redundant-control-flow,modernize-use-nullptr,modernize-use-override")
+file(GLOB voyemu_tidy_resource LIST_DIRECTORIES true "${voyemu_tidy_bin}/../lib/clang/*/include")
+
+# Zig runs its bundled clang with -nostdinc and its own libc++ and libc headers, which compile_commands.json
+# does not record. Sets output to the matching clang-tidy arguments for lang, with the clang-tidy builtin
+# headers in place of the Zig ones; empty for compilers that are not Zig wrappers.
+function(voyemu_tidy_driver_arguments output lang compiler target)
+    set(input "${CMAKE_CURRENT_BINARY_DIR}/tidy/empty.${lang}")
+    file(WRITE "${input}" "")
+    set(target_argument)
+    if(target)
+        set(target_argument "--target=${target}")
+    endif()
+    execute_process(COMMAND "${compiler}" ${target_argument} -E -v "${input}"
+        WORKING_DIRECTORY "${voyemu_project_root}" OUTPUT_QUIET ERROR_VARIABLE log RESULT_VARIABLE result)
+    if(NOT result EQUAL 0 OR NOT log MATCHES "zig[^\n]* -cc1 ([^\n]*)")
+        set(${output} "" PARENT_SCOPE)
+        return()
+    endif()
+    if(CMAKE_HOST_WIN32)
+        separate_arguments(tokens WINDOWS_COMMAND "${CMAKE_MATCH_1}")
+    else()
+        separate_arguments(tokens UNIX_COMMAND "${CMAKE_MATCH_1}")
+    endif()
+    set(arguments -nostdinc)
+    set(previous "")
+    foreach(token IN LISTS tokens)
+        if(previous STREQUAL "-triple")
+            list(APPEND arguments "--target=${token}")
+        elseif(previous STREQUAL "-D")
+            list(APPEND arguments "-D${token}")
+        elseif(previous MATCHES "^-(isystem|idirafter|iframework|isysroot)$")
+            get_filename_component(path "${token}" ABSOLUTE BASE_DIR "${voyemu_project_root}")
+            if(EXISTS "${path}/__stddef_max_align_t.h")
+                set(path "${voyemu_tidy_resource}")
+            endif()
+            list(APPEND arguments "${previous}" "${path}")
+        endif()
+        set(previous "${token}")
+    endforeach()
+    set(${output} "${arguments}" PARENT_SCOPE)
+endfunction()
+voyemu_tidy_driver_arguments(voyemu_tidy_c c "${CMAKE_C_COMPILER}" "${CMAKE_C_COMPILER_TARGET}")
+voyemu_tidy_driver_arguments(voyemu_tidy_cxx cpp "${CMAKE_CXX_COMPILER}" "${CMAKE_CXX_COMPILER_TARGET}")
+
+get_property(voyemu_tidy_targets DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" PROPERTY BUILDSYSTEM_TARGETS)
+set(voyemu_tidy_files)
+set(voyemu_tidy_dependencies)
+foreach(target IN LISTS voyemu_tidy_targets)
+    get_target_property(type ${target} TYPE)
+    if(NOT type MATCHES "^(EXECUTABLE|STATIC_LIBRARY|SHARED_LIBRARY|MODULE_LIBRARY|OBJECT_LIBRARY)$")
+        continue()
+    endif()
+    get_target_property(sources ${target} SOURCES)
+    set(selected FALSE)
+    foreach(source IN LISTS sources)
+        if(source MATCHES "\\$<" OR NOT source MATCHES "\\.(c|cpp|mm)$")
+            continue()
+        endif()
+        get_filename_component(source "${source}" ABSOLUTE BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+        file(RELATIVE_PATH relative "${voyemu_project_root}" "${source}")
+        if(relative MATCHES "^src/(app|dev|guest)/" AND NOT relative MATCHES "^src/app/third_party/")
+            list(APPEND voyemu_tidy_files "${relative}")
+            set(selected TRUE)
+        endif()
+    endforeach()
+    # Generated headers and the compilation database must exist before the check.
+    if(selected)
+        list(APPEND voyemu_tidy_dependencies ${target})
+    endif()
+endforeach()
+list(REMOVE_DUPLICATES voyemu_tidy_files)
+list(SORT voyemu_tidy_files)
+set_property(GLOBAL APPEND PROPERTY JOB_POOLS voyemu_tidy=${VOYEMU_TIDY_JOBS})
+set(voyemu_tidy_outputs)
+set(voyemu_tidy_fix_outputs)
+file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/tidy-fixes")
+foreach(relative IN LISTS voyemu_tidy_files)
+    if(relative MATCHES "\\.c$")
+        set(arguments ${voyemu_tidy_c})
+    else()
+        set(arguments ${voyemu_tidy_cxx})
+    endif()
+    list(TRANSFORM arguments PREPEND "--extra-arg=")
+    # The output is never written, so every build reruns the check.
+    set(output "${CMAKE_CURRENT_BINARY_DIR}/tidy/${relative}.check")
+    add_custom_command(OUTPUT "${output}"
+        COMMAND "${voyemu_tidy_tool}" --quiet "--config-file=${voyemu_project_root}/config/config-clang-tidy.yaml"
+            -p "${CMAKE_BINARY_DIR}" ${arguments} "${relative}"
+        WORKING_DIRECTORY "${voyemu_project_root}" COMMENT "clang-tidy ${relative}" JOB_POOL voyemu_tidy VERBATIM)
+    set_source_files_properties("${output}" PROPERTIES SYMBOLIC TRUE)
+    list(APPEND voyemu_tidy_outputs "${output}")
+    # A stale export from an earlier run would apply old offsets, so each run removes it first.
+    string(MAKE_C_IDENTIFIER "${relative}" fix_name)
+    set(fixes "${CMAKE_CURRENT_BINARY_DIR}/tidy-fixes/${fix_name}.yaml")
+    set(output "${CMAKE_CURRENT_BINARY_DIR}/tidy/${relative}.fix")
+    add_custom_command(OUTPUT "${output}"
+        COMMAND "${CMAKE_COMMAND}" -E rm -f "${fixes}"
+        COMMAND "${voyemu_tidy_tool}" --quiet "--config-file=${voyemu_project_root}/config/config-clang-tidy.yaml"
+            "--checks=${voyemu_tidy_fix_checks}" "--warnings-as-errors=-*" "--export-fixes=${fixes}"
+            -p "${CMAKE_BINARY_DIR}" ${arguments} "${relative}"
+        WORKING_DIRECTORY "${voyemu_project_root}" COMMENT "clang-tidy fixes ${relative}" JOB_POOL voyemu_tidy VERBATIM)
+    set_source_files_properties("${output}" PROPERTIES SYMBOLIC TRUE)
+    list(APPEND voyemu_tidy_fix_outputs "${output}")
+endforeach()
+add_custom_target(tidy-check DEPENDS ${voyemu_tidy_outputs})
+add_dependencies(tidy-check ${voyemu_tidy_dependencies})
+add_custom_target(tidy-fix
+    COMMAND "${voyemu_tidy_apply}" "${CMAKE_CURRENT_BINARY_DIR}/tidy-fixes"
+    DEPENDS ${voyemu_tidy_fix_outputs} WORKING_DIRECTORY "${voyemu_project_root}" VERBATIM)
+add_dependencies(tidy-fix ${voyemu_tidy_dependencies})

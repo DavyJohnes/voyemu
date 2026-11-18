@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "files": [
+    {
+      "path": "src/com/qinggan/canbus/service/BaseCanBusComponent.java",
+      "replacements": [
+        {
+          "before": "import com.qinggan.canbus.EnergyConsumptionInfo;\nimport com.qinggan.canbus.EnergyConsumptionPercent;\n",
+          "after": ""
+        },
+        {
+          "before": "    public void onEnergyConsumptionInfoChanged(EnergyConsumptionInfo value) {\n        dispatch(\"onEnergyConsumptionInfoChanged\", o -> o.onEnergyConsumptionInfoChanged(value));\n    }\n\n",
+          "after": ""
+        },
+        {
+          "before": "    public void onEnergyConsumptionPercentChanged(EnergyConsumptionPercent value) {\n        dispatch(\n                \"onEnergyConsumptionPercentChanged\",\n                o -> o.onEnergyConsumptionPercentChanged(value));\n    }\n\n",
+          "after": ""
+        },
+        {
+          "before": "    /** No consumption data reaches the component; the OEM base component returns null. */\n    public EnergyConsumptionInfo getEnergyConsumptionInfo() {\n        return null;\n    }\n\n",
+          "after": ""
+        },
+        {
+          "before": "    public EnergyConsumptionPercent getEnergyConsumptionPercent() {\n        return null;\n    }\n\n",
+          "after": ""
+        },
+        {
+          "before": "    public void printData(String trace, byte[] data) {\n        if (data != null && data.length > 0) {\n            Log.d(TAG, trace + \", len:\" + data.length + \" \" + hex(data, 0, data.length));\n        }\n    }\n\n",
+          "after": ""
+        },
+        {
+          "before": "    public void printData(String trace, int length, int[] data) {\n        if (data != null && length > 0) {\n            StringBuilder text = new StringBuilder();\n\n            for (int i = 0; i < length && i < data.length; i++) {\n                text.append(String.format(Locale.ROOT, \"%02x \", data[i]));\n            }\n\n            Log.d(TAG, trace + \", len:\" + length + \" [\" + text + \"]\");\n        }\n    }\n\n",
+          "after": ""
+        },
+        {
+          "before": "    public void printDataWithLog(String trace, byte[] data) {\n        if (data != null) {\n            Log.i(TAG, trace + \", len:\" + data.length + \" \" + hex(data, 0, data.length));\n        }\n    }\n\n",
+          "after": ""
+        }
+      ]
+    },
+    {
+      "path": "src/com/qinggan/canbus/service/CanBusStubService.java",
+      "replacements": [
+        {
+          "before": "import com.qinggan.canbus.EnergyConsumptionInfo;\nimport com.qinggan.canbus.EnergyConsumptionPercent;\n",
+          "after": ""
+        },
+        {
+          "before": "    @Override\n    public EnergyConsumptionInfo getEnergyConsumptionInfo() {\n        return mComponent.getEnergyConsumptionInfo();\n    }\n\n",
+          "after": ""
+        },
+        {
+          "before": "    @Override\n    public EnergyConsumptionPercent getEnergyConsumptionPercent() {\n        return mComponent.getEnergyConsumptionPercent();\n    }\n\n",
+          "after": ""
+        }
+      ]
+    }
+  ]
+}

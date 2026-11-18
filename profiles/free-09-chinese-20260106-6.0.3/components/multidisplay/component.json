@@ -1,0 +1,21 @@
+{
+    "type": "apk",
+    "minSdk": 28,
+    "targetSdk": 28,
+    "sign": "platform",
+    "externalSources": {
+        "src/com/android/emulator/multidisplay/MultiDisplayService.java": {
+            "url": "https://android.googlesource.com/device/generic/goldfish/+/refs/tags/android-11.0.0_r1/MultiDisplayProvider/src/com/android/emulator/multidisplay/MultiDisplayService.java?format=TEXT",
+            "sha256": "344362321627ae3a2410aed33c7ef378755f9506b6a3a50f67ea5b39bf69f01f"
+        },
+        "src/com/android/emulator/multidisplay/MultiDisplayServiceReceiver.java": {
+            "url": "https://android.googlesource.com/device/generic/goldfish/+/refs/tags/android-11.0.0_r1/MultiDisplayProvider/src/com/android/emulator/multidisplay/MultiDisplayServiceReceiver.java?format=TEXT",
+            "sha256": "52d19a5ba21a2ce09c7169b34f49b8c5b9f6ba7b6fdc08548e2d83eb833aca89"
+        },
+        "AndroidManifest.xml": {
+            "url": "https://android.googlesource.com/device/generic/goldfish/+/refs/tags/android-11.0.0_r1/MultiDisplayProvider/AndroidManifest.xml?format=TEXT",
+            "sha256": "6588cf9854bb1b8a3cc5b5955321330590b250caae606c80d0bd6f648ddd9643"
+        }
+    },
+    "upstreamEdits": "upstream.edits.json"
+}

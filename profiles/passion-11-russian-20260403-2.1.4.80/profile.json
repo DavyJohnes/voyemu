@@ -1,0 +1,1310 @@
+{
+  "schema": 1,
+  "id": "passion-11-russian-20260403-2.1.4.80",
+  "status": "ready",
+  "identity": {
+    "marketingModel": "Voyah Passion",
+    "marketingModelSource": "owner",
+    "verifiedModel": "VOYAH H53",
+    "device": "monza",
+    "brand": "VOYAH",
+    "release": "11",
+    "sdk": 30,
+    "abis": [
+      "arm64-v8a",
+      "armeabi-v7a",
+      "armeabi"
+    ],
+    "build": "2.1.4.80-20260403174306",
+    "buildDate": "2026-04-03",
+    "fingerprint": "VOYAH/monza/monza:11/RQ3A.211001.001/2.1.4.80-20260403174306:user/release-keys",
+    "buildPropSha256": "0e8c5344b1ed8b7f0dd320fed9c8e3ec86f05e0dc1a0e8c49db64ee136e3059e"
+  },
+  "android": {
+    "package": "system-images;android-30;default;arm64-v8a",
+    "revision": "1",
+    "url": "https://dl.google.com/android/repository/sys-img/android/arm64-v8a-30_r02.zip",
+    "sha256": "cb50112cf2dd234a71e2a29b0241c23dbb37dd5fc3156c68cc9c49d0f58ad304",
+    "clean_base": {
+      "receipt_sha256": "44b6418f2e7fba56db2813fcb9bae05659fa36cae96dddd5d5fb64692fe984aa",
+      "boot_files": {
+        "kernel-ranchu": "08987ba1309fb275565ddc385134d276d8eab6459f81c016b116fb562433e4fa",
+        "ramdisk.img": "74a3ce3aa051f670fef4d70049b4e2f8080d1a9477465e68d847d5971f16fd34",
+        "build.prop": "09feda2d8af0c2e293c978aeb1658a9925faf9759a8e7188c45b0ae6fec8fe21",
+        "advancedFeatures.ini": "b5abe7e9f4ff5d003b06d486bbe58c5e36b42d7e33dddb1ae5f9a93835a85549",
+        "source.properties": "ef234f316d51bd7567540cebc0cf0ebe296b5e5cfd97c66e4844d0ea1792740d",
+        "VerifiedBootParams.textproto": "caf29e0707a3be35f127566510932a7e56bc0d56a0c888992922b2868f18815d"
+      },
+      "images": {
+        "system.img": "b9879a686e47e26d1ba1c2f2eafd417e5f9415d68a4e03a0c2adae47f3fb53ec",
+        "vendor.img": "42fea0d227f36a51cea5a66d79f6d624d9423732f4eb646c3565e3ad40ff333d"
+      },
+      "logical_partitions": {
+        "metadata_sha256": "f535d7f845ccdbd69a01d41639031e7d1a4950f21dc30df57dc4a438af030eee",
+        "system": {
+          "offset": 3145728,
+          "bytes": 789696512
+        },
+        "system_ext": {
+          "offset": 793772032,
+          "bytes": 106733568
+        }
+      },
+      "files": {
+        "/system/etc/selinux/mapping/30.0.cil": "c14ab911584595a94e6783600371fed23cec1d56b8001383584a3192d028eb60"
+      }
+    },
+    "features": {
+      "MultiDisplay": "on",
+      "VirtioInput": "on",
+      "VirtioTablet": "off"
+    }
+  },
+  "original": {
+    "LY_CoreService": {
+      "file": "LY_CoreService.apk",
+      "bytes": 26986775,
+      "sha256": "a07ea5b7e226edf67535af9119458da77b84079b286138cbbebdcf80c838ca55",
+      "source": {
+        "package": "com.voyah.coreservice"
+      },
+      "acquisition": {
+        "image": "system",
+        "path": "/system/priv-app/LY_CoreService/LY_CoreService.apk"
+      }
+    },
+    "LY_Launcher": {
+      "file": "LY_Launcher.apk",
+      "bytes": 70457966,
+      "sha256": "4032f14c0fc49fd52514737309d2af67c9d4ff9340dd534874f46cbe2e748c00",
+      "source": {
+        "package": "com.voyah.os.carlauncher"
+      },
+      "acquisition": {
+        "image": "system",
+        "path": "/system/priv-app/LY_Launcher/LY_Launcher.apk"
+      }
+    },
+    "MegaNexusService": {
+      "file": "MegaNexusService.apk",
+      "bytes": 426471,
+      "sha256": "603805fbc8aa50ff473cd34d2082366bd5cfa6ed9439f37188e9301e1b812b11",
+      "source": {
+        "package": "com.mega.nexus.server"
+      },
+      "acquisition": {
+        "image": "system",
+        "path": "/system/priv-app/MegaNexusService/MegaNexusService.apk"
+      }
+    },
+    "MonzaCarService": {
+      "file": "MonzaCarService.apk",
+      "bytes": 5657523,
+      "sha256": "5cd091682a3ba6aa054a0b545a2c5a853e3e5bff7129f7319ebe8d583eccea98",
+      "source": {
+        "package": "com.mega.car"
+      },
+      "acquisition": {
+        "image": "system",
+        "path": "/system/priv-app/MonzaCarService/MonzaCarService.apk"
+      }
+    },
+    "CarSettings": {
+      "file": "CarSettings.apk",
+      "bytes": 14762500,
+      "sha256": "8d7798dd439ffa39d8af491ff23458d321c8c7659b53ea3672ab4d199189e4b4",
+      "source": {
+        "package": "com.android.car.settings"
+      },
+      "acquisition": {
+        "image": "system",
+        "path": "/system/system_ext/priv-app/CarSettings/CarSettings.apk"
+      }
+    },
+    "MonzaSystemUI": {
+      "file": "MonzaSystemUI.apk",
+      "bytes": 27565659,
+      "sha256": "73d34da0e80bac7be61fee9eae610a3414e1e355b17796795a0d0869f9c1427b",
+      "source": {
+        "package": "com.android.systemui"
+      },
+      "acquisition": {
+        "image": "system",
+        "path": "/system/system_ext/priv-app/MonzaSystemUI/MonzaSystemUI.apk"
+      }
+    },
+    "android.car": {
+      "file": "framework/android.car.jar",
+      "bytes": 684242,
+      "sha256": "87adcf736e346261e6caabbd6aead28f9bd177fb6fc7cec1d8aa8b55f8a0ce15",
+      "source": {
+        "path": "/system/framework/android.car.jar"
+      },
+      "acquisition": {
+        "image": "system",
+        "path": "/system/framework/android.car.jar"
+      }
+    },
+    "car-frameworks-service": {
+      "file": "framework/car-frameworks-service.jar",
+      "bytes": 3323849,
+      "sha256": "14db620c117eba7d3e58aad5e2d2e0663f2665f66100728331d7b9c6df1514e0",
+      "source": {
+        "path": "/system/framework/car-frameworks-service.jar"
+      },
+      "acquisition": {
+        "image": "system",
+        "path": "/system/framework/car-frameworks-service.jar"
+      }
+    },
+    "mega.bluetooth": {
+      "file": "framework/mega.bluetooth.jar",
+      "bytes": 51992,
+      "sha256": "867228e3c56657d02bfe21672a9452b3af473834f60190a7baf13fe3150a2d86",
+      "source": {
+        "path": "/system/framework/mega.bluetooth.jar"
+      },
+      "acquisition": {
+        "image": "system",
+        "path": "/system/framework/mega.bluetooth.jar"
+      }
+    },
+    "frameworkBase": {
+      "file": "framework/framework.jar",
+      "bytes": 30174555,
+      "sha256": "ec2933b1c42f1932cd46117a475b84d83371c9b19130930f43ffd4c455ca6bd3",
+      "source": {
+        "path": "/system/framework/framework.jar"
+      },
+      "acquisition": {
+        "image": "system",
+        "path": "/system/framework/framework.jar"
+      }
+    },
+    "mega.services.core": {
+      "file": "framework/mega.services.core.jar",
+      "bytes": 28410,
+      "sha256": "27fa58d51acfd7816066ac071b34a3812e9a54c564259f8ed709e1f99d780864",
+      "source": {
+        "path": "/system/framework/mega.services.core.jar"
+      },
+      "acquisition": {
+        "image": "system",
+        "path": "/system/framework/mega.services.core.jar"
+      }
+    },
+    "LY_Multimedia": {
+      "file": "LY_Multimedia.apk",
+      "bytes": 54464857,
+      "sha256": "a3c788860d5df27277d53ffbf838daaefddb6ab098ad52b636671dd70b34765d",
+      "source": {
+        "package": "com.voyah.multimedia"
+      },
+      "acquisition": {
+        "image": "system",
+        "path": "/system/app/LY_Multimedia/LY_Multimedia.apk"
+      }
+    },
+    "LY_BtPhone": {
+      "file": "LY_BtPhone.apk",
+      "bytes": 52573685,
+      "sha256": "5bc0f97b94009b2e5aa6cb9759ea2547ab17cdadfbb8021d5e9cb6d6c6589047",
+      "source": {
+        "package": "com.voyah.btphone"
+      },
+      "acquisition": {
+        "image": "system",
+        "path": "/system/priv-app/LY_BtPhone/LY_BtPhone.apk"
+      }
+    },
+    "LY_Car": {
+      "file": "LY_Car.apk",
+      "bytes": 278934856,
+      "sha256": "a5fb5daed4a295a568daf0390858a0bd00782b1384e66b13a96f66d43ad43e60",
+      "source": {
+        "package": "com.voyah.car"
+      },
+      "acquisition": {
+        "image": "vendor",
+        "path": "/vendor/app/LY_Car/LY_Car.apk"
+      }
+    },
+    "LY_Camera": {
+      "file": "LY_Camera.apk",
+      "bytes": 111142678,
+      "sha256": "e0e57f7cd9099136541c3ed35e1042fba1762a13640bea7f6a2ac3415f426bf0",
+      "source": {
+        "package": "com.voyah.camera"
+      },
+      "acquisition": {
+        "image": "system",
+        "path": "/system/app/LY_Camera/LY_Camera.apk"
+      }
+    },
+    "LY_Video": {
+      "file": "LY_Video.apk",
+      "bytes": 83820059,
+      "sha256": "11bd7f83630949a997836753a65e4782f3235cbbe83db037c7b47e25ddd21c5c",
+      "source": {
+        "package": "com.voyah.video"
+      },
+      "acquisition": {
+        "image": "system",
+        "path": "/system/app/LY_Video/LY_Video.apk"
+      }
+    },
+    "LY_AVM": {
+      "file": "LY_AVM.apk",
+      "bytes": 59707822,
+      "sha256": "ca78d415246c5be5c892d93a1b90c9dc19a638024af3ec61877c309cee7b8ecb",
+      "source": {
+        "package": "com.voyah.avm"
+      },
+      "acquisition": {
+        "image": "system",
+        "path": "/system/priv-app/LY_AVM/LY_AVM.apk"
+      }
+    },
+    "screen-control-screen0_off_change": {
+      "file": "screen0_off_change.csv",
+      "bytes": 6111,
+      "sha256": "7e82e683f773e0e300fe7e1f2c097381f0f94ff784d9705d350523f870081881",
+      "source": {
+        "path": "/system/etc/screen-control/screen0_off_change.csv"
+      },
+      "acquisition": {
+        "image": "system",
+        "path": "/system/etc/screen-control/screen0_off_change.csv"
+      }
+    },
+    "screen-control-screen0_off_keep": {
+      "file": "screen0_off_keep.csv",
+      "bytes": 6111,
+      "sha256": "826ff8847dd688819344780bb67dea7cf6287622752ed02cd56d286ae28bf33f",
+      "source": {
+        "path": "/system/etc/screen-control/screen0_off_keep.csv"
+      },
+      "acquisition": {
+        "image": "system",
+        "path": "/system/etc/screen-control/screen0_off_keep.csv"
+      }
+    },
+    "screen-control-screen0_on_change": {
+      "file": "screen0_on_change.csv",
+      "bytes": 6111,
+      "sha256": "dbfe5e0802173415484a1640ed3024a181843ad40d895320952db3a4d8a7bfff",
+      "source": {
+        "path": "/system/etc/screen-control/screen0_on_change.csv"
+      },
+      "acquisition": {
+        "image": "system",
+        "path": "/system/etc/screen-control/screen0_on_change.csv"
+      }
+    },
+    "screen-control-screen0_on_keep": {
+      "file": "screen0_on_keep.csv",
+      "bytes": 6111,
+      "sha256": "826ff8847dd688819344780bb67dea7cf6287622752ed02cd56d286ae28bf33f",
+      "source": {
+        "path": "/system/etc/screen-control/screen0_on_keep.csv"
+      },
+      "acquisition": {
+        "image": "system",
+        "path": "/system/etc/screen-control/screen0_on_keep.csv"
+      }
+    },
+    "screen-control-screen1_off_change": {
+      "file": "screen1_off_change.csv",
+      "bytes": 6111,
+      "sha256": "3aee3f501728d48de7a4c2a189fec04b1c9ddfb7898cd0dcc636129faa908ac0",
+      "source": {
+        "path": "/system/etc/screen-control/screen1_off_change.csv"
+      },
+      "acquisition": {
+        "image": "system",
+        "path": "/system/etc/screen-control/screen1_off_change.csv"
+      }
+    },
+    "screen-control-screen1_off_keep": {
+      "file": "screen1_off_keep.csv",
+      "bytes": 6111,
+      "sha256": "826ff8847dd688819344780bb67dea7cf6287622752ed02cd56d286ae28bf33f",
+      "source": {
+        "path": "/system/etc/screen-control/screen1_off_keep.csv"
+      },
+      "acquisition": {
+        "image": "system",
+        "path": "/system/etc/screen-control/screen1_off_keep.csv"
+      }
+    },
+    "screen-control-screen1_on_change": {
+      "file": "screen1_on_change.csv",
+      "bytes": 6111,
+      "sha256": "e2a2f3a83123cf347c7f0ec8cba58fa077e402b9a3317b36bec2225cbfb65f82",
+      "source": {
+        "path": "/system/etc/screen-control/screen1_on_change.csv"
+      },
+      "acquisition": {
+        "image": "system",
+        "path": "/system/etc/screen-control/screen1_on_change.csv"
+      }
+    },
+    "screen-control-screen1_on_keep": {
+      "file": "screen1_on_keep.csv",
+      "bytes": 6111,
+      "sha256": "826ff8847dd688819344780bb67dea7cf6287622752ed02cd56d286ae28bf33f",
+      "source": {
+        "path": "/system/etc/screen-control/screen1_on_keep.csv"
+      },
+      "acquisition": {
+        "image": "system",
+        "path": "/system/etc/screen-control/screen1_on_keep.csv"
+      }
+    },
+    "BootAnimation": {
+      "file": "media/bootanimation.zip",
+      "bytes": 46184,
+      "sha256": "7d09eedcfbb78834b865bb80a804de27cf4a7d839859a614a52a767c583b8a5d",
+      "source": {
+        "path": "/system/media/bootanimation.zip"
+      },
+      "acquisition": {
+        "image": "system",
+        "path": "/system/media/bootanimation.zip"
+      }
+    }
+  },
+  "components": {
+    "car-availability": "components/car-availability",
+    "platform-callbacks": "components/platform-callbacks",
+    "window-compat": "components/window-compat",
+    "mega-compat": "components/mega-compat",
+    "bootstrap": "components/bootstrap",
+    "wheel-input": "components/wheel-input",
+    "phone": "components/phone",
+    "view-observation": "components/view-observation",
+    "statusbar-overlay": "components/statusbar-overlay"
+  },
+  "patches": {
+    "LY_CoreService": {
+      "input": "original:LY_CoreService",
+      "type": "apk",
+      "steps": [
+        "framework-libraries.json"
+      ]
+    },
+    "LY_Launcher": {
+      "input": "original:LY_Launcher",
+      "type": "apk",
+      "steps": [
+        "framework-libraries.json",
+        "passion-api30-sidebars.json",
+        "passion-api30-bluetooth-volume.json",
+        "passion-api30-launcher-audio.json",
+        "passion-api30-navigation-ready.json",
+        "passion-api30-status-ready.json"
+      ]
+    },
+    "MegaNexusService": {
+      "input": "original:MegaNexusService",
+      "type": "apk",
+      "steps": [
+        "framework-libraries.json",
+        "passion-api30-nexus-power.json"
+      ]
+    },
+    "MonzaCarService": {
+      "input": "original:MonzaCarService",
+      "type": "apk",
+      "steps": [
+        "framework-libraries.json",
+        "passion-api30-diagnostics.json",
+        "passion-api30-mcu-property.json"
+      ]
+    },
+    "passion-services": {
+      "type": "file",
+      "input": "android:/system/etc/selinux/plat_sepolicy.cil",
+      "steps": [
+        "passion-services.json"
+      ]
+    },
+    "passion-service-contexts": {
+      "type": "file",
+      "input": "android:/system/etc/selinux/plat_service_contexts",
+      "steps": [
+        "passion-service-contexts.json"
+      ]
+    },
+    "passion-policy-hash": {
+      "type": "file",
+      "input": "android:/system/etc/selinux/plat_sepolicy_and_mapping.sha256",
+      "steps": [
+        "passion-policy-hash.json"
+      ],
+      "uses": [
+        "patched:passion-services",
+        "android:/system/etc/selinux/mapping/30.0.cil"
+      ]
+    },
+    "passion-property-contexts": {
+      "type": "file",
+      "input": "android:/system/etc/selinux/plat_property_contexts",
+      "steps": [
+        "passion-property-contexts.json"
+      ]
+    },
+    "LY_Multimedia": {
+      "input": "original:LY_Multimedia",
+      "type": "apk",
+      "steps": [
+        "passion-api30-bluetooth-role.json",
+        "passion-api30-music-foreground.json",
+        "passion-api30-music-day-drawables.json",
+        "passion-api30-music-insets.json",
+        "passion-api30-usb-media-session.json"
+      ]
+    },
+    "LY_BtPhone": {
+      "input": "original:LY_BtPhone",
+      "type": "apk",
+      "steps": [
+        "passion-api30-bluetooth-role.json",
+        "passion-api30-phone.json"
+      ]
+    },
+    "passion-api30-secondary-navigation": {
+      "type": "jar",
+      "input": "android:/system/framework/services.jar",
+      "steps": [
+        "passion-api30-secondary-navigation.json",
+        "passion-api30-display-power.json",
+        "passion-api30-startup-volume.json"
+      ]
+    },
+    "passion-api30-statusbar": {
+      "input": "android:/system_ext/priv-app/SystemUI/SystemUI.apk",
+      "type": "apk",
+      "steps": [
+        "passion-api30-statusbar.json"
+      ]
+    },
+    "LY_Car": {
+      "input": "original:LY_Car",
+      "type": "apk",
+      "steps": [
+        "passion-api30-vehicle-libraries.json",
+        "passion-api30-vehicle-bluetooth.json",
+        "passion-api30-vehicle-audio.json",
+        "passion-api30-bluetooth-volume.json",
+        "passion-api30-ambient-light.json",
+        "passion-api30-ecu-hardware.json",
+        "passion-api30-vehicle-animation.json"
+      ]
+    },
+    "LY_Camera": {
+      "input": "original:LY_Camera",
+      "type": "apk",
+      "steps": [
+        "passion-api30-media-libraries.json",
+        "passion-api30-service-foreground.json",
+        "passion-api30-camera-virtual.json"
+      ]
+    },
+    "LY_Video": {
+      "input": "original:LY_Video",
+      "type": "apk",
+      "steps": [
+        "passion-api30-media-libraries.json",
+        "passion-api30-service-foreground.json",
+        "passion-api30-bluetooth-volume.json"
+      ]
+    },
+    "LY_AVM": {
+      "input": "original:LY_AVM",
+      "type": "apk",
+      "steps": [
+        "passion-api30-media-libraries.json",
+        "passion-api30-avm-nexus.json"
+      ]
+    },
+    "CarSettings": {
+      "input": "original:CarSettings",
+      "type": "apk",
+      "steps": [
+        "framework-libraries.json",
+        "passion-api30-settings-recycler.json",
+        "passion-api30-settings-bluetooth-role.json",
+        "passion-api30-settings-sound.json",
+        "passion-api30-settings-units.json"
+      ]
+    }
+  },
+  "install": [
+    {
+      "artifact": "component:statusbar-overlay",
+      "type": "file",
+      "target": "/system/app/VoyemuPassionStatusbar/VoyemuPassionStatusbar.apk",
+      "mode": "0644"
+    },
+    {
+      "artifact": "component:view-observation",
+      "type": "file",
+      "target": "/system/framework/framework.jar",
+      "mode": "0644"
+    },
+    {
+      "artifact": "original:android.car",
+      "type": "file",
+      "target": "/system/framework/android.car.jar",
+      "mode": "0644"
+    },
+    {
+      "artifact": "component:platform-callbacks",
+      "type": "file",
+      "target": "/system/framework/voyemu-platform-callbacks.jar",
+      "mode": "0644"
+    },
+    {
+      "artifact": "component:window-compat",
+      "type": "file",
+      "target": "/system/framework/voyemu-window.jar",
+      "mode": "0644"
+    },
+    {
+      "artifact": "component:mega-compat",
+      "type": "file",
+      "target": "/system/framework/voyemu-mega.jar",
+      "mode": "0644"
+    },
+    {
+      "artifact": "files:framework-libraries",
+      "type": "file",
+      "target": "/system/etc/permissions/voyemu-framework.xml",
+      "mode": "0644"
+    },
+    {
+      "artifact": "patched:passion-services",
+      "type": "file",
+      "target": "/system/etc/selinux/plat_sepolicy.cil",
+      "mode": "0644"
+    },
+    {
+      "artifact": "patched:passion-service-contexts",
+      "type": "file",
+      "target": "/system/etc/selinux/plat_service_contexts",
+      "mode": "0644"
+    },
+    {
+      "artifact": "patched:passion-property-contexts",
+      "type": "file",
+      "target": "/system/etc/selinux/plat_property_contexts",
+      "mode": "0644"
+    },
+    {
+      "artifact": "patched:passion-policy-hash",
+      "type": "file",
+      "target": "/system/etc/selinux/plat_sepolicy_and_mapping.sha256",
+      "mode": "0644"
+    },
+    {
+      "artifact": "component:car-availability",
+      "type": "file",
+      "target": "/system/priv-app/VoyemuCarAvailability/VoyemuCarAvailability.apk",
+      "mode": "0644"
+    },
+    {
+      "artifact": "patched:MegaNexusService",
+      "type": "file",
+      "target": "/system/priv-app/MegaNexusService/MegaNexusService.apk",
+      "mode": "0644"
+    },
+    {
+      "artifact": "patched:MonzaCarService",
+      "type": "file",
+      "target": "/system/priv-app/MonzaCarService/MonzaCarService.apk",
+      "mode": "0644"
+    },
+    {
+      "artifact": "patched:LY_CoreService",
+      "type": "file",
+      "target": "/system/priv-app/LY_CoreService/LY_CoreService.apk",
+      "mode": "0644"
+    },
+    {
+      "artifact": "patched:LY_Launcher",
+      "type": "file",
+      "target": "/system/priv-app/LY_Launcher/LY_Launcher.apk",
+      "mode": "0644"
+    },
+    {
+      "artifact": "component:bootstrap",
+      "type": "file",
+      "target": "/system/priv-app/VoyemuBootstrap/VoyemuBootstrap.apk",
+      "mode": "0644"
+    },
+    {
+      "artifact": "component:wheel-input",
+      "type": "file",
+      "target": "/system/priv-app/VoyemuPassionWheel/VoyemuPassionWheel.apk",
+      "mode": "0644"
+    },
+    {
+      "artifact": "component:phone",
+      "type": "file",
+      "target": "/system/priv-app/VoyemuPassionPhone/VoyemuPassionPhone.apk",
+      "mode": "0644"
+    },
+    {
+      "artifact": "patched:LY_Multimedia",
+      "type": "file",
+      "target": "/system/app/LY_Multimedia/LY_Multimedia.apk",
+      "mode": "0644"
+    },
+    {
+      "artifact": "patched:LY_BtPhone",
+      "type": "file",
+      "target": "/system/priv-app/LY_BtPhone/LY_BtPhone.apk",
+      "mode": "0644"
+    },
+    {
+      "artifact": "patched:passion-api30-statusbar",
+      "type": "file",
+      "target": "/system/system_ext/priv-app/SystemUI/SystemUI.apk",
+      "mode": "0644"
+    },
+    {
+      "artifact": "patched:passion-api30-secondary-navigation",
+      "type": "file",
+      "target": "/system/framework/services.jar",
+      "mode": "0644"
+    },
+    {
+      "artifact": "patched:LY_Car",
+      "type": "file",
+      "target": "/system/app/LY_Car/LY_Car.apk",
+      "mode": "0644"
+    },
+    {
+      "artifact": "patched:LY_Camera",
+      "type": "file",
+      "target": "/system/app/LY_Camera/LY_Camera.apk",
+      "mode": "0644"
+    },
+    {
+      "artifact": "patched:LY_Video",
+      "type": "file",
+      "target": "/system/app/LY_Video/LY_Video.apk",
+      "mode": "0644"
+    },
+    {
+      "artifact": "patched:LY_AVM",
+      "type": "file",
+      "target": "/system/priv-app/LY_AVM/LY_AVM.apk",
+      "mode": "0644"
+    },
+    {
+      "artifact": "patched:CarSettings",
+      "type": "file",
+      "target": "/system/priv-app/CarSettings/CarSettings.apk",
+      "mode": "0644"
+    },
+    {
+      "artifact": "original:screen-control-screen0_off_change",
+      "type": "file",
+      "target": "/system/etc/screen-control/screen0_off_change.csv",
+      "mode": "0644"
+    },
+    {
+      "artifact": "original:screen-control-screen0_off_keep",
+      "type": "file",
+      "target": "/system/etc/screen-control/screen0_off_keep.csv",
+      "mode": "0644"
+    },
+    {
+      "artifact": "original:screen-control-screen0_on_change",
+      "type": "file",
+      "target": "/system/etc/screen-control/screen0_on_change.csv",
+      "mode": "0644"
+    },
+    {
+      "artifact": "original:screen-control-screen0_on_keep",
+      "type": "file",
+      "target": "/system/etc/screen-control/screen0_on_keep.csv",
+      "mode": "0644"
+    },
+    {
+      "artifact": "original:screen-control-screen1_off_change",
+      "type": "file",
+      "target": "/system/etc/screen-control/screen1_off_change.csv",
+      "mode": "0644"
+    },
+    {
+      "artifact": "original:screen-control-screen1_off_keep",
+      "type": "file",
+      "target": "/system/etc/screen-control/screen1_off_keep.csv",
+      "mode": "0644"
+    },
+    {
+      "artifact": "original:screen-control-screen1_on_change",
+      "type": "file",
+      "target": "/system/etc/screen-control/screen1_on_change.csv",
+      "mode": "0644"
+    },
+    {
+      "artifact": "original:screen-control-screen1_on_keep",
+      "type": "file",
+      "target": "/system/etc/screen-control/screen1_on_keep.csv",
+      "mode": "0644"
+    }
+  ],
+  "configure": {
+    "overlays": [
+      "com.voyemu.output.overlay.passion.statusbar"
+    ],
+    "home": "com.voyah.os.carlauncher",
+    "homeActivity": "com.voyah.os.carlauncher/com.voyah.os.carlauncher.LauncherActivityMain",
+    "start": [
+      {
+        "component": "com.android.car/com.voyemu.oem.car.CarAvailabilityService",
+        "mode": "service"
+      },
+      {
+        "component": "com.mega.nexus.server/.BootService",
+        "mode": "service"
+      },
+      {
+        "component": "com.mega.car/.MegaCarService",
+        "mode": "service"
+      },
+      {
+        "component": "com.voyah.coreservice/.CoreService",
+        "mode": "service"
+      }
+    ],
+    "settings": {
+      "global": {
+        "device_provisioned": "1",
+        "policy_control": "immersive.navigation=*",
+        "heads_up_notifications_enabled": "0"
+      },
+      "secure": {
+        "user_setup_complete": "1"
+      }
+    },
+    "disabled": [
+      "com.android.provision"
+    ]
+  },
+  "verify": {
+    "services": [
+      "car_service",
+      "com.mega.NexusService",
+      "com.mega.car.CarService"
+    ],
+    "activities": [
+      {
+        "component": "com.voyah.os.carlauncher/com.voyah.os.carlauncher.LauncherActivityMain",
+        "display": 0
+      },
+      {
+        "component": "com.voyah.os.carlauncher/com.voyah.os.carlauncher.second.LauncherActivityMainSecond",
+        "display": 1
+      }
+    ]
+  },
+  "ownerUpdate": {
+    "file": "OIB_8155_H53Y3632802AW.zip",
+    "bytes": 3620746445,
+    "sha256": "a1b651223453ed23d1835a70a5cac64c43247a21165ccd88d56a21cc3215ddb9",
+    "inner": {
+      "file": "h53y-cdc-8155-H53_8155_OTA_1.4.0_release-soc_ota-user-secure-2.1.4.80-20260403174306.tgz",
+      "bytes": 3620745340,
+      "sha256": "00d41ae4ff1283040e97276d3b287daf381b2ee9843a7b0f3977ec5b7a06eae4"
+    }
+  },
+  "acquisition": {
+    "implemented": true,
+    "format": "pinned-zip-tgz-raw-scatter",
+    "diff": false,
+    "system": {
+      "bytes": 2684354560,
+      "sha256": "218b99296c6963e0c0644dd76d444ea953fcc25b9d187bb65c281e3c9eedff80",
+      "segments": [
+        {
+          "member": "otaPack/system_1.img",
+          "offset": 0,
+          "bytes": 1130496,
+          "sha256": "4aafccc3cd90cb8fc67e2387ca6dddd2e5f92db5731c7e6aa865cec081cc8dc7"
+        },
+        {
+          "member": "otaPack/system_2.img",
+          "offset": 2080768,
+          "bytes": 132149248,
+          "sha256": "002bd3b74cab2d6cedb5252ddd2e52395d5f8e8b307d2dc6f874bd4925901a25"
+        },
+        {
+          "member": "otaPack/system_3.img",
+          "offset": 136298496,
+          "bytes": 132141056,
+          "sha256": "d661b29c81041d03e08e9b6f4704557eac30a68a08a5a5775a151b44c3d28b27"
+        },
+        {
+          "member": "otaPack/system_4.img",
+          "offset": 270508032,
+          "bytes": 132157440,
+          "sha256": "f803a7eaeb38852d0a1d61d1a285c129c73880b5cc1ebb01572f86540de32552"
+        },
+        {
+          "member": "otaPack/system_5.img",
+          "offset": 404733952,
+          "bytes": 132141056,
+          "sha256": "4a60b1826a862de50220cf5ac23ac9973ad98e401c6cb095c15609a7fda4dbcd"
+        },
+        {
+          "member": "otaPack/system_6.img",
+          "offset": 538943488,
+          "bytes": 132157440,
+          "sha256": "93de94b745cfacdb800f69be7a5c2b4f2141a3b1aa1e453150f09e790f940cdf"
+        },
+        {
+          "member": "otaPack/system_7.img",
+          "offset": 673169408,
+          "bytes": 132141056,
+          "sha256": "856ba247e48e18b8cd977c9857eb040da2ef52861a9b20862ff39b0886cab950"
+        },
+        {
+          "member": "otaPack/system_8.img",
+          "offset": 807378944,
+          "bytes": 132157440,
+          "sha256": "2b1d693ba05baa2c47359c9f2b26390cec3f7282ec3544cda065996e8c1f6018"
+        },
+        {
+          "member": "otaPack/system_9.img",
+          "offset": 941604864,
+          "bytes": 132141056,
+          "sha256": "9d870b669b6536b15a9b6f89ea48c6b48f2b851a7b21da1cca2a85d8f609a00d"
+        },
+        {
+          "member": "otaPack/system_10.img",
+          "offset": 1075814400,
+          "bytes": 132157440,
+          "sha256": "37c50c9575805a043b2e27641847966d2cd4f9404b0bd478233bd6b7565d70db"
+        },
+        {
+          "member": "otaPack/system_11.img",
+          "offset": 1210040320,
+          "bytes": 132141056,
+          "sha256": "3f9cc50296532cc483c20dbdd45017845bd37b42b38b8245aad567c0dcabc52b"
+        },
+        {
+          "member": "otaPack/system_12.img",
+          "offset": 1344249856,
+          "bytes": 132149248,
+          "sha256": "cdf0cec7018f884c8a6d65f38ec6b806fdd2ab734d4521fc05ec178fc2dd32d9"
+        },
+        {
+          "member": "otaPack/system_13.img",
+          "offset": 1478467584,
+          "bytes": 132149248,
+          "sha256": "b746f71c2ffb9446cdfce70c1ab455d4d29924382599f1aa86451bed5abe7b64"
+        },
+        {
+          "member": "otaPack/system_14.img",
+          "offset": 1612685312,
+          "bytes": 132149248,
+          "sha256": "9ccb54d3eb29ae439078d310494cd74f2f7b8cbb35aaeca8e2b8c86c4cd98dcf"
+        },
+        {
+          "member": "otaPack/system_15.img",
+          "offset": 1746903040,
+          "bytes": 119324672,
+          "sha256": "a02e92eb2fda373999342db8b7f702f019f24f77efd63f608f0ed31d6b958dae"
+        },
+        {
+          "member": "otaPack/system_16.img",
+          "offset": 2550136832,
+          "bytes": 4096,
+          "sha256": "b784159f8f4140639e4069db927e10f75dabe796caee5a747b346d7e311f1cef"
+        },
+        {
+          "member": "otaPack/system_17.img",
+          "offset": 2641915904,
+          "bytes": 41869312,
+          "sha256": "f3a66c75ff73ca52bba025970a0f36cdd4eb4c78e7448ee3d8a02dcbbc4cee95"
+        },
+        {
+          "member": "otaPack/system_18.img",
+          "offset": 2684350464,
+          "bytes": 4096,
+          "sha256": "83522944d1cb5a1dab84b5d0c4b1215f3f776ad83b8e6e2c7f1cf579f31952c6"
+        }
+      ]
+    },
+    "vendor": {
+      "bytes": 5368709120,
+      "sha256": "2b4a327d96aefc304bfd011edddd17f25feb59e7b7e1feb94e982a4281c7abc9",
+      "segments": [
+        {
+          "member": "otaPack/vendor_1.img",
+          "offset": 0,
+          "bytes": 761856,
+          "sha256": "db8774bd8613a9e45c99fb14f04bb8a3b3650126eeb64947065d51a2cf5d9673"
+        },
+        {
+          "member": "otaPack/vendor_2.img",
+          "offset": 2080768,
+          "bytes": 132149248,
+          "sha256": "a54e70d67139fa4cdebe9f0b66d9dc97af7cc51e8282d7036fd190c5d132f84a"
+        },
+        {
+          "member": "otaPack/vendor_3.img",
+          "offset": 136298496,
+          "bytes": 132141056,
+          "sha256": "faa8d45db6a97c6ec71684c7fb3c3bf7d89354c35554806ad8506404fb36d627"
+        },
+        {
+          "member": "otaPack/vendor_4.img",
+          "offset": 270508032,
+          "bytes": 132157440,
+          "sha256": "5a0f34b74a411be5c5610984a09d6187409a081fd8e1b3e77596e33f4562c519"
+        },
+        {
+          "member": "otaPack/vendor_5.img",
+          "offset": 404733952,
+          "bytes": 132141056,
+          "sha256": "9305e7ee23158186aecbdc6134b20c9e00f6d759fb2c8ad287ab021cd911b862"
+        },
+        {
+          "member": "otaPack/vendor_6.img",
+          "offset": 538943488,
+          "bytes": 132157440,
+          "sha256": "cc585e98d333b36e031ca992edc9cd78fd6a1daa8d360bf1c990d8183cc10804"
+        },
+        {
+          "member": "otaPack/vendor_7.img",
+          "offset": 673169408,
+          "bytes": 132141056,
+          "sha256": "e49b919d66292a999c6f8960afd87247be16016ed7f8857f051f6fb5f389e16f"
+        },
+        {
+          "member": "otaPack/vendor_8.img",
+          "offset": 807378944,
+          "bytes": 132157440,
+          "sha256": "c58dbe15c386ca34f324cfec58c308e20564a87584f252900b871835a458878a"
+        },
+        {
+          "member": "otaPack/vendor_9.img",
+          "offset": 941604864,
+          "bytes": 132141056,
+          "sha256": "c4a0a0e18429d1a5cfc77ac64aea35148fcf7a15a0ad3cfec2f3077f451986ca"
+        },
+        {
+          "member": "otaPack/vendor_10.img",
+          "offset": 1075814400,
+          "bytes": 132157440,
+          "sha256": "08b046f4ce5ce2fbb64ecd481fcf8d28da2460a45268512f14961a744fc25017"
+        },
+        {
+          "member": "otaPack/vendor_11.img",
+          "offset": 1210040320,
+          "bytes": 132141056,
+          "sha256": "5f9187865af83e31c02e75b4ad51b1dcdb52981e2da85dbbb9abc0e2a912a762"
+        },
+        {
+          "member": "otaPack/vendor_12.img",
+          "offset": 1344249856,
+          "bytes": 132149248,
+          "sha256": "2a2cfc2a8f0582134f00c6fe3e6a80ee42dc300985acf083974004e3226f1692"
+        },
+        {
+          "member": "otaPack/vendor_13.img",
+          "offset": 1478467584,
+          "bytes": 132149248,
+          "sha256": "0592fdd217b2b5bb1caef6571282d5ea94e775e08fc7583b0e49501b71b69323"
+        },
+        {
+          "member": "otaPack/vendor_14.img",
+          "offset": 1612685312,
+          "bytes": 132149248,
+          "sha256": "778610c6741298ebc4a1264c9ad129b680a3a232d294b4ef1eda8365a50c80eb"
+        },
+        {
+          "member": "otaPack/vendor_15.img",
+          "offset": 1746903040,
+          "bytes": 132149248,
+          "sha256": "6661826a8a061500ffd36d0ea7677226ac7ec0a05484734c60c72cbd94825bfd"
+        },
+        {
+          "member": "otaPack/vendor_16.img",
+          "offset": 1881120768,
+          "bytes": 132149248,
+          "sha256": "d4d5a61a245c613ace9a2733f9b5b6de0b76ae3f731edc9e30009ca673c67d5f"
+        },
+        {
+          "member": "otaPack/vendor_17.img",
+          "offset": 2015338496,
+          "bytes": 132149248,
+          "sha256": "e3169760fc066d2c7a4fe3474752cf832785ced85a0a4c33bed16cba28bfb5d4"
+        },
+        {
+          "member": "otaPack/vendor_18.img",
+          "offset": 2149556224,
+          "bytes": 132149248,
+          "sha256": "ce149354d9921595a84e33597080d52cdafa67eaf7e0865436abf82294624b68"
+        },
+        {
+          "member": "otaPack/vendor_19.img",
+          "offset": 2283773952,
+          "bytes": 132149248,
+          "sha256": "144951c3b3605080355ba9cf455cf7ba7d5b272bc9b296a4a2f2f1ff2a1d2fc2"
+        },
+        {
+          "member": "otaPack/vendor_20.img",
+          "offset": 2417991680,
+          "bytes": 132149248,
+          "sha256": "0fb536139c861cbaae0b6ecaf6c310ec044565c0c6cbd06f926357b7f7d40d82"
+        },
+        {
+          "member": "otaPack/vendor_21.img",
+          "offset": 2552209408,
+          "bytes": 132149248,
+          "sha256": "c164ca27419588a09aa33c778dab938311e874e1276173fe89513aa0dc1e2de9"
+        },
+        {
+          "member": "otaPack/vendor_22.img",
+          "offset": 2686427136,
+          "bytes": 132149248,
+          "sha256": "76be377b77dc7291847678b4bbc93395e6434dbf5fbbcf5edf15aac65a6d89a8"
+        },
+        {
+          "member": "otaPack/vendor_23.img",
+          "offset": 2820644864,
+          "bytes": 132149248,
+          "sha256": "9977425c9bcd6c9fbecbb70b7e9a1ca8334745627d5d2cd5f588790ded338a2c"
+        },
+        {
+          "member": "otaPack/vendor_24.img",
+          "offset": 2954862592,
+          "bytes": 99311616,
+          "sha256": "cec77941c1e836fe2d9f596e3d32388465964533ee8dc1321b245b22d1c220a0"
+        },
+        {
+          "member": "otaPack/vendor_25.img",
+          "offset": 3355443200,
+          "bytes": 8192,
+          "sha256": "7beac6983cacf53a8dd6f4cbc9f37a6a60d3e3d7473c0798eb4afc6b0270dbda"
+        },
+        {
+          "member": "otaPack/vendor_26.img",
+          "offset": 3623878656,
+          "bytes": 8192,
+          "sha256": "a9766ed1005095908b6651bd6b14a7cc6a8ae568ee96913ac4c1cdc4ebfadd13"
+        },
+        {
+          "member": "otaPack/vendor_27.img",
+          "offset": 5234491392,
+          "bytes": 4096,
+          "sha256": "a803cddb82453f79180e55b89df77861ced0019ae04230396ef07b1b2b50cefa"
+        },
+        {
+          "member": "otaPack/vendor_28.img",
+          "offset": 5283917824,
+          "bytes": 83722240,
+          "sha256": "44c6753d5d09692d2cdfb97c892d04f34b25c7678f4392a31d532fedb3ea11e7"
+        },
+        {
+          "member": "otaPack/vendor_29.img",
+          "offset": 5368705024,
+          "bytes": 4096,
+          "sha256": "25944d59612bfd7f065a9a2761efaace87bbb139d23b1e07e41c0d8be675b5f7"
+        }
+      ]
+    }
+  },
+  "compatibility": {
+    "oem_certificate_sha256": "db7d3298414c64c28556fae2d1048bbccfdaade5f909eddbb8429cdc35fe2b6a",
+    "blocking_requirements": [
+      "Verify the native ZIP/TGZ acquisition backend on Windows; macOS acquisition is host-verified, guest startup remains unverified.",
+      "Resolve MEGA/Monza bootclasspath, Binder/JNI dependencies and OEM startup; Free/Dreamer adapters do not apply.",
+      "Verify two-display geometry, HOME startup, audio and wheel routing in an actual API30 guest.",
+      "Prepare and verify independent QNX hardware adapter and frames."
+    ],
+    "developer_trial": {
+      "partial": true,
+      "geometry_source": "explicit1920x720 test parameters for existing native SDK frame contract, not OEM dimensions",
+      "vehicle_observer": "unsupported",
+      "canonical_ready": false
+    },
+    "privapp_whitelist": {
+      "file": "files/voyemu-framework.xml",
+      "packages": {
+        "com.voyah.os.carlauncher": [
+          "android.permission.INTERACT_ACROSS_USERS",
+          "android.permission.READ_PRIVILEGED_PHONE_STATE",
+          "android.permission.CHANGE_CONFIGURATION",
+          "android.permission.WRITE_SECURE_SETTINGS"
+        ],
+        "com.mega.car": [
+          "android.permission.SET_TIME",
+          "android.permission.LOCAL_MAC_ADDRESS",
+          "android.permission.SET_TIME_ZONE",
+          "android.permission.INTERACT_ACROSS_USERS"
+        ],
+        "com.mega.nexus.server": [
+          "android.permission.FORCE_STOP_PACKAGES",
+          "android.permission.REAL_GET_TASKS",
+          "android.permission.INTERACT_ACROSS_USERS"
+        ],
+        "com.voyah.btphone": [
+          "android.permission.CONTROL_INCALL_EXPERIENCE"
+        ],
+        "com.voyemu.passion.phone": [
+          "android.permission.MODIFY_PHONE_STATE"
+        ],
+        "com.android.car.settings": [
+          "android.permission.BACKUP",
+          "android.permission.BLUETOOTH_PRIVILEGED",
+          "android.permission.DELETE_CACHE_FILES",
+          "android.permission.DUMP",
+          "android.permission.FORCE_STOP_PACKAGES",
+          "android.permission.GET_ACCOUNTS_PRIVILEGED",
+          "android.permission.MANAGE_USERS",
+          "android.permission.MASTER_CLEAR",
+          "android.permission.MOUNT_UNMOUNT_FILESYSTEMS",
+          "android.permission.OVERRIDE_WIFI_CONFIG",
+          "android.permission.REBOOT",
+          "android.permission.WRITE_SECURE_SETTINGS"
+        ]
+      },
+      "scope": "exact25 manifest-requested privileged permissions: existing24 plus one synthetic Telecom requirement; no enforcement change"
+    }
+  },
+  "files": {
+    "framework-libraries": {
+      "file": "voyemu-framework.xml"
+    }
+  },
+  "emulator": {
+    "port": 5580,
+    "memory": 2048,
+    "gpuMode": "host",
+    "cores": 4
+  },
+  "displays": [
+    {
+      "role": "primary",
+      "guest": "android",
+      "width": 1920,
+      "height": 720,
+      "density": 160
+    },
+    {
+      "role": "secondary",
+      "guest": "android",
+      "width": 1920,
+      "height": 720,
+      "density": 160,
+      "xOffset": 1920,
+      "yOffset": 0,
+      "flag": 0
+    },
+    {
+      "role": "hud",
+      "guest": "qnx",
+      "width": 1280,
+      "height": 720
+    }
+  ],
+  "wheel": {
+    "assets": "profiles/common/wheels/passion-2024",
+    "provenance": "Vector interpretation of Voyah Passion H53 controls; boundaries are illustrative. Standard Android media-key routing is partial and awaits guest verification.",
+    "artwork": {
+      "schema": 1,
+      "model": "Voyah Passion H53 vector interpretation",
+      "source_manual": "https://m.dsmp.voyah.com.cn/userguide/h53/clsy_page30.html",
+      "visual_basis": "profiles/common/wheels/free-2021; silhouette and functions interpreted from H53 manual and previously recorded photographs",
+      "hit_regions": "illustrative virtual regions; exact OEM sensor boundaries not established",
+      "same_trim_pair_verified": false,
+      "physical_rollers": false,
+      "reference_photographs": {
+        "left": {
+          "url": "https://img5.bitautoimg.com/usercenter/autoalbum/files/20231220/145/w0_yichecar_202312202329306150814519380.jpg",
+          "sha256": "518d58bd832858189e04a15e1c2359a405f8b267c5fdc3d95c25a251b92d6f73",
+          "image_pixels": [
+            3000,
+            2000
+          ],
+          "crop_pixels": [
+            1060,
+            670,
+            850,
+            727
+          ]
+        },
+        "right": {
+          "url": "https://img2.bitautoimg.com/autoalbum/files/20240303/336/20240303140940214633611861_11543489_22.JPG",
+          "page_url": "https://photo.yiche.com/photo/show_9706_11543489/?style=169392",
+          "sha256": "f879942b438554498f9331f65fd781cfc5860dee6423dcdb532f731b425a6a0d",
+          "image_pixels": [
+            1366,
+            911
+          ],
+          "crop_pixels": [
+            430,
+            210,
+            560,
+            479
+          ]
+        }
+      },
+      "scope": "Vector reconstruction based on the H53 manual and photographs; simulated hover boundaries are chosen for this emulator, not measured OEM sensor boundaries."
+    }
+  },
+  "startupVideos": {
+    "display0": {
+      "file": "startup_video_screen_2.mp4",
+      "bytes": 5844293,
+      "sha256": "de5b5084a646fa6e6f3d0d9285ef6224d379d6a593aefeed667b3271941895f4",
+      "seconds": 5,
+      "acquisition": {
+        "image": "ifs2_la.img",
+        "nested": "ifs_video.img",
+        "path": "proc/boot/startup_video_screen_2.mp4"
+      }
+    },
+    "display1": {
+      "file": "startup_video_screen_3.mp4",
+      "bytes": 5034699,
+      "sha256": "fd8ebcc6b0154ad5577dab8a7650ee906a6dcc5d267e43c175cc4ecf4eb307f6",
+      "seconds": 5,
+      "acquisition": {
+        "image": "ifs2_la.img",
+        "nested": "ifs_video.img",
+        "path": "proc/boot/startup_video_screen_3.mp4"
+      }
+    },
+    "cluster": {
+      "file": "startup_video_screen_0.mp4",
+      "bytes": 2123907,
+      "sha256": "d997ad0a8457335380df471fe94c3f46932c712d444aae5f041706ffcd28a07f",
+      "seconds": 3,
+      "acquisition": {
+        "image": "ifs2_la.img",
+        "nested": "ifs_video.img",
+        "path": "proc/boot/startup_video_screen_0.mp4"
+      }
+    },
+    "hud": {
+      "file": "startup_video_screen_1.mp4",
+      "bytes": 2982728,
+      "sha256": "b004401965f3c53cc86226028771d5891d43fc27007b16784e0f0b04a6e71487",
+      "seconds": 3,
+      "acquisition": {
+        "image": "ifs2_la.img",
+        "nested": "ifs_video.img",
+        "path": "proc/boot/startup_video_screen_1.mp4"
+      }
+    }
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "type": "native",
+  "minSdk": 28,
+  "output": "libemulator_md_shim.so"
+}

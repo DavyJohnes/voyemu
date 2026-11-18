@@ -1,0 +1,669 @@
+#include "model.hpp"
+#include "private_json_reader.hpp"
+#include "process.hpp"
+#include <atomic>
+#include <cassert>
+#include <functional>
+#include <future>
+#include <iostream>
+#include <stdexcept>
+#include <thread>
+#ifdef _WIN32
+#include <aclapi.h>
+#endif
+using namespace voyemu;
+
+static void rejects(const std::function<void()> &action) {
+    bool threw = false;
+
+    try {
+        action();
+    } catch (...) {
+        threw = true;
+    }
+
+    assert(threw);
+}
+
+#ifdef _WIN32
+// Production state objects must satisfy the InactiveProfileLease DACL predicate:
+// owner is the current user and every effective ACE is an ALLOW for the current
+// user, SYSTEM or Administrators. Mirrors the lease acceptance test.
+static bool state_user_sid(std::vector<unsigned char> &user) {
+    HANDLE token = INVALID_HANDLE_VALUE;
+
+    if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token)) {
+        return false;
+    }
+
+    DWORD bytes = 0;
+    GetTokenInformation(token, TokenUser, nullptr, 0, &bytes);
+
+    if (!bytes || bytes > 65536) {
+        CloseHandle(token);
+
+        return false;
+    }
+
+    user.resize(bytes);
+    const bool loaded = GetTokenInformation(token, TokenUser, user.data(), bytes, &bytes) != 0;
+    CloseHandle(token);
+
+    return loaded;
+}
+
+static bool state_trusted_sid(PSID sid) {
+    std::vector<unsigned char> user;
+
+    if (!state_user_sid(user)) {
+        return false;
+    }
+
+    BYTE system[SECURITY_MAX_SID_SIZE]{};
+    DWORD system_size = sizeof system;
+    BYTE administrators[SECURITY_MAX_SID_SIZE]{};
+    DWORD administrators_size = sizeof administrators;
+
+    return EqualSid(sid, reinterpret_cast<TOKEN_USER *>(user.data())->User.Sid) ||
+           (CreateWellKnownSid(WinLocalSystemSid, nullptr, system, &system_size) &&
+            EqualSid(sid, system)) ||
+           (CreateWellKnownSid(WinBuiltinAdministratorsSid, nullptr, administrators,
+                               &administrators_size) &&
+            EqualSid(sid, administrators));
+}
+
+static bool state_private(const std::filesystem::path &path, bool directory) {
+    struct Handle {
+        HANDLE value = INVALID_HANDLE_VALUE;
+
+        ~Handle() {
+            if (value != INVALID_HANDLE_VALUE) {
+                CloseHandle(value);
+            }
+        }
+    } handle;
+
+    handle.value = CreateFileW(path.c_str(), GENERIC_READ | READ_CONTROL,
+                               FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr,
+                               OPEN_EXISTING,
+                               FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OPEN_REPARSE_POINT |
+                                       (directory ? FILE_FLAG_BACKUP_SEMANTICS : 0),
+                               nullptr);
+
+    if (handle.value == INVALID_HANDLE_VALUE) {
+        return false;
+    }
+
+    PSID owner = nullptr;
+    PACL acl = nullptr;
+    PSECURITY_DESCRIPTOR descriptor = nullptr;
+
+    if (GetSecurityInfo(handle.value, SE_FILE_OBJECT,
+                        OWNER_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION, &owner, nullptr,
+                        &acl, nullptr, &descriptor) != ERROR_SUCCESS) {
+        return false;
+    }
+
+    struct Release {
+        PSECURITY_DESCRIPTOR value;
+
+        ~Release() {
+            if (value) {
+                LocalFree(value);
+            }
+        }
+    } release{descriptor};
+    std::vector<unsigned char> user;
+
+    if (!owner || !acl || !state_user_sid(user) ||
+        !EqualSid(owner, reinterpret_cast<TOKEN_USER *>(user.data())->User.Sid)) {
+        return false;
+    }
+
+    for (DWORD i = 0; i < acl->AceCount; ++i) {
+        void *raw = nullptr;
+
+        if (!GetAce(acl, i, &raw)) {
+            return false;
+        }
+
+        const auto *header = static_cast<const ACE_HEADER *>(raw);
+
+        if (header->AceFlags & INHERIT_ONLY_ACE) {
+            continue;
+        }
+
+        if (header->AceType == ACCESS_DENIED_ACE_TYPE) {
+            continue;
+        }
+
+        if (header->AceType != ACCESS_ALLOWED_ACE_TYPE ||
+            !state_trusted_sid(
+                    const_cast<DWORD *>(&static_cast<const ACCESS_ALLOWED_ACE *>(raw)->SidStart))) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+static void state_privacy_regressions(const std::filesystem::path &root) {
+    auto check = [](bool value, const char *reason) {
+        if (!value) {
+            throw std::runtime_error(reason);
+        }
+    };
+    const auto directory = root / "private-state";
+
+    ensure_private_directory(directory);
+    write_private_json(directory / "state.json", {{"schema", 1}});
+    check(state_private(directory, true), "production directory DACL is not private");
+    check(state_private(directory / "state.json", false),
+          "production state file DACL is not private");
+}
+
+static void state_replace_regressions(const std::filesystem::path &directory) {
+    const auto file = directory / "replace-state.json",
+               pending = directory / "replace-state.json.pending";
+    auto check = [](bool value, const char *reason) {
+        if (!value) {
+            throw std::runtime_error(reason);
+        }
+    };
+    auto held = [&](bool delete_share) {
+        const auto result = CreateFileW(file.c_str(), GENERIC_READ,
+                                        FILE_SHARE_READ | FILE_SHARE_WRITE |
+                                                (delete_share ? FILE_SHARE_DELETE : 0),
+                                        nullptr, OPEN_EXISTING, 0, nullptr);
+        check(result != INVALID_HANDLE_VALUE, "replace fixture reader open");
+
+        return result;
+    };
+    auto attempted = [&](const Json &value) {
+        try {
+            write_private_json(file, value);
+
+            return std::string{};
+        } catch (const std::exception &error) {
+            return std::string(error.what());
+        }
+    };
+
+    write_private_json(file, {{"epoch", 1}});
+    const auto reader = held(true);
+    std::thread release([&] {
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        CloseHandle(reader);
+    });
+    const auto transient = attempted({{"epoch", 2}});
+    release.join();
+    check(transient.empty(),
+          "STATE_REPLACE_TRANSIENT: released ordinary reader aborted publication");
+    check(read_private_json(file).at("epoch") == 2 && !std::filesystem::exists(pending),
+          "released reader exact publication/cleanup");
+    write_private_json(file, {{"epoch", 1}});
+    const auto permanent = held(false);
+    const auto begin = std::chrono::steady_clock::now();
+    const auto blocked = attempted({{"epoch", 2}});
+    const auto elapsed = std::chrono::steady_clock::now() - begin;
+    CloseHandle(permanent);
+    check(!blocked.empty() && elapsed < std::chrono::seconds(1) &&
+                  read_private_json(file).at("epoch") == 1 && !std::filesystem::exists(pending),
+          "persistent reader bounded refusal preserves state/staging");
+    check(SetFileAttributesW(file.c_str(), FILE_ATTRIBUTE_READONLY), "readonly fixture attribute");
+    const auto readonly = attempted({{"epoch", 2}});
+    SetFileAttributesW(file.c_str(), FILE_ATTRIBUTE_NORMAL);
+    check(!readonly.empty() && readonly.find("attempts=1") != std::string::npos &&
+                  read_private_json(file).at("epoch") == 1 && !std::filesystem::exists(pending),
+          "readonly target immediate refusal");
+    const auto pinned = held(false);
+    const auto retained = directory / "retained-pending.json";
+    std::atomic<bool> replaced = false;
+    std::thread replacement([&] {
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(200);
+
+        while (std::chrono::steady_clock::now() < deadline) {
+            if (MoveFileExW(pending.c_str(), retained.c_str(), 0)) {
+                const auto fresh = CreateFileW(pending.c_str(), GENERIC_WRITE, 0, nullptr,
+                                               CREATE_NEW, FILE_ATTRIBUTE_NORMAL, nullptr);
+
+                if (fresh != INVALID_HANDLE_VALUE) {
+                    const char bytes[] = "{\"foreign\":true}\n";
+                    DWORD count = 0;
+                    replaced = WriteFile(fresh, bytes, sizeof(bytes) - 1, &count, nullptr) &&
+                               count == sizeof(bytes) - 1;
+                    CloseHandle(fresh);
+                }
+
+                break;
+            }
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+    });
+    const auto changed = attempted({{"epoch", 3}});
+    replacement.join();
+    CloseHandle(pinned);
+    check(replaced && !changed.empty() && read_private_json(file).at("epoch") == 1 &&
+                  read_private_json(pending).value("foreign", false),
+          "foreign pending incarnation preserved/refused");
+    std::filesystem::remove(pending);
+    std::filesystem::remove(retained);
+    std::atomic<bool> done = false;
+    std::atomic<unsigned> metadata_checks = 0;
+    std::thread metadata([&] {
+        while (!done) {
+            const auto burst = std::chrono::steady_clock::now() + std::chrono::milliseconds(10);
+
+            while (!done && std::chrono::steady_clock::now() < burst) {
+                try {
+                    (void)std::filesystem::exists(file);
+                    (void)std::filesystem::file_size(file);
+                    ++metadata_checks;
+                } catch (...) { /* Ignored: the expected rejection is asserted afterwards. */
+                }
+            }
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        }
+    });
+    std::string failed;
+
+    for (int epoch = 4; epoch < 104; ++epoch) {
+        failed = attempted({{"epoch", epoch}});
+
+        if (!failed.empty()) {
+            break;
+        }
+    }
+
+    done = true;
+    metadata.join();
+    check(failed.empty() && metadata_checks > 0 && read_private_json(file).at("epoch") == 103 &&
+                  !std::filesystem::exists(pending),
+          "transient filesystem metadata exact publication");
+}
+#endif
+
+int main(int argc, char **argv) try {
+#ifdef _WIN32
+    if (argc == 3 && std::string_view(argv[1]) == "--replace-regression") {
+        try {
+            const auto directory = std::filesystem::path(argv[2]) /
+                                   ("model-replace-" + random_token());
+            ensure_private_directory(directory);
+            state_replace_regressions(directory);
+            std::filesystem::remove_all(directory);
+            std::cout << "bounded state replace regressions passed\n";
+
+            return 0;
+        } catch (const std::exception &error) {
+            std::cerr << error.what() << '\n';
+
+            return 1;
+        }
+    }
+
+    if (argc == 3 && std::string_view(argv[1]) == "--state-writer") {
+        try {
+            for (int epoch = 131; epoch <= 258; ++epoch) {
+                write_private_json(argv[2], {{"epoch", epoch}});
+            }
+
+            return 0;
+        } catch (const std::exception &error) {
+            std::cerr << error.what() << '\n';
+
+            return 1;
+        }
+    }
+#else
+    (void)argc;
+    (void)argv;
+#endif
+    assert(valid_profile_name(default_profile_name));
+    assert(valid_profile_name("android-11-1.0.0") && valid_profile_name("free_2021.13"));
+
+    for (const auto &name : std::vector<std::string>{
+                 "", ".", "..", "../other", "a/b", "a\\b", ".hidden", "-flag", "_leading", "a\nb",
+                 "a\rb", std::string("a\0b", 3), std::string(121, 'a')}) {
+        assert(!valid_profile_name(name));
+    }
+
+    assert(qnx_theme_display_matches(1, 1) && qnx_theme_display_matches(2, 2) &&
+           qnx_theme_display_matches(2, 5) && qnx_theme_display_matches(3, 3) &&
+           qnx_theme_display_matches(4, 6));
+
+    for (unsigned requested = 0; requested <= 7; ++requested) {
+        assert(!qnx_theme_display_matches(requested,
+                                          4)); // Lower display4 is shared by requests1/3/4; it
+                                               // cannot prove the selected request.
+    }
+
+    assert(!qnx_theme_display_matches(5, 5) && !qnx_theme_display_matches(6, 6) &&
+           !qnx_theme_display_matches(4, 4) && !qnx_theme_display_matches(2, 6) &&
+           !qnx_theme_display_matches(0, 0));
+    assert(catalog().size() == 579);
+
+    for (std::size_t i = 0; i < catalog().size(); ++i) {
+        assert(catalog()[i].index == i + 1);
+    }
+
+    const auto normal = normal_initial_values();
+    assert(normal.size() == 34);
+    auto initial = initial_state();
+    validate_state(initial);
+    const auto &initial_raw = initial.at("raw_oem");
+    assert(initial["sequence"] == 1 && initial["map_sha256"] == map_sha256);
+    assert(normal["gear_valid"] == 1 && normal["gear"] == 0 && normal["spd_valid"] == 1);
+    assert(normal["speed"] == 0 && normal["speed10x"] == 0 && normal["vcu_ExhibitionSts"] == 0);
+    assert(normal["ambient_temp"] == 120 && normal["soc"] == 55 && normal["fuel_percent"] == 50);
+    assert(normal["fuel_cap"] == 0 && normal["fuel_cap_err"] == 0 && normal["dcdc_systemSts"] == 2);
+    assert(normal["esc_hhcAvailable"] == 1 && normal["esc_hdcAvailable"] == 1);
+
+    for (const auto *door : {"door_fl", "door_fr", "door_rl", "door_rr"}) {
+        assert(normal[door] == 0);
+    }
+
+    for (const auto *corner : {"LF", "RF", "LR", "RR"}) {
+        const auto name = std::string(corner);
+        assert(normal["can_v1_5_bcm_tpms" + name + "Sts"] == 1 &&
+               normal["bcm_tpms" + name + "Sts"] == 1);
+        assert(normal["bcm_tyre" + name + "Pressure"] == 24 &&
+               normal["bcm_tyre" + name + "Temp"] == 81);
+    }
+
+    for (const auto &field : catalog()) {
+        assert(initial_raw[field.name] ==
+               (normal.contains(field.name) ? normal[field.name] : Json(field.initial)));
+    }
+
+    auto customized = apply_patch(initial, {{"odo", 12345},
+                                            {"cfg_acc", 0},
+                                            {"cfg_reserve_14", 72},
+                                            {"abs_fault", 1},
+                                            {"gear", 3},
+                                            {"speed", 65},
+                                            {"soc", 42},
+                                            {"door_rr", 1}});
+    auto normalized = apply_patch(customized, normal);
+    validate_state(normalized);
+    assert(normalized["sequence"] == customized["sequence"].get<unsigned>() + 1);
+
+    for (const auto &[name, value] : customized["raw_oem"].items()) {
+        assert(normalized["raw_oem"][name] == (normal.contains(name) ? normal[name] : value));
+    }
+
+    assert(customized["raw_oem"]["gear"] == 3 && customized["raw_oem"]["soc"] == 42);
+    // A fresh session must not mutate the intentionally saved driving scenario.
+    const auto saved_scenario = customized;
+    const auto fresh = select_vehicle_startup(VehicleStartup::fresh, Json::object(),
+                                              &saved_scenario, 200);
+    assert(fresh["raw_oem"] == initial_raw && fresh["sequence"] == 201);
+    assert(saved_scenario == customized);
+    const auto resumed = select_vehicle_startup(VehicleStartup::resume, Json::object(),
+                                                &saved_scenario, 200);
+    assert(resumed["raw_oem"] == saved_scenario["raw_oem"] && resumed["sequence"] == 201);
+    assert(saved_scenario == customized);
+    const auto configured = select_vehicle_startup(VehicleStartup::fresh, {{"soc", 73}}, nullptr);
+    assert(configured["raw_oem"]["soc"] == 73 && configured["raw_oem"]["gear"] == 0);
+    assert(configured["raw_oem"]["alarm_play_req"] ==
+           initial_raw["alarm_play_req"]); // No guessed alarm semantics.
+    rejects([&] {
+        select_vehicle_startup(VehicleStartup::resume, Json::object(), nullptr);
+    });
+    rejects([&] {
+        select_vehicle_startup(VehicleStartup::fresh, {{"invented", 1}}, nullptr);
+    });
+    rejects([&] {
+        select_vehicle_startup(VehicleStartup::fresh, {{"swm_menu", 1}}, nullptr);
+    });
+    rejects([&] {
+        select_vehicle_startup(VehicleStartup::fresh, Json::array(), nullptr);
+    });
+    rejects([&] {
+        select_vehicle_startup(VehicleStartup::fresh, Json::object(), nullptr, UINT32_MAX);
+    });
+    auto malformed_saved = saved_scenario;
+    malformed_saved["raw_oem"].erase("ign");
+    rejects([&] {
+        select_vehicle_startup(VehicleStartup::resume, Json::object(), &malformed_saved);
+    });
+    rejects([&] {
+        select_vehicle_startup(static_cast<VehicleStartup>(42), Json::object(), nullptr);
+    });
+    auto speed = apply_patch(initial, {{"speed", 65}, {"soc", 73}});
+    assert(speed["raw_oem"]["speed10x"] == 650);
+    auto raw = apply_patch(speed, {{"speed10x", 900}, {"gear", 255}});
+    assert(raw["raw_oem"]["speed"] == 90 && raw["raw_oem"]["gear"] == 255);
+    assert(initial["raw_oem"]["speed"] == 0);
+    rejects([&] {
+        apply_patch(initial, {{"speed", 10}, {"speed10x", 90}});
+    });
+    rejects([&] {
+        apply_patch(initial, {{"speed10x", 11}});
+    });
+    rejects([&] {
+        apply_patch(initial, {{"soc", 101}});
+    });
+    rejects([&] {
+        apply_patch(initial, {{"soc", true}});
+    });
+    rejects([&] {
+        apply_patch(initial, {{"door_fl", 2}});
+    });
+    rejects([&] {
+        apply_patch(initial, {{"swm_menu", 0}});
+    });
+    rejects([&] {
+        apply_patch(initial, {{"missing", 0}});
+    });
+    auto missing = initial;
+    missing["raw_oem"].erase("ign");
+    rejects([&] {
+        validate_state(missing);
+    });
+    auto transient = initial;
+    transient["raw_oem"]["swm_menu"] = 1;
+    rejects([&] {
+        validate_state(transient);
+    });
+    auto dir = std::filesystem::canonical(std::filesystem::temp_directory_path()) /
+               ("voyemu-native-model-test-" + random_token());
+    auto created = std::filesystem::create_directory(dir);
+    assert(created);
+
+    if (!created) {
+        throw std::runtime_error("test directory unexpectedly exists");
+    }
+
+    {
+        const auto file = dir / "formatted-state.json";
+        const std::string pretty = "{\n  \"epoch\": 17,\n  \"retained\": true\n}\n";
+        write_private_json_bytes(file, pretty);
+        assert(read_private_json_bytes(file) == pretty &&
+               read_private_json(file).at("epoch") == 17);
+        rejects([&] {
+            write_private_json_bytes(file, "not json");
+        });
+        assert(read_private_json_bytes(file) == pretty);
+        rejects([&] {
+            write_private_json_bytes(file, pretty, 4);
+        });
+        assert(read_private_json_bytes(file) == pretty);
+        const auto alias = dir / "formatted-state-link.json";
+        std::filesystem::create_symlink(file, alias);
+        rejects([&] {
+            read_private_json_bytes(alias);
+        });
+        rejects([&] {
+            write_private_json_bytes(alias, pretty);
+        });
+    }
+#ifdef _WIN32
+    state_replace_regressions(dir);
+    state_privacy_regressions(dir);
+    const auto shared = dir / "reader-state.json";
+    const Json old_record = {{"epoch", 1}}, new_record = {{"epoch", 2}};
+    write_private_json(shared, old_record);
+    std::promise<void> attempting, finished;
+    auto attempted = attempting.get_future(), completed = finished.get_future();
+    std::thread blocked_writer;
+    bool blocked = false;
+    {
+        detail::PrivateJsonReader held(shared, 128);
+        blocked_writer = std::thread([&] {
+            attempting.set_value();
+            try {
+                write_private_json(shared, new_record);
+                finished.set_value();
+            } catch (...) {
+                finished.set_exception(std::current_exception());
+            }
+        });
+        attempted.get();
+        blocked = completed.wait_for(std::chrono::milliseconds(100)) == std::future_status::timeout;
+        assert(Json::parse(held.text()) == old_record);
+    }
+    blocked_writer.join();
+
+    if (!blocked) {
+        std::cerr << "held reader failed to fence publication\n";
+
+        return 1;
+    }
+
+    completed.get();
+    assert(read_private_json(shared) == new_record);
+    std::atomic<bool> writer_done = false;
+    std::exception_ptr writer_error, reader_error;
+    std::thread writer([&] {
+        try {
+            for (int epoch = 3; epoch <= 130; ++epoch) {
+                write_private_json(shared, {{"epoch", epoch}});
+            }
+        } catch (...) {
+            writer_error = std::current_exception();
+        }
+
+        writer_done = true;
+    });
+
+    do {
+        try {
+            const auto current = read_private_json(shared, 128);
+            assert(current.at("epoch").is_number_integer());
+        } catch (...) {
+            reader_error = std::current_exception();
+            break;
+        }
+    } while (!writer_done);
+
+    writer.join();
+
+    if (writer_error || reader_error) {
+        try {
+            std::rethrow_exception(writer_error ? writer_error : reader_error);
+        } catch (const std::exception &error) {
+            std::cerr << "concurrent state publication failed: " << error.what() << '\n';
+
+            return 1;
+        }
+    }
+
+    ProcessSpec process;
+    process.executable = std::filesystem::canonical(argv[0]);
+    process.arguments = {"--state-writer", shared.string()};
+    process.directory = dir;
+    process.output = dir / "writer.log";
+    auto child = ChildProcess::launch(process);
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(20);
+    std::exception_ptr process_read_error;
+    std::size_t reads = 0;
+
+    while (child.alive() && std::chrono::steady_clock::now() < deadline) {
+        try {
+            read_private_json(shared, 128);
+            ++reads;
+        } catch (...) {
+            process_read_error = std::current_exception();
+            break;
+        }
+    }
+
+    const bool child_terminal = !child.alive();
+
+    if (!child_terminal) {
+        child.terminate(1000);
+    }
+
+    if (!child_terminal || child.exit_code() != 0 || process_read_error || !reads) {
+        if (process_read_error) {
+            try {
+                std::rethrow_exception(process_read_error);
+            } catch (const std::exception &error) {
+                std::cerr << error.what() << '\n';
+            }
+        }
+
+        std::cerr << "cross-process state coordination failed\n";
+
+        return 1;
+    }
+
+    const auto alias = dir / "hardlink-state.json";
+    std::filesystem::create_hard_link(shared, alias);
+    rejects([&] {
+        read_private_json(shared);
+    });
+    rejects([&] {
+        detail::PrivateJsonReader held(alias, 128);
+    });
+    std::filesystem::remove(alias);
+    rejects([&] {
+        detail::PrivateJsonReader held(shared, 1);
+    });
+#endif
+    VehicleModel model(dir / "state.json");
+    assert(model.state()["raw_oem"] == initial_raw);
+    model.patch({{"soc", 42},
+                 {"gear", 3},
+                 {"speed", 65},
+                 {"ambient_temp", 130},
+                 {"fuel_percent", 60},
+                 {"door_rr", 1},
+                 {"bcm_tyreLFPressure", 27},
+                 {"odo", 12345}});
+    const auto saved = model.state();
+    VehicleModel restored(dir / "state.json");
+    assert(restored.state() == saved && read_private_json(dir / "state.json") == saved);
+    auto before_floor = restored.state();
+    restored.advance_revision(1);
+    assert(restored.state() == before_floor);
+    restored.advance_revision(128);
+    assert(restored.state()["sequence"] == 129 &&
+           restored.state()["raw_oem"] == before_floor["raw_oem"]);
+    assert(read_private_json(dir / "state.json") == restored.state());
+    auto at_floor = restored.state();
+    rejects([&] {
+        restored.advance_revision(UINT32_MAX);
+    });
+    assert(restored.state() == at_floor && read_private_json(dir / "state.json") == at_floor);
+    auto original = restored.state();
+    rejects([&] {
+        restored.patch({{"soc", 999}});
+    });
+    assert(restored.state() == original);
+#ifndef _WIN32
+    std::filesystem::create_symlink(dir / "state.json", dir / "link.json");
+    rejects([&] {
+        read_private_json(dir / "link.json");
+    });
+#endif
+    std::filesystem::remove_all(dir);
+    std::cout << "model guards and atomic persistence passed\n";
+} catch (const std::exception &error) {
+    std::cerr << error.what() << '\n';
+
+    return 1;
+}

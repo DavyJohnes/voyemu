@@ -1,0 +1,17 @@
+cmake_minimum_required(VERSION 3.22)
+# 7.3.1 Hiboard, status-bar and rear screen router host checks; Run.java requires a fresh WORK under .local/build/jobs.
+get_filename_component(ROOT "${CMAKE_CURRENT_LIST_DIR}/../../../../.." ABSOLUTE)
+include("${ROOT}/src/prepare/test/jdk.cmake")
+get_filename_component(JDK "${JAVA}" REALPATH)
+get_filename_component(JDK "${JDK}/../.." ABSOLUTE)
+string(RANDOM LENGTH 16 ALPHABET 0123456789abcdef TOKEN)
+set(WORK "${ROOT}/.local/build/jobs/display-routing-${TOKEN}")
+foreach(ROUTER hiboard statusbar rearscreen)
+    execute_process(COMMAND "${JAVA}" "${CMAKE_CURRENT_LIST_DIR}/Run.java" ${ROUTER} "${ROOT}" "${WORK}/${ROUTER}" "${JDK}"
+        WORKING_DIRECTORY "${ROOT}" TIMEOUT 120 RESULT_VARIABLE RESULT OUTPUT_VARIABLE OUTPUT ERROR_VARIABLE ERROR)
+    if(NOT RESULT EQUAL 0)
+        message(FATAL_ERROR "${ROUTER} routing: ${RESULT}\n${OUTPUT}\n${ERROR}\ndiagnostics: ${WORK}")
+    endif()
+    message(STATUS "${OUTPUT}")
+endforeach()
+file(REMOVE_RECURSE "${WORK}")

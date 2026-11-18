@@ -1,0 +1,12 @@
+{
+  "type": "jar",
+  "minSdk": 28,
+  "output": "android.hidl.manager-V1.0-java.jar",
+  "frameworkBase": {
+    "jar": "/system/framework/android.hidl.manager-V1.0-java.jar",
+    "oat": "/system/framework/arm64/boot-android.hidl.manager-V1.0-java.oat",
+    "oat_sha256": "3a631b1399479bc2a8c6c2381839ed0e870809a90e6236f53cfdf783500934d8",
+    "vdex": "/system/framework/boot-android.hidl.manager-V1.0-java.vdex",
+    "vdex_sha256": "1d69e317326edfabd42b9569e91773fb07c0d1c181b6bdb6264e5f91a14bf616"
+  }
+}

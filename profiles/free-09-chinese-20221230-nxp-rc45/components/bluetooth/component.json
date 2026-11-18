@@ -1,0 +1,27 @@
+{
+  "type": "jar",
+  "minSdk": 28,
+  "output": "Ivt8BluetoothAdapter.jar",
+  "sourceFiles": {
+    "src/Ivt8BTAdapter.java": "voyemu/profiles/common/components/bluetooth-disabled/src/Ivt8BTAdapter.java",
+    "src/stub-cls/com/qinggan/bluetooth/BTConst.java": "voyemu/profiles/common/components/bluetooth-disabled/src/stub-cls/com/qinggan/bluetooth/BTConst.java",
+    "src/stub-cls/com/qinggan/bluetooth/BTDeviceManager.java": "voyemu/profiles/common/components/bluetooth-disabled/src/stub-cls/com/qinggan/bluetooth/BTDeviceManager.java",
+    "src/stub-cls/com/qinggan/bluetooth/profile/A2dp.java": "voyemu/profiles/common/components/bluetooth-disabled/src/stub-cls/com/qinggan/bluetooth/profile/A2dp.java",
+    "src/stub-cls/com/qinggan/bluetooth/profile/BTAdapter.java": "voyemu/profiles/common/components/bluetooth-disabled/src/stub-cls/com/qinggan/bluetooth/profile/BTAdapter.java",
+    "src/stub-cls/com/qinggan/bluetooth/profile/BTDevice.java": "voyemu/profiles/common/components/bluetooth-disabled/src/stub-cls/com/qinggan/bluetooth/profile/BTDevice.java",
+    "src/stub-cls/com/qinggan/bluetooth/profile/Hfp.java": "voyemu/profiles/common/components/bluetooth-disabled/src/stub-cls/com/qinggan/bluetooth/profile/Hfp.java",
+    "src/stub-cls/com/qinggan/bluetooth/profile/Hid.java": "voyemu/profiles/common/components/bluetooth-disabled/src/stub-cls/com/qinggan/bluetooth/profile/Hid.java",
+    "src/stub-cls/com/qinggan/bluetooth/profile/IA2dpCallback.java": "voyemu/profiles/common/components/bluetooth-disabled/src/stub-cls/com/qinggan/bluetooth/profile/IA2dpCallback.java",
+    "src/stub-cls/com/qinggan/bluetooth/profile/IBTCallback.java": "voyemu/profiles/common/components/bluetooth-disabled/src/stub-cls/com/qinggan/bluetooth/profile/IBTCallback.java",
+    "src/stub-cls/com/qinggan/bluetooth/profile/IBTProfile.java": "voyemu/profiles/common/components/bluetooth-disabled/src/stub-cls/com/qinggan/bluetooth/profile/IBTProfile.java",
+    "src/stub-cls/com/qinggan/bluetooth/profile/IBTProfileCallback.java": "voyemu/profiles/common/components/bluetooth-disabled/src/stub-cls/com/qinggan/bluetooth/profile/IBTProfileCallback.java",
+    "src/stub-cls/com/qinggan/bluetooth/profile/IHfpCallback.java": "voyemu/profiles/common/components/bluetooth-disabled/src/stub-cls/com/qinggan/bluetooth/profile/IHfpCallback.java",
+    "src/stub-cls/com/qinggan/bluetooth/profile/IHidCallback.java": "voyemu/profiles/common/components/bluetooth-disabled/src/stub-cls/com/qinggan/bluetooth/profile/IHidCallback.java",
+    "src/stub-cls/com/qinggan/bluetooth/profile/IPbapCallback.java": "voyemu/profiles/common/components/bluetooth-disabled/src/stub-cls/com/qinggan/bluetooth/profile/IPbapCallback.java",
+    "src/stub-cls/com/qinggan/bluetooth/profile/IRfcommCallback.java": "voyemu/profiles/common/components/bluetooth-disabled/src/stub-cls/com/qinggan/bluetooth/profile/IRfcommCallback.java",
+    "src/stub-cls/com/qinggan/bluetooth/profile/ISppCallback.java": "voyemu/profiles/common/components/bluetooth-disabled/src/stub-cls/com/qinggan/bluetooth/profile/ISppCallback.java",
+    "src/stub-cls/com/qinggan/bluetooth/profile/Pbap.java": "voyemu/profiles/common/components/bluetooth-disabled/src/stub-cls/com/qinggan/bluetooth/profile/Pbap.java",
+    "src/stub-cls/com/qinggan/bluetooth/profile/Rfcomm.java": "voyemu/profiles/common/components/bluetooth-disabled/src/stub-cls/com/qinggan/bluetooth/profile/Rfcomm.java",
+    "src/stub-cls/com/qinggan/bluetooth/profile/Spp.java": "voyemu/profiles/common/components/bluetooth-disabled/src/stub-cls/com/qinggan/bluetooth/profile/Spp.java"
+  }
+}

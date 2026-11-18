@@ -1,0 +1,75 @@
+# Java runtimes of preparation. A tag java-runtime-<sha8> links the javaRuntime modules of src/app/toolchain.json
+# from the pinned Temurin jmods of darwin-arm64, linux-x64 and win32-x64 twice with the jlink of the pinned JDK,
+# checks the archives against the javaRuntime.assets pins and publishes them as the release assets that deps downloads.
+name: java-runtime
+
+on:
+    push:
+        tags: ["java-runtime-*"]
+    workflow_dispatch:
+
+permissions:
+    contents: read
+
+jobs:
+    build:
+        name: Build ${{ github.ref_name }}
+        runs-on: ubuntu-24.04
+        timeout-minutes: 30
+        outputs:
+            tag: ${{ steps.select.outputs.tag }}
+        steps:
+            - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+              with:
+                  persist-credentials: false
+            - name: Check selection fixtures
+              run: bash src/dev/ci/java-runtime-select.test.sh
+            - name: Select the pinned runtimes
+              id: select
+              run: bash src/dev/ci/java-runtime-select.sh .local/build/java-runtime/SHA256SUMS
+            # Restores or installs Zig, CMake, Ninja and the JDK of the linux set; the recipe downloads the pinned jmods.
+            - uses: ./.github/actions/toolchains
+              with:
+                  set: linux
+            - name: Build every runtime twice
+              run: |
+                  out="$PWD/.local/build/java-runtime"
+                  javac --release 25 -d "$out/recipe" src/prepare/java/com/voyemu/prepare/Json.java \
+                      src/prepare/JavaRuntimeBuild.java
+                  for copy in asset repeat; do
+                      java -cp "$out/recipe" com.voyemu.prepare.JavaRuntimeBuild "$PWD" "$out/downloads" "$out/$copy"
+                  done
+                  diff -r "$out/asset" "$out/repeat"
+            - name: Check the runtimes against the pins
+              run: |
+                  cd .local/build/java-runtime
+                  (cd asset && sha256sum -c ../SHA256SUMS)
+                  test "$(find asset -type f | wc -l)" -eq "$(wc -l < SHA256SUMS)"
+                  cp SHA256SUMS asset/
+            - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+              with:
+                  name: ${{ steps.select.outputs.tag }}
+                  path: .local/build/java-runtime/asset/
+                  if-no-files-found: error
+
+    release:
+        name: Release ${{ needs.build.outputs.tag }}
+        needs: build
+        if: github.ref_type == 'tag'
+        runs-on: ubuntu-24.04
+        timeout-minutes: 10
+        permissions:
+            contents: write
+        steps:
+            - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+              with:
+                  name: ${{ needs.build.outputs.tag }}
+                  path: asset
+            - name: Create the release with the runtimes
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  TAG: ${{ needs.build.outputs.tag }}
+              run: |
+                  gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --title "$TAG" \
+                      --notes "Java runtimes of preparation linked at $GITHUB_SHA by src/prepare/JavaRuntimeBuild.java from the pinned Temurin 25 jmods with the jlink of the pinned JDK; modules and jmods are pinned in src/app/toolchain.json javaRuntime. Assets are java-runtime-<host>.zip; the GPLv2 with Classpath Exception texts of the JDK are under java-runtime/legal." \
+                      asset/*

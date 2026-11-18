@@ -1,0 +1,183 @@
+{
+ "schema": 1,
+ "profile": "free-09-chinese-20221230-nxp-rc45",
+ "referenceProfile": "free-09-chinese-20260106-6.0.3",
+ "provenance": "Offline fixture acquisition from the retained factory image (factory_image/system_raw.img0+img1, MD5 8c414c570ebb79555997d451650325fe) using pinned e2fsprogs 1.47.4 debugfs. No vehicle serial, no owner-update.",
+ "android": [
+  {
+   "name": "Launcher",
+   "file": "launcher.apk",
+   "source": {
+    "path": "/system/priv-app/Launcher-release-signed/Launcher-release-signed.apk"
+   }
+  },
+  {
+   "name": "Setting",
+   "file": "setting.apk",
+   "source": {
+    "path": "/system/priv-app/Setting-release-signed/Setting-release-signed.apk"
+   }
+  },
+  {
+   "name": "VehicleSetting",
+   "file": "vehiclesetting.apk",
+   "source": {
+    "path": "/system/priv-app/VehicleSetting-release-signed/VehicleSetting-release-signed.apk"
+   }
+  },
+  {
+   "name": "PateoNavi",
+   "file": "pateonavi.apk",
+   "source": {
+    "path": "/system/priv-app/PateoNaviAuto_C53_Release/PateoNaviAuto_C53_Release.apk"
+   }
+  },
+  {
+   "name": "MusicConcate",
+   "file": "musicconcate.apk",
+   "source": {
+    "path": "/system/priv-app/Music-release-signed/Music-release-signed.apk"
+   }
+  },
+  {
+   "name": "QGIME",
+   "file": "qgime.apk",
+   "source": {
+    "path": "/system/priv-app/QGIME-release-signed/QGIME-release-signed.apk"
+   }
+  },
+  {
+   "name": "QGIMESecond",
+   "file": "qgimesecond.apk",
+   "source": {
+    "path": "/system/priv-app/QGIME-second-signed/QGIME-second-signed.apk"
+   }
+  },
+  {
+   "name": "SettingNetwork",
+   "file": "settingnetwork.apk",
+   "source": {
+    "path": "/system/priv-app/SettingNetwork-release-signed/SettingNetwork-release-signed.apk"
+   }
+  },
+  {
+   "name": "SystemService",
+   "file": "systemservice.apk",
+   "source": {
+    "path": "/system/priv-app/SystemService-release/SystemService-release.apk"
+   }
+  },
+  {
+   "name": "SystemUI",
+   "file": "systemui.apk",
+   "source": {
+    "path": "/system/priv-app/SystemUI-release-signed/SystemUI-release-signed.apk"
+   }
+  },
+  {
+   "name": "QGMedia",
+   "file": "qgmedia.apk",
+   "source": {
+    "path": "/system/priv-app/QGMediaProvider-release/QGMediaProvider-release.apk"
+   }
+  },
+  {
+   "name": "Ivoka",
+   "file": "ivoka.apk",
+   "source": {
+    "path": "/system/priv-app/Ivoka-release-signed/Ivoka-release-signed.apk"
+   }
+  },
+  {
+   "name": "Camera",
+   "file": "camera.apk",
+   "source": {
+    "path": "/system/priv-app/Camera-release-signed/Camera-release-signed.apk"
+   }
+  },
+  {
+   "name": "BluetoothPhone",
+   "file": "bluetoothphone.apk",
+   "source": {
+    "path": "/system/priv-app/BluetoothPhone-release-signed/BluetoothPhone-release-signed.apk"
+   }
+  },
+  {
+   "name": "VehicleCenter",
+   "file": "vehiclecenter.apk",
+   "source": {
+    "path": "/system/priv-app/VehicleCenter-release-signed/VehicleCenter-release-signed.apk"
+   }
+  },
+  {
+   "name": "SpeechService",
+   "file": "speechservice.apk",
+   "source": {
+    "path": "/system/priv-app/QGVisibleSay-release-signed/QGVisibleSay-release-signed.apk"
+   }
+  },
+  {
+   "name": "TtsService",
+   "file": "ttsservice.apk",
+   "source": {
+    "path": "/system/priv-app/QGTtsService-release-signed/QGTtsService-release-signed.apk"
+   }
+  },
+  {
+   "name": "CanBus",
+   "file": "canbus.apk",
+   "source": {
+    "path": "/system/priv-app/CanBusService-release/CanBusService-release.apk"
+   }
+  },
+  {
+   "name": "CarSignal",
+   "file": "carsignal.apk",
+   "source": {
+    "path": "/system/priv-app/CarSignalService-release/CarSignalService-release.apk"
+   }
+  },
+  {
+   "name": "QGAPIFramework",
+   "file": "qgapi.jar",
+   "source": {
+    "path": "/system/framework/QGAPI.jar"
+   }
+  },
+  {
+   "name": "QGMODFramework",
+   "file": "qgmod.jar",
+   "source": {
+    "path": "/system/framework/QGMOD.jar"
+   }
+  },
+  {
+   "name": "BootAnimation",
+   "file": "media/bootanimation.zip",
+   "source": {
+    "path": "/system/media/bootanimation.zip"
+   }
+  },
+  {
+   "name": "BootAnimation1",
+   "file": "media/bootanimation1.zip",
+   "source": {
+    "path": "/system/media/bootanimation1.zip"
+   }
+  },
+  {
+   "name": "PlatSepolicy",
+   "file": "policy/plat_sepolicy.cil",
+   "source": {
+    "path": "/system/etc/selinux/plat_sepolicy.cil"
+   }
+  },
+  {
+   "name": "VendorSepolicy",
+   "file": "policy/vendor_sepolicy.cil",
+   "source": {
+    "path": "/vendor/etc/selinux/vendor_sepolicy.cil"
+   }
+  }
+ ]
+}

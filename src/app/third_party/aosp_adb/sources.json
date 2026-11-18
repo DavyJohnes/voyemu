@@ -1,0 +1,328 @@
+{
+  "schema": 2,
+  "projects": {
+    "adb": {
+      "repository": "https://android.googlesource.com/platform/packages/modules/adb",
+      "commit": "1cf2f017d312f73b3dc53bda85ef2610e35a80e9"
+    },
+    "base": {
+      "repository": "https://android.googlesource.com/platform/system/libbase",
+      "commit": "6d19b5c690fa4220c10e42c2326150bbd4d4b7bb"
+    },
+    "cutils": {
+      "repository": "https://android.googlesource.com/platform/system/core",
+      "commit": "a3b721a32242006b59cb12bd62c9133632af3a2d"
+    },
+    "log": {
+      "repository": "https://android.googlesource.com/platform/system/logging",
+      "commit": "bcac7c30d88a3773a7c0bc9f5617a23a886331fd"
+    }
+  },
+  "files": [
+    {
+      "path": "adb/adb.cpp",
+      "upstream_sha256": "1274bc59800964c3ff83c29a31133df121a809b62b8122caa91856396f3eeeb9",
+      "modified": true
+    },
+    {
+      "path": "adb/adb.h",
+      "sha256": "8ede0a42711d3b664ab11d963007ef59d3f909eccecfb26a02f33a5b1cc62a7d",
+      "bytes": 8409
+    },
+    {
+      "path": "adb/adb_auth.h",
+      "upstream_sha256": "e7d018ef795db31ca144ccd7d0c53429db36a6a646fc192144fd770b3ca60232",
+      "modified": true
+    },
+    {
+      "path": "adb/adb_io.cpp",
+      "sha256": "dd7653dff085e5c211b27a3ad873497cc32c8e50fc89e2824c89d10d76bba18f",
+      "bytes": 6034
+    },
+    {
+      "path": "adb/adb_io.h",
+      "sha256": "8ff8c618451980c53e94a73b38036fbf97e6df17fc841eeb010693df1b6582d2",
+      "bytes": 3192
+    },
+    {
+      "path": "adb/adb_trace.h",
+      "sha256": "f0fdd793ac4feab2e9d5fdb1d58a6ad52239499004a261ea58dcb43e28338db9",
+      "bytes": 1735
+    },
+    {
+      "path": "adb/adb_unique_fd.cpp",
+      "sha256": "d25bc4549c4264ba27b338f9806a0fbd2416dbcce514fca09caf64d426d7d0cc",
+      "bytes": 791
+    },
+    {
+      "path": "adb/adb_unique_fd.h",
+      "sha256": "4d6e315cb97113de8e7edf515fdd455ed82ae00b8d86a086375ea49b23470288",
+      "bytes": 1157
+    },
+    {
+      "path": "adb/adb_utils.cpp",
+      "upstream_sha256": "cfb0e71d95fcfa496860e485c707d1758aee9c462cae128a3b394897a22dd5df",
+      "modified": true
+    },
+    {
+      "path": "adb/adb_utils.h",
+      "sha256": "e530c5e6519ac297f5d763b16d3370ca02cb7296be687a82b4ef4bc3b746e0d0",
+      "bytes": 3356
+    },
+    {
+      "path": "adb/client/usb.h",
+      "sha256": "064b581d39f900acf25fa53ac6c1fb3aced1eee222b4ccdfefc1968f0ea39c9f",
+      "bytes": 1573
+    },
+    {
+      "path": "adb/fdevent/fdevent.cpp",
+      "upstream_sha256": "a98640b2c3b662158a5703835eb528db28bdb5c2e9a4093c97e46763325ce5ed",
+      "modified": true
+    },
+    {
+      "path": "adb/fdevent/fdevent.h",
+      "sha256": "94c92a1328d7732fcc205b5e483637a70554a57b444f482bd5b5335aa533d750",
+      "bytes": 5142
+    },
+    {
+      "path": "adb/fdevent/fdevent_poll.cpp",
+      "sha256": "4802d89d2d040724484a3fc97839f7889698d625b802cf3eb8ba4fc3b855d888",
+      "bytes": 6423
+    },
+    {
+      "path": "adb/fdevent/fdevent_poll.h",
+      "sha256": "a7ae6c2a6da40d41302b5ffb79b50b53313f4da33a7ba24bc564e1030f2a4ac5",
+      "bytes": 1760
+    },
+    {
+      "path": "adb/shell_protocol.h",
+      "sha256": "31152fc050e8eed83fe90b1ad99ec13bc36e2d5ae049a273fa8a860b30434943",
+      "bytes": 3922
+    },
+    {
+      "path": "adb/shell_service_protocol.cpp",
+      "sha256": "6a041fee27de1052b26751fb2beb891fab36ff65feaba6fa652d709dbdf37486",
+      "bytes": 1703
+    },
+    {
+      "path": "adb/socket.h",
+      "sha256": "4a4a5ab505d8ff75cac7437aba9b887301c75943b1291a9d0487fec5370913dd",
+      "bytes": 6843
+    },
+    {
+      "path": "adb/sockets.cpp",
+      "upstream_sha256": "153a8363488adba1a36f929e48c31b4e7fa0c90ab89ab42fa2ee693ff31d3911",
+      "modified": true
+    },
+    {
+      "path": "adb/sysdeps.h",
+      "upstream_sha256": "deb10f98058069b1565e9cfce565e76590913dd7c009b386f1ec9c6eea748c16",
+      "modified": true
+    },
+    {
+      "path": "adb/sysdeps/chrono.h",
+      "sha256": "cc422ab6c0c73b53b9e83e28ca764d103e4fd1297892a980ca14f40b4c80a5bd",
+      "bytes": 692
+    },
+    {
+      "path": "adb/sysdeps/env.cpp",
+      "sha256": "9791512387ed63a916691d9994fb087357bffea009dd47457f2a61a49fc1288f",
+      "bytes": 3004
+    },
+    {
+      "path": "adb/sysdeps/env.h",
+      "sha256": "f11a8fe15f8d4508bf06310c15843e76cadf80bb89ba673d9063eb98f936e17a",
+      "bytes": 1132
+    },
+    {
+      "path": "adb/sysdeps/errno.cpp",
+      "sha256": "782e63d3d295d83063a4d2204bb162c827e87ffdcfad2461619e0cfbe99df4b3",
+      "bytes": 3067
+    },
+    {
+      "path": "adb/sysdeps/errno.h",
+      "sha256": "82cf35946657d62606b3f1454ff5c5e175c266c7fc031b650971f5e6d1fa9af9",
+      "bytes": 986
+    },
+    {
+      "path": "adb/sysdeps/network.h",
+      "sha256": "46a03b74c029d155fb5f2bbd7c33b4a8a5e511ee4200a45798f864a5d1bcdb99",
+      "bytes": 810
+    },
+    {
+      "path": "adb/sysdeps/stat.h",
+      "sha256": "fc3f31c8d63ebef711a1c767621f00926b0b3b66da899edf02582d9697912208",
+      "bytes": 2080
+    },
+    {
+      "path": "adb/sysdeps/uio.h",
+      "sha256": "281365bd22055ca1dc5d216dab113e7b0139a179cdbdd85a86f1f80d2c597a5f",
+      "bytes": 1206
+    },
+    {
+      "path": "adb/sysdeps_unix.cpp",
+      "sha256": "3021c9c17a01959c2ebc8dab550c3310cade0fb2dadb30083a8a603b3084a620",
+      "bytes": 4364
+    },
+    {
+      "path": "adb/transport.cpp",
+      "upstream_sha256": "cb78f8275ee859875cfb0ac73bdd398114ec45631d532adafd5152730fb785ab",
+      "modified": true
+    },
+    {
+      "path": "adb/transport.h",
+      "sha256": "ce5e8d8436cf4e57ecb9270f3fed39007e81d1f92af8d8f32b58ae0137f8a1ca",
+      "bytes": 18128
+    },
+    {
+      "path": "adb/types.cpp",
+      "sha256": "1802bbfafbca986feb4f4e0626f56604ea57547440406f932664d41af15761fb",
+      "bytes": 6673
+    },
+    {
+      "path": "adb/types.h",
+      "sha256": "5a003f46dea270f3093be463cb417ee380120d5382c10b699c31b4af03080afa",
+      "bytes": 10915
+    },
+    {
+      "path": "base/chrono_utils.cpp",
+      "sha256": "4005a18efff164275028fa779402f773f418ac6ebdcc93cdd65608d44767b35e",
+      "bytes": 1247
+    },
+    {
+      "path": "base/errors_unix.cpp",
+      "sha256": "6b46cbbfcc6a47bb554a139e6814148674de70d0724e0cc49502ac2cbf98e6f0",
+      "bytes": 866
+    },
+    {
+      "path": "base/file.cpp",
+      "sha256": "2b6cf39d94b6e3ddfa3539a5f0e86d2f3c0a28767ccda488ed0a68601f13be16",
+      "bytes": 20162
+    },
+    {
+      "path": "base/include/android-base/chrono_utils.h",
+      "sha256": "a94c5bba7cab60541a20dabaf6ba567cf93ae25a04d9e39a8689f37d1f59e4fe",
+      "bytes": 1399
+    },
+    {
+      "path": "base/include/android-base/errno_restorer.h",
+      "sha256": "bc8ea768464dab76980399911027d82499e6438872a96a85e9d1f872e72e38d6",
+      "bytes": 1087
+    },
+    {
+      "path": "base/include/android-base/errors.h",
+      "sha256": "485fc525e16fdee9fdd08e964c353e1313ba8c0d34fcc93f274a460d524b6ca0",
+      "bytes": 6574
+    },
+    {
+      "path": "base/include/android-base/file.h",
+      "sha256": "b271cdfb7d03c83e5e725b5b45285b4104acc58d4c453f946408f44eea5be455",
+      "bytes": 4033
+    },
+    {
+      "path": "base/include/android-base/logging.h",
+      "sha256": "758cfc004bc436200ef8c25ff7e75565b1c24c3e5262bfeddcc406739b58f9ae",
+      "bytes": 21236
+    },
+    {
+      "path": "base/include/android-base/macros.h",
+      "upstream_sha256": "9e5fa1f156269bae41e19a6b217563904e41d7de5b8429874fd6cbadaf919171",
+      "modified": true
+    },
+    {
+      "path": "base/include/android-base/no_destructor.h",
+      "sha256": "b0eba0b6ec9864d3d637c26081c2bbbe355728ab4364dfa70d4661a69fdce7e6",
+      "bytes": 3168
+    },
+    {
+      "path": "base/include/android-base/off64_t.h",
+      "sha256": "0a9a2d66fea5f064f3138a9208e8939cc38cfb3a9a60564f5888eb9e3d05d1ae",
+      "bytes": 761
+    },
+    {
+      "path": "base/include/android-base/parseint.h",
+      "sha256": "34fef602ce7bdb19841234811fb5746268992c8a383a0b6b1e3e0c1614c56faa",
+      "bytes": 4622
+    },
+    {
+      "path": "base/include/android-base/parsenetaddress.h",
+      "sha256": "9f511e7e6e32f7b68bfc27d06f101abf18f8a56e184406f81d38595f9165e62f",
+      "bytes": 1180
+    },
+    {
+      "path": "base/include/android-base/stringprintf.h",
+      "sha256": "127525d36c8546925f09a3c2299a744080400b7ee73b64a1e9f8a6b9d27f2917",
+      "bytes": 1434
+    },
+    {
+      "path": "base/include/android-base/strings.h",
+      "sha256": "ec5b19105c1e536552a54c30e363662103a0f424ee1bbc72e01d356b9267f043",
+      "bytes": 8232
+    },
+    {
+      "path": "base/include/android-base/thread_annotations.h",
+      "sha256": "1f7e5a90d436f6eecb9e5702b498f9ad3bb3154694690a25ccdcdc6c1d3a0554",
+      "bytes": 4566
+    },
+    {
+      "path": "base/include/android-base/threads.h",
+      "sha256": "1e44eb939f0884b90e3abaa814905aab4de580761e6c5fb218cb0321e2663e26",
+      "bytes": 921
+    },
+    {
+      "path": "base/include/android-base/unique_fd.h",
+      "upstream_sha256": "670ee4419c5f8768121fc8dbcffa88b861e05a5a6e5adfb96dec0746e8c5db84",
+      "modified": true
+    },
+    {
+      "path": "base/include/android-base/utf8.h",
+      "sha256": "e1a30360ae48a55e130d7bc90cea217c91d49167524a9805623021c104135632",
+      "bytes": 3841
+    },
+    {
+      "path": "base/logging.cpp",
+      "upstream_sha256": "2770be7c4c99c1540a732de0e28b472832ba79076e34167dc5c530f6ce7390c8",
+      "modified": true
+    },
+    {
+      "path": "base/logging_splitters.h",
+      "upstream_sha256": "0c8d411c9047614ab0078c8bbc90eaca625b46f8ddcee2252481c72cfe63e2c5",
+      "modified": true
+    },
+    {
+      "path": "base/parsenetaddress.cpp",
+      "sha256": "613f753ee28c1b2c1f3fed86e263908cc1304593d13bd10da5eacef87e006a85",
+      "bytes": 2427
+    },
+    {
+      "path": "base/stringprintf.cpp",
+      "sha256": "0ac350c5e3223eb714aa6a2a165541710bfd08f018c15e01fe5bbccb72d198ea",
+      "bytes": 2262
+    },
+    {
+      "path": "base/strings.cpp",
+      "sha256": "12e70fe4ff6eae9825a05514902fae31ca9ec529831594a89dbc84e90b375940",
+      "bytes": 4865
+    },
+    {
+      "path": "base/threads.cpp",
+      "sha256": "9b3aa047f143265aa185cfb70937dc69c472f532f24405baebcbdd265eecdcf5",
+      "bytes": 1401
+    },
+    {
+      "path": "base/utf8.cpp",
+      "sha256": "6b03bc6a5b063ba0b8048a99f4600094aa7f7e864e381ffa43c576c037bb8e0d",
+      "bytes": 6756
+    },
+    {
+      "path": "cutils/libcutils/include/cutils/sockets.h",
+      "sha256": "855276e46e22ef6cad64682b2c067b8ebea9517b1fbc57a676758bd3ed9a327a",
+      "bytes": 4405
+    },
+    {
+      "path": "log/liblog/include/android/log.h",
+      "upstream_sha256": "f3a663a483c259d0f7ed6d1d532134d10bedb2de22f3ff12bf4584da5735a86b",
+      "modified": true
+    }
+  ]
+}

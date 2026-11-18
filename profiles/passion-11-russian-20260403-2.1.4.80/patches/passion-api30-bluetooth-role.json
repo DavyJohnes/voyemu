@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "api": 30,
+  "constants": {
+    "original_sha256_allowlist": [
+      "a3c788860d5df27277d53ffbf838daaefddb6ab098ad52b636671dd70b34765d",
+      "5bc0f97b94009b2e5aa6cb9759ea2547ab17cdadfbb8021d5e9cb6d6c6589047"
+    ]
+  },
+  "calls": [
+    {
+      "operation": "useLibraries",
+      "args": [
+        [
+          "android.car",
+          "voyemu.platform.callbacks",
+          "voyemu.window",
+          "voyemu.mega"
+        ]
+      ]
+    },
+    {
+      "operation": "guardPassionBluetoothRole",
+      "args": []
+    }
+  ]
+}

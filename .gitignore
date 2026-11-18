@@ -1,0 +1,9 @@
+.DS_Store
+
+/plans/
+/machines/
+/.local/
+
+# Native build entry points in the project root
+/voyemu
+/voyemu.exe

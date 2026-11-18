@@ -1,0 +1,10 @@
+{
+  "type": "jar",
+  "minSdk": 28,
+  "output": "VoyemuLauncherRouting.jar",
+  "sourceFiles": {
+    "src/com/voyemu/output/DisplayTasks.java": "voyemu/profiles/free-09-chinese-20260106-6.0.3/patches/launcher-display-routing/src/com/voyemu/output/DisplayTasks.java",
+    "src/com/voyemu/output/LaunchRouter.java": "voyemu/profiles/free-09-chinese-20260106-6.0.3/patches/launcher-display-routing/src/com/voyemu/output/LaunchRouter.java",
+    "src/com/voyemu/output/WindowRouter.java": "voyemu/profiles/free-09-chinese-20260106-6.0.3/patches/launcher-display-routing/src/com/voyemu/output/WindowRouter.java"
+  }
+}

@@ -1,0 +1,83 @@
+# Own guest Java of the profiles for preparation. A tag android-java-<sha8> compiles every guest Java unit
+# of every profile twice with javac and D8 of the pinned JDK and build tools, checks android-java.zip against
+# the androidJava pin in src/app/toolchain.json and publishes it as the release asset that preparation reads.
+name: android-java
+
+on:
+    push:
+        tags: ["android-java-*"]
+    workflow_dispatch:
+
+permissions:
+    contents: read
+
+jobs:
+    build:
+        name: Build ${{ github.ref_name }}
+        runs-on: ubuntu-24.04
+        timeout-minutes: 60
+        outputs:
+            tag: ${{ steps.select.outputs.tag }}
+        steps:
+            - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+              with:
+                  persist-credentials: false
+            - name: Check selection fixtures
+              run: bash src/dev/ci/android-java-select.test.sh
+            - name: Select the pinned guest Java
+              id: select
+              run: bash src/dev/ci/android-java-select.sh .local/build/android-java/SHA256SUMS
+            # Restores or installs the JDK of the linux set and, as source-fixture inputs, the pinned Maven
+            # libraries, build tools and platform JAR; the recipe downloads the pinned external sources.
+            - uses: ./.github/actions/toolchains
+              with:
+                  set: linux
+                  fixture-inputs: 'true'
+            # The recipe is GuestJavaRecipe of the preparation helper sources.
+            - name: Compile the recipe
+              run: |
+                  out=.local/build/android-java
+                  javac -J-Xmx1g --release 25 -encoding UTF-8 -proc:none -nowarn \
+                      -cp ".local/toolchains/java/libraries/*:.local/toolchains/java-sdk/build-tools/36.1.0/lib/*" \
+                      -d "$out/classes" $(find src/prepare/java -name '*.java' | sort)
+            - name: Build the guest Java twice
+              run: |
+                  out="$PWD/.local/build/android-java"
+                  for copy in asset repeat; do
+                      java -Xmx1g -cp "$out/classes:.local/toolchains/java/libraries/*:.local/toolchains/java-sdk/build-tools/36.1.0/lib/*" \
+                          com.voyemu.prepare.GuestJavaRecipe "$PWD" "$PWD/.local/toolchains/java-sdk" "$out/$copy"
+                  done
+                  diff -r "$out/asset" "$out/repeat"
+            - name: Check the guest Java against the pin
+              run: |
+                  cd .local/build/android-java
+                  (cd asset && sha256sum -c ../SHA256SUMS)
+                  test "$(find asset -type f | wc -l)" -eq "$(wc -l < SHA256SUMS)"
+                  cp SHA256SUMS asset/
+            - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+              with:
+                  name: ${{ steps.select.outputs.tag }}
+                  path: .local/build/android-java/asset/
+                  if-no-files-found: error
+
+    release:
+        name: Release ${{ needs.build.outputs.tag }}
+        needs: build
+        if: github.ref_type == 'tag'
+        runs-on: ubuntu-24.04
+        timeout-minutes: 10
+        permissions:
+            contents: write
+        steps:
+            - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+              with:
+                  name: ${{ needs.build.outputs.tag }}
+                  path: asset
+            - name: Create the release with the guest Java
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  TAG: ${{ needs.build.outputs.tag }}
+              run: |
+                  gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --title "$TAG" \
+                      --notes "Guest Java of the profiles compiled at $GITHUB_SHA by GuestJavaRecipe with javac of the pinned JDK and D8 of the pinned build tools against the pinned android.jar; no OEM input. android-java.zip holds <unit-key>/classes*.dex and index.json." \
+                      asset/*

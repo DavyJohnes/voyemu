@@ -1,0 +1,12 @@
+{
+  "type": "jar",
+  "minSdk": 28,
+  "output": "bmgr.jar",
+  "frameworkBase": {
+    "jar": "/system/framework/bmgr.jar",
+    "oat": "/system/framework/oat/arm64/bmgr.odex",
+    "oat_sha256": "126e60d54fad7eef2ea9acf29729ba4b6c431982fde7bb1f10d3790c4a08552a",
+    "vdex": "/system/framework/oat/arm64/bmgr.vdex",
+    "vdex_sha256": "def7a8163eb07b2f475b12e4a130d4fbd202271cf133315227e43dcfe1d82b8b"
+  }
+}

@@ -1,0 +1,188 @@
+--- a/backends/hostmem-file.c
++++ b/backends/hostmem-file.c
+@@ -39,7 +39,7 @@
+ static bool
+ file_backend_memory_alloc(HostMemoryBackend *backend, Error **errp)
+ {
+-#ifndef CONFIG_POSIX
++#if !defined(CONFIG_POSIX) && !defined(CONFIG_WIN32)
+     error_setg(errp, "backend '%s' not supported on this host",
+                object_get_typename(OBJECT(backend)));
+     return false;
+--- a/backends/meson.build
++++ b/backends/meson.build
+@@ -16,6 +16,9 @@
+     system_ss.add(files('hostmem-file.c'))
+     system_ss.add([files('hostmem-shm.c'), rt])
+   endif
++endif
++if host_os == 'windows'
++  system_ss.add(files('hostmem-file.c'))
+ endif
+ if host_os == 'linux'
+   system_ss.add(files('hostmem-memfd.c'))
+--- a/include/system/memory.h
++++ b/include/system/memory.h
+@@ -1166,7 +1166,7 @@
+                                                        uint64_t length,
+                                                        void *host),
+                                        Error **errp);
+-#ifdef CONFIG_POSIX
++#if defined(CONFIG_POSIX) || defined(CONFIG_WIN32)
+ 
+ /**
+  * memory_region_init_ram_from_file:  Initialize RAM memory region with a
+--- a/include/system/ramblock.h
++++ b/include/system/ramblock.h
+@@ -39,6 +39,9 @@
+     QLIST_HEAD(, RAMBlockNotifier) ramblock_notifiers;
+     Error *cpr_blocker;
+     int fd;
++#ifdef CONFIG_WIN32
++    void *win32_file_view;
++#endif
+     uint64_t fd_offset;
+     int guest_memfd;
+     RamBlockAttributes *attributes;
+--- a/meson.build
++++ b/meson.build
+@@ -374,7 +374,7 @@
+   qemu_common_flags += ['-DB_USE_POSITIVE_POSIX_ERRORS', '-D_BSD_SOURCE', '-fPIC']
+ elif host_os == 'windows'
+   # plugins use delaylib, and clang needs to be used with lld to make it work.
+-  if compiler.get_id() == 'clang' and compiler.get_linker_id() != 'ld.lld'
++  if get_option('plugins') and compiler.get_id() == 'clang' and compiler.get_linker_id() != 'ld.lld'
+     error('On windows, you need to use lld with clang - use msys2 clang64/clangarm64 env')
+   endif
+ endif
+--- a/system/memory.c
++++ b/system/memory.c
+@@ -1623,7 +1623,7 @@
+     return memory_region_set_ram_block(mr, rb);
+ }
+ 
+-#if defined(CONFIG_POSIX) && !defined(EMSCRIPTEN)
++#if (defined(CONFIG_POSIX) || defined(CONFIG_WIN32)) && !defined(EMSCRIPTEN)
+ bool memory_region_init_ram_from_file(MemoryRegion *mr, Object *owner,
+                                       const char *name, uint64_t size,
+                                       uint64_t align, uint32_t ram_flags,
+@@ -1640,6 +1640,8 @@
+     return memory_region_set_ram_block(mr, rb);
+ }
+ 
++#endif
++#if defined(CONFIG_POSIX) && !defined(EMSCRIPTEN)
+ bool memory_region_init_ram_from_fd(MemoryRegion *mr, Object *owner,
+                                     const char *name, uint64_t size,
+                                     uint32_t ram_flags, int fd,
+--- a/system/physmem.c
++++ b/system/physmem.c
+@@ -2566,8 +2566,95 @@
+                                    RAM_RESIZEABLE, mr, errp);
+ }
+ 
++
++#ifdef CONFIG_WIN32
++/* Windows file views are released with the RAMBlock after its RCU grace period. */
++RAMBlock *qemu_ram_alloc_from_file(ram_addr_t size, MemoryRegion *mr,
++                                 uint32_t ram_flags, const char *path,
++                                 off_t offset, Error **errp)
++{
++    HANDLE file, mapping;
++    LARGE_INTEGER length;
++    SYSTEM_INFO info;
++    uint64_t aligned, delta;
++    void *view;
++    int fd;
++    RAMBlock *block;
++    g_autofree gunichar2 *wide_path = NULL;
++
++    if (!size || offset < 0 || (size | offset) % qemu_real_host_page_size() ||
++        size > SIZE_MAX - (uint64_t)offset ||
++        !(ram_flags & RAM_SHARED) ||
++        (ram_flags & ~(RAM_SHARED | RAM_NAMED_FILE)) || mr->align) {
++        error_setg(errp, "Windows file RAM requires shared writable storage, "
++                         "default alignment and a bounded extent");
++        return NULL;
++    }
++    wide_path = g_utf8_to_utf16(path, -1, NULL, NULL, NULL);
++    if (!wide_path) {
++        error_setg(errp, "RAM file path is not valid UTF-8");
++        return NULL;
++    }
++    file = CreateFileW((LPCWSTR)wide_path, GENERIC_READ | GENERIC_WRITE,
++                       FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
++                       OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
++    if (file == INVALID_HANDLE_VALUE) {
++        error_setg_win32(errp, GetLastError(), "Cannot open existing RAM file");
++        return NULL;
++    }
++    if (!GetFileSizeEx(file, &length) ||
++        (uint64_t)length.QuadPart < size + (uint64_t)offset) {
++        error_setg(errp, "Windows RAM file is smaller than requested extent");
++        CloseHandle(file);
++        return NULL;
++    }
++    GetSystemInfo(&info);
++    aligned = (uint64_t)offset & ~((uint64_t)info.dwAllocationGranularity - 1);
++    delta = (uint64_t)offset - aligned;
++    mapping = CreateFileMapping(file, NULL, PAGE_READWRITE, 0, 0, NULL);
++    if (!mapping) {
++        error_setg_win32(errp, GetLastError(), "Cannot create RAM file mapping");
++        CloseHandle(file);
++        return NULL;
++    }
++    view = MapViewOfFile(mapping, FILE_MAP_READ | FILE_MAP_WRITE,
++                         aligned >> 32, (DWORD)aligned, size + delta);
++    CloseHandle(mapping);
++    if (!view) {
++        error_setg_win32(errp, GetLastError(), "Cannot map RAM file view");
++        CloseHandle(file);
++        return NULL;
++    }
++    fd = _open_osfhandle((intptr_t)file, O_BINARY | O_RDWR);
++    if (fd < 0) {
++        error_setg_errno(errp, errno, "Cannot retain RAM file descriptor");
++        UnmapViewOfFile(view);
++        CloseHandle(file);
++        return NULL;
++    }
++    block = qemu_ram_alloc_internal(size, size, NULL, (char *)view + delta,
++                                    RAM_PREALLOC | RAM_SHARED, mr, errp);
++    if (!block) {
++        UnmapViewOfFile(view);
++        close(fd);
++        return NULL;
++    }
++    block->fd = fd;
++    block->fd_offset = offset;
++    block->flags |= RAM_NAMED_FILE;
++    block->win32_file_view = view;
++    return block;
++}
++#endif
++
+ static void reclaim_ramblock(RAMBlock *block)
+ {
++#ifdef CONFIG_WIN32
++    if (block->win32_file_view) {
++        UnmapViewOfFile(block->win32_file_view);
++        close(block->fd);
++    } else
++#endif
+     if (block->flags & RAM_PREALLOC) {
+         ;
+     } else if (xen_map_cache_enabled()) {
+--- a/util/oslib-win32.c
++++ b/util/oslib-win32.c
+@@ -858,6 +858,10 @@
+      * The sync range will most probably be wider than the one
+      * requested - but it will still get the job done
+      */
++    if (!FlushViewOfFile(addr, length)) {
++        errno = EIO;
++        return -1;
++    }
+     return qemu_fdatasync(fd);
+ }
+ 

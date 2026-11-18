@@ -1,0 +1,60 @@
+{
+  "schema": 1,
+  "api": 28,
+  "calls": [
+    {
+      "operation": "editMethod",
+      "args": [
+        "Lcom/qinggan/systempolicy/PolicyManager;-><init>(Landroid/content/Context;)V",
+        {
+          "edits": [
+            {
+              "before": [
+                "iget-object v0, p0, Lcom/qinggan/systempolicy/PolicyManager;->mPolicyList:Ljava/util/ArrayList;",
+                "new-instance v1, Lcom/qinggan/systempolicy/bluetooth/BluetoothPolicy;"
+              ],
+              "insert": [
+                "invoke-static {}, Landroid/bluetooth/BluetoothAdapter;->getDefaultAdapter()Landroid/bluetooth/BluetoothAdapter;",
+                "move-result-object v0",
+                "if-eqz v0, :voyemu_no_bluetooth_policy"
+              ]
+            },
+            {
+              "before": [
+                "sget-object v0, Landroid/os/Build;->PRODUCT:Ljava/lang/String;"
+              ],
+              "insert": [
+                ":voyemu_no_bluetooth_policy"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "editMethod",
+      "args": [
+        "Lcom/qinggan/systempolicy/SystemPolicyService;->startChargingService()V",
+        {
+          "edits": [
+            {
+              "before": [
+                "new-instance v0, Landroid/content/Intent;"
+              ],
+              "insert": [
+                "invoke-static {}, Landroid/bluetooth/BluetoothAdapter;->getDefaultAdapter()Landroid/bluetooth/BluetoothAdapter;",
+                "move-result-object v0",
+                "if-nez v0, :voyemu_has_bluetooth_adapter",
+                "return-void",
+                ":voyemu_has_bluetooth_adapter"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "constants": {
+    "INPUT_SHA256": "c4920cc36a257755335c6fae098172e30414711e9f2adf3fab6dbc566edabd15"
+  }
+}

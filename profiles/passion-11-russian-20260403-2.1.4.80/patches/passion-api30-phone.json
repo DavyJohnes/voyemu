@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "api": 30,
+  "constants": {
+    "original_sha256_allowlist": ["5bc0f97b94009b2e5aa6cb9759ea2547ab17cdadfbb8021d5e9cb6d6c6589047"]
+  },
+  "calls": [{"operation": "guardPassionPhone", "args": []}]
+}

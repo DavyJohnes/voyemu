@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "api": 30,
+  "constants": {
+    "original_sha256_allowlist": [
+      "5cd091682a3ba6aa054a0b545a2c5a853e3e5bff7129f7319ebe8d583eccea98"
+    ]
+  },
+  "calls": [
+    {
+      "operation": "guardPassionDiagnostics",
+      "args": []
+    }
+  ]
+}

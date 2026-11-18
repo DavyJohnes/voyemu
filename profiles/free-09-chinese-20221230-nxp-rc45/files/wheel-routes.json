@@ -1,0 +1,206 @@
+{
+  "schema": 1,
+  "profile": "free-09-chinese-20221230-nxp-rc45",
+  "provenance_kind": "Owner-acquired NXP Launcher APK SHA256; QGKeyEvent ABI constants, not A9 CAN mapping",
+  "source_pins": [
+    {
+      "id": "nxp-key-contract",
+      "path": "Launcher/classes2.dex/com/qinggan/system/QGKeyEvent",
+      "sha256": "93f4bea56530bf2de8634b7898fd4275a3c8985ff0392fdc58607ef8bc5b2441"
+    }
+  ],
+  "action_codes": {
+    "down": 4096,
+    "short": 8192,
+    "up": 65536
+  },
+  "routes": [
+    {
+      "id": "ica",
+      "can_key": null,
+      "qg_code": null,
+      "status": "unmapped",
+      "consumer": "NXP consumer unavailable",
+      "proof": [
+        "nxp-key-contract: QGKeyEvent named key/action constants; runtime consumer acceptance pending"
+      ],
+      "runtime_verified": false
+    },
+    {
+      "id": "acc",
+      "can_key": null,
+      "qg_code": null,
+      "status": "unmapped",
+      "consumer": "NXP consumer unavailable",
+      "proof": [
+        "nxp-key-contract: QGKeyEvent named key/action constants; runtime consumer acceptance pending"
+      ],
+      "runtime_verified": false
+    },
+    {
+      "id": "distance",
+      "can_key": null,
+      "qg_code": null,
+      "status": "unmapped",
+      "consumer": "NXP consumer unavailable",
+      "proof": [
+        "nxp-key-contract: QGKeyEvent named key/action constants; runtime consumer acceptance pending"
+      ],
+      "runtime_verified": false
+    },
+    {
+      "id": "cruise_up",
+      "can_key": null,
+      "qg_code": null,
+      "status": "unmapped",
+      "consumer": "NXP consumer unavailable",
+      "proof": [
+        "nxp-key-contract: QGKeyEvent named key/action constants; runtime consumer acceptance pending"
+      ],
+      "runtime_verified": false
+    },
+    {
+      "id": "cruise_down",
+      "can_key": null,
+      "qg_code": null,
+      "status": "unmapped",
+      "consumer": "NXP consumer unavailable",
+      "proof": [
+        "nxp-key-contract: QGKeyEvent named key/action constants; runtime consumer acceptance pending"
+      ],
+      "runtime_verified": false
+    },
+    {
+      "id": "cancel",
+      "can_key": null,
+      "qg_code": null,
+      "status": "unmapped",
+      "consumer": "NXP consumer unavailable",
+      "proof": [
+        "nxp-key-contract: QGKeyEvent named key/action constants; runtime consumer acceptance pending"
+      ],
+      "runtime_verified": false
+    },
+    {
+      "id": "night_vision",
+      "can_key": null,
+      "qg_code": null,
+      "status": "unmapped",
+      "consumer": "NXP consumer unavailable",
+      "proof": [
+        "nxp-key-contract: QGKeyEvent named key/action constants; runtime consumer acceptance pending"
+      ],
+      "runtime_verified": false
+    },
+    {
+      "id": "custom",
+      "can_key": null,
+      "qg_code": 3090,
+      "status": "recovered",
+      "consumer": "NXP OEM key listener or matching media/audio terminal",
+      "proof": [
+        "nxp-key-contract: QGKeyEvent named key/action constants; runtime consumer acceptance pending"
+      ],
+      "runtime_verified": false
+    },
+    {
+      "id": "menu",
+      "can_key": null,
+      "qg_code": 3074,
+      "status": "recovered",
+      "consumer": "NXP OEM key listener or matching media/audio terminal",
+      "proof": [
+        "nxp-key-contract: QGKeyEvent named key/action constants; runtime consumer acceptance pending"
+      ],
+      "runtime_verified": false
+    },
+    {
+      "id": "voice",
+      "can_key": null,
+      "qg_code": 130,
+      "status": "recovered",
+      "consumer": "NXP OEM key listener or matching media/audio terminal",
+      "proof": [
+        "nxp-key-contract: QGKeyEvent named key/action constants; runtime consumer acceptance pending"
+      ],
+      "runtime_verified": false
+    },
+    {
+      "id": "volume_up",
+      "can_key": null,
+      "qg_code": 2,
+      "status": "recovered",
+      "consumer": "NXP OEM key listener or matching media/audio terminal",
+      "proof": [
+        "nxp-key-contract: QGKeyEvent named key/action constants; runtime consumer acceptance pending"
+      ],
+      "runtime_verified": false
+    },
+    {
+      "id": "ok",
+      "can_key": null,
+      "qg_code": 6,
+      "status": "recovered",
+      "consumer": "NXP OEM key listener or matching media/audio terminal",
+      "proof": [
+        "nxp-key-contract: QGKeyEvent named key/action constants; runtime consumer acceptance pending"
+      ],
+      "runtime_verified": false
+    },
+    {
+      "id": "volume_down",
+      "can_key": null,
+      "qg_code": 1,
+      "status": "recovered",
+      "consumer": "NXP OEM key listener or matching media/audio terminal",
+      "proof": [
+        "nxp-key-contract: QGKeyEvent named key/action constants; runtime consumer acceptance pending"
+      ],
+      "runtime_verified": false
+    },
+    {
+      "id": "previous",
+      "can_key": null,
+      "qg_code": 4,
+      "status": "recovered",
+      "consumer": "NXP OEM key listener or matching media/audio terminal",
+      "proof": [
+        "nxp-key-contract: QGKeyEvent named key/action constants; runtime consumer acceptance pending"
+      ],
+      "runtime_verified": false
+    },
+    {
+      "id": "next",
+      "can_key": null,
+      "qg_code": 3,
+      "status": "recovered",
+      "consumer": "NXP OEM key listener or matching media/audio terminal",
+      "proof": [
+        "nxp-key-contract: QGKeyEvent named key/action constants; runtime consumer acceptance pending"
+      ],
+      "runtime_verified": false
+    },
+    {
+      "id": "photo",
+      "can_key": null,
+      "qg_code": 142,
+      "status": "recovered",
+      "consumer": "NXP OEM key listener or matching media/audio terminal",
+      "proof": [
+        "nxp-key-contract: QGKeyEvent named key/action constants; runtime consumer acceptance pending"
+      ],
+      "runtime_verified": false
+    },
+    {
+      "id": "phone",
+      "can_key": null,
+      "qg_code": 128,
+      "status": "recovered",
+      "consumer": "NXP OEM key listener or matching media/audio terminal",
+      "proof": [
+        "nxp-key-contract: QGKeyEvent named key/action constants; runtime consumer acceptance pending"
+      ],
+      "runtime_verified": false
+    }
+  ]
+}

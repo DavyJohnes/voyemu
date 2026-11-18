@@ -1,0 +1,143 @@
+{
+  "version": 1,
+  "files": [
+    {
+      "path": "src/com/qinggan/audiopolicy/AudioPolicyStubService.java",
+      "resultSha256": "3a2cd67ee6dc60a30200dac85e6e2914ec990d2f1dd7af8b6bd13df87dcc4dd2",
+      "edits": [
+        {
+          "startLine": 6,
+          "deleteCount": 1,
+          "insert": []
+        },
+        {
+          "startLine": 56,
+          "deleteCount": 2,
+          "insert": []
+        },
+        {
+          "startLine": 62,
+          "deleteCount": 0,
+          "insert": [
+            {
+              "text": "                @Override\n                public void registerSoundChannelForPid(int pid, int channel) {}\n"
+            }
+          ]
+        },
+        {
+          "startLine": 63,
+          "deleteCount": 0,
+          "insert": [
+            {
+              "text": "                @Override\n                public void unregisterSoundChannelForPid(int pid) {}\n\n"
+            }
+          ]
+        },
+        {
+          "startLine": 152,
+          "deleteCount": 0,
+          "insert": [
+            {
+              "text": "                        IBinder token,\n"
+            }
+          ]
+        },
+        {
+          "startLine": 170,
+          "deleteCount": 1,
+          "insert": [
+            {
+              "text": "                public AudioPolicyInfo getCurrentAudioPolicyInfo(int value) {\n"
+            }
+          ]
+        },
+        {
+          "startLine": 172,
+          "deleteCount": 14,
+          "insert": []
+        },
+        {
+          "startLine": 191,
+          "deleteCount": 14,
+          "insert": []
+        },
+        {
+          "startLine": 301,
+          "deleteCount": 100,
+          "insert": []
+        },
+        {
+          "startLine": 411,
+          "deleteCount": 6,
+          "insert": []
+        },
+        {
+          "startLine": 422,
+          "deleteCount": 5,
+          "insert": []
+        },
+        {
+          "startLine": 432,
+          "deleteCount": 1,
+          "insert": [
+            {
+              "text": "                public boolean isInCall() {\n"
+            }
+          ]
+        },
+        {
+          "startLine": 437,
+          "deleteCount": 11,
+          "insert": [
+            {
+              "text": "                public int getStreamVolume(int stream) {\n"
+            }
+          ]
+        },
+        {
+          "startLine": 521,
+          "deleteCount": 5,
+          "insert": []
+        },
+        {
+          "startLine": 753,
+          "deleteCount": 3,
+          "insert": []
+        },
+        {
+          "startLine": 781,
+          "deleteCount": 3,
+          "insert": []
+        },
+        {
+          "startLine": 840,
+          "deleteCount": 1,
+          "insert": [
+            {
+              "text": "                public void setStreamVolume(int stream, int volume, int flags) {\n"
+            }
+          ]
+        },
+        {
+          "startLine": 858,
+          "deleteCount": 3,
+          "insert": []
+        },
+        {
+          "startLine": 949,
+          "deleteCount": 3,
+          "insert": []
+        },
+        {
+          "startLine": 985,
+          "deleteCount": 1,
+          "insert": [
+            {
+              "text": "                        .getInt(\"stream-\" + stream, 0);\n"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,187 @@
+--- a/arch/arm64/kernel/vdso/gettimeofday.S
++++ b/arch/arm64/kernel/vdso/gettimeofday.S
+@@ -220,7 +220,7 @@
+ 	get_clock_shifted_nsec res=x15, cycle_last=x10, mult=x11
+ 	get_ts_realtime res_sec=x10, res_nsec=x11, \
+ 		clock_nsec=x15, xtime_sec=x13, xtime_nsec=x14, nsec_to_sec=x9
+-	clock_gettime_return, shift=1
++	clock_gettime_return shift=1
+ 
+ 	ALIGN
+ monotonic:
+@@ -243,7 +243,7 @@
+ 		clock_nsec=x15, xtime_sec=x13, xtime_nsec=x14, nsec_to_sec=x9
+ 
+ 	add_ts sec=x10, nsec=x11, ts_sec=x3, ts_nsec=x4, nsec_to_sec=x9
+-	clock_gettime_return, shift=1
++	clock_gettime_return shift=1
+ 
+ 	ALIGN
+ monotonic_raw:
+@@ -264,7 +264,7 @@
+ 		clock_nsec=x15, nsec_to_sec=x9
+ 
+ 	add_ts sec=x10, nsec=x11, ts_sec=x13, ts_nsec=x14, nsec_to_sec=x9
+-	clock_gettime_return, shift=1
++	clock_gettime_return shift=1
+ 
+ 	ALIGN
+ realtime_coarse:
+--- a/arch/arm64/kernel/entry.S
++++ b/arch/arm64/kernel/entry.S
+@@ -20,6 +20,7 @@
+ 
+ #include <linux/init.h>
+ #include <linux/linkage.h>
++#include <linux/stringify.h>
+ 
+ #include <asm/alternative.h>
+ #include <asm/assembler.h>
+@@ -144,7 +145,7 @@
+ #else
+ 	str	x20, [tsk, #TI_ADDR_LIMIT]
+ #endif
+-	ALTERNATIVE(nop, SET_PSTATE_UAO(0), ARM64_HAS_UAO, CONFIG_ARM64_UAO)
++	alternative_insn nop, __stringify(SET_PSTATE_UAO(0)), ARM64_HAS_UAO, __stringify(IS_ENABLED(CONFIG_ARM64_UAO))
+ 	.endif /* \el == 0 */
+ 	mrs	x22, elr_el1
+ 	mrs	x23, spsr_el1
+--- a/arch/arm64/include/asm/assembler.h
++++ b/arch/arm64/include/asm/assembler.h
+@@ -323,14 +323,22 @@
+ 	sub	\tmp2, \tmp1, #1
+ 	bic	\kaddr, \kaddr, \tmp2
+ 9998:
+-	.if	(\op == cvau || \op == cvac)
++	.ifc	\op, cvau
+ alternative_if_not ARM64_WORKAROUND_CLEAN_CACHE
+ 	dc	\op, \kaddr
+ alternative_else
+ 	dc	civac, \kaddr
+ alternative_endif
+ 	.else
++	.ifc	\op, cvac
++alternative_if_not ARM64_WORKAROUND_CLEAN_CACHE
+ 	dc	\op, \kaddr
++alternative_else
++	dc	civac, \kaddr
++alternative_endif
++	.else
++	dc	\op, \kaddr
++	.endif
+ 	.endif
+ 	add	\kaddr, \kaddr, \tmp1
+ 	cmp	\kaddr, \size
+--- a/drivers/cpufreq/cpufreq_times.c
++++ b/drivers/cpufreq/cpufreq_times.c
+@@ -245,6 +245,13 @@
+ 	return 0;
+ }
+ 
++static void seq_put_decimal_with_prefix(struct seq_file *m, const char *prefix,
++                                        unsigned long long value)
++{
++    seq_puts(m, prefix);
++    seq_put_decimal_ull(m, 0, value);
++}
++
+ static int concurrent_time_seq_show(struct seq_file *m, void *v,
+ 	atomic64_t *(*get_times)(struct concurrent_times *))
+ {
+@@ -256,13 +263,13 @@
+ 	hlist_for_each_entry_rcu(uid_entry, (struct hlist_head *)v, hash) {
+ 		atomic64_t *times = get_times(uid_entry->concurrent_times);
+ 
+-		seq_put_decimal_ull(m, "", (u64)uid_entry->uid);
++		seq_put_decimal_with_prefix(m, "", (u64)uid_entry->uid);
+ 		seq_putc(m, ':');
+ 
+ 		for (i = 0; i < num_possible_cpus; ++i) {
+ 			u64 time = cputime_to_clock_t(atomic64_read(&times[i]));
+ 
+-			seq_put_decimal_ull(m, " ", time);
++			seq_put_decimal_with_prefix(m, " ", time);
+ 		}
+ 		seq_putc(m, '\n');
+ 	}
+@@ -280,7 +287,7 @@
+ static int concurrent_active_time_seq_show(struct seq_file *m, void *v)
+ {
+ 	if (v == uid_hash_table) {
+-		seq_put_decimal_ull(m, "cpus: ", num_possible_cpus());
++		seq_put_decimal_with_prefix(m, "cpus: ", num_possible_cpus());
+ 		seq_putc(m, '\n');
+ 	}
+ 
+@@ -306,18 +313,18 @@
+ 				continue;
+ 			if (freqs != last_freqs) {
+ 				if (last_freqs) {
+-					seq_put_decimal_ull(m, ": ", cnt);
++					seq_put_decimal_with_prefix(m, ": ", cnt);
+ 					seq_putc(m, ' ');
+ 					cnt = 0;
+ 				}
+-				seq_put_decimal_ull(m, "policy", i);
++				seq_put_decimal_with_prefix(m, "policy", i);
+ 
+ 				last_freqs = freqs;
+ 			}
+ 			cnt++;
+ 		}
+ 		if (last_freqs) {
+-			seq_put_decimal_ull(m, ": ", cnt);
++			seq_put_decimal_with_prefix(m, ": ", cnt);
+ 			seq_putc(m, '\n');
+ 		}
+ 	}
+--- a/drivers/cpufreq/dummy-cpufreq.c
++++ b/drivers/cpufreq/dummy-cpufreq.c
+@@ -27,7 +27,7 @@
+ 	return 1;
+ }
+ 
+-static int dummy_cpufreq_verify(struct cpufreq_policy_data *policy)
++static int dummy_cpufreq_verify(struct cpufreq_policy *policy)
+ {
+ 	return 0;
+ }
+--- a/arch/arm64/lib/memcpy.S
++++ b/arch/arm64/lib/memcpy.S
+@@ -68,9 +68,8 @@
+ 	stp \ptr, \regB, [\regC], \val
+ 	.endm
+ 
+-	.weak memcpy
+ ENTRY(__memcpy)
+-ENTRY(memcpy)
++WEAK(memcpy)
+ #include "copy_template.S"
+ 	ret
+ ENDPIPROC(memcpy)
+--- a/arch/arm64/lib/memmove.S
++++ b/arch/arm64/lib/memmove.S
+@@ -57,9 +57,8 @@
+ D_l	.req	x13
+ D_h	.req	x14
+ 
+-	.weak memmove
+ ENTRY(__memmove)
+-ENTRY(memmove)
++WEAK(memmove)
+ 	cmp	dstin, src
+ 	b.lo	__memcpy
+ 	add	tmp1, src, count
+--- a/arch/arm64/lib/memset.S
++++ b/arch/arm64/lib/memset.S
+@@ -54,9 +54,8 @@
+ tmp3w		.req	w9
+ tmp3		.req	x9
+ 
+-	.weak memset
+ ENTRY(__memset)
+-ENTRY(memset)
++WEAK(memset)
+ 	mov	dst, dstin	/* Preserve return value.  */
+ 	and	A_lw, val, #255
+ 	orr	A_lw, A_lw, A_lw, lsl #8

@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "api": 30,
+  "constants": {
+    "original_sha256_allowlist": [
+      "5c4d5470b552c69575d5ea285220249ef2ec54ba79160bc6d004199232b0c389"
+    ]
+  },
+  "calls": [
+    {
+      "operation": "removePinnedEntry",
+      "args": [
+        "lib/armeabi-v7a/libBugly.so",
+        "e3094e2d13dd6f65ceb9138d8562dea219718d9f0536ac19f6c9f1d17da95c20"
+      ]
+    },
+    {
+      "operation": "removePinnedEntry",
+      "args": [
+        "lib/armeabi-v7a/libpl_droidsonroids_gif.so",
+        "4f8e8ef4dd9c05ca84e797522d301dcf165d5a4879456707be5787acdeaab402"
+      ]
+    }
+  ]
+}

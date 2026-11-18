@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.voyemu.oem"
+    android:sharedUserId="android.uid.system">
+
+    <uses-sdk android:minSdkVersion="28" android:targetSdkVersion="28" />
+
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.INTERNAL_SYSTEM_WINDOW" />
+
+    <application android:label="NxpWheel" android:allowBackup="false">
+        <service android:name="com.voyemu.oem.RegistrationService"
+            android:exported="true" />
+        <provider android:name="com.voyemu.input.WheelControlProvider"
+            android:authorities="com.voyemu.input.wheel"
+            android:permission="android.permission.DUMP"
+            android:exported="true"
+            android:grantUriPermissions="false" />
+        <receiver android:name="com.voyemu.oem.BootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

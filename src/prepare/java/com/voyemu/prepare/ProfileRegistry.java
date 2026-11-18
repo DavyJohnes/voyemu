@@ -1,0 +1,323 @@
+package com.voyemu.prepare;
+
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+/** Immutable compiled-in definitions; mutable owner receipts live in Storage. */
+final class ProfileRegistry {
+    record Profile(
+            String id,
+            String revision,
+            Map<String, Object> data,
+            String resourcePrefix,
+            Path sourceRoot) {
+        Profile(String id, String revision, Map<String, Object> data, String resourcePrefix) {
+            this(id, revision, data, resourcePrefix, null);
+        }
+
+        String referenceProfile() {
+            Failure.require(
+                    !data.containsKey("id") || id.equals(data.get("id")),
+                    "PROFILE_INVALID",
+                    "Logical profile identity differs",
+                    2);
+
+            if (!(data.get("capture") instanceof Map<?, ?>)) {
+                return id;
+            }
+
+            var capture = Json.obj(data, "capture");
+
+            if (!capture.containsKey("referenceProfile")) {
+                return id;
+            }
+
+            Failure.require(
+                    id.equals(capture.get("profile"))
+                            && capture.get("referenceProfile") instanceof String,
+                    "PROFILE_INVALID",
+                    "Reference profile must belong to the selected logical profile",
+                    2);
+            String reference = Json.str(capture, "referenceProfile");
+            validId(reference);
+
+            return reference;
+        }
+    }
+
+    private final Map<String, Profile> profiles = new LinkedHashMap<>();
+    private final Map<String, Map<String, String>> sourcePins = new LinkedHashMap<>();
+    private final Path projectRoot;
+
+    /** Explicit current source profiles; no Node-generated embedded resource index required. */
+    ProfileRegistry(Path root) throws Exception {
+        this(root, null);
+    }
+
+    /**
+     * Host source preparation only: exposes one explicitly selected incomplete definition, never
+     * changes status.
+     */
+    ProfileRegistry(Path root, String preparationProfile) throws Exception {
+        if (preparationProfile != null) {
+            validId(preparationProfile);
+        }
+
+        Failure.require(
+                root.isAbsolute() && root.toRealPath().equals(root.normalize()),
+                "PROFILE_ROOT_INVALID",
+                "Canonical project root required",
+                2);
+        Storage.confined(root, ".");
+        projectRoot = root;
+        Path folder = Storage.confined(root, "profiles");
+
+        try (var entries = Files.list(folder)) {
+            for (Path directory : entries.sorted().toList()) {
+                if (preparationProfile != null
+                        && !directory.getFileName().toString().equals(preparationProfile)) {
+                    continue;
+                }
+
+                Failure.require(
+                        Files.isDirectory(directory) && !Files.isSymbolicLink(directory),
+                        "PROFILE_INVALID",
+                        "Ordinary profile directory required",
+                        2);
+                String id = directory.getFileName().toString();
+                validId(id);
+                Path definition = directory.resolve("profile.json");
+
+                if (!Files.exists(definition)) {
+                    continue;
+                } // Draft profiles have no executable definition.
+
+                Map<String, String> pins = new java.util.TreeMap<>();
+                long total = 0;
+
+                for (var file : FilesSupport.tree(directory).entrySet()) {
+                    long size = Files.size(file.getValue());
+                    total += size;
+                    Failure.require(
+                            size <= 32L * 1024 * 1024 && total <= 128L * 1024 * 1024,
+                            "PROFILE_RESOURCE_LIMIT",
+                            "Source profile exceeds bounds",
+                            2);
+                    pins.put(file.getKey(), FilesSupport.hash(file.getValue()));
+                }
+
+                Failure.require(
+                        Files.size(definition) <= 512 * 1024,
+                        "PROFILE_RESOURCE_LIMIT",
+                        "Profile definition exceeds bounds",
+                        2);
+                Map<String, Object> data = Json.object(Json.parse(Files.readString(definition)));
+                String status = (String) data.getOrDefault("status", "ready");
+
+                if (!"ready".equals(status)
+                        && !(id.equals(preparationProfile) && "incomplete".equals(status))) {
+                    continue;
+                }
+
+                Failure.require(
+                        Json.integer(data, "schema") == 1,
+                        "PROFILE_INVALID",
+                        "Unsupported source profile schema",
+                        2);
+                String revision =
+                        NativeCore.hash(Json.write(pins).getBytes(StandardCharsets.UTF_8));
+                profiles.put(
+                        id, new Profile(id, revision, data, "voyemu/profiles/" + id + "/", root));
+                sourcePins.put(id, Map.copyOf(pins));
+            }
+        }
+
+        Failure.require(
+                !profiles.isEmpty(), "PROFILE_MISSING", "No executable source profiles found", 2);
+    }
+
+    void verifySource(Profile profile) throws Exception {
+        if (projectRoot == null) {
+            return;
+        }
+
+        Path source = Storage.confined(projectRoot, "profiles/" + profile.id());
+        Map<String, String> actual = new java.util.TreeMap<>();
+
+        for (var file : FilesSupport.tree(source).entrySet()) {
+            actual.put(file.getKey(), FilesSupport.hash(file.getValue()));
+        }
+
+        Failure.require(
+                actual.equals(sourcePins.get(profile.id())),
+                "PROFILE_RESOURCE_MODIFIED",
+                "Source profile changed during preparation",
+                3);
+    }
+
+    ProfileRegistry() throws Exception {
+        projectRoot = null;
+        Map<String, Object> index = Json.object(Json.parse(text("voyemu/profile-index.json")));
+        Failure.require(
+                Json.integer(index, "schema") == 1,
+                "PROFILE_INVALID",
+                "Unsupported embedded catalog schema",
+                2);
+
+        for (Object item : Json.list(index.get("profiles"))) {
+            Map<String, Object> entry = Json.object(item);
+            String id = Json.str(entry, "id");
+            validId(id);
+            String prefix = "voyemu/profiles/" + id + "/";
+            Map<String, Object> data = Json.object(Json.parse(text(prefix + "profile.json")));
+            Failure.require(
+                    Json.integer(data, "schema") == 1,
+                    "PROFILE_INVALID",
+                    "Unsupported profile schema",
+                    2);
+            Failure.require(
+                    !profiles.containsKey(id), "PROFILE_INVALID", "Duplicate embedded profile", 2);
+            profiles.put(id, new Profile(id, Json.str(entry, "revision"), data, prefix));
+        }
+    }
+
+    static void validId(String id) {
+        Failure.require(
+                id.matches("[a-z0-9][a-z0-9._-]{0,127}") && !id.equals(".") && !id.equals(".."),
+                "PROFILE_INVALID",
+                "Invalid profile ID",
+                2);
+    }
+
+    List<Profile> list() {
+        return List.copyOf(profiles.values());
+    }
+
+    Profile get(String id) {
+        Profile profile = profiles.get(id);
+
+        Failure.require(
+                profile != null, "PROFILE_MISSING", "Profile is not in this release: " + id, 2);
+
+        return profile;
+    }
+
+    Profile selected(Arguments args, Storage storage, boolean requirePrepared) throws Exception {
+        if (args.profile() != null) {
+            return get(args.profile());
+        }
+
+        Path configuration = Storage.confined(storage.config(), "config.json");
+
+        if (Files.isRegularFile(configuration)) {
+            Map<String, Object> config = Json.object(Json.parse(Files.readString(configuration)));
+
+            if (config.containsKey("defaultProfile")) {
+                return get(Json.str(config, "defaultProfile"));
+            }
+        }
+
+        List<Profile> available = new ArrayList<>();
+
+        for (Profile profile : list()) {
+            if (!requirePrepared
+                    || Files.isRegularFile(
+                            Storage.confined(storage.machine(profile.id()), "manifest.json"))) {
+                available.add(profile);
+            }
+        }
+
+        Failure.require(
+                available.size() == 1,
+                "ARGUMENT_INVALID",
+                "Specify a profile ID: voyemu " + args.command() + " <profile>",
+                2);
+
+        return available.get(0);
+    }
+
+    Path sourceDirectory(Profile profile) throws Exception {
+        Failure.require(
+                projectRoot != null && projectRoot.equals(profile.sourceRoot()),
+                "PROFILE_ROOT_INVALID",
+                "Preparation requires an explicit source profile",
+                2);
+        verifySource(profile);
+
+        return Storage.confined(projectRoot, "profiles/" + profile.id());
+    }
+
+    static Map<String, Object> patchMetadata(Profile profile) throws Exception {
+        var imageApi =
+                java.util.regex.Pattern.compile("(?:^|;)android-(28|30)(?:;|$)")
+                        .matcher(Json.str(Json.obj(profile.data(), "android"), "package"));
+
+        Failure.require(imageApi.find(), "PATCH_SOURCE", "Supported exact Android API required", 3);
+        int api = Integer.parseInt(imageApi.group(1));
+
+        Map<String, Object> result = new java.util.TreeMap<>();
+
+        for (Object node : Json.obj(profile.data(), "patches").values()) {
+            for (Object item : Json.list(Json.object(node).get("steps"))) {
+                String step = (String) item;
+                Failure.require(step.endsWith(".json"), "PATCH_SOURCE", "JSON recipe required", 3);
+                byte[] source = bytes(profile, profile.resourcePrefix() + "patches/" + step);
+                Map<String, Object> data =
+                        Json.object(Json.parse(new String(source, StandardCharsets.UTF_8)));
+                Failure.require(
+                        Json.integer(data, "schema") == 1
+                                && Json.integer(data, "api") == api
+                                && !data.containsKey("sourceSha256"),
+                        "PATCH_SOURCE",
+                        "Canonical JSON recipe required",
+                        3);
+                data.put("sourceSha256", NativeCore.hash(source));
+                result.put(step, data);
+            }
+        }
+
+        return result;
+    }
+
+    static byte[] bytes(Profile profile, String name) throws Exception {
+        Path root = profile.sourceRoot();
+
+        // Other project resources, such as the AudioPolicy helper sources, are embedded in the
+        // helper JAR, so preparation never reads src/.
+        if (root != null
+                && (name.startsWith("voyemu/profiles/") || name.equals("voyemu/LICENSE"))) {
+            String relative = name.substring("voyemu/".length());
+
+            Path file = Storage.confined(root, relative);
+            Failure.require(
+                    Files.isRegularFile(file) && Files.size(file) <= 32L * 1024 * 1024,
+                    "RESOURCE_MISSING",
+                    "Missing bounded explicit project resource: " + relative,
+                    3);
+
+            return Files.readAllBytes(file);
+        }
+
+        return bytes(name);
+    }
+
+    static byte[] bytes(String name) throws Exception {
+        try (InputStream stream =
+                ProfileRegistry.class.getClassLoader().getResourceAsStream(name)) {
+            Failure.require(
+                    stream != null, "RESOURCE_MISSING", "Missing embedded resource: " + name, 3);
+
+            return stream.readAllBytes();
+        }
+    }
+
+    static String text(String name) throws Exception {
+        return new String(bytes(name), StandardCharsets.UTF_8);
+    }
+}

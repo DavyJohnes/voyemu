@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.qinggan.app.messagecenter"
+    android:sharedUserId="android.uid.system">
+
+    <uses-sdk android:minSdkVersion="28" android:targetSdkVersion="28" />
+
+    <application android:label="MessageCenterProviderStub" android:allowBackup="false">
+        <provider
+            android:name="com.qinggan.app.messagecenter.provider.MessageProvider"
+            android:authorities="com.qinggan.provider.messagecenter"
+            android:exported="true" />
+        <provider
+            android:name="com.qinggan.app.messagecenter.provider.CommonMessageProvider"
+            android:authorities="com.qinggan.provider.commonMessageCenter"
+            android:exported="true" />
+    </application>
+</manifest>

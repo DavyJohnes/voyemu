@@ -1,0 +1,181 @@
+# Source-only native checks. OEM inputs and guest machines are not built here.
+name: ci
+
+on:
+    pull_request:
+    push:
+        branches: [main]
+    workflow_dispatch:
+    # The release workflow runs the same checks before it builds the archives.
+    workflow_call:
+
+permissions:
+    contents: read
+
+concurrency:
+    group: ci-${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    source-fixtures:
+        name: Source fixtures (${{ matrix.host }})
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    - { host: linux-x64, runner: ubuntu-24.04, set: linux, toolchain: zig-linux-x64 }
+                    - { host: macos-arm64, runner: macos-15, set: macos, toolchain: zig-macos-arm64 }
+                    - { host: windows-x64, runner: windows-2022, set: windows, toolchain: zig-windows-x64 }
+        runs-on: ${{ matrix.runner }}
+        timeout-minutes: 45
+        defaults:
+            run:
+                shell: bash
+        env:
+            JAVA_TOOL_OPTIONS: -XX:ActiveProcessorCount=1 -Xmx512m
+        steps:
+            - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+              with:
+                  persist-credentials: false
+            - uses: ./.github/actions/toolchains
+              with:
+                  set: ${{ matrix.set }}
+                  fixture-inputs: 'true'
+            - if: runner.os == 'macOS'
+              run: sudo xcode-select --switch /Library/Developer/CommandLineTools
+            - run: cmake -S src/app -B .local/build/source-fixtures -G Ninja -DCMAKE_TOOLCHAIN_FILE="$PWD/src/dev/toolchains/${{ matrix.toolchain }}.cmake" -DBUILD_TESTING=ON -DVOYEMU_BUILD_GRAPHICS=OFF
+            - run: cmake --build .local/build/source-fixtures --target native_component_test --parallel 1
+            # Select actual source behavior suites; copyrighted/manual owner inputs stay explicitly excluded.
+            - run: ctest --test-dir .local/build/source-fixtures --label-regex '^deps$' --label-exclude '^oem$' --tests-regex '^(prepare_java_(host_unit|phone_behavior|phone_peer|native_component_handoff|android_stubs_source)|guest_android_api_java|nxp_music_media|passion_carsettings_source|qinggan09_equipment_artifacts|nxp_climate|canbus_source|nxp_wheel)$' --no-tests=error --output-on-failure --parallel 1 --output-junit source-fixtures.xml
+            - run: cmake -DRESULT="$PWD/.local/build/source-fixtures/source-fixtures.xml" -P src/dev/ci/source-fixtures-result.cmake
+
+    lint:
+        name: Lint (Linux x64, Zig)
+        runs-on: ubuntu-24.04
+        timeout-minutes: 60
+        steps:
+            - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+              with:
+                  persist-credentials: false
+            - uses: ./.github/actions/toolchains
+              with:
+                  set: lint
+            - run: cmake -S src/app -B .local/build/lint -G Ninja -DCMAKE_TOOLCHAIN_FILE="$PWD/src/dev/toolchains/zig-linux-x64.cmake" -DBUILD_TESTING=ON
+            # lint builds every checked target first, so generated headers exist; -k 0 reports every failing check.
+            - run: cmake --build .local/build/lint --target lint --parallel 4 -- -k 0
+
+    linux:
+        name: Linux x64 Release (Zig)
+        runs-on: ubuntu-24.04
+        timeout-minutes: 60
+        steps:
+            - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+              with:
+                  persist-credentials: false
+            - uses: ./.github/actions/toolchains
+              with:
+                  set: linux
+            - run: cmake -S src/app -B .local/build/linux -G Ninja -DCMAKE_TOOLCHAIN_FILE="$PWD/src/dev/toolchains/zig-linux-x64.cmake" -DBUILD_TESTING=ON
+            - run: cmake --build .local/build/linux --parallel 4
+            - run: ./.local/build/linux/voyemu --help
+            # Tests labeled deps need toolchains installed by deps and tests labeled oem need imported OEM inputs.
+            - name: Install pinned KornShell for startup fence tests
+              run: |
+                  prefix="$PWD/.local/toolchains/ksh93u+m-1.0.8-1"
+                  mkdir -p "$prefix"
+                  curl --fail --location --retry 3 https://archive.ubuntu.com/ubuntu/pool/universe/k/ksh93u+m/ksh93u+m_1.0.8-1_amd64.deb --output "$prefix/ksh.deb"
+                  echo "5795a5e3b8f9ef7bf69c06bb0413ef19aabeaf98cf6e8c58975b86057ec1af2e  $prefix/ksh.deb" | sha256sum --check
+                  dpkg-deb --extract "$prefix/ksh.deb" "$prefix"
+                  echo "VOYEMU_TEST_KSH=$prefix/bin/ksh93" >> "$GITHUB_ENV"
+            - run: ctest --test-dir .local/build/linux --label-exclude 'oem|deps' --output-on-failure --parallel 2
+
+    tidy-check-windows:
+        name: clang-tidy check (Windows x64 MinGW, Zig cross-build)
+        runs-on: ubuntu-24.04
+        timeout-minutes: 60
+        steps:
+            - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+              with:
+                  persist-credentials: false
+            - uses: ./.github/actions/toolchains
+              with:
+                  set: tidy-windows
+            - run: cmake -S src/app -B .local/build/tidy-windows -G Ninja -DCMAKE_TOOLCHAIN_FILE="$PWD/src/dev/toolchains/zig-windows-x64.cmake" -DBUILD_TESTING=ON
+            # The target first builds every checked target, so generated headers exist.
+            - run: cmake --build .local/build/tidy-windows --target tidy-check --parallel 4
+
+    macos-native:
+        name: macOS arm64 Release (Zig native, Command Line Tools SDK)
+        runs-on: macos-15
+        timeout-minutes: 30
+        env:
+            TMPDIR: ${{ github.workspace }}/.local/build/tmp/ci
+        steps:
+            - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+              with:
+                  persist-credentials: false
+            - run: mkdir -p .local/build/tmp/ci
+            - uses: ./.github/actions/toolchains
+              with:
+                  set: macos
+            - run: sudo xcode-select --switch /Library/Developer/CommandLineTools && xcrun --sdk macosx --show-sdk-path
+            # Real ANGLE tests require the pinned SDK and are separate from source-only checks.
+            - run: cmake -S src/app -B .local/build/native-host -G Ninja -DCMAKE_TOOLCHAIN_FILE="$PWD/src/dev/toolchains/zig-macos-arm64.cmake" -DBUILD_TESTING=ON -DVOYEMU_BUILD_GRAPHICS=OFF
+            - run: cmake --build .local/build/native-host --parallel 3
+            - run: ./.local/build/native-host/voyemu --help
+            - run: codesign --verify --strict ./.local/build/native-host/voyemu
+            - run: ctest --test-dir .local/build/native-host --label-exclude 'oem|deps' --output-on-failure --parallel 1
+
+    windows-cross:
+        name: Windows x64 MinGW Release (Zig cross-build, Wine)
+        runs-on: ubuntu-24.04
+        timeout-minutes: 45
+        env:
+            WINEPREFIX: ${{ github.workspace }}/.local/build/wine-ci/prefix
+            WINEARCH: win64
+            WINEDEBUG: -all
+            WINEDLLOVERRIDES: mscoree,mshtml=
+        steps:
+            - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+              with:
+                  persist-credentials: false
+            - uses: ./.github/actions/toolchains
+              with:
+                  set: windows-cross
+            - run: cmake -S src/app -B .local/build/windows-cross -G Ninja -DCMAKE_TOOLCHAIN_FILE="$PWD/src/dev/toolchains/zig-windows-x64.cmake" -DBUILD_TESTING=ON
+            - run: cmake --build .local/build/windows-cross --parallel 4
+            # Cross-built binaries run through Wine below; no PDB may be produced.
+            - run: test -f .local/build/windows-cross/voyemu.exe && test -z "$(find .local/build/windows-cross -name '*.pdb' -print -quit)"
+            - run: bash src/dev/ci/wine-install.sh
+            - run: xvfb-run -a wineboot -u
+            - run: xvfb-run -a cmake -DBUILD="$PWD/.local/build/windows-cross" -DWINE="$(command -v wine)" -P src/dev/ci/wine-tests.cmake
+            - if: always()
+              run: |
+                  if [[ -d "$WINEPREFIX" ]]; then
+                      wineserver -k
+                      wineserver -w
+                  fi
+
+    windows-native:
+        name: Windows x64 MinGW Release (Zig native)
+        runs-on: windows-2022
+        timeout-minutes: 60
+        defaults:
+            run:
+                shell: pwsh
+        env:
+            TEMP: ${{ github.workspace }}\.local\build\tmp\ci
+            TMP: ${{ github.workspace }}\.local\build\tmp\ci
+        steps:
+            - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+              with:
+                  persist-credentials: false
+            - run: New-Item -ItemType Directory -Force .local/build/tmp/ci | Out-Null
+            - uses: ./.github/actions/toolchains
+              with:
+                  set: windows
+            - run: cmake -S src/app -B .local/build/windows-native -G Ninja -DCMAKE_TOOLCHAIN_FILE="$PWD/src/dev/toolchains/zig-windows-x64.cmake" -DBUILD_TESTING=ON
+            - run: cmake --build .local/build/windows-native --parallel 4
+            - run: .\.local\build\windows-native\voyemu.exe --help
+            # Host-only checks exclude dependency and OEM suites; missing inputs remain failures in strict suites.
+            - run: ctest --test-dir .local/build/windows-native --label-exclude 'oem|deps' --output-on-failure --parallel 1

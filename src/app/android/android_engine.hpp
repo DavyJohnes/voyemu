@@ -1,0 +1,157 @@
+#pragma once
+#include "error.hpp"
+#include <filesystem>
+#include <map>
+#include <stdexcept>
+#include <string>
+#include <string_view>
+#include <vector>
+namespace voyemu {
+// An explicit binding always wins; Windows prefers its shipped PE SDK when present; every other
+// host keeps the native SDK.
+inline std::filesystem::path android_runtime_sdk_root(const std::filesystem::path &root,
+                                                      const std::filesystem::path &binding_sdk,
+                                                      bool windows) {
+    if (!binding_sdk.empty()) {
+        return binding_sdk;
+    }
+
+    if (windows && std::filesystem::exists(root / ".local/toolchains/windows-sdk")) {
+        return root / ".local/toolchains/windows-sdk";
+    }
+
+    return root / ".local/toolchains/native-sdk";
+}
+
+// The Windows launcher rejects ARM64 on x64; select its shipped ARM64 backend directly.
+inline std::filesystem::path android_sdk_program(const std::filesystem::path &sdk, bool windows) {
+    return windows ? sdk / "emulator" / "qemu" / "windows-x86_64" / "qemu-system-aarch64.exe"
+                   : sdk / "emulator" / "emulator";
+}
+
+// Windows SDK ships the formatter with platform-tools, not emulator/bin64.
+inline std::filesystem::path android_sdk_ext4_program(const std::filesystem::path &sdk,
+                                                      bool windows) {
+    return windows ? sdk / "platform-tools" / "mke2fs.exe"
+                   : sdk / "emulator" / "bin64" / "mkfs.ext4";
+}
+
+inline std::filesystem::path android_sdk_ext4_config(const std::filesystem::path &sdk,
+                                                     bool windows) {
+    return windows ? sdk / "platform-tools" / "mke2fs.conf" : std::filesystem::path{};
+}
+
+inline std::vector<std::string> android_sdk_ext4_arguments(const std::filesystem::path &image,
+                                                           bool windows) {
+    return windows ? std::vector<std::string>{"-t", "ext4", "-F", "-q", image.string()}
+                   : std::vector<std::string>{"-F", "-q", image.string()};
+}
+
+inline std::map<std::string, std::string>
+android_sdk_ext4_environment(const std::filesystem::path &sdk, bool windows) {
+    return windows ? std::map<std::string, std::string>{{"MKE2FS_CONFIG",
+                                                         android_sdk_ext4_config(sdk, true)
+                                                                 .string()}}
+                   : std::map<std::string, std::string>{};
+}
+
+// Private diagnostic opt-in; never accept free-form SDK arguments from the environment.
+inline std::vector<std::string> android_boot_trace_arguments(const char *value) {
+    if (!value) {
+        return {};
+    }
+
+    if (std::string_view(value) != "1") {
+        throw VoyemuError("ANDROID_BOOT_TRACE", "expected exact value 1 or an unset variable");
+    }
+
+    return {"-show-kernel", "-logcat",
+            "ActivityManager:I SystemServer:I Watchdog:W Zygote:I AndroidRuntime:E libc:F art:I dex2oat:I app_process:I init:I adbd:I *:S"};
+}
+
+// Private Passion clock trace opt-in. The caller never supplies a pathname: the only accepted value
+// is the exact marker "1", and the single permitted destination is the fixed name below under the
+// watch directory that the session owner derives from its own private session directory. Any other
+// value is rejected so a mistyped opt-in can never open an arbitrary file.
+inline std::string passion_clock_trace_file(const char *value) {
+    if (!value || !*value) {
+        return {};
+    }
+
+    if (std::string_view(value) != "1") {
+        throw VoyemuError("PASSION_CLOCK_TRACE", "expected exact value 1 or an unset variable");
+    }
+
+    return "clock-trace.jsonl";
+}
+
+// Windows ARM64 uses multi-threaded TCG with host-paced virtual timers.
+// Pinned SDK capability probe verifies four distinct owned vCPU threads; virt supplies HDA PCI.
+inline std::vector<std::string> android_sdk_machine_arguments(bool windows,
+                                                              bool diagnostic_native = false) {
+    return windows && !diagnostic_native
+                   ? std::vector<std::string>{"-qemu", "-machine", "type=virt", "-accel",
+                                              "tcg,thread=multi"}
+                   : std::vector<std::string>{};
+}
+
+// Fixed third NIC carrying QEMU user-mode NAT (slirp) identically on macOS and Windows.
+inline std::vector<std::string> android_network_arguments(bool qemu_boundary_present) {
+    std::vector<std::string> result;
+
+    if (!qemu_boundary_present) {
+        result.push_back("-qemu");
+    }
+
+    result.insert(result.end(), {"-netdev", "user,id=voyemu-wan", "-device",
+                                 "virtio-net-pci,netdev=voyemu-wan,mac=52:54:00:76:6f:22"});
+
+    return result;
+}
+
+// Fixed second NIC; the legacy SDK eth0/router and its backend remain unchanged.
+inline constexpr bool android_interguest_listener =
+#ifdef _WIN32
+        true;
+#else
+        false;
+#endif
+
+inline std::vector<std::string>
+android_interguest_arguments(unsigned port, bool qemu_boundary_present,
+                             bool listener = android_interguest_listener) {
+    if (port < 1024 || port > 65535) {
+        throw VoyemuError("INTERGUEST_ARGUMENT", "owned loopback port required");
+    }
+
+    std::vector<std::string> result;
+
+    if (!qemu_boundary_present) {
+        result.push_back("-qemu");
+    }
+
+    result.insert(result.end(),
+                  {"-netdev",
+                   "socket,id=voyemu-interguest," + std::string(listener ? "listen" : "connect") +
+                           "=127.0.0.1:" + std::to_string(port),
+                   "-device", "virtio-net-pci,netdev=voyemu-interguest,mac=52:54:00:76:6f:21"});
+
+    return result;
+}
+
+inline std::map<std::string, std::string> android_sdk_environment(const std::filesystem::path &sdk,
+                                                                  bool windows,
+                                                                  std::string_view inherited_path) {
+    if (!windows) {
+        return {};
+    }
+
+    const auto emulator = sdk / "emulator";
+
+    return {{"ANDROID_EMULATOR_LAUNCHER_DIR", emulator.string()},
+            {"PATH", (emulator / "lib64").string() + ";" +
+                             (emulator / "lib64" / "qt" / "lib").string() + ";" +
+                             emulator.string() +
+                             (inherited_path.empty() ? "" : ";" + std::string(inherited_path))}};
+}
+} // namespace voyemu

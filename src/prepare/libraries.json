@@ -1,0 +1,83 @@
+[
+  {
+    "name": "dexlib2",
+    "version": "2.5.2",
+    "filename": "dexlib2-2.5.2.jar",
+    "url": "https://repo.maven.apache.org/maven2/org/smali/dexlib2/2.5.2/dexlib2-2.5.2.jar",
+    "sha1": "8b664182af455b0757a7f59a42020fa5608c7d0e",
+    "sha256": "5a5c8982d8bd7d6e3bb1a0713049e3c78b719ec32b20f6b619885cec30a0dd61",
+    "bytes": 1103473
+  },
+  {
+    "name": "jsr305",
+    "version": "3.0.2",
+    "filename": "jsr305-3.0.2.jar",
+    "url": "https://repo.maven.apache.org/maven2/com/google/code/findbugs/jsr305/3.0.2/jsr305-3.0.2.jar",
+    "sha1": "25ea2e8b0c338a877313bd4672d3fe056ea78f0d",
+    "sha256": "766ad2a0783f2687962c8ad74ceecc38a28b9f72a2d085ee438b7813e928d0c7",
+    "bytes": 19936
+  },
+  {
+    "name": "guava",
+    "version": "27.1-android",
+    "filename": "guava-27.1-android.jar",
+    "url": "https://repo.maven.apache.org/maven2/com/google/guava/guava/27.1-android/guava-27.1-android.jar",
+    "sha1": "a80ef47421d6607e749f8b7282dd7dee61adfea7",
+    "sha256": "686404f2d1d4d221911f96bd627ff60dac2226a5dfa6fb8ba517073eb97ec0ef",
+    "bytes": 2603938
+  },
+  {
+    "name": "failureaccess",
+    "version": "1.0.1",
+    "filename": "failureaccess-1.0.1.jar",
+    "url": "https://repo.maven.apache.org/maven2/com/google/guava/failureaccess/1.0.1/failureaccess-1.0.1.jar",
+    "sha1": "1dcf1de382a0bf95a3d8b0849546c88bac1292c9",
+    "sha256": "a171ee4c734dd2da837e4b16be9df4661afab72a41adaf31eb84dfdaf936ca26",
+    "bytes": 4617
+  },
+  {
+    "name": "listenablefuture",
+    "version": "9999.0-empty-to-avoid-conflict-with-guava",
+    "filename": "listenablefuture-9999.0-empty-to-avoid-conflict-with-guava.jar",
+    "url": "https://repo.maven.apache.org/maven2/com/google/guava/listenablefuture/9999.0-empty-to-avoid-conflict-with-guava/listenablefuture-9999.0-empty-to-avoid-conflict-with-guava.jar",
+    "sha1": "b421526c5f297295adef1c886e5246c39d4ac629",
+    "sha256": "b372a037d4230aa57fbeffdef30fd6123f9c0c2db85d0aced00c91b974f33f99",
+    "bytes": 2199
+  },
+  {
+    "name": "checker-compat-qual",
+    "version": "2.5.2",
+    "filename": "checker-compat-qual-2.5.2.jar",
+    "url": "https://repo.maven.apache.org/maven2/org/checkerframework/checker-compat-qual/2.5.2/checker-compat-qual-2.5.2.jar",
+    "sha1": "dc0b20906c9e4b9724af29d11604efa574066892",
+    "sha256": "d7291cebf5e158d169807ae49d4b16ff672986f0c6d803e5f207c40cb61ef982",
+    "bytes": 5816
+  },
+  {
+    "name": "error_prone_annotations",
+    "version": "2.2.0",
+    "filename": "error_prone_annotations-2.2.0.jar",
+    "url": "https://repo.maven.apache.org/maven2/com/google/errorprone/error_prone_annotations/2.2.0/error_prone_annotations-2.2.0.jar",
+    "sha1": "88e3c593e9b3586e1c6177f89267da6fc6986f0c",
+    "sha256": "6ebd22ca1b9d8ec06d41de8d64e0596981d9607b42035f9ed374f9de271a481a",
+    "bytes": 13694
+  },
+  {
+    "name": "j2objc-annotations",
+    "version": "1.1",
+    "filename": "j2objc-annotations-1.1.jar",
+    "url": "https://repo.maven.apache.org/maven2/com/google/j2objc/j2objc-annotations/1.1/j2objc-annotations-1.1.jar",
+    "sha1": "ed28ded51a8b1c6b112568def5f4b455e6809019",
+    "sha256": "2994a7eb78f2710bd3d3bfb639b2c94e219cedac0d4d084d516e78c16dddecf6",
+    "bytes": 8782
+  },
+  {
+    "name": "animal-sniffer-annotations",
+    "version": "1.17",
+    "filename": "animal-sniffer-annotations-1.17.jar",
+    "url": "https://repo.maven.apache.org/maven2/org/codehaus/mojo/animal-sniffer-annotations/1.17/animal-sniffer-annotations-1.17.jar",
+    "sha1": "f97ce6decaea32b36101e37979f8b647f00681fb",
+    "sha256": "92654f493ecfec52082e76354f0ebf87648dc3d5cec2e3c3cdb947c016747a53",
+    "bytes": 3448
+  }
+]

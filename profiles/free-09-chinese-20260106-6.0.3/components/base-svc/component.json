@@ -1,0 +1,12 @@
+{
+  "type": "jar",
+  "minSdk": 28,
+  "output": "svc.jar",
+  "frameworkBase": {
+    "jar": "/system/framework/svc.jar",
+    "oat": "/system/framework/oat/arm64/svc.odex",
+    "oat_sha256": "131714a047503804aa4cc814b3bcb88c858ca9925ead49d67724db4cb3f3f41f",
+    "vdex": "/system/framework/oat/arm64/svc.vdex",
+    "vdex_sha256": "428dd0cc4976d544e21adf322828f91dafb8b5c4b8f1b1bbb08e95dae70f452c"
+  }
+}

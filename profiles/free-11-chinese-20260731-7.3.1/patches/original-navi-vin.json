@@ -1,0 +1,7 @@
+{
+  "schema": 1,
+  "api": 30,
+  "constants": {"original_sha256_allowlist": ["c178682be164be4872697dbb5accdc6ea28446941b6d681ddb736f2fdb627c07"]},
+  "calls": [{"operation": "guardOriginalNaviVin", "args": []}],
+  "helper": "api30-original-navi-identity/vin-src/com/voyemu/qgapi/BrokerVin.java"
+}

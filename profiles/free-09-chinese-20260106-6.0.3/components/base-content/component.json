@@ -1,0 +1,12 @@
+{
+  "type": "jar",
+  "minSdk": 28,
+  "output": "content.jar",
+  "frameworkBase": {
+    "jar": "/system/framework/content.jar",
+    "oat": "/system/framework/oat/arm64/content.odex",
+    "oat_sha256": "0b4e97f848d1a784926b824d38eaff6dfb7e456fa50ef7072bb6e164e03ad62a",
+    "vdex": "/system/framework/oat/arm64/content.vdex",
+    "vdex_sha256": "cf04de9afc7cf2ecca04d9dd2cece53567de236a94348f96d4e01e212e4571e6"
+  }
+}

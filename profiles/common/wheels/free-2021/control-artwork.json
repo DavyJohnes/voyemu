@@ -1,0 +1,120 @@
+{
+  "schema": 1,
+  "inputs": {
+    "dark": {
+      "path": "originals/Setting.apk",
+      "sha256": "93ecb87389b62d8cdeb38c3ee19d41902addcbc36b79845c69981de26f6f30d3"
+    },
+    "light": {
+      "path": "originals/theme/defaulttheme/simple/Setting-release-signed.apk",
+      "sha256": "0100be25ea09fa2781447c95179c196e910a352b190af95bda31418594cbcb07"
+    },
+    "light_launcher": {
+      "path": "originals/theme/defaulttheme/simple/Launcher-release-signed.apk",
+      "sha256": "72a9b017fd8bd0de77e831da7c9505a568be349bc58e375827199b0111893da2"
+    },
+    "light_vehicle": {
+      "path": "originals/theme/defaulttheme/simple/VehicleSetting-release-signed.apk",
+      "sha256": "94e319834c8f65a19a251d0ba8326204f67bc358b8f38b0feab75b4aacafe833"
+    }
+  },
+  "assets": [
+    {
+      "file": "toggle-track-dark.png",
+      "input": "dark",
+      "member": "res/drawable/checkbox_bg.png",
+      "png_sha256": "f6f83568fcecf391c2eb27e6081794bcec0450a5ce2e721b8ff793eb9af84bb8",
+      "dimensions": [
+        85,
+        48
+      ],
+      "crop_pixels": [
+        1,
+        3,
+        83,
+        42
+      ]
+    },
+    {
+      "file": "toggle-knob-dark.png",
+      "input": "dark",
+      "member": "res/drawable/checkbox_thumb.png",
+      "png_sha256": "edddb09183731335372528ae2cb9dd7aad8f8f039dc711b6143af7328b486179",
+      "dimensions": [
+        45,
+        48
+      ],
+      "crop_pixels": [
+        2,
+        4,
+        40,
+        40
+      ]
+    },
+    {
+      "file": "toggle-track-light.png",
+      "input": "light",
+      "member": "res/drawable/checkbox_bg.png",
+      "png_sha256": "6fcf2187b47af2901442dad80ce2b9664c4274df87a90afd38e2a88ece64f35d",
+      "dimensions": [
+        85,
+        48
+      ],
+      "crop_pixels": [
+        1,
+        3,
+        83,
+        42
+      ]
+    },
+    {
+      "file": "toggle-knob-light.png",
+      "input": "light",
+      "member": "res/drawable/checkbox_thumb.png",
+      "png_sha256": "770b5d62549f99cf552f56fa6270eb1052756e267e420b498fd310f181f21841",
+      "dimensions": [
+        44,
+        48
+      ],
+      "crop_pixels": [
+        5,
+        7,
+        34,
+        34
+      ]
+    },
+    {
+      "file": "radio-selection.png",
+      "input": "dark",
+      "member": "res/drawable-mdpi-v4/radio_button_height_70_checked.9.png",
+      "png_sha256": "131d940ab147fec59767eaafd58eebe6967c8b18a563a4a5451ea3a69adcae13",
+      "dimensions": [
+        94,
+        70
+      ]
+    },
+    {
+      "file": "panel-background-light.png",
+      "input": "light_launcher",
+      "member": "res/drawable-mdpi-v4/screen_up_main_bg.png",
+      "png_sha256": "2b0265f0a2f1f3e87d817aa64c3741599e43700413cb048787e9f0cae76df108",
+      "dimensions": [
+        1920,
+        720
+      ]
+    },
+    {
+      "file": "radio-selection-light.png",
+      "input": "light_vehicle",
+      "member": "res/drawable-mdpi-v4/radio_button_height_70_checked.9.png",
+      "png_sha256": "817a2a86a71eee9d2218120f21f8afb0898c3c4c335c5fb846f088c53840a92a",
+      "dimensions": [
+        94,
+        70
+      ]
+    }
+  ],
+  "ownerProfiles": [
+    "free-09-chinese-20260106-6.0.3"
+  ]
+}

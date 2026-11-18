@@ -1,0 +1,919 @@
+{
+  "version": 1,
+  "files": [
+    {
+      "path": "src/com/android/emulator/multidisplay/MultiDisplayService.java",
+      "resultSha256": "8fc942c2a37c5148886b3cd34e63a106f72756e2cc178706422a6a46aa00e956",
+      "edits": [
+        {
+          "startLine": 17,
+          "deleteCount": 0,
+          "insert": [
+            {
+              "text": "// Modified by Voyemu: API 28 compatibility and emulator display touch behavior.\n"
+            },
+            {
+              "text": "\n"
+            }
+          ]
+        },
+        {
+          "startLine": 19,
+          "deleteCount": 1,
+          "insert": []
+        },
+        {
+          "startLine": 22,
+          "deleteCount": 0,
+          "insert": [
+            {
+              "copy": {
+                "startLine": 25,
+                "lineCount": 1
+              }
+            },
+            {
+              "copy": {
+                "startLine": 26,
+                "lineCount": 1
+              }
+            }
+          ]
+        },
+        {
+          "startLine": 24,
+          "deleteCount": 0,
+          "insert": [
+            {
+              "copy": {
+                "startLine": 28,
+                "lineCount": 1
+              }
+            }
+          ]
+        },
+        {
+          "startLine": 25,
+          "deleteCount": 2,
+          "insert": []
+        },
+        {
+          "startLine": 28,
+          "deleteCount": 3,
+          "insert": [
+            {
+              "text": "\n"
+            },
+            {
+              "text": "/**\n"
+            },
+            {
+              "text": " * Keeps the emulator multi-display pipe open and creates guest VirtualDisplays\n"
+            },
+            {
+              "text": " * on host commands. Port of the A11 system image MultiDisplayProvider for\n"
+            },
+            {
+              "text": " * API 28; the createVirtualDisplay overload without the API 30 uniqueId\n"
+            },
+            {
+              "text": " * argument is used, everything else matches the original smali.\n"
+            },
+            {
+              "copy": {
+                "startLine": 15,
+                "lineCount": 1
+              }
+            }
+          ]
+        },
+        {
+          "startLine": 33,
+          "deleteCount": 18,
+          "insert": [
+            {
+              "text": "    private static final int MAX_DISPLAYS = 11;\n"
+            },
+            {
+              "text": "\n"
+            },
+            {
+              "text": "    private Handler mHandler;\n"
+            }
+          ]
+        },
+        {
+          "startLine": 53,
+          "deleteCount": 4,
+          "insert": [
+            {
+              "copy": {
+                "startLine": 48,
+                "lineCount": 1
+              }
+            },
+            {
+              "text": "    private MultiDisplay[] mMultiDisplay;\n"
+            },
+            {
+              "text": "\n"
+            },
+            {
+              "text": "    static class MultiDisplay {\n"
+            }
+          ]
+        },
+        {
+          "startLine": 61,
+          "deleteCount": 0,
+          "insert": [
+            {
+              "copy": {
+                "startLine": 63,
+                "lineCount": 1
+              }
+            }
+          ]
+        },
+        {
+          "startLine": 63,
+          "deleteCount": 4,
+          "insert": [
+            {
+              "text": "\n"
+            }
+          ]
+        },
+        {
+          "startLine": 76,
+          "deleteCount": 0,
+          "insert": [
+            {
+              "text": "\n"
+            }
+          ]
+        },
+        {
+          "startLine": 83,
+          "deleteCount": 0,
+          "insert": [
+            {
+              "text": "\n"
+            }
+          ]
+        },
+        {
+          "startLine": 84,
+          "deleteCount": 4,
+          "insert": [
+            {
+              "text": "            return width == w && height == h && dpi == d && flag == f;\n"
+            },
+            {
+              "copy": {
+                "startLine": 66,
+                "lineCount": 1
+              }
+            },
+            {
+              "copy": {
+                "startLine": 86,
+                "lineCount": 1
+              }
+            },
+            {
+              "text": "\n"
+            },
+            {
+              "text": "    private class ListenerThread extends Thread {\n"
+            },
+            {
+              "copy": {
+                "startLine": 123,
+                "lineCount": 1
+              }
+            },
+            {
+              "text": "            super(\"MultiDisplayService\");\n"
+            },
+            {
+              "copy": {
+                "startLine": 66,
+                "lineCount": 1
+              }
+            },
+            {
+              "text": "\n"
+            },
+            {
+              "text": "        private void deleteVirtualDisplay(int id) {\n"
+            },
+            {
+              "text": "            if (!mMultiDisplay[id].enabled) {\n"
+            },
+            {
+              "copy": {
+                "startLine": 129,
+                "lineCount": 1
+              }
+            },
+            {
+              "copy": {
+                "startLine": 130,
+                "lineCount": 1
+              }
+            },
+            {
+              "text": "            if (mMultiDisplay[id].virtualDisplay != null) {\n"
+            },
+            {
+              "text": "                mMultiDisplay[id].virtualDisplay.release();\n"
+            },
+            {
+              "copy": {
+                "startLine": 130,
+                "lineCount": 1
+              }
+            },
+            {
+              "text": "            if (mMultiDisplay[id].surface != null) {\n"
+            },
+            {
+              "text": "                mMultiDisplay[id].surface.release();\n"
+            },
+            {
+              "copy": {
+                "startLine": 130,
+                "lineCount": 1
+              }
+            },
+            {
+              "text": "            mMultiDisplay[id].clear();\n"
+            },
+            {
+              "text": "            nativeReleaseListener(id);\n"
+            },
+            {
+              "copy": {
+                "startLine": 66,
+                "lineCount": 1
+              }
+            },
+            {
+              "text": "\n"
+            },
+            {
+              "text": "        private void createVirtualDisplay(int id, int width, int height, int dpi, int flag) {\n"
+            },
+            {
+              "text": "            mMultiDisplay[id].surface = nativeCreateSurface(id, width, height);\n"
+            },
+            {
+              "text": "            // voyemu: the name must not contain spaces — the A9 .idc parser\n"
+            },
+            {
+              "text": "            // reads values as whitespace-delimited tokens, and the display\n"
+            },
+            {
+              "text": "            // uniqueId (\"virtual:<owner>,<uid>,<name>,<displayId>\") is matched\n"
+            },
+            {
+              "text": "            // by touch.displayId in the virtio multi-touch idc.\n"
+            },
+            {
+              "text": "            mMultiDisplay[id].virtualDisplay = mDisplayManager.createVirtualDisplay(\n"
+            },
+            {
+              "text": "                    \"Emulator2D\", width, height, dpi,\n"
+            },
+            {
+              "text": "                    mMultiDisplay[id].surface, flag, null, null);\n"
+            },
+            {
+              "text": "            mMultiDisplay[id].set(width, height, dpi, flag);\n"
+            },
+            {
+              "copy": {
+                "startLine": 66,
+                "lineCount": 1
+              }
+            },
+            {
+              "text": "\n"
+            },
+            {
+              "text": "        private void addVirtualDisplay(int id, int width, int height, int dpi, int flag) {\n"
+            },
+            {
+              "text": "            if (mMultiDisplay[id].match(width, height, dpi, flag)) {\n"
+            },
+            {
+              "copy": {
+                "startLine": 129,
+                "lineCount": 1
+              }
+            },
+            {
+              "copy": {
+                "startLine": 130,
+                "lineCount": 1
+              }
+            },
+            {
+              "text": "            if (mMultiDisplay[id].virtualDisplay == null) {\n"
+            },
+            {
+              "text": "                createVirtualDisplay(id, width, height, dpi, flag);\n"
+            },
+            {
+              "copy": {
+                "startLine": 129,
+                "lineCount": 1
+              }
+            },
+            {
+              "copy": {
+                "startLine": 130,
+                "lineCount": 1
+              }
+            },
+            {
+              "text": "            if (mMultiDisplay[id].flag != flag) {\n"
+            },
+            {
+              "text": "                deleteVirtualDisplay(id);\n"
+            },
+            {
+              "text": "                createVirtualDisplay(id, width, height, dpi, flag);\n"
+            },
+            {
+              "copy": {
+                "startLine": 129,
+                "lineCount": 1
+              }
+            },
+            {
+              "copy": {
+                "startLine": 130,
+                "lineCount": 1
+              }
+            },
+            {
+              "text": "            if (mMultiDisplay[id].width != width || mMultiDisplay[id].height != height) {\n"
+            },
+            {
+              "text": "                nativeResizeListener(id, width, height);\n"
+            },
+            {
+              "copy": {
+                "startLine": 130,
+                "lineCount": 1
+              }
+            },
+            {
+              "text": "            mMultiDisplay[id].virtualDisplay.resize(width, height, dpi);\n"
+            },
+            {
+              "text": "            mMultiDisplay[id].set(width, height, dpi, flag);\n"
+            },
+            {
+              "copy": {
+                "startLine": 66,
+                "lineCount": 1
+              }
+            },
+            {
+              "text": "\n"
+            },
+            {
+              "copy": {
+                "startLine": 174,
+                "lineCount": 1
+              }
+            },
+            {
+              "copy": {
+                "startLine": 175,
+                "lineCount": 1
+              }
+            },
+            {
+              "text": "            int pipe;\n"
+            },
+            {
+              "text": "            do {\n"
+            },
+            {
+              "text": "                pipe = nativeOpen();\n"
+            },
+            {
+              "text": "                if (pipe <= 0) {\n"
+            },
+            {
+              "copy": {
+                "startLine": 177,
+                "lineCount": 1
+              }
+            },
+            {
+              "copy": {
+                "startLine": 183,
+                "lineCount": 1
+              }
+            },
+            {
+              "text": "            } while (pipe <= 0);\n"
+            },
+            {
+              "text": "            int[] parameters = new int[6];\n"
+            },
+            {
+              "copy": {
+                "startLine": 179,
+                "lineCount": 1
+              }
+            },
+            {
+              "text": "                if (!nativeReadPipe(parameters)) {\n"
+            },
+            {
+              "copy": {
+                "startLine": 182,
+                "lineCount": 1
+              }
+            },
+            {
+              "copy": {
+                "startLine": 183,
+                "lineCount": 1
+              }
+            },
+            {
+              "text": "                if (parameters[0] == 1) {\n"
+            },
+            {
+              "text": "                    for (int value : parameters) {\n"
+            },
+            {
+              "text": "                        Log.d(TAG, \"received \" + value);\n"
+            },
+            {
+              "copy": {
+                "startLine": 201,
+                "lineCount": 1
+              }
+            },
+            {
+              "text": "                    int id = parameters[1];\n"
+            },
+            {
+              "text": "                    int width = parameters[2];\n"
+            },
+            {
+              "text": "                    int height = parameters[3];\n"
+            },
+            {
+              "text": "                    int dpi = parameters[4];\n"
+            },
+            {
+              "text": "                    // voyemu: the host sends flag=1 as \"display enabled\", which\n"
+            },
+            {
+              "text": "                    // lacks the VIRTUAL_DISPLAY 0x40 touch bit. Without it the\n"
+            },
+            {
+              "text": "                    // A9 VirtualDisplayAdapter sets DisplayDeviceInfo.touch to\n"
+            },
+            {
+              "text": "                    // NONE, DisplayManagerService never creates a touch\n"
+            },
+            {
+              "text": "                    // viewport for Emulator2D, and the virtio multi-touch\n"
+            },
+            {
+              "text": "                    // mapper stays disabled — touches on display 1 land on 0.\n"
+            },
+            {
+              "text": "                    // Always OR the touch bit into whatever the host reports.\n"
+            },
+            {
+              "text": "                    int flag = (parameters[5] != 0 ? parameters[5] : 1737) | 0x40;\n"
+            },
+            {
+              "text": "                    if (id >= 1 && id <= 10 && width > 0 && height > 0 && dpi > 0 && flag >= 0) {\n"
+            },
+            {
+              "text": "                        addVirtualDisplay(id, width, height, dpi, flag);\n"
+            },
+            {
+              "text": "                    } else {\n"
+            },
+            {
+              "copy": {
+                "startLine": 196,
+                "lineCount": 1
+              }
+            },
+            {
+              "copy": {
+                "startLine": 201,
+                "lineCount": 1
+              }
+            },
+            {
+              "text": "                } else if (parameters[0] == 2) {\n"
+            },
+            {
+              "text": "                    int id = parameters[1];\n"
+            },
+            {
+              "text": "                    Log.d(TAG, \"DEL \" + id);\n"
+            },
+            {
+              "text": "                    if (id >= 1 && id <= 10) {\n"
+            },
+            {
+              "text": "                        deleteVirtualDisplay(id);\n"
+            },
+            {
+              "text": "                    } else {\n"
+            },
+            {
+              "copy": {
+                "startLine": 206,
+                "lineCount": 1
+              }
+            },
+            {
+              "copy": {
+                "startLine": 201,
+                "lineCount": 1
+              }
+            },
+            {
+              "copy": {
+                "startLine": 183,
+                "lineCount": 1
+              }
+            },
+            {
+              "copy": {
+                "startLine": 130,
+                "lineCount": 1
+              }
+            },
+            {
+              "copy": {
+                "startLine": 66,
+                "lineCount": 1
+              }
+            },
+            {
+              "copy": {
+                "startLine": 86,
+                "lineCount": 1
+              }
+            },
+            {
+              "text": "\n"
+            },
+            {
+              "copy": {
+                "startLine": 217,
+                "lineCount": 1
+              }
+            },
+            {
+              "text": "\n"
+            },
+            {
+              "text": "    private native boolean nativeReadPipe(int[] parameters);\n"
+            },
+            {
+              "text": "\n"
+            },
+            {
+              "text": "    private native Surface nativeCreateSurface(int id, int width, int height);\n"
+            },
+            {
+              "text": "\n"
+            },
+            {
+              "text": "    private native boolean nativeResizeListener(int id, int width, int height);\n"
+            },
+            {
+              "text": "\n"
+            },
+            {
+              "text": "    private native boolean nativeReleaseListener(int id);\n"
+            }
+          ]
+        },
+        {
+          "startLine": 92,
+          "deleteCount": 1,
+          "insert": [
+            {
+              "text": "        mHandler = new Handler();\n"
+            }
+          ]
+        },
+        {
+          "startLine": 98,
+          "deleteCount": 1,
+          "insert": []
+        },
+        {
+          "startLine": 99,
+          "deleteCount": 2,
+          "insert": []
+        },
+        {
+          "startLine": 101,
+          "deleteCount": 4,
+          "insert": [
+            {
+              "text": "        mDisplayManager = (DisplayManager) getSystemService(DISPLAY_SERVICE);\n"
+            },
+            {
+              "text": "        mMultiDisplay = new MultiDisplay[MAX_DISPLAYS];\n"
+            },
+            {
+              "text": "        for (int i = 0; i < MAX_DISPLAYS; i++) {\n"
+            }
+          ]
+        },
+        {
+          "startLine": 107,
+          "deleteCount": 0,
+          "insert": [
+            {
+              "copy": {
+                "startLine": 99,
+                "lineCount": 2
+              }
+            },
+            {
+              "copy": {
+                "startLine": 86,
+                "lineCount": 1
+              }
+            },
+            {
+              "text": "\n"
+            },
+            {
+              "copy": {
+                "startLine": 89,
+                "lineCount": 1
+              }
+            },
+            {
+              "copy": {
+                "startLine": 117,
+                "lineCount": 1
+              }
+            },
+            {
+              "copy": {
+                "startLine": 119,
+                "lineCount": 1
+              }
+            }
+          ]
+        },
+        {
+          "startLine": 111,
+          "deleteCount": 1,
+          "insert": [
+            {
+              "text": "        if (mMessenger == null) {\n"
+            }
+          ]
+        },
+        {
+          "startLine": 113,
+          "deleteCount": 0,
+          "insert": [
+            {
+              "copy": {
+                "startLine": 66,
+                "lineCount": 1
+              }
+            },
+            {
+              "text": "\n"
+            }
+          ]
+        },
+        {
+          "startLine": 115,
+          "deleteCount": 107,
+          "insert": []
+        }
+      ]
+    },
+    {
+      "path": "src/com/android/emulator/multidisplay/MultiDisplayServiceReceiver.java",
+      "resultSha256": "8d7505bc5c83d0b70087ab179b9a381cfd97f9ccfc7ce23e376da8f93cdbe67c",
+      "edits": [
+        {
+          "startLine": 17,
+          "deleteCount": 0,
+          "insert": [
+            {
+              "text": "// Modified by Voyemu: preserve the API 28 receiver behavior.\n"
+            },
+            {
+              "text": "\n"
+            }
+          ]
+        },
+        {
+          "startLine": 20,
+          "deleteCount": 1,
+          "insert": []
+        },
+        {
+          "startLine": 22,
+          "deleteCount": 0,
+          "insert": [
+            {
+              "text": "import android.content.ComponentName;\n"
+            }
+          ]
+        },
+        {
+          "startLine": 26,
+          "deleteCount": 0,
+          "insert": [
+            {
+              "text": "/**\n"
+            },
+            {
+              "text": " * Starts MultiDisplayService when the emulator console asks for it.\n"
+            },
+            {
+              "text": " * Port of the A11 system image MultiDisplayProvider receiver for API 28.\n"
+            },
+            {
+              "copy": {
+                "startLine": 15,
+                "lineCount": 1
+              }
+            }
+          ]
+        },
+        {
+          "startLine": 29,
+          "deleteCount": 8,
+          "insert": []
+        },
+        {
+          "startLine": 38,
+          "deleteCount": 2,
+          "insert": [
+            {
+              "copy": {
+                "startLine": 38,
+                "lineCount": 1
+              }
+            },
+            {
+              "text": "        for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {\n"
+            }
+          ]
+        },
+        {
+          "startLine": 44,
+          "deleteCount": 0,
+          "insert": [
+            {
+              "text": "\n"
+            }
+          ]
+        },
+        {
+          "startLine": 46,
+          "deleteCount": 0,
+          "insert": [
+            {
+              "text": "\n"
+            },
+            {
+              "copy": {
+                "startLine": 29,
+                "lineCount": 1
+              }
+            },
+            {
+              "copy": {
+                "startLine": 30,
+                "lineCount": 1
+              }
+            },
+            {
+              "text": "        if (isMyServiceRunning(context)) {\n"
+            },
+            {
+              "text": "            return;\n"
+            },
+            {
+              "copy": {
+                "startLine": 34,
+                "lineCount": 1
+              }
+            },
+            {
+              "copy": {
+                "startLine": 32,
+                "lineCount": 1
+              }
+            },
+            {
+              "copy": {
+                "startLine": 33,
+                "lineCount": 1
+              }
+            },
+            {
+              "copy": {
+                "startLine": 35,
+                "lineCount": 1
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "AndroidManifest.xml",
+      "resultSha256": "f7c60c02658f52eafb010f00e0eb6d5ebbc61920b9b61974aeb1df7f0871f100",
+      "edits": [
+        {
+          "startLine": 17,
+          "deleteCount": 2,
+          "insert": [
+            {
+              "text": "<!-- Modified by Voyemu for the API 28 platform stub. -->\n"
+            }
+          ]
+        },
+        {
+          "startLine": 20,
+          "deleteCount": 2,
+          "insert": [
+            {
+              "text": "    package=\"com.android.emulator.multidisplay\"\n"
+            },
+            {
+              "text": "    android:sharedUserId=\"android.uid.system\">\n"
+            }
+          ]
+        },
+        {
+          "startLine": 23,
+          "deleteCount": 4,
+          "insert": [
+            {
+              "text": "    <uses-sdk android:minSdkVersion=\"28\" android:targetSdkVersion=\"28\" />\n"
+            },
+            {
+              "text": "\n"
+            },
+            {
+              "text": "    <application android:label=\"MultiDisplayProvider\"\n"
+            },
+            {
+              "text": "        android:allowBackup=\"false\"\n"
+            },
+            {
+              "text": "        android:persistent=\"true\"\n"
+            },
+            {
+              "text": "        android:extractNativeLibs=\"true\">\n"
+            },
+            {
+              "text": "        <receiver android:name=\"com.android.emulator.multidisplay.MultiDisplayServiceReceiver\"\n"
+            },
+            {
+              "text": "            android:exported=\"true\">\n"
+            }
+          ]
+        },
+        {
+          "startLine": 31,
+          "deleteCount": 6,
+          "insert": [
+            {
+              "text": "        <service android:name=\"com.android.emulator.multidisplay.MultiDisplayService\"\n"
+            },
+            {
+              "text": "            android:exported=\"true\" />\n"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

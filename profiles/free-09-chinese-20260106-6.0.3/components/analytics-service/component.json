@@ -1,0 +1,6 @@
+{
+    "type": "apk",
+    "minSdk": 28,
+    "targetSdk": 28,
+    "sign": "platform"
+}

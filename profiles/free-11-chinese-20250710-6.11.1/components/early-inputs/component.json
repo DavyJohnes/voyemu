@@ -1,0 +1,7 @@
+{
+  "type": "native",
+  "minSdk": 30,
+  "outputType": "executable",
+  "output": "voyemu-early-inputs",
+  "libs": []
+}

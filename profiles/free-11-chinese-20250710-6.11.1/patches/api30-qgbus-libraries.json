@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "api": 30,
+  "calls": [
+    {
+      "operation": "useLibraries",
+      "args": [
+        [
+          "QGAPI"
+        ]
+      ]
+    }
+  ],
+  "constants": {
+    "original_sha256_allowlist": [
+      "a4395872617162e0ee3ef7c57de4387f20cb8200bb46f5798a1bd2fc805284d3"
+    ]
+  }
+}

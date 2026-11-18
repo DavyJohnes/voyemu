@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "api": 30,
+  "constants": {
+    "original_sha256_allowlist": [
+      "aa50fb67ef3d63038a5a0001edea8d9d46c4342b5905129b036040670f25ae72",
+      "a53b1d5e52f25d0bb5fb8e84b743f59ef05114b861b8f30f1ada1cbd86215e7b",
+      "0d5e7a4c4556c19aa417cef3ded9bc0824f58e36346109e75ce0197643ce05fd",
+      "dee46bafb1e174ab38841f5802722a3bcce1e4dae26e5a70840c04885651508f"
+    ]
+  },
+  "calls": [
+    {
+      "operation": "useLibraries",
+      "args": [
+        [
+          "QGAPI"
+        ]
+      ]
+    }
+  ]
+}

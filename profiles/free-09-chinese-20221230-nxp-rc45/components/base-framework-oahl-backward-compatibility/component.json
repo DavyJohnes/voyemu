@@ -1,0 +1,12 @@
+{
+  "type": "jar",
+  "minSdk": 28,
+  "output": "framework-oahl-backward-compatibility.jar",
+  "frameworkBase": {
+    "jar": "/system/framework/framework-oahl-backward-compatibility.jar",
+    "oat": "/system/framework/arm64/boot-framework-oahl-backward-compatibility.oat",
+    "oat_sha256": "4b392f6fe71e314b9ce3aef6520bcc6edde4624f224c2bfcc12f4f1cf46f16c3",
+    "vdex": "/system/framework/boot-framework-oahl-backward-compatibility.vdex",
+    "vdex_sha256": "d4322a4007880210c2eaec34a50ab06938459271c46d7d72e193a047dd637eeb"
+  }
+}

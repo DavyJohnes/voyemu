@@ -1,0 +1,27 @@
+{
+  "api": 28,
+  "calls": [
+    {
+      "args": [
+        "output",
+        [
+          {
+            "startLine": 129,
+            "deleteCount": 0,
+            "insert": [
+              {
+                "text": "\non shutdown\n    umount /data/vendor/var/run/netns/router\n"
+              }
+            ]
+          }
+        ],
+        "b49dd4349af7d4f0a5b961679075421e68faa28a4a4410e4b407636020aafba4"
+      ],
+      "operation": "editLines"
+    }
+  ],
+  "constants": {
+    "INPUT_SHA256": "602ca641728bbac947147ad8d7e41bbd481c7847a6bb838bf1c5dcbd37a11d8d"
+  },
+  "schema": 1
+}

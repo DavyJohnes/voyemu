@@ -1,0 +1,25 @@
+{
+  "type": "jar",
+  "minSdk": 30,
+  "output": "voyemu-window.jar",
+  "donorDex": {
+    "original": "frameworkBase",
+    "sha256": "ec2933b1c42f1932cd46117a475b84d83371c9b19130930f43ffd4c455ca6bd3",
+    "dex": "classes3.dex",
+    "classes": [
+      "android.view.IWindowAttributesCallback",
+      "android.view.IWindowAttributesCallback$Default",
+      "android.view.IWindowAttributesCallback$Stub",
+      "android.view.IWindowAttributesCallback$Stub$Proxy",
+      "android.view.WindowAttributes",
+      "android.view.WindowAttributes$1"
+    ]
+  },
+  "compatibility": {
+    "active": false,
+    "guestVerified": false,
+    "sourceTypeClosureVerified": false,
+    "methodFieldPreflightPending": true,
+    "nestedInventoryVerified": true
+  }
+}

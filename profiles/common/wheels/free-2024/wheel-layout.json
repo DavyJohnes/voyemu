@@ -1,0 +1,71 @@
+{
+  "schema": 1,
+  "name": "Voyah Free A11 continuous engraving wheel",
+  "source_grid": [
+    1000,
+    1000
+  ],
+  "source_logical_frame": [
+    50,
+    115,
+    900,
+    770
+  ],
+  "source_photos": [
+    {
+      "side": "right",
+      "file": "1200x900.jpeg",
+      "sha256": "02d529519aa6f61d3c717ec540717849c91bfbf50b51d41311b5ddef53caa8de"
+    },
+    {
+      "side": "left",
+      "file": "1200x900n.webp",
+      "sha256": "9e345db3d4712906452fb699c8f4b3ee4b7b24b6cc597df749638382a95249ef"
+    }
+  ],
+  "rocker_centers_interactive": false,
+  "blank_plate": {
+    "side": "left",
+    "position": "lower-inner",
+    "action": null
+  },
+  "unverified_actions": [
+    "adas",
+    "cruise_up",
+    "cruise_down",
+    "distance-long",
+    "distance-short",
+    "custom"
+  ],
+  "input_codes_added": false,
+  "source_generation": {
+    "kind": "source-owned vector tracing",
+    "svgo": "4.0.0",
+    "svgo_config_sha256": "a9dc9eb9a6202a897697ae38f35f2dff791bcfa5eded77e8aa0b25398c3fc298",
+    "renderer": "librsvg 2.63.2",
+    "external_symbol_ids_preserved": true,
+    "cleanup_ids_override": "Disabled only because face-*, roller-* and glyph-* ids are consumed as geometry and external symbol contracts."
+  },
+  "icon_sources": [
+    "profiles/common/icons/icon-adas-car-arcs.svg",
+    "profiles/common/icons/icon-cards.svg",
+    "profiles/common/icons/icon-resume-plus.svg",
+    "profiles/common/icons/icon-distance-long.svg",
+    "profiles/common/icons/icon-distance-short.svg",
+    "profiles/common/icons/icon-play-pause.svg",
+    "profiles/common/icons/icon-chevron-up.svg",
+    "profiles/common/icons/icon-chevron-down.svg",
+    "profiles/common/icons/icon-voice-continuous.svg",
+    "profiles/common/icons/icon-phone-continuous.svg",
+    "profiles/common/icons/icon-camera-continuous.svg",
+    "profiles/common/icons/icon-star-continuous.svg",
+    "profiles/common/icons/icon-previous-continuous.svg",
+    "profiles/common/icons/icon-next-continuous.svg"
+  ],
+  "shared_geometry": {
+    "source": "profiles/common/wheels/free-2021",
+    "joined_offset_logical_points": 122.40000000002001,
+    "plate_and_hover_contours": "byte-identical paths and exact normalized vertices; action ids remapped for A11",
+    "rocker_centers_interactive": false
+  }
+}

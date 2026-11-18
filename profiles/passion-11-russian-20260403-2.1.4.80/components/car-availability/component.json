@@ -1,0 +1,51 @@
+{
+  "type": "apk",
+  "minSdk": 30,
+  "targetSdk": 30,
+  "sign": "platform",
+  "contract": {
+    "original": "android.car",
+    "sha256": "87adcf736e346261e6caabbd6aead28f9bd177fb6fc7cec1d8aa8b55f8a0ce15",
+    "descriptor": "android.car.ICar",
+    "service": "car_service",
+    "getCarServiceTransaction": 12,
+    "unsupportedServicesReturn": "null",
+    "compatibilityApplicationId": "com.android.car",
+    "bindingAction": "android.car.ICar",
+    "guestVerified": false
+  },
+  "nativeFiles": {
+    "profile": "passion-11-russian-20260403-2.1.4.80",
+    "api": 30,
+    "active": false,
+    "guestVerified": false,
+    "nodes": {
+      "passion-services": {
+        "target": "/system/etc/selinux/plat_sepolicy.cil",
+        "inputSha256": "f6d5316e443b6830d5331e6586cc0fc1df2ea8a59853ae3b0870945990145a17",
+        "outputSha256": "008fade9e6f183e228e7210a7bc9c30750c45f83ecfdb932ad92f61f0eeaadc4"
+      },
+      "passion-service-contexts": {
+        "target": "/system/etc/selinux/plat_service_contexts",
+        "inputSha256": "e4a9f3406dc9c3ff5a03c4b478941e02bede17ee95798bdbce1a31cc33f40959",
+        "outputSha256": "25c66b18abdb1bf102f5012387d54336c12a67c80e4ab540b90fdb863c1b82b6"
+      },
+      "passion-property-contexts": {
+        "target": "/system/etc/selinux/plat_property_contexts",
+        "inputSha256": "a49213f01ea1f8ec19b41311116bc9324c682af1482297e4bbbc05265dfd623e",
+        "outputSha256": "1f322fc1fdea910bee266cc00126d2e8429b82a4a283250f12655e5d49b83d2c"
+      },
+      "passion-policy-hash": {
+        "target": "/system/etc/selinux/plat_sepolicy_and_mapping.sha256",
+        "inputSha256": "391829e0167f44415e54ba64692ad410b1398b16263869beb22e427130eae766",
+        "outputSha256": "243e1ba72d2c8e67417aa9443424c2063732ca932ce9add8530e4fdc907c2f10",
+        "patchedDependency": "passion-services",
+        "dependencySha256": "008fade9e6f183e228e7210a7bc9c30750c45f83ecfdb932ad92f61f0eeaadc4",
+        "mapping": {
+          "path": "/system/etc/selinux/mapping/30.0.cil",
+          "sha256": "c14ab911584595a94e6783600371fed23cec1d56b8001383584a3192d028eb60"
+        }
+      }
+    }
+  }
+}

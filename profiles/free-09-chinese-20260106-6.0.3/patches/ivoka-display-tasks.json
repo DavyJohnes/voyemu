@@ -1,0 +1,75 @@
+{
+  "api": 28,
+  "calls": [
+    {
+      "args": [
+        "launcher-display-routing/src"
+      ],
+      "operation": "addDex"
+    },
+    {
+      "args": [
+        "Lcom/qinggan/qingai/ivoka/adapter/IvokaAdapter;->getCurTopActivity(Landroid/content/Context;I)Ljava/lang/String;",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-static {p1, p2, v0}, Lcom/qinggan/os/ServiceManager;->getDpyTopAppInfo(Landroid/content/Context;II)Ljava/lang/String;"
+              ],
+              "with": [
+                "invoke-static {p1, p2, v0}, Lcom/voyemu/output/DisplayTasks;->getTopAppInfo(Landroid/content/Context;II)Ljava/lang/String;"
+              ]
+            }
+          ]
+        }
+      ],
+      "operation": "editMethod"
+    },
+    {
+      "args": [
+        "Lcom/qinggan/qingai/ivoka/adapter/IvokaAdapter;->getCurTopPackage(Landroid/content/Context;I)Ljava/lang/String;",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-static {p1, p2, v0}, Lcom/qinggan/os/ServiceManager;->getDpyTopAppInfo(Landroid/content/Context;II)Ljava/lang/String;"
+              ],
+              "with": [
+                "invoke-static {p1, p2, v0}, Lcom/voyemu/output/DisplayTasks;->getTopAppInfo(Landroid/content/Context;II)Ljava/lang/String;"
+              ]
+            }
+          ]
+        }
+      ],
+      "operation": "editMethod"
+    },
+    {
+      "args": [
+        "Lcom/qinggan/qingai/ivoka/adapter/IvokaAdapter;->isLoginForeGround(Landroid/content/Context;)Z",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-static {p1, v0, v1}, Lcom/qinggan/os/ServiceManager;->getDpyTopAppInfo(Landroid/content/Context;II)Ljava/lang/String;"
+              ],
+              "with": [
+                "invoke-static {p1, v0, v1}, Lcom/voyemu/output/DisplayTasks;->getTopAppInfo(Landroid/content/Context;II)Ljava/lang/String;"
+              ]
+            },
+            {
+              "replace": [
+                "invoke-static {p1, v1, v1}, Lcom/qinggan/os/ServiceManager;->getDpyTopAppInfo(Landroid/content/Context;II)Ljava/lang/String;"
+              ],
+              "with": [
+                "invoke-static {p1, v1, v1}, Lcom/voyemu/output/DisplayTasks;->getTopAppInfo(Landroid/content/Context;II)Ljava/lang/String;"
+              ]
+            }
+          ]
+        }
+      ],
+      "operation": "editMethod"
+    }
+  ],
+  "constants": {},
+  "schema": 1
+}

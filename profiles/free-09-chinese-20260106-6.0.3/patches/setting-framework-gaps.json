@@ -1,0 +1,86 @@
+{
+  "api": 28,
+  "calls": [
+    {
+      "args": [
+        "Lcom/qinggan/setting/netlib/settingwifi/AccessPoint;-><init>(Landroid/content/Context;Ljava/util/Collection;)V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "iget-boolean p2, p1, Landroid/net/wifi/ScanResult;->isCarrierAp:Z",
+                "iput-boolean p2, p0, Lcom/qinggan/setting/netlib/settingwifi/AccessPoint;->mIsCarrierAp:Z",
+                "iget p2, p1, Landroid/net/wifi/ScanResult;->carrierApEapType:I",
+                "iput p2, p0, Lcom/qinggan/setting/netlib/settingwifi/AccessPoint;->mCarrierApEapType:I",
+                "iget-object p1, p1, Landroid/net/wifi/ScanResult;->carrierName:Ljava/lang/String;"
+              ],
+              "with": [
+                "const/4 p2, 0x0",
+                "iput-boolean p2, p0, Lcom/qinggan/setting/netlib/settingwifi/AccessPoint;->mIsCarrierAp:Z",
+                ".line 271",
+                "const/16 p2, -0x1",
+                "iput p2, p0, Lcom/qinggan/setting/netlib/settingwifi/AccessPoint;->mCarrierApEapType:I",
+                ".line 272",
+                "const/4 p1, 0x0"
+              ]
+            }
+          ]
+        }
+      ],
+      "operation": "editMethod"
+    },
+    {
+      "args": [
+        "Lcom/qinggan/setting/netlib/settingwifi/AccessPoint;->setScanResults(Ljava/util/Collection;)V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "iget-boolean v0, p1, Landroid/net/wifi/ScanResult;->isCarrierAp:Z",
+                "iput-boolean v0, p0, Lcom/qinggan/setting/netlib/settingwifi/AccessPoint;->mIsCarrierAp:Z",
+                "iget v0, p1, Landroid/net/wifi/ScanResult;->carrierApEapType:I",
+                "iput v0, p0, Lcom/qinggan/setting/netlib/settingwifi/AccessPoint;->mCarrierApEapType:I",
+                "iget-object p1, p1, Landroid/net/wifi/ScanResult;->carrierName:Ljava/lang/String;"
+              ],
+              "with": [
+                "const/4 v0, 0x0",
+                "iput-boolean v0, p0, Lcom/qinggan/setting/netlib/settingwifi/AccessPoint;->mIsCarrierAp:Z",
+                ".line 1026",
+                "const/16 v0, -0x1",
+                "iput v0, p0, Lcom/qinggan/setting/netlib/settingwifi/AccessPoint;->mCarrierApEapType:I",
+                ".line 1027",
+                "const/4 p1, 0x0"
+              ]
+            }
+          ]
+        }
+      ],
+      "operation": "editMethod"
+    },
+    {
+      "args": [
+        "Lcom/qinggan/setting/netlib/utils/NetworkMgr;-><clinit>()V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-virtual {v1, v3, v2}, Landroid/net/wifi/WifiManager;->registerSoftApCallback(Landroid/net/wifi/WifiManager$SoftApCallback;Landroid/os/Handler;)V"
+              ],
+              "with": [
+                ":try_start_voyemu_softap",
+                "invoke-virtual {v1, v3, v2}, Landroid/net/wifi/WifiManager;->registerSoftApCallback(Landroid/net/wifi/WifiManager$SoftApCallback;Landroid/os/Handler;)V",
+                ":try_end_voyemu_softap",
+                ".catch Ljava/lang/NoSuchMethodError; {:try_start_voyemu_softap .. :try_end_voyemu_softap} :catch_voyemu_softap",
+                ".line 1154",
+                ":catch_voyemu_softap"
+              ]
+            }
+          ]
+        }
+      ],
+      "operation": "editMethod"
+    }
+  ],
+  "constants": {},
+  "schema": 1
+}

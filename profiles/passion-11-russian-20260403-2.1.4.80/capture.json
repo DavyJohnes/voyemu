@@ -1,0 +1,188 @@
+{
+  "schema": 1,
+  "profile": "passion-11-russian-20260403-2.1.4.80",
+  "android": [
+    {
+      "name": "LY_CoreService",
+      "file": "LY_CoreService.apk",
+      "source": {
+        "package": "com.voyah.coreservice"
+      }
+    },
+    {
+      "name": "LY_Launcher",
+      "file": "LY_Launcher.apk",
+      "source": {
+        "package": "com.voyah.os.carlauncher"
+      }
+    },
+    {
+      "name": "MegaNexusService",
+      "file": "MegaNexusService.apk",
+      "source": {
+        "package": "com.mega.nexus.server"
+      }
+    },
+    {
+      "name": "MonzaCarService",
+      "file": "MonzaCarService.apk",
+      "source": {
+        "package": "com.mega.car"
+      }
+    },
+    {
+      "name": "CarSettings",
+      "file": "CarSettings.apk",
+      "source": {
+        "package": "com.android.car.settings"
+      }
+    },
+    {
+      "name": "MonzaSystemUI",
+      "file": "MonzaSystemUI.apk",
+      "source": {
+        "package": "com.android.systemui"
+      }
+    },
+    {
+      "name": "android.car",
+      "file": "framework/android.car.jar",
+      "source": {
+        "path": "/system/framework/android.car.jar"
+      }
+    },
+    {
+      "name": "car-frameworks-service",
+      "file": "framework/car-frameworks-service.jar",
+      "source": {
+        "path": "/system/framework/car-frameworks-service.jar"
+      }
+    },
+    {
+      "name": "mega.bluetooth",
+      "file": "framework/mega.bluetooth.jar",
+      "source": {
+        "path": "/system/framework/mega.bluetooth.jar"
+      }
+    },
+    {
+      "name": "frameworkBase",
+      "file": "framework/framework.jar",
+      "source": {
+        "path": "/system/framework/framework.jar"
+      }
+    },
+    {
+      "name": "mega.services.core",
+      "file": "framework/mega.services.core.jar",
+      "source": {
+        "path": "/system/framework/mega.services.core.jar"
+      }
+    },
+    {
+      "name": "LY_Multimedia",
+      "file": "LY_Multimedia.apk",
+      "source": {
+        "package": "com.voyah.multimedia"
+      }
+    },
+    {
+      "name": "LY_BtPhone",
+      "file": "LY_BtPhone.apk",
+      "source": {
+        "package": "com.voyah.btphone"
+      }
+    },
+    {
+      "name": "LY_Car",
+      "file": "LY_Car.apk",
+      "source": {
+        "package": "com.voyah.car"
+      }
+    },
+    {
+      "name": "LY_Camera",
+      "file": "LY_Camera.apk",
+      "source": {
+        "package": "com.voyah.camera"
+      }
+    },
+    {
+      "name": "LY_Video",
+      "file": "LY_Video.apk",
+      "source": {
+        "package": "com.voyah.video"
+      }
+    },
+    {
+      "name": "LY_AVM",
+      "file": "LY_AVM.apk",
+      "source": {
+        "package": "com.voyah.avm"
+      }
+    },
+    {
+      "name": "screen-control-screen0_off_change",
+      "file": "screen0_off_change.csv",
+      "source": {
+        "path": "/system/etc/screen-control/screen0_off_change.csv"
+      }
+    },
+    {
+      "name": "screen-control-screen0_off_keep",
+      "file": "screen0_off_keep.csv",
+      "source": {
+        "path": "/system/etc/screen-control/screen0_off_keep.csv"
+      }
+    },
+    {
+      "name": "screen-control-screen0_on_change",
+      "file": "screen0_on_change.csv",
+      "source": {
+        "path": "/system/etc/screen-control/screen0_on_change.csv"
+      }
+    },
+    {
+      "name": "screen-control-screen0_on_keep",
+      "file": "screen0_on_keep.csv",
+      "source": {
+        "path": "/system/etc/screen-control/screen0_on_keep.csv"
+      }
+    },
+    {
+      "name": "screen-control-screen1_off_change",
+      "file": "screen1_off_change.csv",
+      "source": {
+        "path": "/system/etc/screen-control/screen1_off_change.csv"
+      }
+    },
+    {
+      "name": "screen-control-screen1_off_keep",
+      "file": "screen1_off_keep.csv",
+      "source": {
+        "path": "/system/etc/screen-control/screen1_off_keep.csv"
+      }
+    },
+    {
+      "name": "screen-control-screen1_on_change",
+      "file": "screen1_on_change.csv",
+      "source": {
+        "path": "/system/etc/screen-control/screen1_on_change.csv"
+      }
+    },
+    {
+      "name": "screen-control-screen1_on_keep",
+      "file": "screen1_on_keep.csv",
+      "source": {
+        "path": "/system/etc/screen-control/screen1_on_keep.csv"
+      }
+    },
+    {
+      "name": "BootAnimation",
+      "file": "media/bootanimation.zip",
+      "source": {
+        "path": "/system/media/bootanimation.zip"
+      }
+    }
+  ]
+}

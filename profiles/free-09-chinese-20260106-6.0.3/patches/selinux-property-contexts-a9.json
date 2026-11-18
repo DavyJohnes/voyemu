@@ -1,0 +1,14 @@
+{
+  "api": 28,
+  "calls": [],
+  "constants": {
+    "ENTRIES": [
+      "persist.app. u:object_r:system_prop:s0",
+      "persist.sys.qg. u:object_r:system_prop:s0",
+      "persist.clusterCardInfo u:object_r:system_prop:s0",
+      "persist.media.metrics.enabled u:object_r:system_prop:s0",
+      "ignoreActivation u:object_r:system_prop:s0"
+    ]
+  },
+  "schema": 1
+}

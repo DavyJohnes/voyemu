@@ -1,0 +1,78 @@
+{
+  "schema": 1,
+  "hardware_adapter": "sa8155-qinggan09",
+  "update": {
+    "sha256": "651a673cd1f9d94986190117a276cf0e4f3e08d24e08947d3a460249a28d0be1",
+    "source": "owner-update"
+  },
+  "originals": {
+    "hyp_la.img": {
+      "file": "hyp_la.img",
+      "bytes": 7340032,
+      "sha256": "0af64f396f7de8dafe3488f21ec7e4cd989b3d02d3de0412aec020fdb1424b89",
+      "update": {
+        "kind": "zero-base-zstd-segments",
+        "entries": [
+          "qnx/hyp_la/hyp_la.patch0"
+        ],
+        "segment_bytes": [
+          7340032
+        ]
+      }
+    },
+    "ifs2_la.img": {
+      "file": "ifs2_la.img",
+      "bytes": 268435456,
+      "sha256": "403269cadb0b279a8698eddf909948408caf0e2d5bd2423fd6a11e58dcde0ee0",
+      "update": {
+        "kind": "zero-base-zstd-segments",
+        "entries": [
+          "qnx/ifs2_la/ifs2_la.patch0"
+        ],
+        "segment_bytes": [
+          268435456
+        ]
+      }
+    },
+    "system_la.img": {
+      "file": "system_la.img",
+      "bytes": 1073741824,
+      "sha256": "ed32a05382848e0fb63cb33cdf0de55ec3d088f37aad21637b24c12e22a7a6bf",
+      "update": {
+        "kind": "zero-base-zstd-segments",
+        "entries": [
+          "qnx/system_la/system_la.patch0",
+          "qnx/system_la/system_la.patch1"
+        ],
+        "segment_bytes": [
+          536870912,
+          536870912
+        ]
+      }
+    },
+    "ifs2_recovery_la.img": {
+      "file": "ifs2_recovery_la.img",
+      "bytes": 268435456,
+      "sha256": "d7dd2e04b36d760dd8e95a939e194530e66b24b8ffe77a5f7290684145e76930",
+      "update": {
+        "kind": "zero-base-zstd-segments",
+        "entries": [
+          "qnx/ifs2_recovery_la/ifs2_recovery_la.patch0"
+        ],
+        "segment_bytes": [
+          268435456
+        ]
+      }
+    }
+  },
+  "startup_extension": {
+    "file": "scripts/startup_cluster.sh",
+    "sha256": "c26b4913707a1e96933f48a07d6957857cc52853a7e405eb29b2adab9b84f47a",
+    "anchor": "clusterboot &"
+  },
+  "persistence": {
+    "schema": 1,
+    "system_image": "sysla-gpt-ramdisk-v3.img",
+    "userdata_image": "userdata-qnx6.img"
+  }
+}

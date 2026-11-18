@@ -1,0 +1,12 @@
+{
+  "type": "jar",
+  "minSdk": 28,
+  "output": "core-oj.jar",
+  "frameworkBase": {
+    "jar": "/system/framework/core-oj.jar",
+    "oat": "/system/framework/arm64/boot.oat",
+    "oat_sha256": "fb9fa62e80643f850a4c906e7d14b500e4dad6c57c886212a18d9f9646a2c7ea",
+    "vdex": "/system/framework/boot.vdex",
+    "vdex_sha256": "7dd54d2d9646ef46af4723ca70a0df55bb88d4beae1fb66ae4caec9e0c023f15"
+  }
+}

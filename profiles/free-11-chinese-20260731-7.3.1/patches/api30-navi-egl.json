@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "api": 30,
+  "constants": {
+    "original_sha256_allowlist": [
+      "dceddff70db38bacb50ebffa46d36da76f70e5596c6184bca51c48c3ed562a05"
+    ]
+  },
+  "calls": [
+    {
+      "operation": "guardNaviEgl",
+      "args": []
+    }
+  ]
+}

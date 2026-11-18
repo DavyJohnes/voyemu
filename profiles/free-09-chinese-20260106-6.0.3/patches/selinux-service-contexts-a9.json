@@ -1,0 +1,16 @@
+{
+  "api": 28,
+  "calls": [],
+  "constants": {
+    "ENTRIES": [
+      "qg.canbus u:object_r:voyemu_canbus_service:s0",
+      "qg.power_manager u:object_r:voyemu_oem_service:s0",
+      "qg.carsignal u:object_r:voyemu_oem_service:s0",
+      "qg.key_manager u:object_r:voyemu_oem_service:s0",
+      "dls_tbox_service u:object_r:voyemu_oem_service:s0",
+      "qg.system_policy u:object_r:voyemu_oem_service:s0",
+      "qg.qgbus_service u:object_r:voyemu_oem_service:s0"
+    ]
+  },
+  "schema": 1
+}

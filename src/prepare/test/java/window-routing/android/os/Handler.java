@@ -1,0 +1,15 @@
+package android.os;
+
+public class Handler {
+    public Handler(Looper l) {}
+
+    public boolean post(Runnable r) {
+        r.run();
+
+        return true;
+    }
+
+    public boolean postDelayed(Runnable r, long t) {
+        return true;
+    }
+}

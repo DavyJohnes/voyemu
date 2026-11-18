@@ -1,0 +1,13 @@
+{
+  "type": "jar",
+  "minSdk": 28,
+  "output": "ethernet-service.jar",
+  "frameworkBase": {
+    "jar": "/system/framework/ethernet-service.jar",
+    "oat": "/system/framework/oat/arm64/ethernet-service.odex",
+    "oat_sha256": "4195549b43209bb5c245774db1a8f595fcc6ef8e7daef16c6f1e73f9e0c1dd50",
+    "vdex": "/system/framework/oat/arm64/ethernet-service.vdex",
+    "vdex_sha256": "4ec323b6342bf1b1d10d701cb02c28324be766e3e18c6b41ffbcbc7cfb3eafe9",
+    "systemServer": true
+  }
+}

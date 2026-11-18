@@ -1,0 +1,36 @@
+{
+ "schema": 1,
+ "api": 28,
+ "constants": {
+  "INPUT_SHA256": "619186d34262ea53e5386abb52ca11d74636da2a85434fafa19df7efecca565b"
+ },
+ "calls": [
+  {
+   "operation": "editMethod",
+   "args": [
+    "Lcom/qinggan/speech/adapter/phoneconnect/PhoneConnectMgr;->initValueNotifier()V",
+    {
+     "edits": [
+      {
+       "replace": [
+        "new-instance v0, Landroid/os/Handler;",
+        "invoke-direct {v0}, Landroid/os/Handler;-><init>()V"
+       ],
+       "with": [
+        "new-instance v0, Landroid/os/HandlerThread;",
+        "const-string v2, \"PChatAutoMgr\"",
+        "invoke-direct {v0, v2}, Landroid/os/HandlerThread;-><init>(Ljava/lang/String;)V",
+        "invoke-virtual {v0}, Landroid/os/HandlerThread;->start()V",
+        "invoke-virtual {v0}, Landroid/os/HandlerThread;->getLooper()Landroid/os/Looper;",
+        "move-result-object v2",
+        "new-instance v3, Landroid/os/Handler;",
+        "invoke-direct {v3, v2}, Landroid/os/Handler;-><init>(Landroid/os/Looper;)V",
+        "move-object v0, v3"
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,6 @@
+{
+  "schema": 1,
+  "api": 30,
+  "constants": {"original_sha256_allowlist": []},
+  "calls": [{"operation": "guardOriginalNaviEgl", "args": []}]
+}

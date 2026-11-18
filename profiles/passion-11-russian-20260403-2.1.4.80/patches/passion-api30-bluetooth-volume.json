@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "api": 30,
+  "calls": [
+    {
+      "operation": "guardPassionBluetoothVolume",
+      "args": []
+    }
+  ],
+  "constants": {
+    "original_sha256_allowlist": [
+      "4032f14c0fc49fd52514737309d2af67c9d4ff9340dd534874f46cbe2e748c00",
+      "a5fb5daed4a295a568daf0390858a0bd00782b1384e66b13a96f66d43ad43e60",
+      "11bd7f83630949a997836753a65e4782f3235cbbe83db037c7b47e25ddd21c5c"
+    ]
+  }
+}

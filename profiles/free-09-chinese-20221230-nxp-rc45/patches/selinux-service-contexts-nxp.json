@@ -1,0 +1,12 @@
+{
+  "api": 28,
+  "calls": [
+
+  ],
+  "constants": {
+    "INPUT_SHA256": "73cc38daa6ea57b35889f05bea6d5258234f4982140eae0d0db0090c891fdf77",
+    "OUTPUT_SHA256": "c0aec6e636d92640affdec453f40d1a9dbf3df1157b8dfa5af1a559b56abb9c9",
+    "APPEND": "qg.canbus u:object_r:voyemu_canbus_service:s0\nqg.key_manager u:object_r:voyemu_nxp_key_manager_service:s0\nqg.system_policy u:object_r:voyemu_nxp_system_policy_service:s0\n"
+  },
+  "schema": 1
+}

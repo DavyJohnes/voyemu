@@ -1,0 +1,37 @@
+# Guest simulator fixture; property gate remains false on helper failure.
+on post-fs-data
+    setprop sys.voyemu.early.probe 1
+    setprop sys.voyemu.early.ready 0
+    mount ext4 /dev/root / remount rw
+    mkdir /private 0755 root system
+    mkdir /private/configs 0755 root system
+    mkdir /private/configs/token 0755 root system
+    restorecon /private /private/configs /private/configs/token
+    mount ext4 /dev/root / remount ro
+    setprop persist.sys.qg.userid ""
+    setprop persist.sys.qg.multiuser 0
+    exec_start voyemu-early-prepare
+    exec_start voyemu-early-loop
+    restorecon /dev/block/vdh
+    exec_start voyemu-early-verify
+    start can-simulator
+
+service voyemu-early-prepare /system/bin/voyemu-early-inputs prepare-db
+    user system
+    group system
+    disabled
+    oneshot
+
+service voyemu-early-loop /system/bin/voyemu-early-inputs prepare-loop
+    user root
+    group system
+    capabilities CHOWN
+    disabled
+    oneshot
+
+service voyemu-early-verify /system/bin/voyemu-early-inputs verify
+    user root
+    group system
+    capabilities CHOWN
+    disabled
+    oneshot

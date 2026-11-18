@@ -1,0 +1,3 @@
+<permissions>
+    <library name="VoyemuLauncherRouting" file="/system/framework/VoyemuLauncherRouting.jar" />
+</permissions>

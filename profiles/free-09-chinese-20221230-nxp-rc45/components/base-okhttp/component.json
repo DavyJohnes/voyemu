@@ -1,0 +1,12 @@
+{
+  "type": "jar",
+  "minSdk": 28,
+  "output": "okhttp.jar",
+  "frameworkBase": {
+    "jar": "/system/framework/okhttp.jar",
+    "oat": "/system/framework/arm64/boot-okhttp.oat",
+    "oat_sha256": "f76da6959341420e6c65cf39f56bc6149f43cfeb8cb5d89be4bfd65675489ad2",
+    "vdex": "/system/framework/boot-okhttp.vdex",
+    "vdex_sha256": "292572bf92af438b26858eb63926e9459aafe347c2e9e257671f48ebda8b433a"
+  }
+}

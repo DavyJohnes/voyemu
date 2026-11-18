@@ -1,0 +1,12 @@
+{
+  "type": "jar",
+  "minSdk": 28,
+  "output": "monkey.jar",
+  "frameworkBase": {
+    "jar": "/system/framework/monkey.jar",
+    "oat": "/system/framework/oat/arm64/monkey.odex",
+    "oat_sha256": "070264c08c39d8cf5de3543f4665cbdb06e17f9dc53a23cc3353327f7eb2b0f2",
+    "vdex": "/system/framework/oat/arm64/monkey.vdex",
+    "vdex_sha256": "235c343c515d30140f9ae35cda4ef081749d0859aa5985ae392c215b4596fa9b"
+  }
+}

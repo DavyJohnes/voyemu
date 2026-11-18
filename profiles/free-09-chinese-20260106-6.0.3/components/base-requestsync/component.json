@@ -1,0 +1,12 @@
+{
+  "type": "jar",
+  "minSdk": 28,
+  "output": "requestsync.jar",
+  "frameworkBase": {
+    "jar": "/system/framework/requestsync.jar",
+    "oat": "/system/framework/oat/arm64/requestsync.odex",
+    "oat_sha256": "1e73978408a64f74bf25e99fcc6804e805be92e3d1e04d5b90fecbbda65b01be",
+    "vdex": "/system/framework/oat/arm64/requestsync.vdex",
+    "vdex_sha256": "be4d3aa0f6798974017cbbf37a02c5d78957225cfefba0188cd2438d7afdf463"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "schema": 1,
+  "api": 30,
+  "constants": {"original_sha256_allowlist": ["d95d1b05418660d278fbaf2e6e390f8849d3dd23555a38d8d1965efb85cccede"]},
+  "calls": [{"operation": "guardOriginalNaviVehicle", "args": []}],
+  "helper": "api30-original-navi-identity/vehicle-src/com/voyemu/qgapi/VehicleBroker.java"
+}

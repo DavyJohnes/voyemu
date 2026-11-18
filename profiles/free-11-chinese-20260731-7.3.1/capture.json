@@ -1,0 +1,231 @@
+{
+  "schema": 1,
+  "profile": "free-11-chinese-20260731-7.3.1",
+  "android": [
+    {
+      "name": "Launcher",
+      "file": "Launcher.apk",
+      "source": {
+        "package": "com.qinggan.app.launcher"
+      }
+    },
+    {
+      "name": "MusicConcate",
+      "file": "MusicConcate.apk",
+      "source": {
+        "package": "com.qinggan.app.music"
+      }
+    },
+    {
+      "name": "Setting",
+      "file": "Setting.apk",
+      "source": {
+        "package": "com.qinggan.app.setting"
+      }
+    },
+    {
+      "name": "SystemUI",
+      "file": "SystemUI.apk",
+      "source": {
+        "package": "com.qinggan.systemui"
+      }
+    },
+    {
+      "name": "SystemService",
+      "file": "SystemService.apk",
+      "source": {
+        "package": "com.qinggan.systemservice"
+      }
+    },
+    {
+      "name": "QGSettingProvider",
+      "file": "QGSettingProvider.apk",
+      "source": {
+        "package": "com.qinggan.providers.settings"
+      }
+    },
+    {
+      "name": "QGAPI",
+      "file": "framework/QGAPI.jar",
+      "source": {
+        "path": "/system/framework/QGAPI.jar"
+      }
+    },
+    {
+      "name": "QGMOD",
+      "file": "framework/QGMOD.jar",
+      "source": {
+        "path": "/system/framework/QGMOD.jar"
+      }
+    },
+    {
+      "name": "QGVehicle",
+      "file": "framework/QGVehicle.jar",
+      "source": {
+        "path": "/system/framework/QGVehicle.jar"
+      }
+    },
+    {
+      "name": "android.car",
+      "file": "framework/android.car.jar",
+      "source": {
+        "path": "/system/framework/android.car.jar"
+      }
+    },
+    {
+      "name": "Ivt8BluetoothAdapter",
+      "file": "framework/Ivt8BluetoothAdapter.jar",
+      "source": {
+        "path": "/system/framework/Ivt8BluetoothAdapter.jar"
+      }
+    },
+    {
+      "name": "frameworkResources",
+      "file": "framework/framework-res.apk",
+      "source": {
+        "path": "/system/framework/framework-res.apk"
+      }
+    },
+    {
+      "name": "frameworkBase",
+      "file": "framework/framework.jar",
+      "source": {
+        "path": "/system/framework/framework.jar"
+      }
+    },
+    {
+      "name": "servicesFramework",
+      "file": "framework/services.jar",
+      "source": {
+        "path": "/system/framework/services.jar"
+      }
+    },
+    {
+      "name": "theme",
+      "file": "theme/defaulttheme",
+      "type": "tree",
+      "source": {
+        "path": "/resc/defaulttheme"
+      }
+    },
+    {
+      "name": "KeyManagerService",
+      "file": "KeyManagerService.apk",
+      "source": {
+        "path": "/system/priv-app/KeyManagerService-release/KeyManagerService-release.apk"
+      }
+    },
+    {
+      "name": "Hiboard",
+      "file": "Hiboard.apk",
+      "source": {
+        "path": "/vendor/app/Hiboard-release-signed/Hiboard-release-signed.apk"
+      }
+    },
+    {
+      "name": "ThirdScreen",
+      "file": "ThirdScreen.apk",
+      "source": {
+        "package": "com.qinggan.app.thirdscreen"
+      }
+    },
+    {
+      "name": "VehicleAir",
+      "file": "VehicleAir.apk",
+      "source": {
+        "package": "com.qinggan.app.vehicle"
+      }
+    },
+    {
+      "name": "VehicleSetting",
+      "file": "VehicleSetting.apk",
+      "source": {
+        "package": "com.qinggan.app.vehiclesetting"
+      }
+    },
+    {
+      "name": "QGMedia",
+      "file": "QGMedia.apk",
+      "source": {
+        "package": "com.qinggan.media"
+      }
+    },
+    {
+      "name": "Navi",
+      "file": "Navi.apk",
+      "source": {
+        "package": "com.baidu.naviauto"
+      }
+    },
+    {
+      "name": "Camera",
+      "file": "Camera.apk",
+      "source": {
+        "package": "com.qinggan.camera"
+      }
+    },
+    {
+      "name": "Gallery",
+      "file": "Gallery.apk",
+      "source": {
+        "package": "com.qinggan.app.gallery"
+      }
+    },
+    {
+      "name": "AudioPolicy",
+      "file": "AudioPolicy-release.apk",
+      "source": {
+        "path": "/system/priv-app/AudioPolicy-release/AudioPolicy-release.apk"
+      }
+    },
+    {
+      "name": "BootAnimation",
+      "file": "media/bootanimation.zip",
+      "source": {
+        "path": "/system/media/bootanimation.zip"
+      }
+    },
+    {
+      "name": "BootAnimation1",
+      "file": "media/bootanimation1.zip",
+      "source": {
+        "path": "/system/media/bootanimation1.zip"
+      }
+    },
+    {
+      "name": "BootAnimation2",
+      "file": "media/bootanimation2.zip",
+      "source": {
+        "path": "/system/media/bootanimation2.zip"
+      }
+    },
+    {
+      "name": "SystemExtSepolicy",
+      "file": "policy/system_ext_sepolicy.cil",
+      "source": {
+        "path": "/system/system_ext/etc/selinux/system_ext_sepolicy.cil"
+      }
+    },
+    {
+      "name": "VendorSepolicy",
+      "file": "policy/vendor_sepolicy.cil",
+      "source": {
+        "path": "/vendor/etc/selinux/vendor_sepolicy.cil"
+      }
+    },
+    {
+      "name": "SystemPolicy",
+      "file": "SystemPolicy-release.apk",
+      "source": {
+        "package": "com.qinggan.systempolicy"
+      }
+    },
+    {
+      "name": "QGBus",
+      "file": "QGBus-release.apk",
+      "source": {
+        "package": "com.qinggan.QGBus"
+      }
+    }
+  ]
+}

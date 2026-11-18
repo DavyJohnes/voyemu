@@ -1,0 +1,19 @@
+{
+  "api": 28,
+  "calls": [
+    {
+      "args": [
+        "lib/armeabi-v7a/libjni_qgHandWrite.so"
+      ],
+      "operation": "removeEntry"
+    },
+    {
+      "args": [
+        "lib/armeabi-v7a/libjni_qgime.so"
+      ],
+      "operation": "removeEntry"
+    }
+  ],
+  "constants": {},
+  "schema": 1
+}

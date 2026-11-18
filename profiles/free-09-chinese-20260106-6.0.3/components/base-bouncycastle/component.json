@@ -1,0 +1,12 @@
+{
+  "type": "jar",
+  "minSdk": 28,
+  "output": "bouncycastle.jar",
+  "frameworkBase": {
+    "jar": "/system/framework/bouncycastle.jar",
+    "oat": "/system/framework/arm64/boot-bouncycastle.oat",
+    "oat_sha256": "3aefe6639717af043f032c5adf0ae4bb2ab244948f5117683d98e071a79246d2",
+    "vdex": "/system/framework/boot-bouncycastle.vdex",
+    "vdex_sha256": "60b3bd7f3790864413c5421e873de605c4ab500c0ca76c3564e11c4413548c3e"
+  }
+}

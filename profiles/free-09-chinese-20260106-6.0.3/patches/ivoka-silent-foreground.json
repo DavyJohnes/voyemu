@@ -1,0 +1,34 @@
+{
+  "api": 28,
+  "calls": [
+    {
+      "args": [
+        "Lcom/qinggan/qingai/ivoka/adapter/IvokaAdapter;->startServiceForeground(Landroid/app/Service;)V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "const-string v1, \"40\""
+              ],
+              "with": [
+                "const-string v1, \"voyemu.service.ivoka.v1\""
+              ]
+            },
+            {
+              "before": [
+                "invoke-virtual {v0, v2}, Landroid/app/NotificationManager;->createNotificationChannel(Landroid/app/NotificationChannel;)V"
+              ],
+              "insert": [
+                "const/4 v3, 0x0",
+                "invoke-virtual {v2, v3, v3}, Landroid/app/NotificationChannel;->setSound(Landroid/net/Uri;Landroid/media/AudioAttributes;)V"
+              ]
+            }
+          ]
+        }
+      ],
+      "operation": "editMethod"
+    }
+  ],
+  "constants": {},
+  "schema": 1
+}

@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "api": 30,
+  "calls": [
+    {
+      "operation": "guardPassionAvmNexus",
+      "args": []
+    }
+  ],
+  "constants": {
+    "original_sha256_allowlist": [
+      "ca78d415246c5be5c892d93a1b90c9dc19a638024af3ec61877c309cee7b8ecb"
+    ]
+  }
+}

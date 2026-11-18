@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "profile": "passion-11-russian-20260403-2.1.4.80",
+  "api": 30,
+  "native": true,
+  "input_sha256": "a49213f01ea1f8ec19b41311116bc9324c682af1482297e4bbbc05265dfd623e",
+  "output_sha256": "1f322fc1fdea910bee266cc00126d2e8429b82a4a283250f12655e5d49b83d2c",
+  "description": "Exact OEM service-created boot property uses existing system_prop permissions; no default property policy is widened."
+}

@@ -1,0 +1,12 @@
+{
+  "type": "apk",
+  "minSdk": 30,
+  "targetSdk": 30,
+  "sign": "platform",
+  "compatibility": {
+    "active": false,
+    "guestVerified": false,
+    "purpose": "Developer secondary HOME dispatch; Activity/window/frame acceptance remains external.",
+    "targetSourceSha256": "4032f14c0fc49fd52514737309d2af67c9d4ff9340dd534874f46cbe2e748c00"
+  }
+}

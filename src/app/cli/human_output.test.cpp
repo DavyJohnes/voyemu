@@ -1,0 +1,118 @@
+#include "human_output.hpp"
+#include <cassert>
+#include <exception>
+#include <iostream>
+using namespace voyemu;
+
+int main() try {
+    auto plain = [](const std::string &text) {
+        assert(!text.empty() && text.back() == '\n' &&
+               Json::parse(text, nullptr, false).is_discarded());
+    };
+    const auto names = human_cli_output("list", Json::array({"free-profile", "passion-profile"}),
+                                        "free-profile");
+
+    plain(names);
+    assert(names == "Profiles\n  free-profile\n  passion-profile\n");
+    const auto status = human_cli_output("status",
+                                         {{"stopped", false},
+                                          {"machine_seed", "/machines/My car"},
+                                          {"deliveries",
+                                           {{"android", {{"status", "guest_acknowledged"}}},
+                                            {"qnx", {{"status", "not_started"}}}}}},
+                                         "free-profile");
+    plain(status);
+    assert(status.find("/machines/My car") != std::string::npos &&
+           status.find("ready") != std::string::npos && status.find("off") != std::string::npos);
+    const Json grpc{{"status", "listening"},
+                    {"host", "127.0.0.1"},
+                    {"port", 30123},
+                    {"discovery", "/private/session/qnx-frame-grpc.json"},
+                    {"token", "fixture-secret"}};
+    const auto cluster_status = human_cli_output(
+            "status", {{"stopped", false}, {"deliveries", {{"qnx", {{"frame_grpc", grpc}}}}}},
+            "free-profile");
+    assert(cluster_status.find("/private/session/qnx-frame-grpc.json") != std::string::npos &&
+           cluster_status.find("fixture-secret") == std::string::npos);
+    const auto stopped = human_cli_output("status", {{"stopped", true}}, "free-profile");
+    plain(stopped);
+    assert(stopped.find("stopped") != std::string::npos);
+
+    for (const auto *command : {"restart", "stop", "patch", "fetch"}) {
+        plain(human_cli_output(command, {{"ok", true}, {"with_cluster", true}}, "free-profile"));
+    }
+
+    const auto recovered = human_cli_output("status",
+                                            {{"stopped", true},
+                                             {"deliveries",
+                                              {{"android", {{"status", "host_terminal"}}},
+                                               {"qnx", {{"status", "host_terminal"}}}}}},
+                                            "free-profile");
+    assert(recovered.find("host_terminal") == std::string::npos &&
+           recovered.find("off") != std::string::npos);
+    const auto failed = human_cli_output(
+            "status",
+            {{"stopped", true}, {"deliveries", {{"qnx", {{"status", "graphics_worker_exited"}}}}}},
+            "free-profile");
+    assert(failed.find("graphics_worker_exited") != std::string::npos);
+    const Json started{{"ok", true}, {"with_cluster", true}, {"with_multimedia", true}};
+    assert(human_cli_output("start", started, "free-profile").empty());
+    assert(human_cli_output("start", started, "free-profile", "/machines/car", true) ==
+           "Session active: /machines/car\nCluster: on\nMultimedia: on\n");
+    assert(human_cli_output("start", {{"ok", false}, {"error", "launch failed"}}, "free-profile") ==
+           "Voyemu: launch failed\n");
+    const auto check = human_cli_output("check",
+                                        {{"root", "/host installation"},
+                                         {"android_launch_spec", false},
+                                         {"cluster_launch_spec", true}},
+                                        "free-profile");
+    plain(check);
+    assert(check.find("Installation: /host installation") != std::string::npos &&
+           check.find("Multimedia launch: missing") != std::string::npos);
+    const auto deps = human_cli_output("deps", {{"preparation_tools_ready", false}},
+                                       "free-profile");
+    plain(deps);
+    assert(deps.find("--jdk") != std::string::npos && deps.find("QNX") == std::string::npos);
+    const auto built = human_cli_output(
+            "build", {{"android_ready", true}, {"runtime", "/machines/car/runtime.json"}},
+            "free-profile");
+    plain(built);
+    assert(built.find("Multimedia prepared") != std::string::npos &&
+           built.find("QNX engine") == std::string::npos);
+    // deps, check and build name a QNX engine that this host cannot install.
+    const Json unavailable = {{"status", "unavailable"},
+                              {"reason", "QNX_HOST_ASSET_MISSING: not published yet"}};
+    const auto qnx_deps = human_cli_output("deps", {{"qnx_host", unavailable}}, "free-profile");
+    const auto qnx_build = human_cli_output(
+            "build", {{"android_ready", true}, {"qnx_host", unavailable}}, "free-profile");
+    const auto qnx_check = human_cli_output("check",
+                                            {{"root", "/host installation"},
+                                             {"android_launch_spec", true},
+                                             {"cluster_launch_spec", false},
+                                             {"qnx_host", unavailable}},
+                                            "free-profile");
+
+    for (const auto &output : {qnx_deps, qnx_build, qnx_check}) {
+        plain(output);
+        assert(output.find("The QNX engine of this host is unavailable") != std::string::npos);
+    }
+
+    assert(human_cli_output("deps", {{"qnx_host", {{"executable", "/qemu"}}}}, "free-profile")
+                   .find("QNX engine") == std::string::npos);
+    plain(human_cli_output("build", {{"profile_ready", true}}, "free-profile"));
+    const auto failure = human_cli_output(
+            "stop", {{"ok", false}, {"error", {{"message", "owned guest is still running"}}}},
+            "free-profile");
+    plain(failure);
+    assert(failure.find("owned guest is still running") != std::string::npos &&
+           failure.find("Session stopped") == std::string::npos);
+    const auto error = human_cli_error("CLI_COMMAND: unknown command 'strat'; run 'voyemu help'");
+    plain(error);
+    assert(error.find("unknown command 'strat'") != std::string::npos &&
+           error.find("prototype") == std::string::npos);
+    std::cout << "Human CLI summaries, tables and errors remain plain text\n";
+} catch (const std::exception &error) {
+    std::cerr << error.what() << '\n';
+
+    return 1;
+}

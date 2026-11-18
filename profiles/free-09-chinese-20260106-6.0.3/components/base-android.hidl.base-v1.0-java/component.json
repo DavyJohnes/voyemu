@@ -1,0 +1,12 @@
+{
+  "type": "jar",
+  "minSdk": 28,
+  "output": "android.hidl.base-V1.0-java.jar",
+  "frameworkBase": {
+    "jar": "/system/framework/android.hidl.base-V1.0-java.jar",
+    "oat": "/system/framework/arm64/boot-android.hidl.base-V1.0-java.oat",
+    "oat_sha256": "c8398ba91c4f304749745f1ecf09f82128d7ed4c32115d1099ed1224129679bc",
+    "vdex": "/system/framework/boot-android.hidl.base-V1.0-java.vdex",
+    "vdex_sha256": "a12217c68de7bd211a050ec53107a47dfe98e3a7b428082a06c7bdba0f4a6724"
+  }
+}

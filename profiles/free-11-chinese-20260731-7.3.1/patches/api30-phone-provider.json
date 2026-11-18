@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "api": 30,
+  "constants": {
+    "original_sha256_allowlist": [
+      "c8a33e377a6a708ef6c3cca7e8cc3f938349c04dd494dac32bcf823a3096efa1"
+    ]
+  },
+  "calls": [
+    {
+      "operation": "guardPhoneProvider",
+      "args": []
+    },
+    {
+      "operation": "useLibraries",
+      "args": [
+        [
+          "QGAPI",
+          "QGMOD",
+          "QGVehicle"
+        ]
+      ]
+    }
+  ],
+  "helperSources": [
+    "profiles/free-09-chinese-20260106-6.0.3/patches/phone-provider/src/com/voyemu/input/PhoneControlProvider.java",
+    "profiles/free-09-chinese-20260106-6.0.3/patches/phone-provider/src/com/voyemu/input/PhonePeerProvider.java"
+  ],
+  "windowPolicy": {
+    "originalDexSha256": "e9e9710fc23ec92b9c1720c6ffbcf29c0bfdcd45c5bf8fa9a791846bd6d7c15b",
+    "preparedDexSha256": "f05d6bdbfe9b1399b2e4560f26760d3cff3c65f3bae1fbc05ee55a0947ef7496",
+    "automaticWindow": "existing-oem-full-renderer",
+    "wechatAndManualMinimum": "preserved"
+  }
+}

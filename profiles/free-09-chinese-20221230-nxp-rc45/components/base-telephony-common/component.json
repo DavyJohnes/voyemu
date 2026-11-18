@@ -1,0 +1,12 @@
+{
+  "type": "jar",
+  "minSdk": 28,
+  "output": "telephony-common.jar",
+  "frameworkBase": {
+    "jar": "/system/framework/telephony-common.jar",
+    "oat": "/system/framework/arm64/boot-telephony-common.oat",
+    "oat_sha256": "a82156cbcb6dafcbf9dcbdcb863b22669f744e97a71c1f83dae8b99c602a678e",
+    "vdex": "/system/framework/boot-telephony-common.vdex",
+    "vdex_sha256": "a070b76480464d6d4c79ecd738b102d936c605d1fad73199ee83a5aa9f34ed1d"
+  }
+}

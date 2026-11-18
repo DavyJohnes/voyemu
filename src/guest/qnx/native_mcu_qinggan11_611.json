@@ -1,0 +1,4055 @@
+{
+  "schema": 1,
+  "hardware_adapter": "sa8155-qinggan11-611",
+  "map_sha256": "255335b86bb5fd782d23086018dcfc3874d088364ad5f15b264cfb12020d800e",
+  "packet_bytes": 650,
+  "wire_fields": 736,
+  "projected_fields": 56,
+  "source_parser_sha256": "a830d876d9091190096025f4f4eb81294078b3002d955283b3a9dec296414f05",
+  "source_engine_sha256": "faeb580b46c5c92d7ecd5b707be15b85874c838471f5cb9ca010b9a90e9ae195",
+  "fields": [
+    {
+      "position": 0,
+      "name": "ign",
+      "normalized_width": 1,
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 1,
+        "start_bit": 0,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x3944",
+        "output_bit": 0,
+        "output_width": 1
+      }
+    },
+    {
+      "position": 1,
+      "name": "turn_left",
+      "normalized_width": 1,
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 2,
+        "start_bit": 1,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x3934",
+        "output_bit": 1,
+        "output_width": 1
+      }
+    },
+    {
+      "position": 2,
+      "name": "turn_right",
+      "normalized_width": 1,
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 3,
+        "start_bit": 2,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x3924",
+        "output_bit": 2,
+        "output_width": 1
+      }
+    },
+    {
+      "position": 3,
+      "name": "pos_lamp",
+      "normalized_width": 1,
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 4,
+        "start_bit": 3,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x3914",
+        "output_bit": 3,
+        "output_width": 1
+      }
+    },
+    {
+      "position": 4,
+      "name": "low_beam",
+      "normalized_width": 1,
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 5,
+        "start_bit": 4,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_lightitems_struct",
+        "case_address": "0x515c",
+        "output_bit": 4,
+        "output_width": 1
+      }
+    },
+    {
+      "position": 5,
+      "name": "high_beam",
+      "normalized_width": 1,
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 6,
+        "start_bit": 5,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_lightitems_struct",
+        "case_address": "0x514c",
+        "output_bit": 5,
+        "output_width": 1
+      }
+    },
+    {
+      "position": 6,
+      "name": "hcm_adbFuctionStsLt_bak",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 7,
+      "name": "hcm_adbFuctionStsRt_bak",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 8,
+      "name": "rear_fog",
+      "normalized_width": 1,
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 9,
+        "start_bit": 10,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_lightitems_struct",
+        "case_address": "0x511c",
+        "output_bit": 10,
+        "output_width": 1
+      }
+    },
+    {
+      "position": 9,
+      "name": "epb_fault",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 10,
+      "name": "bcm_DRLStatus",
+      "normalized_width": 1,
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 11,
+        "start_bit": 13,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_lightitems_struct",
+        "case_address": "0x50fc",
+        "output_bit": 13,
+        "output_width": 1
+      }
+    },
+    {
+      "position": 11,
+      "name": "bms_authenticationResult",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 12,
+      "name": "bcm_tpms_lamp",
+      "normalized_width": 2,
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 13,
+        "start_bit": 16,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_lightitems_struct",
+        "case_address": "0x50dc",
+        "output_bit": 16,
+        "output_width": 2
+      }
+    },
+    {
+      "position": 13,
+      "name": "brake_oil_low",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 14,
+      "name": "abs_fault",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 15,
+      "name": "ebd_fault",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 16,
+      "name": "epb_parking",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 17,
+      "name": "autohold_lamp",
+      "normalized_width": 3,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 18,
+      "name": "assist_sys_fault",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 19,
+      "name": "esc_lamp",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 20,
+      "name": "esc_off",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 21,
+      "name": "eps_fault",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 22,
+      "name": "hdc_lamp",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 23,
+      "name": "acu_driverSeatBeltSts",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 24,
+      "name": "acu_passengerSeatBeltSts",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 25,
+      "name": "RearLeftSeatBelt",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 26,
+      "name": "RearMidSeatBelt",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 27,
+      "name": "RearRightSeatBelt",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 28,
+      "name": "acu_warning",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 29,
+      "name": "fuel_low_alert",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 30,
+      "name": "mil_lamp",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 31,
+      "name": "eng_coolant_temp_high",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 32,
+      "name": "eng_coolant_temp",
+      "normalized_width": 8,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 33,
+      "name": "engine_oil_low",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 34,
+      "name": "cool_ant_low",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 35,
+      "name": "dcdc_systemSts",
+      "normalized_width": 4,
+      "unsupported_initial": 2,
+      "wire": {
+        "index": 36,
+        "start_bit": 64,
+        "width": 4,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x37d4",
+        "output_bit": 45,
+        "output_width": 4
+      }
+    },
+    {
+      "position": 36,
+      "name": "pwr_bat_soc_low",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 37,
+      "name": "ready_lamp",
+      "normalized_width": 1,
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 38,
+        "start_bit": 69,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x37b4",
+        "output_bit": 50,
+        "output_width": 1
+      }
+    },
+    {
+      "position": 38,
+      "name": "mcu0_fault",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 39,
+      "name": "turtle_lamp",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 40,
+      "name": "vcu_alertLevel",
+      "normalized_width": 3,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 41,
+      "name": "bms_alert",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 42,
+      "name": "isolationFault",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 43,
+      "name": "acc_mode",
+      "normalized_width": 3,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 44,
+      "name": "mpc_icaSts",
+      "normalized_width": 3,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 45,
+      "name": "ivi_overspdWarningSet",
+      "normalized_width": 8,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 46,
+      "name": "overspdWarning",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 47,
+      "name": "mpc_isa_speed_limit",
+      "normalized_width": 6,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 48,
+      "name": "mpc_isaOnOffSts",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 49,
+      "name": "isa_limit_warning",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 50,
+      "name": "bcm_pepsPowerMode",
+      "normalized_width": 3,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 51,
+      "name": "reserve_0_5",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 52,
+      "name": "aeb_sts",
+      "normalized_width": 3,
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 53,
+        "start_bit": 110,
+        "width": 3,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x36fc",
+        "output_bit": 85,
+        "output_width": 3,
+        "engine_name": "mrr_aebSts",
+        "normalized_name_comparison": "different"
+      }
+    },
+    {
+      "position": 53,
+      "name": "mrr_fcwSts",
+      "normalized_width": 3,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 54,
+      "name": "ldws_lamp",
+      "normalized_width": 3,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 55,
+      "name": "esc_hbbSts",
+      "normalized_width": 3,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 56,
+      "name": "asc_ASC_errorSts",
+      "normalized_width": 3,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 57,
+      "name": "vcu_CCStas",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 58,
+      "name": "charge_lamp",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 59,
+      "name": "bms_state",
+      "normalized_width": 4,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 60,
+      "name": "mcuf0_overTemperature",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 61,
+      "name": "vcu_tcmFail",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 62,
+      "name": "sound_enable",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 63,
+      "name": "hcm_leftHighBeamFaultSt",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 64,
+      "name": "hcm_rightHighBeamFaultSt",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 65,
+      "name": "hcm_leftLowBeamFaultSt",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 66,
+      "name": "hcm_rightLowBeamFaultSt",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 67,
+      "name": "hcm_turnLampWarningLt",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 68,
+      "name": "hcm_turnLampWarningRt",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 69,
+      "name": "bcm_rllmLeftTurnLampFault",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 70,
+      "name": "bcm_rrlmRightTurnLampFault",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 71,
+      "name": "bcm_rmlmleftTurnLampFault",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 72,
+      "name": "bcm_rmlmrightTurnLampFault",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 73,
+      "name": "hcm_middleLeftPositionLampFault",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 74,
+      "name": "hcm_positionLampWarningLt",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 75,
+      "name": "hcm_middleRightPositionLampFault",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 76,
+      "name": "hcm_positionLampWarningRt",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 77,
+      "name": "bcm_rllmPositionLampFault",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 78,
+      "name": "bcm_rmlmpositionLampFault",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 79,
+      "name": "bcm_rrlmpositionLampFault",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 80,
+      "name": "hcm_dayTimeRunningLampWarningLt",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 81,
+      "name": "hcm_dayTimeRunningLampWarningRt",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 82,
+      "name": "hcm_alsErrorStsLt",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 83,
+      "name": "hcm_alsErrorStsRt",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 84,
+      "name": "bcm_rllmstopLampFault",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 85,
+      "name": "bcm_rmlmstopLampFault",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 86,
+      "name": "bcm_rmlmhighStopLampFault",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 87,
+      "name": "bcm_rrlmstopLampFault",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 88,
+      "name": "bcm_rllmfogLampFault",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 89,
+      "name": "bcm_rrlmfogLampFault",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 90,
+      "name": "bcm_rllmreverseLampFault",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 91,
+      "name": "bcm_rrlmreverseLampFault",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 92,
+      "name": "mrr_r1_rearCollisionWarning",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 93,
+      "name": "esc_hhcActive",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 94,
+      "name": "bsd_lca_sts",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 95,
+      "name": "bsd_lca_txt",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 96,
+      "name": "dow_txt",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 97,
+      "name": "rcta_txt",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 98,
+      "name": "rcw_txt",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 99,
+      "name": "mrr_r1_systemErrorSts",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 100,
+      "name": "washing_liquid_low",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 101,
+      "name": "ev_lamp",
+      "normalized_width": 2,
+      "unsupported_initial": 2
+    },
+    {
+      "position": 102,
+      "name": "break_warning",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 103,
+      "name": "hood",
+      "normalized_width": 1,
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 103,
+        "start_bit": 184,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x341c",
+        "output_bit": 157,
+        "output_width": 1
+      }
+    },
+    {
+      "position": 104,
+      "name": "door_fl",
+      "normalized_width": 1,
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 104,
+        "start_bit": 185,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x340c",
+        "output_bit": 158,
+        "output_width": 1
+      }
+    },
+    {
+      "position": 105,
+      "name": "door_fr",
+      "normalized_width": 1,
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 105,
+        "start_bit": 186,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x33fc",
+        "output_bit": 159,
+        "output_width": 1
+      }
+    },
+    {
+      "position": 106,
+      "name": "door_rl",
+      "normalized_width": 1,
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 106,
+        "start_bit": 187,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x33ec",
+        "output_bit": 160,
+        "output_width": 1
+      }
+    },
+    {
+      "position": 107,
+      "name": "door_rr",
+      "normalized_width": 1,
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 107,
+        "start_bit": 188,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x33dc",
+        "output_bit": 161,
+        "output_width": 1
+      }
+    },
+    {
+      "position": 108,
+      "name": "tail_gate",
+      "normalized_width": 1,
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 108,
+        "start_bit": 189,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x33cc",
+        "output_bit": 162,
+        "output_width": 1
+      }
+    },
+    {
+      "position": 109,
+      "name": "fuel_cap",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 110,
+      "name": "charge_cap",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 111,
+      "name": "volOrSOCLowAlarm",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 112,
+      "name": "vcu_batteryOverTemperature",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 113,
+      "name": "etc_disassemblySts",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 114,
+      "name": "etc_lockSts",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 115,
+      "name": "etc_detect",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 116,
+      "name": "etc_lamp",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 117,
+      "name": "etc_tranStauts",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 118,
+      "name": "bms_f003_packOverCrntChg",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 119,
+      "name": "icm_dmsWearyLeverSts",
+      "normalized_width": 3,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 120,
+      "name": "gsm_warnInformation_bak",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 121,
+      "name": "gsm_faultLevel",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 122,
+      "name": "maintenance_sts_km",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 123,
+      "name": "maintenance_sts_day",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 124,
+      "name": "remain_maintenance_km",
+      "normalized_width": 9,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 125,
+      "name": "remain_maintenance_days",
+      "normalized_width": 4,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 126,
+      "name": "Maintain_Reminder",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 127,
+      "name": "maintenance",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 128,
+      "name": "can_v1_5_bcm_tpmsLFSts",
+      "normalized_width": 3,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 129,
+      "name": "bcm_tyreLFPressure",
+      "normalized_width": 8,
+      "unsupported_initial": 24,
+      "wire": {
+        "index": 129,
+        "start_bit": 230,
+        "width": 8,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x32ac",
+        "output_bit": 199,
+        "output_width": 8
+      }
+    },
+    {
+      "position": 130,
+      "name": "bcm_tyreLFTemp",
+      "normalized_width": 8,
+      "unsupported_initial": 81,
+      "wire": {
+        "index": 130,
+        "start_bit": 238,
+        "width": 8,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x329c",
+        "output_bit": 207,
+        "output_width": 8
+      }
+    },
+    {
+      "position": 131,
+      "name": "can_v1_5_bcm_tpmsRFSts",
+      "normalized_width": 3,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 132,
+      "name": "bcm_tyreRFPressure",
+      "normalized_width": 8,
+      "unsupported_initial": 24,
+      "wire": {
+        "index": 132,
+        "start_bit": 249,
+        "width": 8,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x328c",
+        "output_bit": 215,
+        "output_width": 8
+      }
+    },
+    {
+      "position": 133,
+      "name": "bcm_tyreRFTemp",
+      "normalized_width": 8,
+      "unsupported_initial": 81,
+      "wire": {
+        "index": 133,
+        "start_bit": 257,
+        "width": 8,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x3284",
+        "output_bit": 224,
+        "output_width": 8
+      }
+    },
+    {
+      "position": 134,
+      "name": "can_v1_5_bcm_tpmsLRSts",
+      "normalized_width": 3,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 135,
+      "name": "bcm_tyreLRPressure",
+      "normalized_width": 8,
+      "unsupported_initial": 24,
+      "wire": {
+        "index": 135,
+        "start_bit": 268,
+        "width": 8,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x327c",
+        "output_bit": 232,
+        "output_width": 8
+      }
+    },
+    {
+      "position": 136,
+      "name": "bcm_tyreLRTemp",
+      "normalized_width": 8,
+      "unsupported_initial": 81,
+      "wire": {
+        "index": 136,
+        "start_bit": 276,
+        "width": 8,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x3274",
+        "output_bit": 240,
+        "output_width": 8
+      }
+    },
+    {
+      "position": 137,
+      "name": "can_v1_5_bcm_tpmsRRSts",
+      "normalized_width": 3,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 138,
+      "name": "bcm_tyreRRPressure",
+      "normalized_width": 8,
+      "unsupported_initial": 24,
+      "wire": {
+        "index": 138,
+        "start_bit": 287,
+        "width": 8,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x326c",
+        "output_bit": 248,
+        "output_width": 8
+      }
+    },
+    {
+      "position": 139,
+      "name": "bcm_tyreRRTemp",
+      "normalized_width": 8,
+      "unsupported_initial": 81,
+      "wire": {
+        "index": 139,
+        "start_bit": 295,
+        "width": 8,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x3264",
+        "output_bit": 256,
+        "output_width": 8
+      }
+    },
+    {
+      "position": 140,
+      "name": "reserve_267_5",
+      "normalized_width": 5,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 141,
+      "name": "pos_lamp_tips",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 142,
+      "name": "bcm_sl_errSts",
+      "normalized_width": 4,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 143,
+      "name": "peps_key_not_incar",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 144,
+      "name": "peps_key_serch_fail",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 145,
+      "name": "immo_release",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 146,
+      "name": "peps_key_close",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 147,
+      "name": "peps_low_bat",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 148,
+      "name": "peps_relay_err",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 149,
+      "name": "epb_text",
+      "normalized_width": 4,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 150,
+      "name": "esc_hhcAvailable",
+      "normalized_width": 1,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 151,
+      "name": "avh_available",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 152,
+      "name": "avh_stdby",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 153,
+      "name": "bcm_12VBatterySOC",
+      "normalized_width": 8,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 154,
+      "name": "esc_hdcAvailable",
+      "normalized_width": 1,
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 154,
+        "start_bit": 335,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x317c",
+        "output_bit": 296,
+        "output_width": 1
+      }
+    },
+    {
+      "position": 155,
+      "name": "vcu_towMode",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 156,
+      "name": "vsp_errorIdentification",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 157,
+      "name": "peps_key_incar",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 158,
+      "name": "dc_charge_state",
+      "normalized_width": 4,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 159,
+      "name": "ac_charge_state",
+      "normalized_width": 4,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 160,
+      "name": "ac_charge_connect",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 161,
+      "name": "dc_charge_connect",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 162,
+      "name": "remain_charge_time",
+      "normalized_width": 10,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 163,
+      "name": "bms_pPack",
+      "normalized_width": 14,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 164,
+      "name": "obc_chargeVoltage",
+      "normalized_width": 17,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 165,
+      "name": "obc_chargeCurrent",
+      "normalized_width": 13,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 166,
+      "name": "vcu_consumpRatio50km",
+      "normalized_width": 8,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 167,
+      "name": "ivi_maxChrgSocSet",
+      "normalized_width": 8,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 168,
+      "name": "bms_chargeFormSts",
+      "normalized_width": 3,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 169,
+      "name": "ivi_ChargeEndTimeHour",
+      "normalized_width": 4,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 170,
+      "name": "ivi_ChargeStartTimeHour",
+      "normalized_width": 4,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 171,
+      "name": "ivi_ChargeEndTimeHalfDay",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 172,
+      "name": "ivi_ChargeStartTimeHalfDay",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 173,
+      "name": "ivi_ChargeEndTimeMinute",
+      "normalized_width": 6,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 174,
+      "name": "ivi_ChargeStartTimeMinute",
+      "normalized_width": 6,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 175,
+      "name": "obc_state",
+      "normalized_width": 4,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 176,
+      "name": "reserve_2_8",
+      "normalized_width": 4,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 177,
+      "name": "las_status",
+      "normalized_width": 3,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 178,
+      "name": "left_visualization",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 179,
+      "name": "right_visualization",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 180,
+      "name": "lasWarningModeSelection",
+      "normalized_width": 3,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 181,
+      "name": "mpc_laneAssitType",
+      "normalized_width": 3,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 182,
+      "name": "mrr_ccFuntionMode",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 183,
+      "name": "mpc_LL_Line_Curvature",
+      "normalized_width": 7,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 184,
+      "name": "mpc_RR_Line_Curvature",
+      "normalized_width": 7,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 185,
+      "name": "mpc_LAS_roadCurvature",
+      "normalized_width": 7,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 186,
+      "name": "llane_marker_type",
+      "normalized_width": 3,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 187,
+      "name": "rlane_marker_type",
+      "normalized_width": 3,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 188,
+      "name": "mpc_LL_LaneMarkerType",
+      "normalized_width": 3,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 189,
+      "name": "mpc_RR_LaneMarkerType",
+      "normalized_width": 3,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 190,
+      "name": "llane_distance",
+      "normalized_width": 6,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 191,
+      "name": "rlane_distance",
+      "normalized_width": 6,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 192,
+      "name": "mrr_obj0_wExist",
+      "normalized_width": 3,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 193,
+      "name": "mrr_obj0_TargetType",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 194,
+      "name": "mrr_obj0_dx",
+      "normalized_width": 8,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 195,
+      "name": "mrr_obj0_dy",
+      "normalized_width": 8,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 196,
+      "name": "mrr_obj0_Vx",
+      "normalized_width": 9,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 197,
+      "name": "mrr_obj1_wExist",
+      "normalized_width": 3,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 198,
+      "name": "mrr_obj1_TargetType",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 199,
+      "name": "mrr_obj1_dx",
+      "normalized_width": 8,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 200,
+      "name": "mrr_obj1_dy",
+      "normalized_width": 8,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 201,
+      "name": "mrr_obj1_Vx",
+      "normalized_width": 9,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 202,
+      "name": "mrr_obj2_wExist",
+      "normalized_width": 3,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 203,
+      "name": "mrr_obj2_TargetType",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 204,
+      "name": "mrr_obj2_dx",
+      "normalized_width": 8,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 205,
+      "name": "mrr_obj2_dy",
+      "normalized_width": 8,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 206,
+      "name": "mrr_obj2_Vx",
+      "normalized_width": 9,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 207,
+      "name": "mrr_obj3_wExist",
+      "normalized_width": 3,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 208,
+      "name": "mrr_obj3_TargetType",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 209,
+      "name": "mrr_obj3_dx",
+      "normalized_width": 8,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 210,
+      "name": "mrr_obj3_dy",
+      "normalized_width": 8,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 211,
+      "name": "mrr_obj3_Vx",
+      "normalized_width": 9,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 212,
+      "name": "mrr_r1_targetStsLR",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 213,
+      "name": "mrr_r1_targetDangerLevelLR",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 214,
+      "name": "mrr_r1_targetLongDisLR",
+      "normalized_width": 8,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 215,
+      "name": "mrr_r1_targetLateralDistanceLR",
+      "normalized_width": 8,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 216,
+      "name": "mrr_r1_targetTypeLR",
+      "normalized_width": 3,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 217,
+      "name": "mrr_r1_targetStsRR",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 218,
+      "name": "mrr_r1_targetDangerLevelRR",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 219,
+      "name": "mrr_r1_targetLongDisRR",
+      "normalized_width": 8,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 220,
+      "name": "mrr_r1_targetLateralDistanceRR",
+      "normalized_width": 8,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 221,
+      "name": "mrr_r1_targetTypeRR",
+      "normalized_width": 3,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 222,
+      "name": "adas_takeover_req",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 223,
+      "name": "mpc_text_infor",
+      "normalized_width": 5,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 224,
+      "name": "mrr_vSetDis",
+      "normalized_width": 9,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 225,
+      "name": "time_gap_set",
+      "normalized_width": 3,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 226,
+      "name": "acc_takeover_req",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 227,
+      "name": "mrr_text_info",
+      "normalized_width": 5,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 228,
+      "name": "pebs_warning",
+      "normalized_width": 3,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 229,
+      "name": "mrr_fcwOnOffSts",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 230,
+      "name": "vcu_vDisSet",
+      "normalized_width": 8,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 231,
+      "name": "vcu_ccState",
+      "normalized_width": 4,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 232,
+      "name": "wcm_reminder",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 233,
+      "name": "obc_ccOhm",
+      "normalized_width": 4,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 234,
+      "name": "bcm_readyReq",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 235,
+      "name": "Tbox_SysErSt",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 236,
+      "name": "vcu_KL15offReq",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 237,
+      "name": "reserve_194",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 238,
+      "name": "ASC_SusTempAdjust",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 239,
+      "name": "icm_dmsCameraSts",
+      "normalized_width": 3,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 240,
+      "name": "icm_dmsSts",
+      "normalized_width": 3,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 241,
+      "name": "icm_dmsDistractLeverSts",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 242,
+      "name": "icm_dmsDrvBehaviorMon",
+      "normalized_width": 3,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 243,
+      "name": "bcm_IndicationPressBrake",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 244,
+      "name": "bcm_LowFrequencyAntennaFault",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 245,
+      "name": "mpc_isaMode",
+      "normalized_width": 3,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 246,
+      "name": "driving_long_tips",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 247,
+      "name": "bcm_remoteForbidden",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 248,
+      "name": "vcu_GearPosNotEqual",
+      "normalized_width": 3,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 249,
+      "name": "pdc_OnOffSts",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 250,
+      "name": "reserve_3_6",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 251,
+      "name": "MCU_Software_Project_differ",
+      "normalized_width": 3,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 252,
+      "name": "trip_ax",
+      "normalized_width": 24,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 253,
+      "name": "tripax_avg_pwr",
+      "normalized_width": 11,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 254,
+      "name": "tripax_avg_spd",
+      "normalized_width": 8,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 255,
+      "name": "tripax_avg_fuelconsump",
+      "normalized_width": 8,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 256,
+      "name": "tripax_time_min",
+      "normalized_width": 13,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 257,
+      "name": "trip_fuel",
+      "normalized_width": 24,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 258,
+      "name": "tripfuel_avg_pwr",
+      "normalized_width": 11,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 259,
+      "name": "tripfuel_avg_spd",
+      "normalized_width": 8,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 260,
+      "name": "tripfuel_avg_fuelconsump",
+      "normalized_width": 8,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 261,
+      "name": "tripfuel_time_min",
+      "normalized_width": 13,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 262,
+      "name": "trip_interval_ready",
+      "normalized_width": 24,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 263,
+      "name": "current_trip_avg_pwr",
+      "normalized_width": 11,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 264,
+      "name": "current_trip_avg_spd",
+      "normalized_width": 8,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 265,
+      "name": "current_trip_avg_fuelconsump",
+      "normalized_width": 8,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 266,
+      "name": "current_trip_time_min",
+      "normalized_width": 13,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 267,
+      "name": "trip_interval_charge",
+      "normalized_width": 24,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 268,
+      "name": "last_charge_avg_pwr",
+      "normalized_width": 11,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 269,
+      "name": "last_charge_avg_fuelconsump",
+      "normalized_width": 8,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 270,
+      "name": "last_charge_avg_spd",
+      "normalized_width": 8,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 271,
+      "name": "last_charge_time_min",
+      "normalized_width": 13,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 272,
+      "name": "vcu_consumpRatioInstant",
+      "normalized_width": 11,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 273,
+      "name": "vcu_consumpRatioInstant_last1km",
+      "normalized_width": 11,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 274,
+      "name": "instant_value_unit",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 275,
+      "name": "fuel_instant",
+      "normalized_width": 8,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 276,
+      "name": "fuel_instant_last1km",
+      "normalized_width": 8,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 277,
+      "name": "instant_value_trip",
+      "normalized_width": 10,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 278,
+      "name": "rpm",
+      "normalized_width": 13,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 279,
+      "name": "bms_stEgyFlowSysDischRgn",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 280,
+      "name": "bms_stEgyFlowOBCAndBatt",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 281,
+      "name": "mcuf0_stEgyFlowAndBatt",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 282,
+      "name": "mcur0_stEgyFlowAndBatt",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 283,
+      "name": "vcu_stEgyFlowEngAndGenMot",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 284,
+      "name": "vcu_stEgyFlowGenMotAndBatt",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 285,
+      "name": "remain_mileage_e",
+      "normalized_width": 11,
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 285,
+        "start_bit": 1090,
+        "width": 11,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2984",
+        "output_bit": 1124,
+        "output_width": 11
+      }
+    },
+    {
+      "position": 286,
+      "name": "remain_mileage_f",
+      "normalized_width": 10,
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 639,
+        "start_bit": 2218,
+        "width": 11,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1934",
+        "output_bit": 1924,
+        "output_width": 11
+      }
+    },
+    {
+      "position": 287,
+      "name": "gear_valid",
+      "normalized_width": 1,
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 287,
+        "start_bit": 1111,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2964",
+        "output_bit": 1145,
+        "output_width": 1
+      }
+    },
+    {
+      "position": 288,
+      "name": "gear",
+      "normalized_width": 8,
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 288,
+        "start_bit": 1112,
+        "width": 8,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x295c",
+        "output_bit": 1152,
+        "output_width": 8
+      }
+    },
+    {
+      "position": 289,
+      "name": "odo",
+      "normalized_width": 24,
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 289,
+        "start_bit": 1120,
+        "width": 24,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x294c",
+        "output_bit": 1160,
+        "output_width": 24
+      }
+    },
+    {
+      "position": 290,
+      "name": "ambient_temp",
+      "normalized_width": 8,
+      "unsupported_initial": 120,
+      "wire": {
+        "index": 290,
+        "start_bit": 1144,
+        "width": 8,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2944",
+        "output_bit": 1184,
+        "output_width": 8
+      }
+    },
+    {
+      "position": 291,
+      "name": "vcu_driveMode",
+      "normalized_width": 3,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 292,
+      "name": "ivi_naviDirection",
+      "normalized_width": 4,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 293,
+      "name": "ivi_naviAltitude",
+      "normalized_width": 7,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 294,
+      "name": "reserve_281_10",
+      "normalized_width": 10,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 295,
+      "name": "ac_driverTempC_off",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 296,
+      "name": "ac_driverTempC",
+      "normalized_width": 5,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 297,
+      "name": "ivi_timeInfoSecond",
+      "normalized_width": 6,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 298,
+      "name": "ivi_timeInfoMinute",
+      "normalized_width": 6,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 299,
+      "name": "ivi_timeInfoHour",
+      "normalized_width": 5,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 300,
+      "name": "ivi_timeInfoDay",
+      "normalized_width": 5,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 301,
+      "name": "ivi_timeInfoMonth",
+      "normalized_width": 4,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 302,
+      "name": "ivi_timeInfoYear",
+      "normalized_width": 6,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 303,
+      "name": "ivi_timeValid",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 304,
+      "name": "nvs_displayReq",
+      "normalized_width": 3,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 305,
+      "name": "nvs_Sts",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 306,
+      "name": "nvs_cameraSts",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 307,
+      "name": "nvs_warnningSts",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 308,
+      "name": "nvs_textPrompt",
+      "normalized_width": 4,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 309,
+      "name": "spd_valid",
+      "normalized_width": 1,
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 311,
+        "start_bit": 1227,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x27f4",
+        "output_bit": 1267,
+        "output_width": 1
+      }
+    },
+    {
+      "position": 310,
+      "name": "speed",
+      "normalized_width": 8,
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 312,
+        "start_bit": 1228,
+        "width": 8,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x27e4",
+        "output_bit": 1268,
+        "output_width": 8
+      }
+    },
+    {
+      "position": 311,
+      "name": "fuel_percent",
+      "normalized_width": 7,
+      "unsupported_initial": 50,
+      "wire": {
+        "index": 313,
+        "start_bit": 1236,
+        "width": 7,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x27d4",
+        "output_bit": 1280,
+        "output_width": 7
+      }
+    },
+    {
+      "position": 312,
+      "name": "soc",
+      "normalized_width": 10,
+      "unsupported_initial": 55,
+      "wire": {
+        "index": 314,
+        "start_bit": 1243,
+        "width": 10,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x27c4",
+        "output_bit": 1287,
+        "output_width": 10
+      }
+    },
+    {
+      "position": 313,
+      "name": "soc_warning",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 314,
+      "name": "allowed_power",
+      "normalized_width": 7,
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 316,
+        "start_bit": 1255,
+        "width": 7,
+        "order": 1,
+        "named_consumer": "_pointitem_struct",
+        "case_address": "0x3f2c",
+        "output_bit": 147,
+        "output_width": 7
+      }
+    },
+    {
+      "position": 315,
+      "name": "actual_power",
+      "normalized_width": 7,
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 317,
+        "start_bit": 1262,
+        "width": 7,
+        "order": 1,
+        "named_consumer": "_pointitem_struct",
+        "case_address": "0x3f1c",
+        "output_bit": 160,
+        "output_width": 7
+      }
+    },
+    {
+      "position": 316,
+      "name": "recovery_power",
+      "normalized_width": 7,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 317,
+      "name": "bcm_sl_currentPos",
+      "normalized_width": 2,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 318,
+      "name": "IHBC_status",
+      "normalized_width": 3,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 319,
+      "name": "poweroff_req",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 320,
+      "name": "ivi_languageSet",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 321,
+      "name": "swm_Photo",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 322,
+      "name": "swm_menu",
+      "normalized_width": 1,
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 324,
+        "start_bit": 1286,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2774",
+        "output_bit": 1306,
+        "output_width": 1
+      }
+    },
+    {
+      "position": 323,
+      "name": "swm_OK",
+      "normalized_width": 1,
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 325,
+        "start_bit": 1287,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2764",
+        "output_bit": 1307,
+        "output_width": 1
+      }
+    },
+    {
+      "position": 324,
+      "name": "swm_upAdd",
+      "normalized_width": 1,
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 326,
+        "start_bit": 1288,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2754",
+        "output_bit": 1308,
+        "output_width": 1
+      }
+    },
+    {
+      "position": 325,
+      "name": "swm_downMinus",
+      "normalized_width": 1,
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 327,
+        "start_bit": 1289,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2744",
+        "output_bit": 1309,
+        "output_width": 1
+      }
+    },
+    {
+      "position": 326,
+      "name": "swm_leftLast",
+      "normalized_width": 1,
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 328,
+        "start_bit": 1290,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2734",
+        "output_bit": 1310,
+        "output_width": 1
+      }
+    },
+    {
+      "position": 327,
+      "name": "swm_rightNext",
+      "normalized_width": 1,
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 329,
+        "start_bit": 1291,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2724",
+        "output_bit": 1311,
+        "output_width": 1
+      }
+    },
+    {
+      "position": 328,
+      "name": "swm_nvsSwitch",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 329,
+      "name": "swm_phone",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 330,
+      "name": "swm_voice",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 331,
+      "name": "ic_bat_voltage",
+      "normalized_width": 12,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 332,
+      "name": "esc_vehicleSpeed",
+      "normalized_width": 13,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 333,
+      "name": "nvs_warningXCoordinate",
+      "normalized_width": 12,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 334,
+      "name": "nvs_warningYCoordinate",
+      "normalized_width": 10,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 335,
+      "name": "nvs_warningType",
+      "normalized_width": 3,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 336,
+      "name": "bcm_tpmsLFSts",
+      "normalized_width": 2,
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 338,
+        "start_bit": 1345,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x26d4",
+        "output_bit": 1357,
+        "output_width": 2
+      }
+    },
+    {
+      "position": 337,
+      "name": "bcm_tpmsRFSts",
+      "normalized_width": 2,
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 339,
+        "start_bit": 1347,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x26c4",
+        "output_bit": 1359,
+        "output_width": 2
+      }
+    },
+    {
+      "position": 338,
+      "name": "bcm_PressureWarningLF",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 339,
+      "name": "bcm_PressureWarningRF",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 340,
+      "name": "bcm_TireTempWarningLF",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 341,
+      "name": "bcm_TireTempWarningRF",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 342,
+      "name": "bcm_tpmsLFLOW_BATT_Warning",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 343,
+      "name": "bcm_tpmsRFLOW_BATT_Warning",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 344,
+      "name": "bcm_tpmsLFRAPID_LEAK_Warning",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 345,
+      "name": "bcm_tpmsRFRAPID_LEAK_Warning",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 346,
+      "name": "bcm_tpmsLRSts",
+      "normalized_width": 2,
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 348,
+        "start_bit": 1359,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2634",
+        "output_bit": 1371,
+        "output_width": 2
+      }
+    },
+    {
+      "position": 347,
+      "name": "bcm_tpmsRRSts",
+      "normalized_width": 2,
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 349,
+        "start_bit": 1361,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2624",
+        "output_bit": 1373,
+        "output_width": 2
+      }
+    },
+    {
+      "position": 348,
+      "name": "bcm_PressureWarningLR",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 349,
+      "name": "bcm_PressureWarningRR",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 350,
+      "name": "bcm_TireTempWarningLR",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 351,
+      "name": "bcm_TireTempWarningRR",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 352,
+      "name": "bcm_tpmsLRLOW_BATT_Warning",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 353,
+      "name": "bcm_tpmsRRLOW_BATT_Warning",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 354,
+      "name": "bcm_tpmsLRRAPID_LEAK_Warning",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 355,
+      "name": "bcm_tpmsRRRAPID_LEAK_Warning",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 356,
+      "name": "BMS_ThrmlRunawaySt",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 357,
+      "name": "upgradeMCU",
+      "normalized_width": 8,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 358,
+      "name": "speed10x",
+      "normalized_width": 12,
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 360,
+        "start_bit": 1383,
+        "width": 12,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2584",
+        "output_bit": 1388,
+        "output_width": 12
+      }
+    },
+    {
+      "position": 359,
+      "name": "allowed_power10x",
+      "normalized_width": 12,
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 361,
+        "start_bit": 1395,
+        "width": 12,
+        "order": 1,
+        "named_consumer": "_pointitem_struct",
+        "case_address": "0x3edc",
+        "output_bit": 192,
+        "output_width": 12
+      }
+    },
+    {
+      "position": 360,
+      "name": "actual_power10x",
+      "normalized_width": 12,
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 362,
+        "start_bit": 1407,
+        "width": 12,
+        "order": 1,
+        "named_consumer": "_pointitem_struct",
+        "case_address": "0x3ecc",
+        "output_bit": 204,
+        "output_width": 12
+      }
+    },
+    {
+      "position": 361,
+      "name": "recovery_power10x",
+      "normalized_width": 12,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 362,
+      "name": "IVI_remainingMileageswitch",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 363,
+      "name": "vcu_remainingMileageReal",
+      "normalized_width": 11,
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 365,
+        "start_bit": 1433,
+        "width": 11,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2564",
+        "output_bit": 1408,
+        "output_width": 11
+      }
+    },
+    {
+      "position": 364,
+      "name": "vcu_brakePedalPressed",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 365,
+      "name": "VCU_StandStillPreheatBattWarn",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 366,
+      "name": "VCU_LowTempInhibitPowerUpWarn",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 367,
+      "name": "lowBatChargeFault",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 368,
+      "name": "tbox_vehicleMode",
+      "normalized_width": 4,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 369,
+      "name": "OTA_mode",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 370,
+      "name": "hcm_adbFuctionStsLt",
+      "normalized_width": 3,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 371,
+      "name": "hcm_adbFuctionStsRt",
+      "normalized_width": 3,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 372,
+      "name": "asc_AirPumpOverHeatWarning",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 373,
+      "name": "remain_mileage_f_nedc",
+      "normalized_width": 10,
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 375,
+        "start_bit": 1463,
+        "width": 10,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x24f4",
+        "output_bit": 1428,
+        "output_width": 10
+      }
+    },
+    {
+      "position": 374,
+      "name": "gsm_warnInformation",
+      "normalized_width": 3,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 375,
+      "name": "asc_ascSysSts",
+      "normalized_width": 3,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 376,
+      "name": "odoRev",
+      "normalized_width": 24,
+      "unsupported_initial": 100
+    },
+    {
+      "position": 377,
+      "name": "etc_dataSts",
+      "normalized_width": 8,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 378,
+      "name": "vcu_ExhibitionSts",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 379,
+      "name": "fuel_cap_err",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 380,
+      "name": "alarm_play_req",
+      "normalized_width": 12,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 381,
+      "name": "apa_WarningReq",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 382,
+      "name": "APA_PDCSysSts",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 383,
+      "name": "APA_PDCFailureWarning",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 384,
+      "name": "APA_PDCAudibleFrontBeepRate",
+      "normalized_width": 3,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 385,
+      "name": "APA_PDCAudibleRearBeepRate",
+      "normalized_width": 3,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 386,
+      "name": "pdc_sysSts",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 387,
+      "name": "pdc_failureWarning",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 388,
+      "name": "pdc_audibleFrontBeepRate",
+      "normalized_width": 3,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 389,
+      "name": "pdc_audibleRearBeepRate",
+      "normalized_width": 3,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 390,
+      "name": "SeatBeltLamp",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 391,
+      "name": "SeatBeatFlash",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 392,
+      "name": "mrr_r1_leftBSDLCAWarning",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 393,
+      "name": "mrr_r1_rightBSDLCAWarning",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 394,
+      "name": "mrr_r1_leftDOWWarnning",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 395,
+      "name": "mrr_r1_rightDOWWarnning",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 396,
+      "name": "mrr_r1_leftRCTAWarnning",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 397,
+      "name": "mrr_r1_rightRCTAWarnning",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 398,
+      "name": "soc_menu_info",
+      "normalized_width": 8,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 399,
+      "name": "icyroad_reminder",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 400,
+      "name": "vcu_hvilWarningIndicate",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 401,
+      "name": "vcu_remainingMileageCLTCWLTC",
+      "normalized_width": 11,
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 403,
+        "start_bit": 1571,
+        "width": 11,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x23f4",
+        "output_bit": 1516,
+        "output_width": 11
+      }
+    },
+    {
+      "position": 402,
+      "name": "Trailer_EnabState_St",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 403,
+      "name": "Trailer_EnabState_Prompt",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 404,
+      "name": "remain_mileage_f_wltc",
+      "normalized_width": 10,
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 640,
+        "start_bit": 2229,
+        "width": 11,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1924",
+        "output_bit": 1935,
+        "output_width": 11
+      }
+    },
+    {
+      "position": 405,
+      "name": "bms_batteryConditionFail",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 406,
+      "name": "bms_f054_dcChrgOverTemp",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 407,
+      "name": "reset_dsp",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 408,
+      "name": "apa_AbortWarningReq",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 409,
+      "name": "apa_ActiveWarningReq",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 410,
+      "name": "apa_avmSts",
+      "normalized_width": 4,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 411,
+      "name": "apa_avmHmiIndex",
+      "normalized_width": 4,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 412,
+      "name": "apa_avmViewMode",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 413,
+      "name": "apa_avmDisplayReq",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 414,
+      "name": "apa_avmMODSts",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 415,
+      "name": "apa_avmTrigByTurnningSts",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 416,
+      "name": "apa_avmSingleViewSts",
+      "normalized_width": 5,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 417,
+      "name": "apa_avmTrajectory_display",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 418,
+      "name": "apa_avmAutoswitching_display",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 419,
+      "name": "apa_avmCarBodyTransparent",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 420,
+      "name": "apa_avmSwSts",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 421,
+      "name": "apa_avmMonitVideoOutput",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 422,
+      "name": "apa_avmPDCfailureWarn",
+      "normalized_width": 3,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 423,
+      "name": "avm_sts",
+      "normalized_width": 4,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 424,
+      "name": "avm_hmiIndex",
+      "normalized_width": 4,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 425,
+      "name": "avm_viewMode",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 426,
+      "name": "avm_displayReq",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 427,
+      "name": "avm_MODSts",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 428,
+      "name": "avm_trigByTurnningSts",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 429,
+      "name": "avm_singleViewSts",
+      "normalized_width": 5,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 430,
+      "name": "avm_Trajectory_display",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 431,
+      "name": "avm_Autoswitching_display",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 432,
+      "name": "avm_CarBodyTransparent",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 433,
+      "name": "avm_SwSts",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 434,
+      "name": "avm_QuitSw",
+      "normalized_width": 1,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 435,
+      "name": "OBC_halfConnectWarn",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 436,
+      "name": "VCU_SOCmodeSet",
+      "normalized_width": 3,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 437,
+      "name": "trip_ax_rev",
+      "normalized_width": 20,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 438,
+      "name": "trip_current_rev",
+      "normalized_width": 20,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 439,
+      "name": "charge_connect_warn",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 440,
+      "name": "vcu_textinfo",
+      "normalized_width": 3,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 441,
+      "name": "reboot_request",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 442,
+      "name": "can_msg_timeout_111",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 443,
+      "name": "can_msg_timeout_114",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 444,
+      "name": "can_msg_timeout_130",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 445,
+      "name": "can_msg_timeout_140",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 446,
+      "name": "can_msg_timeout_144",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 447,
+      "name": "can_msg_timeout_212",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 448,
+      "name": "can_msg_timeout_219",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 449,
+      "name": "can_msg_timeout_21a",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 450,
+      "name": "can_msg_timeout_239",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 451,
+      "name": "can_msg_timeout_23b",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 452,
+      "name": "can_msg_timeout_241",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 453,
+      "name": "can_msg_timeout_2a1",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 454,
+      "name": "can_msg_timeout_2a2",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 455,
+      "name": "can_msg_timeout_2ac",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 456,
+      "name": "can_msg_timeout_2c1",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 457,
+      "name": "can_msg_timeout_2c2",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 458,
+      "name": "can_msg_timeout_301",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 459,
+      "name": "can_msg_timeout_306",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 460,
+      "name": "can_msg_timeout_309",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 461,
+      "name": "can_msg_timeout_319",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 462,
+      "name": "can_msg_timeout_30e",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 463,
+      "name": "can_msg_timeout_322",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 464,
+      "name": "can_msg_timeout_323",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 465,
+      "name": "can_msg_timeout_324",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 466,
+      "name": "can_msg_timeout_349",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 467,
+      "name": "can_msg_timeout_35a",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 468,
+      "name": "can_msg_timeout_36e",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 469,
+      "name": "can_msg_timeout_369",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 470,
+      "name": "can_msg_timeout_37e",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 471,
+      "name": "can_msg_timeout_380",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 472,
+      "name": "can_msg_timeout_38d",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 473,
+      "name": "can_msg_timeout_394",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 474,
+      "name": "can_msg_timeout_396",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 475,
+      "name": "can_msg_timeout_3a0",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 476,
+      "name": "can_msg_timeout_3a1",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 477,
+      "name": "can_msg_timeout_3a9",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 478,
+      "name": "can_msg_timeout_3ad",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 479,
+      "name": "can_msg_timeout_3ae",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 480,
+      "name": "can_msg_timeout_3b6",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 481,
+      "name": "can_msg_timeout_3be",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 482,
+      "name": "can_msg_timeout_3c1",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 483,
+      "name": "can_msg_timeout_3c2",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 484,
+      "name": "can_msg_timeout_407",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 485,
+      "name": "can_msg_timeout_411",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 486,
+      "name": "can_msg_timeout_421",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 487,
+      "name": "can_msg_timeout_431",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 488,
+      "name": "can_msg_timeout_441",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 489,
+      "name": "can_msg_timeout_511",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 490,
+      "name": "can_msg_timeout_514",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 491,
+      "name": "can_msg_timeout_561",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 492,
+      "name": "can_msg_timeout_07e",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 493,
+      "name": "can_msg_timeout_0a5",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 494,
+      "name": "can_msg_timeout_2fa",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 495,
+      "name": "can_msg_timeout_331",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 496,
+      "name": "can_msg_timeout_387",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 497,
+      "name": "can_msg_timeout_3b5",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 498,
+      "name": "can_msg_timeout_3fe",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 499,
+      "name": "can_msg_timeout_1A0",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 500,
+      "name": "can_msg_timeout_1A3",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 501,
+      "name": "can_msg_timeout_35f",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 502,
+      "name": "can_msg_timeout_334",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 503,
+      "name": "can_msg_timeout_203",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 504,
+      "name": "can_msg_timeout_208",
+      "normalized_width": 2,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 505,
+      "name": "set_byte0",
+      "normalized_width": 8,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 506,
+      "name": "set_byte1",
+      "normalized_width": 8,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 507,
+      "name": "set_byte2",
+      "normalized_width": 8,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 508,
+      "name": "set_byte3",
+      "normalized_width": 8,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 509,
+      "name": "set_byte4",
+      "normalized_width": 8,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 510,
+      "name": "set_byte5",
+      "normalized_width": 8,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 511,
+      "name": "set_byte6",
+      "normalized_width": 8,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 512,
+      "name": "set_byte7",
+      "normalized_width": 8,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 513,
+      "name": "set_byte8",
+      "normalized_width": 8,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 514,
+      "name": "set_byte9",
+      "normalized_width": 8,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 515,
+      "name": "cfg_driver_mode",
+      "normalized_width": 2,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 516,
+      "name": "cfg_tbox",
+      "normalized_width": 2,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 517,
+      "name": "cfg_driver_style",
+      "normalized_width": 3,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 518,
+      "name": "cfg_hud",
+      "normalized_width": 1,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 519,
+      "name": "cfg_driver_source",
+      "normalized_width": 4,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 520,
+      "name": "cfg_wireless_charge",
+      "normalized_width": 2,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 521,
+      "name": "cfg_glass_cover",
+      "normalized_width": 2,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 522,
+      "name": "cfg_sunroof_type",
+      "normalized_width": 2,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 523,
+      "name": "cfg_child_lock",
+      "normalized_width": 2,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 524,
+      "name": "cfg_driver_seat_heat",
+      "normalized_width": 1,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 525,
+      "name": "cfg_driver_seat_air",
+      "normalized_width": 1,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 526,
+      "name": "cfg_driver_seat_massage",
+      "normalized_width": 1,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 527,
+      "name": "cfg_driver_seat_memory",
+      "normalized_width": 1,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 528,
+      "name": "cfg_copilot_seat_heat",
+      "normalized_width": 1,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 529,
+      "name": "cfg_copilot_seat_air",
+      "normalized_width": 1,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 530,
+      "name": "cfg_copilot_seat_massage",
+      "normalized_width": 1,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 531,
+      "name": "cfg_copilot_seat_memory",
+      "normalized_width": 1,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 532,
+      "name": "cfg_seat",
+      "normalized_width": 3,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 533,
+      "name": "cfg_sound_band",
+      "normalized_width": 1,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 534,
+      "name": "cfg_charge_port_type",
+      "normalized_width": 2,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 535,
+      "name": "cfg_gas_port_type",
+      "normalized_width": 2,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 536,
+      "name": "cfg_speaker",
+      "normalized_width": 3,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 537,
+      "name": "cfg_air_suspension",
+      "normalized_width": 1,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 538,
+      "name": "cfg_vehicle_color",
+      "normalized_width": 4,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 539,
+      "name": "cfg_maintain",
+      "normalized_width": 2,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 540,
+      "name": "cfg_auto_beam",
+      "normalized_width": 1,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 541,
+      "name": "cfg_auto_beam_height",
+      "normalized_width": 1,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 542,
+      "name": "cfg_env_lamp",
+      "normalized_width": 3,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 543,
+      "name": "cfg_left_right_hand",
+      "normalized_width": 1,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 544,
+      "name": "cfg_auto_headlight",
+      "normalized_width": 1,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 545,
+      "name": "cfg_matrix_lamp",
+      "normalized_width": 1,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 546,
+      "name": "cfg_auto_parking",
+      "normalized_width": 1,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 547,
+      "name": "cfg_ar",
+      "normalized_width": 1,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 548,
+      "name": "cfg_sound_position",
+      "normalized_width": 2,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 549,
+      "name": "cfg_iaqc",
+      "normalized_width": 1,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 550,
+      "name": "cfg_air_filter",
+      "normalized_width": 1,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 551,
+      "name": "cfg_air_flesh",
+      "normalized_width": 1,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 552,
+      "name": "cfg_dvr",
+      "normalized_width": 1,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 553,
+      "name": "cfg_etc_cfg",
+      "normalized_width": 1,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 554,
+      "name": "cfg_ac_auto_cycle",
+      "normalized_width": 1,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 555,
+      "name": "cfg_nvs",
+      "normalized_width": 1,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 556,
+      "name": "cfg_backmonitor",
+      "normalized_width": 1,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 557,
+      "name": "cfg_blis",
+      "normalized_width": 1,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 558,
+      "name": "cfg_ldw",
+      "normalized_width": 1,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 559,
+      "name": "cfg_pre_crash",
+      "normalized_width": 2,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 560,
+      "name": "cfg_lka",
+      "normalized_width": 1,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 561,
+      "name": "cfg_lca",
+      "normalized_width": 1,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 562,
+      "name": "cfg_acc",
+      "normalized_width": 2,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 563,
+      "name": "cfg_aeb",
+      "normalized_width": 1,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 564,
+      "name": "cfg_door_warning",
+      "normalized_width": 1,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 565,
+      "name": "cfg_traffic_sign",
+      "normalized_width": 1,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 566,
+      "name": "cfg_isa",
+      "normalized_width": 1,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 567,
+      "name": "cfg_rcta",
+      "normalized_width": 1,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 568,
+      "name": "cfg_tja_assis",
+      "normalized_width": 1,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 569,
+      "name": "cfg_dms_id",
+      "normalized_width": 1,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 570,
+      "name": "cfg_gesture",
+      "normalized_width": 1,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 571,
+      "name": "cfg_sale_area",
+      "normalized_width": 6,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 572,
+      "name": "cfg_screen",
+      "normalized_width": 2,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 573,
+      "name": "cfg_mrr",
+      "normalized_width": 1,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 574,
+      "name": "cfg_mpc",
+      "normalized_width": 1,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 575,
+      "name": "cfg_adas_supplier",
+      "normalized_width": 4,
+      "unsupported_initial": 0
+    },
+    {
+      "position": 576,
+      "name": "cfg_reserve_12",
+      "normalized_width": 8,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 577,
+      "name": "cfg_reserve_13",
+      "normalized_width": 8,
+      "unsupported_initial": 1
+    },
+    {
+      "position": 578,
+      "name": "cfg_reserve_14",
+      "normalized_width": 8,
+      "unsupported_initial": 1
+    }
+  ],
+  "native_initial_fields": {
+    "eps_calibrationFlag": {
+      "index": 185,
+      "start_bit": 465,
+      "width": 2
+    }
+  }
+}

@@ -1,0 +1,53 @@
+--- a/include/linux/netlink.h
++++ b/include/linux/netlink.h
+@@ -136,6 +136,7 @@
+ 			       int (*filter)(struct sock *dsk, struct sk_buff *skb, void *data),
+ 			       void *filter_data);
+ int netlink_set_err(struct sock *ssk, __u32 portid, __u32 group, int code);
++void netlink_reset_multicast(struct sock *ssk, __u32 group);
+ int netlink_register_notifier(struct notifier_block *nb);
+ int netlink_unregister_notifier(struct notifier_block *nb);
+ 
+--- a/net/netlink/af_netlink.c
++++ b/net/netlink/af_netlink.c
+@@ -1601,6 +1601,40 @@
+ 	return ret;
+ }
+ EXPORT_SYMBOL(netlink_set_err);
++/* Drop only kernel-origin datagrams for this kernel socket's group and netns.
++ * A recvmsg which already dequeued an skb is not recalled by this operation.
++ */
++void netlink_reset_multicast(struct sock *ssk, u32 group)
++{
++    struct sock *sk;
++    if (!netlink_is_kernel(ssk) || !group)
++        return;
++    read_lock(&nl_table_lock);
++    sk_for_each_bound(sk, &nl_table[ssk->sk_protocol].mc_list) {
++        struct netlink_sock *nlk = nlk_sk(sk);
++        struct sk_buff_head removed;
++        struct sk_buff *skb, *next;
++        if (sk == ssk || !net_eq(sock_net(sk), sock_net(ssk)) ||
++            group - 1 >= nlk->ngroups || !test_bit(group - 1, nlk->groups))
++            continue;
++        skb_queue_head_init(&removed);
++        spin_lock_bh(&sk->sk_receive_queue.lock);
++        skb_queue_walk_safe(&sk->sk_receive_queue, skb, next) {
++            if (NETLINK_CB(skb).portid == 0 && NETLINK_CB(skb).dst_group == group) {
++                __skb_unlink(skb, &sk->sk_receive_queue);
++                __skb_queue_tail(&removed, skb);
++            }
++        }
++        spin_unlock_bh(&sk->sk_receive_queue.lock);
++        skb_queue_purge(&removed);
++        netlink_rcv_wake(sk);
++        sk->sk_err = ENETRESET;
++        sk->sk_error_report(sk);
++    }
++    read_unlock(&nl_table_lock);
++}
++EXPORT_SYMBOL_GPL(netlink_reset_multicast);
++
+ 
+ /* must be called with netlink table grabbed */
+ static void netlink_update_socket_mc(struct netlink_sock *nlk,

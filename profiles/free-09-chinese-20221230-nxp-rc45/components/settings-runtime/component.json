@@ -1,0 +1,37 @@
+{
+  "type": "jar",
+  "minSdk": 28,
+  "output": "VoyemuNxpSettingsRuntime.jar",
+  "donorDex": {
+    "original": "Setting",
+    "sha256": "b3a79c9cb737b5c84256c98b9e00553467bc9fda43b975398a7284a0a9cac741",
+    "dex": "classes.dex",
+    "classes": [
+      "com.qinggan.account.AccountInfoBean",
+      "com.qinggan.account.AccountUserManager",
+      "com.qinggan.account.QGSupportMutiUserCommonhelper",
+      "com.qinggan.common.OnInitListener",
+      "com.qinggan.os.ExternalDevicesState",
+      "com.qinggan.os.FileUtils",
+      "com.qinggan.os.FileUtils$FileStatus",
+      "com.qinggan.os.NvramNative",
+      "com.qinggan.os.Runtime",
+      "com.qinggan.os.QGStorageVolume",
+      "com.qinggan.os.QGStorageVolume$1",
+      "com.qinggan.os.ServiceManager",
+      "com.qinggan.os.SystemProperties",
+      "com.qinggan.os.SystemProperties$FakeNvram",
+      "com.qinggan.provider.QGSettings",
+      "com.qinggan.provider.QGSettings$1",
+      "com.qinggan.provider.QGSettings$Global",
+      "com.qinggan.provider.QGSettings$Global$1",
+      "com.qinggan.provider.QGSettings$NameValueCache",
+      "com.qinggan.provider.QGSettings$NameValueTable",
+      "com.qinggan.provider.QGSettings$Secure",
+      "com.qinggan.provider.QGSettings$Secure$1",
+      "com.qinggan.provider.QGSettings$System",
+      "com.qinggan.provider.QGSettings$System$1",
+      "com.qinggan.provider.QGSettingsListener"
+    ]
+  }
+}

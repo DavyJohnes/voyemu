@@ -1,0 +1,1019 @@
+{
+  "api": 28,
+  "calls": [
+    {
+      "args": [
+        "src"
+      ],
+      "operation": "addDex"
+    }
+  ],
+  "constants": {
+    "ROUTING": [
+      [
+        "Lcom/qinggan/launcher/base/utils/AppLauncher;->startCloudApp(Landroid/content/Context;I)V",
+        {
+          "edits": [
+            {
+              "before": [
+                "const/high16 v1, 0x10000000"
+              ],
+              "insert": [
+                "if-nez v0, :voyemu_cloud_available",
+                "return-void",
+                ":voyemu_cloud_available"
+              ]
+            }
+          ]
+        }
+      ],
+      [
+        "Lcom/qinggan/launcher/base/utils/AppUtils;->getTopAppInfo(Landroid/content/Context;II)Ljava/lang/String;",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-static {p0, p1, p2}, Lcom/qinggan/os/ServiceManager;->getDpyTopAppInfo(Landroid/content/Context;II)Ljava/lang/String;"
+              ],
+              "with": [
+                "invoke-static {p0, p1, p2}, Lcom/voyemu/output/DisplayTasks;->getTopAppInfo(Landroid/content/Context;II)Ljava/lang/String;"
+              ]
+            }
+          ]
+        }
+      ],
+      [
+        "Lcom/qinggan/app/launcher/LauncherModel$29;->run()V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "iget-boolean v0, p0, Lcom/qinggan/app/launcher/LauncherModel$29;->val$visible:Z",
+                "if-eqz v0, :cond_99",
+                "iget-object v0, p0, Lcom/qinggan/app/launcher/LauncherModel$29;->this$0:Lcom/qinggan/app/launcher/LauncherModel;",
+                "invoke-static {v0}, Lcom/qinggan/app/launcher/LauncherModel;->access$1600(Lcom/qinggan/app/launcher/LauncherModel;)Lcom/qinggan/mainlauncher/navigation/NavigationBar;",
+                "move-result-object v0",
+                "if-eqz v0, :cond_aa",
+                "iget-object v0, p0, Lcom/qinggan/app/launcher/LauncherModel$29;->this$0:Lcom/qinggan/app/launcher/LauncherModel;",
+                "invoke-static {v0}, Lcom/qinggan/app/launcher/LauncherModel;->access$1600(Lcom/qinggan/app/launcher/LauncherModel;)Lcom/qinggan/mainlauncher/navigation/NavigationBar;",
+                "move-result-object v0",
+                "invoke-virtual {v0}, Lcom/qinggan/mainlauncher/navigation/NavigationBar;->show()V",
+                "goto :goto_aa",
+                "iget-object v0, p0, Lcom/qinggan/app/launcher/LauncherModel$29;->this$0:Lcom/qinggan/app/launcher/LauncherModel;",
+                "invoke-static {v0}, Lcom/qinggan/app/launcher/LauncherModel;->access$1600(Lcom/qinggan/app/launcher/LauncherModel;)Lcom/qinggan/mainlauncher/navigation/NavigationBar;",
+                "move-result-object v0",
+                "if-eqz v0, :cond_aa",
+                "iget-object v0, p0, Lcom/qinggan/app/launcher/LauncherModel$29;->this$0:Lcom/qinggan/app/launcher/LauncherModel;",
+                "invoke-static {v0}, Lcom/qinggan/app/launcher/LauncherModel;->access$1600(Lcom/qinggan/app/launcher/LauncherModel;)Lcom/qinggan/mainlauncher/navigation/NavigationBar;",
+                "move-result-object v0",
+                "invoke-virtual {v0}, Lcom/qinggan/mainlauncher/navigation/NavigationBar;->dismiss()V"
+              ],
+              "with": []
+            }
+          ]
+        }
+      ],
+      [
+        "Lcom/qinggan/app/launcher/LauncherModel$30;->run()V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "iget-boolean v1, p0, Lcom/qinggan/app/launcher/LauncherModel$30;->val$visible:Z",
+                "if-eqz v1, :cond_b0",
+                "iget-object v1, p0, Lcom/qinggan/app/launcher/LauncherModel$30;->this$0:Lcom/qinggan/app/launcher/LauncherModel;",
+                "invoke-static {v1}, Lcom/qinggan/app/launcher/LauncherModel;->access$1700(Lcom/qinggan/app/launcher/LauncherModel;)Lcom/qinggan/mainlauncher/navigation/NavigationBar;",
+                "move-result-object v1",
+                "if-eqz v1, :cond_c1",
+                "iget-object v1, p0, Lcom/qinggan/app/launcher/LauncherModel$30;->this$0:Lcom/qinggan/app/launcher/LauncherModel;",
+                "invoke-static {v1}, Lcom/qinggan/app/launcher/LauncherModel;->access$1700(Lcom/qinggan/app/launcher/LauncherModel;)Lcom/qinggan/mainlauncher/navigation/NavigationBar;",
+                "move-result-object v1",
+                "invoke-virtual {v1}, Lcom/qinggan/mainlauncher/navigation/NavigationBar;->show()V",
+                "invoke-static {}, Lcom/qinggan/app/launcher/LauncherModel;->access$100()Ljava/lang/String;",
+                "move-result-object v1",
+                "new-instance v2, Ljava/lang/StringBuilder;",
+                "invoke-direct {v2}, Ljava/lang/StringBuilder;-><init>()V",
+                "invoke-virtual {v2, v4}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;",
+                "invoke-virtual {v2, v0}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;",
+                "invoke-virtual {v2}, Ljava/lang/StringBuilder;->toString()Ljava/lang/String;",
+                "move-result-object v0",
+                "invoke-static {v1, v0}, Landroid/util/Log;->i(Ljava/lang/String;Ljava/lang/String;)I",
+                "goto :goto_c1",
+                "iget-object v0, p0, Lcom/qinggan/app/launcher/LauncherModel$30;->this$0:Lcom/qinggan/app/launcher/LauncherModel;",
+                "invoke-static {v0}, Lcom/qinggan/app/launcher/LauncherModel;->access$1700(Lcom/qinggan/app/launcher/LauncherModel;)Lcom/qinggan/mainlauncher/navigation/NavigationBar;",
+                "move-result-object v0",
+                "if-eqz v0, :cond_c1",
+                "iget-object v0, p0, Lcom/qinggan/app/launcher/LauncherModel$30;->this$0:Lcom/qinggan/app/launcher/LauncherModel;",
+                "invoke-static {v0}, Lcom/qinggan/app/launcher/LauncherModel;->access$1700(Lcom/qinggan/app/launcher/LauncherModel;)Lcom/qinggan/mainlauncher/navigation/NavigationBar;",
+                "move-result-object v0",
+                "invoke-virtual {v0}, Lcom/qinggan/mainlauncher/navigation/NavigationBar;->dismiss()V"
+              ],
+              "with": []
+            }
+          ]
+        }
+      ],
+      [
+        "Lcom/pateo/material/anim/ActivityAnimUtils;->startActivityByAnim(Landroid/content/Context;Landroid/content/Intent;)V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-virtual {v0, v1}, Landroid/app/ActivityOptions;->setLaunchDisplayId(I)Landroid/app/ActivityOptions;",
+                "invoke-virtual {v0}, Landroid/app/ActivityOptions;->toBundle()Landroid/os/Bundle;",
+                "move-result-object v0",
+                "invoke-virtual {p0, p1, v0}, Landroid/content/Context;->startActivity(Landroid/content/Intent;Landroid/os/Bundle;)V"
+              ],
+              "with": [
+                "invoke-static {p0, p1, v0, v1}, Lcom/voyemu/output/LaunchRouter;->launch(Landroid/content/Context;Landroid/content/Intent;Landroid/app/ActivityOptions;I)V"
+              ]
+            }
+          ]
+        }
+      ],
+      [
+        "Lcom/pateo/material/anim/ActivityAnimUtils;->startActivityByAnim(Landroid/content/Context;Landroid/content/Intent;I)V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-virtual {v0, p2}, Landroid/app/ActivityOptions;->setLaunchDisplayId(I)Landroid/app/ActivityOptions;",
+                "invoke-virtual {v0}, Landroid/app/ActivityOptions;->toBundle()Landroid/os/Bundle;",
+                "move-result-object p2",
+                "invoke-virtual {p0, p1, p2}, Landroid/content/Context;->startActivity(Landroid/content/Intent;Landroid/os/Bundle;)V"
+              ],
+              "with": [
+                "invoke-static {p0, p1, v0, p2}, Lcom/voyemu/output/LaunchRouter;->launch(Landroid/content/Context;Landroid/content/Intent;Landroid/app/ActivityOptions;I)V"
+              ]
+            }
+          ]
+        }
+      ],
+      [
+        "Lcom/qinggan/secondlauncher/hiboard/SecondHiboardBar;->show()V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-interface {v0, v1, v2}, Landroid/view/WindowManager;->addView(Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ],
+              "with": [
+                "invoke-static {v0, v1, v2}, Lcom/voyemu/output/WindowRouter;->addView(Landroid/view/ViewManager;Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ]
+            }
+          ]
+        }
+      ],
+      [
+        "Lcom/qinggan/launcher/base/hiboard/BlindsWindow;->moveWindow(ZI)V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-interface {p1, p2}, Landroid/view/WindowManager;->removeView(Landroid/view/View;)V"
+              ],
+              "with": [
+                "invoke-static {p1, p2}, Lcom/voyemu/output/WindowRouter;->removeView(Landroid/view/ViewManager;Landroid/view/View;)V"
+              ]
+            }
+          ]
+        }
+      ],
+      [
+        "Lcom/qinggan/launcher/base/hiboard/BlindsWindow;->updatePosition(I)V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-interface {p1, v0, v1}, Landroid/view/WindowManager;->addView(Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ],
+              "with": [
+                "invoke-static {p1, v0, v1}, Lcom/voyemu/output/WindowRouter;->addView(Landroid/view/ViewManager;Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ]
+            },
+            {
+              "replace": [
+                "invoke-interface {p1, v0, v1}, Landroid/view/WindowManager;->updateViewLayout(Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ],
+              "with": [
+                "invoke-static {p1, v0, v1}, Lcom/voyemu/output/WindowRouter;->updateViewLayout(Landroid/view/ViewManager;Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ]
+            }
+          ]
+        }
+      ],
+      [
+        "Lcom/qinggan/launcher/base/hiboard/BlindsWindow;->onStartTrackingTouch()V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-interface {v0, v1, v2}, Landroid/view/WindowManager;->addView(Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ],
+              "with": [
+                "invoke-static {v0, v1, v2}, Lcom/voyemu/output/WindowRouter;->addView(Landroid/view/ViewManager;Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ]
+            }
+          ]
+        }
+      ],
+      [
+        "Lcom/qinggan/launcher/base/hiboard/BlindsWindow;->update()V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-interface {v0, v1, v2}, Landroid/view/WindowManager;->addView(Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ],
+              "with": [
+                "invoke-static {v0, v1, v2}, Lcom/voyemu/output/WindowRouter;->addView(Landroid/view/ViewManager;Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ]
+            },
+            {
+              "replace": [
+                "invoke-interface {v0, v1, v2}, Landroid/view/WindowManager;->updateViewLayout(Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ],
+              "with": [
+                "invoke-static {v0, v1, v2}, Lcom/voyemu/output/WindowRouter;->updateViewLayout(Landroid/view/ViewManager;Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ]
+            }
+          ]
+        }
+      ],
+      [
+        "Lcom/qinggan/launcher/base/hiboard/BlindsWindow;->update(Lcom/qinggan/launcher/base/hiboard/BlindsWindow$LayoutParams;)V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-interface {v0, v1, p1}, Landroid/view/WindowManager;->addView(Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ],
+              "with": [
+                "invoke-static {v0, v1, p1}, Lcom/voyemu/output/WindowRouter;->addView(Landroid/view/ViewManager;Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ]
+            },
+            {
+              "replace": [
+                "invoke-interface {v0, v1, p1}, Landroid/view/WindowManager;->updateViewLayout(Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ],
+              "with": [
+                "invoke-static {v0, v1, p1}, Lcom/voyemu/output/WindowRouter;->updateViewLayout(Landroid/view/ViewManager;Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ]
+            }
+          ]
+        }
+      ],
+      [
+        "Lcom/qinggan/launcher/base/hiboard/BlindsWindow$3;->onAnimationEnd(Landroid/animation/Animator;)V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-interface {p1, v0}, Landroid/view/WindowManager;->removeView(Landroid/view/View;)V"
+              ],
+              "with": [
+                "invoke-static {p1, v0}, Lcom/voyemu/output/WindowRouter;->removeView(Landroid/view/ViewManager;Landroid/view/View;)V"
+              ]
+            }
+          ]
+        }
+      ],
+      [
+        "Lcom/qinggan/app/launcher/LauncherModel$1;->onDimUpdate(IZ)V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-interface {p2, v0}, Landroid/view/WindowManager;->removeView(Landroid/view/View;)V"
+              ],
+              "with": [
+                "invoke-static {p2, v0}, Lcom/voyemu/output/WindowRouter;->removeView(Landroid/view/ViewManager;Landroid/view/View;)V"
+              ]
+            },
+            {
+              "replace": [
+                "invoke-interface {p2, v0, v1}, Landroid/view/WindowManager;->addView(Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ],
+              "with": [
+                "invoke-static {p2, v0, v1}, Lcom/voyemu/output/WindowRouter;->addView(Landroid/view/ViewManager;Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ]
+            }
+          ]
+        }
+      ],
+      [
+        "Lcom/qinggan/app/launcher/LauncherModel;->removeDimBackground()V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-interface {v1, v0}, Landroid/view/WindowManager;->removeView(Landroid/view/View;)V"
+              ],
+              "with": [
+                "invoke-static {v1, v0}, Lcom/voyemu/output/WindowRouter;->removeView(Landroid/view/ViewManager;Landroid/view/View;)V"
+              ]
+            }
+          ]
+        }
+      ],
+      [
+        "Lcom/qinggan/app/launcher/LauncherModel;->removeSecondDimBackground()V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-interface {v1, v0}, Landroid/view/WindowManager;->removeView(Landroid/view/View;)V"
+              ],
+              "with": [
+                "invoke-static {v1, v0}, Lcom/voyemu/output/WindowRouter;->removeView(Landroid/view/ViewManager;Landroid/view/View;)V"
+              ]
+            }
+          ]
+        }
+      ],
+      [
+        "Lcom/qinggan/app/launcher/LauncherModel$2;->onDimUpdate(IZ)V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-interface {p2, v0}, Landroid/view/WindowManager;->removeView(Landroid/view/View;)V"
+              ],
+              "with": [
+                "invoke-static {p2, v0}, Lcom/voyemu/output/WindowRouter;->removeView(Landroid/view/ViewManager;Landroid/view/View;)V"
+              ]
+            },
+            {
+              "replace": [
+                "invoke-interface {p2, v0, v1}, Landroid/view/WindowManager;->addView(Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ],
+              "with": [
+                "invoke-static {p2, v0, v1}, Lcom/voyemu/output/WindowRouter;->addView(Landroid/view/ViewManager;Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ]
+            }
+          ]
+        }
+      ],
+      [
+        "Lcom/qinggan/mainlauncher/navigation/NavigationBar;->animateDismiss()V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-interface {v0, v1}, Landroid/view/WindowManager;->removeView(Landroid/view/View;)V"
+              ],
+              "with": [
+                "invoke-static {v0, v1}, Lcom/voyemu/output/WindowRouter;->removeView(Landroid/view/ViewManager;Landroid/view/View;)V"
+              ]
+            }
+          ]
+        }
+      ],
+      [
+        "Lcom/qinggan/mainlauncher/navigation/NavigationBar;->animateShow()V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-interface {v0, v1, v2}, Landroid/view/WindowManager;->addView(Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ],
+              "with": [
+                "invoke-static {v0, v1, v2}, Lcom/voyemu/output/WindowRouter;->addView(Landroid/view/ViewManager;Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ]
+            }
+          ]
+        }
+      ],
+      [
+        "Lcom/qinggan/mainlauncher/navigation/NavigationBar;->show()V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-interface {v0, v1, v2}, Landroid/view/WindowManager;->updateViewLayout(Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ],
+              "with": [
+                "invoke-static {v0, v1, v2}, Lcom/voyemu/output/WindowRouter;->updateViewLayout(Landroid/view/ViewManager;Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ]
+            }
+          ]
+        }
+      ],
+      [
+        "Lcom/qinggan/mainlauncher/navigation/NavigationBar$8;->onAnimationEnd(Landroid/animation/Animator;)V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-interface {p1, v0}, Landroid/view/WindowManager;->removeView(Landroid/view/View;)V"
+              ],
+              "with": [
+                "invoke-static {p1, v0}, Lcom/voyemu/output/WindowRouter;->removeView(Landroid/view/ViewManager;Landroid/view/View;)V"
+              ]
+            }
+          ]
+        }
+      ],
+      [
+        "Lcom/qinggan/mainlauncher/navigation/NavigationBar$3;->onAnimationUpdate(Landroid/animation/ValueAnimator;)V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-interface {p1, v0, v1}, Landroid/view/WindowManager;->updateViewLayout(Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ],
+              "with": [
+                "invoke-static {p1, v0, v1}, Lcom/voyemu/output/WindowRouter;->updateViewLayout(Landroid/view/ViewManager;Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ]
+            }
+          ]
+        }
+      ],
+      [
+        "Lcom/qinggan/mainlauncher/navigation/NavigationBar$7;->onAnimationUpdate(Landroid/animation/ValueAnimator;)V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-interface {p1, v0, v1}, Landroid/view/WindowManager;->updateViewLayout(Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ],
+              "with": [
+                "invoke-static {p1, v0, v1}, Lcom/voyemu/output/WindowRouter;->updateViewLayout(Landroid/view/ViewManager;Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ]
+            }
+          ]
+        }
+      ],
+      [
+        "Lcom/qinggan/mainlauncher/navigation/NavigationBar$4;->onAnimationEnd(Landroid/animation/Animator;)V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-interface {p1, v0, v1}, Landroid/view/WindowManager;->addView(Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ],
+              "with": [
+                "invoke-static {p1, v0, v1}, Lcom/voyemu/output/WindowRouter;->addView(Landroid/view/ViewManager;Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ]
+            }
+          ]
+        }
+      ],
+      [
+        "Lcom/qinggan/mainlauncher/hiboard/HiboardBar$11;->run()V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-interface {v0, v1}, Landroid/view/WindowManager;->removeView(Landroid/view/View;)V",
+                "iget-object v0, p0, Lcom/qinggan/mainlauncher/hiboard/HiboardBar$11;->val$windowManager:Landroid/view/WindowManager;"
+              ],
+              "with": [
+                "invoke-static {v0, v1}, Lcom/voyemu/output/WindowRouter;->removeView(Landroid/view/ViewManager;Landroid/view/View;)V",
+                "iget-object v0, p0, Lcom/qinggan/mainlauncher/hiboard/HiboardBar$11;->val$windowManager:Landroid/view/WindowManager;"
+              ]
+            },
+            {
+              "replace": [
+                "invoke-interface {v0, v1}, Landroid/view/WindowManager;->removeView(Landroid/view/View;)V",
+                "return-void"
+              ],
+              "with": [
+                "invoke-static {v0, v1}, Lcom/voyemu/output/WindowRouter;->removeView(Landroid/view/ViewManager;Landroid/view/View;)V",
+                "return-void"
+              ]
+            }
+          ]
+        }
+      ],
+      [
+        "Lcom/qinggan/mainlauncher/hiboard/HiboardBar;->amendThemeIfNeeded()V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-interface {v1, v4, v12}, Landroid/view/WindowManager;->addView(Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ],
+              "with": [
+                "invoke-static {v1, v4, v12}, Lcom/voyemu/output/WindowRouter;->addView(Landroid/view/ViewManager;Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ]
+            },
+            {
+              "replace": [
+                "invoke-interface {v1, v5, v3}, Landroid/view/WindowManager;->addView(Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ],
+              "with": [
+                "invoke-static {v1, v5, v3}, Lcom/voyemu/output/WindowRouter;->addView(Landroid/view/ViewManager;Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ]
+            }
+          ]
+        }
+      ],
+      [
+        "Lcom/qinggan/mainlauncher/hiboard/HiboardBar;->initPop()V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "iput-object v0, p0, Lcom/qinggan/mainlauncher/hiboard/HiboardBar;->mLineView:Landroid/view/View;",
+                "const/16 v1, 0x8",
+                "invoke-virtual {v0, v1}, Landroid/view/View;->setVisibility(I)V"
+              ],
+              "with": [
+                "iput-object v0, p0, Lcom/qinggan/mainlauncher/hiboard/HiboardBar;->mLineView:Landroid/view/View;",
+                "const/4 v1, 0x0",
+                ".line 777",
+                "invoke-virtual {v0, v1}, Landroid/view/View;->setVisibility(I)V"
+              ]
+            }
+          ]
+        }
+      ],
+      [
+        "Lcom/qinggan/mainlauncher/hiboard/HiboardBar;->showThemeChangeLoadingLayout()V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-interface {v0, v2}, Landroid/view/WindowManager;->removeViewImmediate(Landroid/view/View;)V"
+              ],
+              "with": [
+                "invoke-static {v0, v2}, Lcom/voyemu/output/WindowRouter;->removeViewImmediate(Landroid/view/WindowManager;Landroid/view/View;)V"
+              ]
+            },
+            {
+              "replace": [
+                "invoke-interface {v0, v2, v3}, Landroid/view/WindowManager;->addView(Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ],
+              "with": [
+                "invoke-static {v0, v2, v3}, Lcom/voyemu/output/WindowRouter;->addView(Landroid/view/ViewManager;Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ]
+            }
+          ]
+        }
+      ],
+      [
+        "Lcom/qinggan/mainlauncher/hiboard/HiboardBar;->setTheme(IILjava/lang/String;)V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-interface {v8, v5, v3}, Landroid/view/WindowManager;->addView(Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ],
+              "with": [
+                "invoke-static {v8, v5, v3}, Lcom/voyemu/output/WindowRouter;->addView(Landroid/view/ViewManager;Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ]
+            },
+            {
+              "replace": [
+                "invoke-interface {v3, v6, v7}, Landroid/view/WindowManager;->addView(Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ],
+              "with": [
+                "invoke-static {v3, v6, v7}, Lcom/voyemu/output/WindowRouter;->addView(Landroid/view/ViewManager;Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ]
+            }
+          ]
+        }
+      ],
+      [
+        "Lcom/qinggan/mainlauncher/hiboard/HiboardBar;->show()V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-interface {v0, v1, v2}, Landroid/view/WindowManager;->addView(Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ],
+              "with": [
+                "invoke-static {v0, v1, v2}, Lcom/voyemu/output/WindowRouter;->addView(Landroid/view/ViewManager;Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ]
+            }
+          ]
+        }
+      ],
+      [
+        "Lcom/qinggan/mainlauncher/hiboard/HiboardBar$12;->run()V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-interface {v0, v1}, Landroid/view/WindowManager;->removeViewImmediate(Landroid/view/View;)V"
+              ],
+              "with": [
+                "invoke-static {v0, v1}, Lcom/voyemu/output/WindowRouter;->removeViewImmediate(Landroid/view/WindowManager;Landroid/view/View;)V"
+              ]
+            }
+          ]
+        }
+      ],
+      [
+        "Lcom/qinggan/mainlauncher/hiboard/HiboardBar$10;->run()V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-interface {v0, v1}, Landroid/view/WindowManager;->removeView(Landroid/view/View;)V",
+                "iget-object v0, p0, Lcom/qinggan/mainlauncher/hiboard/HiboardBar$10;->this$0:Lcom/qinggan/mainlauncher/hiboard/HiboardBar;"
+              ],
+              "with": [
+                "invoke-static {v0, v1}, Lcom/voyemu/output/WindowRouter;->removeView(Landroid/view/ViewManager;Landroid/view/View;)V",
+                "iget-object v0, p0, Lcom/qinggan/mainlauncher/hiboard/HiboardBar$10;->this$0:Lcom/qinggan/mainlauncher/hiboard/HiboardBar;"
+              ]
+            },
+            {
+              "replace": [
+                "invoke-interface {v0, v1}, Landroid/view/WindowManager;->removeView(Landroid/view/View;)V",
+                "return-void"
+              ],
+              "with": [
+                "invoke-static {v0, v1}, Lcom/voyemu/output/WindowRouter;->removeView(Landroid/view/ViewManager;Landroid/view/View;)V",
+                "return-void"
+              ]
+            }
+          ]
+        }
+      ],
+      [
+        "Lcom/qinggan/mainlauncher/hiboard/vehiclehiboard/VehicleHiBoardBarNew;->addWindowView(Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-interface {v0, p1, p2}, Landroid/view/WindowManager;->addView(Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ],
+              "with": [
+                "invoke-static {v0, p1, p2}, Lcom/voyemu/output/WindowRouter;->addView(Landroid/view/ViewManager;Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ]
+            }
+          ]
+        }
+      ],
+      [
+        "Lcom/qinggan/mainlauncher/hiboard/vehiclehiboard/VehicleHiBoardBarNew;->removeWindowView(Landroid/view/View;)V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-interface {v0, p1}, Landroid/view/WindowManager;->removeView(Landroid/view/View;)V"
+              ],
+              "with": [
+                "invoke-static {v0, p1}, Lcom/voyemu/output/WindowRouter;->removeView(Landroid/view/ViewManager;Landroid/view/View;)V"
+              ]
+            }
+          ]
+        }
+      ],
+      [
+        "Lcom/qinggan/mainlauncher/hiboard/vehiclehiboard/VehicleHiBoardBarNew;->doScreenLift(I)V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-interface {v2, v3, v4}, Landroid/view/WindowManager;->updateViewLayout(Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ],
+              "with": [
+                "invoke-static {v2, v3, v4}, Lcom/voyemu/output/WindowRouter;->updateViewLayout(Landroid/view/ViewManager;Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ]
+            }
+          ]
+        }
+      ],
+      [
+        "Lcom/qinggan/mainlauncher/hiboard/vehiclehiboard/VehicleHiBoardBarNew;->show()V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-interface {v0, v1, v2}, Landroid/view/WindowManager;->addView(Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ],
+              "with": [
+                "invoke-static {v0, v1, v2}, Lcom/voyemu/output/WindowRouter;->addView(Landroid/view/ViewManager;Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ]
+            }
+          ]
+        }
+      ],
+      [
+        "Lcom/qinggan/mainlauncher/hiboard/vehiclehiboard/widget/VehicleHiboardAboveWindow;->lambda$showChargeDialog$2$VehicleHiboardAboveWindow(Landroid/view/View;)V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-interface {p1, v0}, Landroid/view/WindowManager;->removeView(Landroid/view/View;)V",
+                "invoke-static {}, Lcom/qinggan/launcher/base/BaseApplication;->getContext()Lcom/qinggan/launcher/base/BaseApplication;",
+                "move-result-object p1",
+                "invoke-virtual {p1, v3}, Lcom/qinggan/launcher/base/BaseApplication;->vehicleBoardSubWindowShow(Z)V",
+                "return-void",
+                "new-instance p1, Ljava/util/LinkedHashMap;"
+              ],
+              "with": [
+                "invoke-static {p1, v0}, Lcom/voyemu/output/WindowRouter;->removeView(Landroid/view/ViewManager;Landroid/view/View;)V",
+                "invoke-static {}, Lcom/qinggan/launcher/base/BaseApplication;->getContext()Lcom/qinggan/launcher/base/BaseApplication;",
+                "move-result-object p1",
+                "invoke-virtual {p1, v3}, Lcom/qinggan/launcher/base/BaseApplication;->vehicleBoardSubWindowShow(Z)V",
+                "return-void",
+                "new-instance p1, Ljava/util/LinkedHashMap;"
+              ]
+            },
+            {
+              "replace": [
+                "sget v0, Lcom/qinggan/mainlauncher/R$string;->try_open_charging:I",
+                "invoke-static {p1, v0, v1, v2}, Lcom/pateo/material/dialog/QGToast;->makeText(Landroid/content/Context;IJ)Lcom/pateo/material/dialog/DelayDialog;",
+                "move-result-object p1",
+                "invoke-virtual {p1}, Lcom/pateo/material/dialog/DelayDialog;->show()V",
+                "iget-object p1, p0, Lcom/qinggan/mainlauncher/hiboard/vehiclehiboard/widget/VehicleHiboardAboveWindow;->mWindowManager:Landroid/view/WindowManager;",
+                "iget-object v0, p0, Lcom/qinggan/mainlauncher/hiboard/vehiclehiboard/widget/VehicleHiboardAboveWindow;->dialogView:Landroid/view/View;",
+                "invoke-interface {p1, v0}, Landroid/view/WindowManager;->removeView(Landroid/view/View;)V",
+                "invoke-static {}, Lcom/qinggan/launcher/base/BaseApplication;->getContext()Lcom/qinggan/launcher/base/BaseApplication;",
+                "move-result-object p1",
+                "invoke-virtual {p1, v3}, Lcom/qinggan/launcher/base/BaseApplication;->vehicleBoardSubWindowShow(Z)V",
+                "return-void"
+              ],
+              "with": [
+                "sget v0, Lcom/qinggan/mainlauncher/R$string;->try_open_charging:I",
+                "invoke-static {p1, v0, v1, v2}, Lcom/pateo/material/dialog/QGToast;->makeText(Landroid/content/Context;IJ)Lcom/pateo/material/dialog/DelayDialog;",
+                "move-result-object p1",
+                "invoke-virtual {p1}, Lcom/pateo/material/dialog/DelayDialog;->show()V",
+                "iget-object p1, p0, Lcom/qinggan/mainlauncher/hiboard/vehiclehiboard/widget/VehicleHiboardAboveWindow;->mWindowManager:Landroid/view/WindowManager;",
+                "iget-object v0, p0, Lcom/qinggan/mainlauncher/hiboard/vehiclehiboard/widget/VehicleHiboardAboveWindow;->dialogView:Landroid/view/View;",
+                "invoke-static {p1, v0}, Lcom/voyemu/output/WindowRouter;->removeView(Landroid/view/ViewManager;Landroid/view/View;)V",
+                "invoke-static {}, Lcom/qinggan/launcher/base/BaseApplication;->getContext()Lcom/qinggan/launcher/base/BaseApplication;",
+                "move-result-object p1",
+                "invoke-virtual {p1, v3}, Lcom/qinggan/launcher/base/BaseApplication;->vehicleBoardSubWindowShow(Z)V",
+                "return-void"
+              ]
+            }
+          ]
+        }
+      ],
+      [
+        "Lcom/qinggan/mainlauncher/hiboard/vehiclehiboard/widget/VehicleHiboardAboveWindow;->lambda$showChargeDialog$3$VehicleHiboardAboveWindow(Landroid/view/View;)V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-interface {p1, v0}, Landroid/view/WindowManager;->removeView(Landroid/view/View;)V"
+              ],
+              "with": [
+                "invoke-static {p1, v0}, Lcom/voyemu/output/WindowRouter;->removeView(Landroid/view/ViewManager;Landroid/view/View;)V"
+              ]
+            }
+          ]
+        }
+      ],
+      [
+        "Lcom/qinggan/mainlauncher/hiboard/vehiclehiboard/widget/VehicleHiboardAboveWindow;->lambda$showFuelDialog$0$VehicleHiboardAboveWindow(Landroid/view/View;)V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-interface {p1, v0}, Landroid/view/WindowManager;->removeView(Landroid/view/View;)V",
+                "invoke-static {}, Lcom/qinggan/launcher/base/BaseApplication;->getContext()Lcom/qinggan/launcher/base/BaseApplication;",
+                "move-result-object p1",
+                "invoke-virtual {p1, v2}, Lcom/qinggan/launcher/base/BaseApplication;->vehicleBoardSubWindowShow(Z)V",
+                "return-void",
+                "sget-object v0, Lcom/qinggan/canbus/DFVehicleState;->FUEL_PORT_CAP_STS:Lcom/qinggan/canbus/VehicleState;"
+              ],
+              "with": [
+                "invoke-static {p1, v0}, Lcom/voyemu/output/WindowRouter;->removeView(Landroid/view/ViewManager;Landroid/view/View;)V",
+                "invoke-static {}, Lcom/qinggan/launcher/base/BaseApplication;->getContext()Lcom/qinggan/launcher/base/BaseApplication;",
+                "move-result-object p1",
+                "invoke-virtual {p1, v2}, Lcom/qinggan/launcher/base/BaseApplication;->vehicleBoardSubWindowShow(Z)V",
+                "return-void",
+                "sget-object v0, Lcom/qinggan/canbus/DFVehicleState;->FUEL_PORT_CAP_STS:Lcom/qinggan/canbus/VehicleState;"
+              ]
+            },
+            {
+              "replace": [
+                "invoke-interface {p1, v0}, Landroid/view/WindowManager;->removeView(Landroid/view/View;)V",
+                "invoke-static {}, Lcom/qinggan/launcher/base/BaseApplication;->getContext()Lcom/qinggan/launcher/base/BaseApplication;",
+                "move-result-object p1",
+                "invoke-virtual {p1, v2}, Lcom/qinggan/launcher/base/BaseApplication;->vehicleBoardSubWindowShow(Z)V",
+                "return-void",
+                "sget-object v0, Lcom/qinggan/canbus/DFVehicleState;->IVI_FUEL_PORT_CAP:Lcom/qinggan/canbus/VehicleState;"
+              ],
+              "with": [
+                "invoke-static {p1, v0}, Lcom/voyemu/output/WindowRouter;->removeView(Landroid/view/ViewManager;Landroid/view/View;)V",
+                "invoke-static {}, Lcom/qinggan/launcher/base/BaseApplication;->getContext()Lcom/qinggan/launcher/base/BaseApplication;",
+                "move-result-object p1",
+                "invoke-virtual {p1, v2}, Lcom/qinggan/launcher/base/BaseApplication;->vehicleBoardSubWindowShow(Z)V",
+                "return-void",
+                "sget-object v0, Lcom/qinggan/canbus/DFVehicleState;->IVI_FUEL_PORT_CAP:Lcom/qinggan/canbus/VehicleState;"
+              ]
+            },
+            {
+              "replace": [
+                "sget v0, Lcom/qinggan/mainlauncher/R$string;->try_open_tank_h56:I",
+                "invoke-static {p1, v0, v3, v4}, Lcom/pateo/material/dialog/QGToast;->makeText(Landroid/content/Context;IJ)Lcom/pateo/material/dialog/DelayDialog;",
+                "move-result-object p1",
+                "invoke-virtual {p1}, Lcom/pateo/material/dialog/DelayDialog;->show()V",
+                "iget-object p1, p0, Lcom/qinggan/mainlauncher/hiboard/vehiclehiboard/widget/VehicleHiboardAboveWindow;->mWindowManager:Landroid/view/WindowManager;",
+                "iget-object v0, p0, Lcom/qinggan/mainlauncher/hiboard/vehiclehiboard/widget/VehicleHiboardAboveWindow;->dialogView:Landroid/view/View;",
+                "invoke-interface {p1, v0}, Landroid/view/WindowManager;->removeView(Landroid/view/View;)V",
+                "invoke-static {}, Lcom/qinggan/launcher/base/BaseApplication;->getContext()Lcom/qinggan/launcher/base/BaseApplication;",
+                "move-result-object p1",
+                "invoke-virtual {p1, v2}, Lcom/qinggan/launcher/base/BaseApplication;->vehicleBoardSubWindowShow(Z)V",
+                "return-void"
+              ],
+              "with": [
+                "sget v0, Lcom/qinggan/mainlauncher/R$string;->try_open_tank_h56:I",
+                "invoke-static {p1, v0, v3, v4}, Lcom/pateo/material/dialog/QGToast;->makeText(Landroid/content/Context;IJ)Lcom/pateo/material/dialog/DelayDialog;",
+                "move-result-object p1",
+                "invoke-virtual {p1}, Lcom/pateo/material/dialog/DelayDialog;->show()V",
+                "iget-object p1, p0, Lcom/qinggan/mainlauncher/hiboard/vehiclehiboard/widget/VehicleHiboardAboveWindow;->mWindowManager:Landroid/view/WindowManager;",
+                "iget-object v0, p0, Lcom/qinggan/mainlauncher/hiboard/vehiclehiboard/widget/VehicleHiboardAboveWindow;->dialogView:Landroid/view/View;",
+                "invoke-static {p1, v0}, Lcom/voyemu/output/WindowRouter;->removeView(Landroid/view/ViewManager;Landroid/view/View;)V",
+                "invoke-static {}, Lcom/qinggan/launcher/base/BaseApplication;->getContext()Lcom/qinggan/launcher/base/BaseApplication;",
+                "move-result-object p1",
+                "invoke-virtual {p1, v2}, Lcom/qinggan/launcher/base/BaseApplication;->vehicleBoardSubWindowShow(Z)V",
+                "return-void"
+              ]
+            }
+          ]
+        }
+      ],
+      [
+        "Lcom/qinggan/mainlauncher/hiboard/vehiclehiboard/widget/VehicleHiboardAboveWindow;->lambda$showFuelDialog$1$VehicleHiboardAboveWindow(Landroid/view/View;)V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-interface {p1, v0}, Landroid/view/WindowManager;->removeView(Landroid/view/View;)V"
+              ],
+              "with": [
+                "invoke-static {p1, v0}, Lcom/voyemu/output/WindowRouter;->removeView(Landroid/view/ViewManager;Landroid/view/View;)V"
+              ]
+            }
+          ]
+        }
+      ],
+      [
+        "Lcom/qinggan/mainlauncher/hiboard/vehiclehiboard/widget/VehicleHiboardAboveWindow;->lambda$showHDCDialog$4$VehicleHiboardAboveWindow(Landroid/view/View;)V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-interface {p1, v0}, Landroid/view/WindowManager;->removeView(Landroid/view/View;)V"
+              ],
+              "with": [
+                "invoke-static {p1, v0}, Lcom/voyemu/output/WindowRouter;->removeView(Landroid/view/ViewManager;Landroid/view/View;)V"
+              ]
+            }
+          ]
+        }
+      ],
+      [
+        "Lcom/qinggan/mainlauncher/hiboard/vehiclehiboard/widget/VehicleHiboardAboveWindow;->lambda$showHDCDialog$5$VehicleHiboardAboveWindow(Landroid/view/View;)V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-interface {p1, v0}, Landroid/view/WindowManager;->removeView(Landroid/view/View;)V"
+              ],
+              "with": [
+                "invoke-static {p1, v0}, Lcom/voyemu/output/WindowRouter;->removeView(Landroid/view/ViewManager;Landroid/view/View;)V"
+              ]
+            }
+          ]
+        }
+      ],
+      [
+        "Lcom/qinggan/mainlauncher/hiboard/vehiclehiboard/widget/VehicleHiboardAboveWindow;->removeDialog()V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-interface {v0, v1}, Landroid/view/WindowManager;->removeView(Landroid/view/View;)V"
+              ],
+              "with": [
+                "invoke-static {v0, v1}, Lcom/voyemu/output/WindowRouter;->removeView(Landroid/view/ViewManager;Landroid/view/View;)V"
+              ]
+            }
+          ]
+        }
+      ],
+      [
+        "Lcom/qinggan/mainlauncher/hiboard/vehiclehiboard/widget/VehicleHiboardAboveWindow;->showChargeDialog()V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-interface {v0, v1, v2}, Landroid/view/WindowManager;->addView(Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ],
+              "with": [
+                "invoke-static {v0, v1, v2}, Lcom/voyemu/output/WindowRouter;->addView(Landroid/view/ViewManager;Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ]
+            }
+          ]
+        }
+      ],
+      [
+        "Lcom/qinggan/mainlauncher/hiboard/vehiclehiboard/widget/VehicleHiboardAboveWindow;->showFuelDialog()V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-interface {v0, v1, v2}, Landroid/view/WindowManager;->addView(Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ],
+              "with": [
+                "invoke-static {v0, v1, v2}, Lcom/voyemu/output/WindowRouter;->addView(Landroid/view/ViewManager;Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ]
+            }
+          ]
+        }
+      ],
+      [
+        "Lcom/qinggan/mainlauncher/hiboard/vehiclehiboard/widget/VehicleHiboardAboveWindow;->showHDCDialog()V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-interface {v0, v1, v2}, Landroid/view/WindowManager;->addView(Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ],
+              "with": [
+                "invoke-static {v0, v1, v2}, Lcom/voyemu/output/WindowRouter;->addView(Landroid/view/ViewManager;Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ]
+            }
+          ]
+        }
+      ],
+      [
+        "Lcom/qinggan/mainlauncher/hiboard/vehiclehiboard/widget/VehicleHiboardAboveWindow;->showOrHiddenAscHeightAnim(ZI)V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-interface {p1, p2}, Landroid/view/WindowManager;->removeView(Landroid/view/View;)V",
+                "invoke-static {}, Lcom/qinggan/launcher/base/BaseApplication;->getContext()Lcom/qinggan/launcher/base/BaseApplication;",
+                "move-result-object p1",
+                "invoke-virtual {p1, v0}, Lcom/qinggan/launcher/base/BaseApplication;->vehicleBoardSubWindowShow(Z)V",
+                "return-void"
+              ],
+              "with": [
+                "invoke-static {p1, p2}, Lcom/voyemu/output/WindowRouter;->removeView(Landroid/view/ViewManager;Landroid/view/View;)V",
+                "invoke-static {}, Lcom/qinggan/launcher/base/BaseApplication;->getContext()Lcom/qinggan/launcher/base/BaseApplication;",
+                "move-result-object p1",
+                "invoke-virtual {p1, v0}, Lcom/qinggan/launcher/base/BaseApplication;->vehicleBoardSubWindowShow(Z)V",
+                "return-void"
+              ]
+            },
+            {
+              "replace": [
+                "invoke-interface {p1, p2}, Landroid/view/WindowManager;->removeView(Landroid/view/View;)V",
+                "invoke-static {}, Lcom/qinggan/launcher/base/BaseApplication;->getContext()Lcom/qinggan/launcher/base/BaseApplication;",
+                "move-result-object p1",
+                "invoke-virtual {p1, v0}, Lcom/qinggan/launcher/base/BaseApplication;->vehicleBoardSubWindowShow(Z)V",
+                "goto :goto_a5"
+              ],
+              "with": [
+                "invoke-static {p1, p2}, Lcom/voyemu/output/WindowRouter;->removeView(Landroid/view/ViewManager;Landroid/view/View;)V",
+                "invoke-static {}, Lcom/qinggan/launcher/base/BaseApplication;->getContext()Lcom/qinggan/launcher/base/BaseApplication;",
+                "move-result-object p1",
+                "invoke-virtual {p1, v0}, Lcom/qinggan/launcher/base/BaseApplication;->vehicleBoardSubWindowShow(Z)V",
+                "goto :goto_a5"
+              ]
+            },
+            {
+              "replace": [
+                "invoke-interface {p2, v0, v1}, Landroid/view/WindowManager;->addView(Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ],
+              "with": [
+                "invoke-static {p2, v0, v1}, Lcom/voyemu/output/WindowRouter;->addView(Landroid/view/ViewManager;Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ]
+            }
+          ]
+        }
+      ],
+      [
+        "Lcom/qinggan/mainlauncher/hiboard/h97a/SecondVehicleHiboardBar;->doScreenLift(I)V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-interface {p1, v0, v1}, Landroid/view/WindowManager;->updateViewLayout(Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ],
+              "with": [
+                "invoke-static {p1, v0, v1}, Lcom/voyemu/output/WindowRouter;->updateViewLayout(Landroid/view/ViewManager;Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ]
+            }
+          ]
+        }
+      ],
+      [
+        "Lcom/qinggan/mainlauncher/hiboard/h97a/SecondVehicleHiboardBar;->show()V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "invoke-interface {v0, v1, v2}, Landroid/view/WindowManager;->addView(Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ],
+              "with": [
+                "invoke-static {v0, v1, v2}, Lcom/voyemu/output/WindowRouter;->addView(Landroid/view/ViewManager;Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V"
+              ]
+            }
+          ]
+        }
+      ]
+    ]
+  },
+  "schema": 1
+}

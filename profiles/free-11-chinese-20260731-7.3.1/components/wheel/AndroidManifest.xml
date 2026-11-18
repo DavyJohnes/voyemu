@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.qinggan.keymanager.service" android:sharedUserId="android.uid.system">
+    <uses-sdk android:minSdkVersion="30" android:targetSdkVersion="30" />
+    <application android:label="VoyemuFreeKeyBroker" android:allowBackup="false">
+        <service android:name="com.voyemu.oem.FreeKeyService" android:exported="true">
+            <intent-filter>
+                <action android:name="com.qinggan.keymanager.action.KEY_MANAGER_SERVICE" />
+                <category android:name="android.intent.category.QGKEYMANAGER" />
+            </intent-filter>
+        </service>
+        <provider android:name="com.voyemu.input.FreeWheelProvider" android:authorities="com.voyemu.input.wheel" android:exported="true" android:permission="android.permission.DUMP" android:grantUriPermissions="false" />
+    </application>
+</manifest>

@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "api": 30,
+  "calls": [
+    {
+      "operation": "guardPassionNexusPower",
+      "args": []
+    }
+  ],
+  "constants": {
+    "original_sha256_allowlist": [
+      "603805fbc8aa50ff473cd34d2082366bd5cfa6ed9439f37188e9301e1b812b11"
+    ]
+  }
+}

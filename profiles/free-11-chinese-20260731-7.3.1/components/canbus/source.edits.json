@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "files": [
+    {
+      "path": "src/com/qinggan/canbus/service/protocol/dongfeng/DongfengCanBusComponentImpl.java",
+      "replacements": [
+        {
+          "before": "    @Override\n    public float getBatteryRemainingCapacity() {\n        return super.getBatteryRemainingCapacity();\n    }\n\n",
+          "after": ""
+        }
+      ]
+    }
+  ]
+}

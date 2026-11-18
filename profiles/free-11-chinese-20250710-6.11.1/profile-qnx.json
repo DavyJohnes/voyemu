@@ -1,0 +1,65 @@
+{
+  "schema": 1,
+  "status": "ready",
+  "hardware_adapter": "sa8155-qinggan11-611",
+  "update": {
+    "sha256": "ce6d1ffcd158c91383b61a44ea529bf54238512c520b436973fc0f6222047e42",
+    "source": "owner-update"
+  },
+  "originals": {
+    "hyp_la.img": {
+      "file": "hyp_la.img",
+      "bytes": 7340032,
+      "sha256": "dbb3bc2c6f9b0308e38627cf6a3e3b6757ba98c4f5413334526c26d812ab08f0",
+      "update": {
+        "kind": "zero-base-zstd-segments",
+        "entries": [
+          "qnx/hyp_la/hyp_la.patch0"
+        ],
+        "segment_bytes": [
+          7340032
+        ]
+      }
+    },
+    "ifs2_la.img": {
+      "file": "ifs2_la.img",
+      "bytes": 268435456,
+      "sha256": "fe181358fb9f827bc9df2d63e7ba0fad4f5fb0264b3bfa43f9fa6d0b47bc3ad7",
+      "update": {
+        "kind": "zero-base-zstd-segments",
+        "entries": [
+          "qnx/ifs2_la/ifs2_la.patch0"
+        ],
+        "segment_bytes": [
+          268435456
+        ]
+      }
+    },
+    "system_la.img": {
+      "file": "system_la.img",
+      "bytes": 1073741824,
+      "sha256": "f93893afd4dccea26099b11fa84a1c03684d9f4279eeca55d8852b71315837e1",
+      "update": {
+        "kind": "zero-base-zstd-segments",
+        "entries": [
+          "qnx/system_la/system_la.patch0",
+          "qnx/system_la/system_la.patch1"
+        ],
+        "segment_bytes": [
+          536870912,
+          536870912
+        ]
+      }
+    }
+  },
+  "ram_disk_driver": {
+    "image": "ifs2_la.img",
+    "imagefs": "ifs_disk.img",
+    "file": "bin/devb-ram",
+    "bytes": 22165,
+    "sha256": "5cded42595afc399ba6517c6600a258c96823ec14da3e7a01dd8a57f48d3c6e0"
+  },
+  "initial_native_state": {
+    "eps_calibrationFlag": 1
+  }
+}

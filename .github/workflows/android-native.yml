@@ -1,0 +1,81 @@
+# Native Android components of the profiles for preparation. A tag android-native-<sha8> builds every
+# native component twice with the pinned NDK, checks them against the androidNativeComponents pins in
+# src/app/toolchain.json and publishes them as the release assets that preparation downloads.
+name: android-native
+
+on:
+    push:
+        tags: ["android-native-*"]
+    workflow_dispatch:
+
+permissions:
+    contents: read
+
+jobs:
+    build:
+        name: Build ${{ github.ref_name }}
+        runs-on: ubuntu-24.04
+        timeout-minutes: 90
+        outputs:
+            tag: ${{ steps.select.outputs.tag }}
+        steps:
+            - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+              with:
+                  persist-credentials: false
+            - name: Check selection fixtures
+              run: bash src/dev/ci/android-native-select.test.sh
+            - name: Select the pinned components
+              id: select
+              run: bash src/dev/ci/android-native-select.sh .local/build/android-native/SHA256SUMS
+            # Restores or installs Zig, CMake, Ninja and the JDK of the linux set and, as a source-fixture input,
+            # the pinned NDK; the recipe downloads the pinned AOSP sources of the components.
+            - uses: ./.github/actions/toolchains
+              with:
+                  set: linux
+                  fixture-inputs: 'true'
+            # The recipe is build_native_component_recipe of the launcher sources, run by native_component_test.
+            - name: Build the recipe runner
+              run: |
+                  cmake -S src/app -B .local/build/android-native/build -G Ninja \
+                      -DCMAKE_TOOLCHAIN_FILE="$PWD/src/dev/toolchains/zig-linux-x64.cmake" -DBUILD_TESTING=ON -DVOYEMU_BUILD_CLUSTER=OFF
+                  cmake --build .local/build/android-native/build --target native_component_test --parallel 4
+            - name: Build every native component twice
+              run: |
+                  out="$PWD/.local/build/android-native"
+                  for copy in asset repeat; do
+                      "$out/build/native_component_test" --recipe "$PWD" "$out/$copy" --online
+                  done
+                  diff -r "$out/asset" "$out/repeat"
+            - name: Check the components against the pins
+              run: |
+                  cd .local/build/android-native
+                  (cd asset && sha256sum -c ../SHA256SUMS)
+                  test "$(find asset -type f | wc -l)" -eq "$(wc -l < SHA256SUMS)"
+                  cp SHA256SUMS asset/
+            - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+              with:
+                  name: ${{ steps.select.outputs.tag }}
+                  path: .local/build/android-native/asset/
+                  if-no-files-found: error
+
+    release:
+        name: Release ${{ needs.build.outputs.tag }}
+        needs: build
+        if: github.ref_type == 'tag'
+        runs-on: ubuntu-24.04
+        timeout-minutes: 10
+        permissions:
+            contents: write
+        steps:
+            - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+              with:
+                  name: ${{ needs.build.outputs.tag }}
+                  path: asset
+            - name: Create the release with the components
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  TAG: ${{ needs.build.outputs.tag }}
+              run: |
+                  gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --title "$TAG" \
+                      --notes "Native Android components built at $GITHUB_SHA by build_native_component_recipe from the profile components and their pinned AOSP sources with the pinned NDK; no OEM input. Assets are <profile>-<component>-<output>." \
+                      asset/*

@@ -1,0 +1,50 @@
+{
+  "api": 28,
+  "calls": [
+    {
+      "args": [
+        "src"
+      ],
+      "operation": "addDex"
+    },
+    {
+      "args": [
+        "Lcom/qinggan/app/qgime/QingganIME;->onDestroy()V",
+        {
+          "edits": [
+            {
+              "before": [
+                "iget-object v0, p0, Lcom/qinggan/app/qgime/QingganIME;->mEnvironment:Lcom/qinggan/app/qgime/Environment;",
+                "invoke-virtual {v0}, Lcom/qinggan/app/qgime/Environment;->needDebug()Z"
+              ],
+              "insert": [
+                "invoke-static {p0}, Lcom/voyemu/input/ImeDisplayRouter;->destroy(Landroid/inputmethodservice/InputMethodService;)V"
+              ]
+            }
+          ]
+        }
+      ],
+      "operation": "editMethod"
+    },
+    {
+      "args": [
+        "Lcom/qinggan/app/qgime/QingganIME;->onStartInputView(Landroid/view/inputmethod/EditorInfo;Z)V",
+        {
+          "edits": [
+            {
+              "before": [
+                "iget-object v0, p0, Lcom/qinggan/app/qgime/QingganIME;->mEnvironment:Lcom/qinggan/app/qgime/Environment;"
+              ],
+              "insert": [
+                "invoke-static {p0, p1}, Lcom/voyemu/input/ImeDisplayRouter;->route(Landroid/inputmethodservice/InputMethodService;Landroid/view/inputmethod/EditorInfo;)V"
+              ]
+            }
+          ]
+        }
+      ],
+      "operation": "editMethod"
+    }
+  ],
+  "constants": {},
+  "schema": 1
+}

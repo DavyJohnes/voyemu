@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "api": 30,
+  "native": true,
+  "input_sha256": "34309b705a40fbc6a52a96cfc6713c90a683223e0652b936b7227584546169d8",
+  "output_sha256": "c5c361ff9623c3c3798f60210684ae10b5eec48bed7e9e43a3b275f2b36db392",
+  "description": "Exact OEM certificate and Navi package scoped mapping to the existing platform_app envelope; inactive until explicitly selected."
+}

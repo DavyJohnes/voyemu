@@ -1,0 +1,5 @@
+{
+  "type": "jar",
+  "minSdk": 30,
+  "output": "voyemu-free-wheel.jar"
+}

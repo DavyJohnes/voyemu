@@ -1,0 +1,25 @@
+{
+  "type": "apk",
+  "minSdk": 28,
+  "targetSdk": 28,
+  "sign": "platform",
+  "donorDex": {
+    "original": "VehicleSetting",
+    "dex": "classes2.dex",
+    "classes": [
+      "com.qinggan.audiopolicy.AudioEQMode",
+      "com.qinggan.audiopolicy.AudioPolicyInfo",
+      "com.qinggan.audiopolicy.IAudioExceptionCallback",
+      "com.qinggan.audiopolicy.IAudioFadeCallback",
+      "com.qinggan.audiopolicy.IAudioPolicyCallback",
+      "com.qinggan.audiopolicy.IAudioPolicyInfoCallback",
+      "com.qinggan.audiopolicy.IAudioPolicyService"
+    ]
+  },
+  "sourceFiles": {
+    "AndroidManifest.xml": "voyemu/profiles/common/components/audiopolicy-disabled/AndroidManifest.xml",
+    "src/com/qinggan/audiopolicy/AudioPolicyStubService.java": "voyemu/profiles/common/components/audiopolicy-disabled/src/com/qinggan/audiopolicy/AudioPolicyStubService.java",
+    "src/com/qinggan/util/Log.java": "voyemu/profiles/free-09-chinese-20260106-6.0.3/components/audiopolicy/src/com/qinggan/util/Log.java"
+  },
+  "upstreamEdits": "upstream.edits.json"
+}

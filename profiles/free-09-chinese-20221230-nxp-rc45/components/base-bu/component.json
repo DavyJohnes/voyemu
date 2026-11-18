@@ -1,0 +1,12 @@
+{
+  "type": "jar",
+  "minSdk": 28,
+  "output": "bu.jar",
+  "frameworkBase": {
+    "jar": "/system/framework/bu.jar",
+    "oat": "/system/framework/oat/arm64/bu.odex",
+    "oat_sha256": "1b97a0d2aa3a41b22e56ed62aa0bd4c5f1930caf28a674fac5b7cc8bab8d4a42",
+    "vdex": "/system/framework/oat/arm64/bu.vdex",
+    "vdex_sha256": "9c091390603c5bedbb3f5dc1183b43571343693aa2015f61002c8b1f1b7c6867"
+  }
+}

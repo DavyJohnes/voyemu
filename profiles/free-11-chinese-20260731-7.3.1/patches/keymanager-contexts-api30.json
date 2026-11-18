@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "api": 30,
+  "native": true,
+  "input_sha256": "e4a9f3406dc9c3ff5a03c4b478941e02bede17ee95798bdbce1a31cc33f40959",
+  "output_sha256": "d73bcfe6f82f18f52e40e86d55f2a1163d2b526a0143bee9322d0ea5da368061",
+  "description": "Exact Free A11 7.3.1 API30 cockpit names including OEM KeyManager, screen PowerManager, cluster, car signal and AudioPolicy Binders; existing system_app add/find policy unchanged."
+}

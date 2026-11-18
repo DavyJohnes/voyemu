@@ -1,0 +1,12 @@
+{
+  "api": 28,
+  "calls": [
+
+  ],
+  "constants": {
+    "INPUT_SHA256": "a735efbbf4f1aea52e43fb57c31974fe4a2deed52ef91e5da276f67c60d0a711",
+    "OUTPUT_SHA256": "3edc01cb3c82403f9e37c87f17c6f3890cd10d7333e035b9ff485d19a1430595",
+    "APPEND": "\n; voyemu NXP canbus\n(type voyemu_canbus_service)\n(roletype object_r voyemu_canbus_service)\n(typeattributeset service_manager_type (voyemu_canbus_service))\n(allow system_app voyemu_canbus_service (service_manager (add find)))\n(allow platform_app voyemu_canbus_service (service_manager (find)))\n(allow priv_app voyemu_canbus_service (service_manager (find)))\n(type voyemu_nxp_key_manager_service)\n(roletype object_r voyemu_nxp_key_manager_service)\n(typeattributeset service_manager_type (voyemu_nxp_key_manager_service))\n(allow system_app voyemu_nxp_key_manager_service (service_manager (add find)))\n(allow platform_app voyemu_nxp_key_manager_service (service_manager (find)))\n(allow priv_app voyemu_nxp_key_manager_service (service_manager (find)))\n(type voyemu_nxp_system_policy_service)\n(roletype object_r voyemu_nxp_system_policy_service)\n(typeattributeset service_manager_type (voyemu_nxp_system_policy_service))\n(allow system_app voyemu_nxp_system_policy_service (service_manager (add find)))\n"
+  },
+  "schema": 1
+}

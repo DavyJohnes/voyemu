@@ -1,0 +1,9 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.qinggan.canbus.service" android:sharedUserId="android.uid.system">
+ <uses-sdk android:minSdkVersion="28" android:targetSdkVersion="28"/>
+ <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/><uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+ <application android:name="com.qinggan.canbus.service.CanApplication" android:label="NXP CAN climate" android:allowBackup="false" android:persistent="true">
+  <uses-library android:name="QGAPI" android:required="true"/>
+  <service android:name=".RegistrationService" android:exported="true"><intent-filter><action android:name="qg.canbus"/></intent-filter></service>
+  <receiver android:name=".BootReceiver" android:exported="true"><intent-filter><action android:name="android.intent.action.BOOT_COMPLETED"/></intent-filter></receiver>
+ </application>
+</manifest>

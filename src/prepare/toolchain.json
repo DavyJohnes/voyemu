@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "libraries": {
+    "apksigner": {
+      "version": "build-tools-36.1.0",
+      "file": ".local/toolchains/java-sdk/build-tools/36.1.0/lib/apksigner.jar",
+      "sha256": "71e18adf733f5e112d1f062dbe6b0c2eb439a4d7c773d083c42a703c66f56df1"
+    },
+    "d8": {
+      "version": "build-tools-36.1.0",
+      "file": ".local/toolchains/java-sdk/build-tools/36.1.0/lib/d8.jar",
+      "sha256": "e0c2803fbf9a1258051c3202daad46a2e00f33a0eb91258ac9fd373df0a832ce"
+    }
+  }
+}

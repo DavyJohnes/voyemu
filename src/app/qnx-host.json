@@ -1,0 +1,474 @@
+{
+  "schema": 1,
+  "prebuilt": {
+    "macos_arm64": {
+      "url": "https://github.com/voyemu/voyemu/releases/download/qnx-host-macos-arm64-98d88ffa/qnx-host-macos-arm64.zip",
+      "sha256": "98d88ffa6d6c26b55550249a9d7214f62486b324da4e66328dbd450bba85bef2"
+    },
+    "linux_x64": {
+      "url": "https://github.com/voyemu/voyemu/releases/download/qnx-host-linux-x64-86ea52c3/qnx-host-linux-x64.zip",
+      "sha256": "86ea52c3f11b5427f5f97cfccbf02f31e2a5be80773b5672f1f3761e7c4b7e33"
+    },
+    "windows_file_backend": null
+  },
+  "windows_x64": {
+    "version": "11.1.0",
+    "qemu": {
+      "url": "https://qemu.weilnetz.de/w64/2026/qemu-w64-setup-20260811.exe",
+      "sha256": "f98a8aeb5f7faea9765b6dee28316c266cd179d80354a2fed8e50176f9a2e59f"
+    },
+    "extractor": {
+      "version": "25.01",
+      "url": "https://7-zip.org/a/7z2501-x64.msi",
+      "sha256": "e7eb0b7ed5efa4e087b7b17f191797f7af5b7f442d1290c66f3a21777005ef57"
+    }
+  },
+  "macos_arm64": {
+    "version": "11.1.2",
+    "minimum_macos": "15.0",
+    "source": {
+      "url": "https://download.qemu.org/qemu-11.1.2.tar.xz",
+      "sha256": "731b5681e4bb18be313231579b8efd0296c5b015fa36dc533874b639ba838016"
+    },
+    "patch": {
+      "file": "src/app/qnx-host.patch"
+    },
+    "patched_sources": {
+      "target/arm/hvf/hvf.c": "84e32f818dfbc3d7ad6cb3cc2e8655b9e5774fa4ef1112334ffaa6ed83526bde",
+      "hw/intc/arm_gicv3_hvf.c": "a5c977b22bbcd030513c37c55e99c0fd27aafb891366214ffc828be82b402752",
+      "hw/intc/arm_gicv3_hvf_mmio.h": "062b0ad49a4a296678fa55056fc69ed5600e8a0c4a161776edbb0e5b234270e2",
+      "meson.build": "34a4661e9112c54206cb15ee201d098e5bbacd0884b737af7d7c1501d97d3b2c",
+      "scripts/entitlement.sh": "584f412bf4cbc2727bfa65a44276cb49c74df982794b97156afa59e509d01bf7"
+    },
+    "dependencies": {
+      "glib": {
+        "version": "2.90.0",
+        "bottle": {
+          "url": "https://ghcr.io/v2/homebrew/core/glib/blobs/sha256:91df2202a093cd00b90fa9919f1c1e61e8f78d8ddd9a307009af6d4007072180",
+          "sha256": "91df2202a093cd00b90fa9919f1c1e61e8f78d8ddd9a307009af6d4007072180"
+        },
+        "source": {
+          "url": "https://download.gnome.org/sources/glib/2.90/glib-2.90.0.tar.xz",
+          "sha256": "17d15cac2af80a33271127408e0abc2748eb297c595c2a26409e81e14e7d1b8f"
+        },
+        "license": "LGPL-2.1-or-later",
+        "static_library": {
+          "file": "libglib-2.0.a",
+          "sha256": "04f59eec1dcebb35e26486d480e6fd257ff7520ca930e1f59c72085eb1c6a33e"
+        }
+      },
+      "dtc": {
+        "version": "1.8.1",
+        "bottle": {
+          "url": "https://ghcr.io/v2/homebrew/core/dtc/blobs/sha256:2b800aed01f5ebfc9cbb685536ad1625d1d702ab850bd34639865d3457c4f2e8",
+          "sha256": "2b800aed01f5ebfc9cbb685536ad1625d1d702ab850bd34639865d3457c4f2e8"
+        },
+        "source": {
+          "url": "https://mirrors.edge.kernel.org/pub/software/utils/dtc/dtc-1.8.1.tar.xz",
+          "sha256": "23526015a6f1550e0541a53fe7acea1b5a11e3697cdf3a3bdc076abc38f6045d"
+        },
+        "license": {
+          ":any_of": [
+            "GPL-2.0-or-later",
+            "BSD-2-Clause"
+          ]
+        },
+        "static_library": {
+          "file": "libfdt.a",
+          "sha256": "83d4679cd26049403320397dd9ccbcc73bfeb0bc3a41ae7d4360dd432818ec7b"
+        }
+      },
+      "pcre2": {
+        "version": "10.49",
+        "bottle": {
+          "url": "https://ghcr.io/v2/homebrew/core/pcre2/blobs/sha256:0ec47d18c50f5770db2b3f07b5b85644284cc6ee8e07e23b11d2727e95932b77",
+          "sha256": "0ec47d18c50f5770db2b3f07b5b85644284cc6ee8e07e23b11d2727e95932b77"
+        },
+        "source": {
+          "url": "https://github.com/PCRE2Project/pcre2/releases/download/pcre2-10.49/pcre2-10.49.tar.bz2",
+          "sha256": "53c156e1ba416a20da8e65395daa132da0d80e76910424caca3fcdae7831d384"
+        },
+        "license": "BSD-3-Clause",
+        "static_library": {
+          "file": "libpcre2-8.a",
+          "sha256": "948858c1902f34a45317fd9f40b88ec8a3b5fcee563279325d8886246872b0bb"
+        }
+      },
+      "gettext": {
+        "version": "1.0",
+        "bottle": {
+          "url": "https://ghcr.io/v2/homebrew/core/gettext/blobs/sha256:98a116d35792ccd730360ffc8c0d8fc5799b2282b96bb7696192c573f064a331",
+          "sha256": "98a116d35792ccd730360ffc8c0d8fc5799b2282b96bb7696192c573f064a331"
+        },
+        "source": {
+          "url": "https://ftpmirror.gnu.org/gettext/gettext-1.0.tar.gz",
+          "sha256": "85d99b79c981a404874c02e0342176cf75c7698e2b51fe41031cf6526d974f1a"
+        },
+        "license": {
+          ":all_of": [
+            "GPL-3.0-or-later",
+            "LGPL-2.1-or-later"
+          ]
+        },
+        "static_library": {
+          "file": "libintl.a",
+          "sha256": "77dcf975f1568218bdb48b1da5c62b14b9ff481feedf7b9b87b40d43f6a6e6f5"
+        }
+      }
+    },
+    "pkgconf": {
+      "version": "3.0.7",
+      "url": "https://distfiles.ariadne.space/pkgconf/pkgconf-3.0.7.tar.xz",
+      "sha256": "c926ff491cbd9a331a589160811bd97ab1749b4d5198a519338f2cdfabe6940a"
+    },
+    "python_wheels": [
+      {
+        "name": "pip",
+        "version": "25.3",
+        "url": "https://files.pythonhosted.org/packages/44/3c/d717024885424591d5376220b5e836c2d5293ce2011523c9de23ff7bf068/pip-25.3-py3-none-any.whl",
+        "sha256": "9655943313a94722b7774661c21049070f6bbb0a1516bf02f7c8d5d9201514cd"
+      },
+      {
+        "name": "setuptools",
+        "version": "80.9.0",
+        "url": "https://files.pythonhosted.org/packages/a3/dc/17031897dae0efacfea57dfd3a82fdd2a2aeb58e0ff71b77b87e44edc772/setuptools-80.9.0-py3-none-any.whl",
+        "sha256": "062d34222ad13e0cc312a4c02d73f059e86a4acbfbdea8f8f76b28c99f306922"
+      },
+      {
+        "name": "wheel",
+        "version": "0.45.1",
+        "url": "https://files.pythonhosted.org/packages/0b/2c/87f3254fd8ffd29e4c02732eee68a83a1d3c346ae39bc6822dcbcb697f2b/wheel-0.45.1-py3-none-any.whl",
+        "sha256": "708e7481cc80179af0e556bbf0cc00b8444c7321e2700b8d8580231d13017248"
+      },
+      {
+        "name": "tomli",
+        "version": "2.2.1",
+        "url": "https://files.pythonhosted.org/packages/6e/c2/61d3e0f47e2b74ef40a68b9e6ad5984f6241a942f7cd3bbfbdbd03861ea9/tomli-2.2.1-py3-none-any.whl",
+        "sha256": "cb55c73c5f4408779d0cf3eef9f762b9c9f147a77de7b258bef0a5628adc85cc"
+      }
+    ],
+    "compiler": "Xcode Command Line Tools",
+    "python": "/usr/bin/python3",
+    "system_only_runtime": true
+  },
+  "linux_x64": {
+    "version": "11.1.2",
+    "source": {
+      "url": "https://download.qemu.org/qemu-11.1.2.tar.xz",
+      "sha256": "731b5681e4bb18be313231579b8efd0296c5b015fa36dc533874b639ba838016"
+    },
+    "dependencies": {
+      "zlib": {
+        "version": "1.3.2",
+        "url": "https://github.com/madler/zlib/releases/download/v1.3.2/zlib-1.3.2.tar.xz",
+        "sha256": "d7a0654783a4da529d1bb793b7ad9c3318020af77667bcae35f95d0e42a792f3",
+        "license": "Zlib",
+        "notices": ["LICENSE"]
+      },
+      "pcre2": {
+        "version": "10.49",
+        "url": "https://github.com/PCRE2Project/pcre2/releases/download/pcre2-10.49/pcre2-10.49.tar.bz2",
+        "sha256": "53c156e1ba416a20da8e65395daa132da0d80e76910424caca3fcdae7831d384",
+        "license": "BSD-3-Clause",
+        "notices": ["LICENCE.md"]
+      },
+      "libffi": {
+        "version": "3.8.1",
+        "url": "https://github.com/libffi/libffi/releases/download/v3.8.1/libffi-3.8.1.tar.gz",
+        "sha256": "81e879c094cc5ec3186c48510c6385ac6b3e866192e8bc71a35245703757ee40",
+        "license": "MIT",
+        "notices": ["LICENSE"]
+      },
+      "glib": {
+        "version": "2.90.0",
+        "url": "https://download.gnome.org/sources/glib/2.90/glib-2.90.0.tar.xz",
+        "sha256": "17d15cac2af80a33271127408e0abc2748eb297c595c2a26409e81e14e7d1b8f",
+        "license": "LGPL-2.1-or-later",
+        "notices": ["COPYING"]
+      },
+      "dtc": {
+        "version": "1.8.1",
+        "url": "https://mirrors.edge.kernel.org/pub/software/utils/dtc/dtc-1.8.1.tar.xz",
+        "sha256": "23526015a6f1550e0541a53fe7acea1b5a11e3697cdf3a3bdc076abc38f6045d",
+        "license": "BSD-2-Clause",
+        "notices": ["BSD-2-Clause"]
+      }
+    },
+    "pkgconf": {
+      "version": "3.0.7",
+      "url": "https://distfiles.ariadne.space/pkgconf/pkgconf-3.0.7.tar.xz",
+      "sha256": "c926ff491cbd9a331a589160811bd97ab1749b4d5198a519338f2cdfabe6940a"
+    },
+    "python_wheels": [
+      {
+        "name": "pip",
+        "version": "25.3",
+        "url": "https://files.pythonhosted.org/packages/44/3c/d717024885424591d5376220b5e836c2d5293ce2011523c9de23ff7bf068/pip-25.3-py3-none-any.whl",
+        "sha256": "9655943313a94722b7774661c21049070f6bbb0a1516bf02f7c8d5d9201514cd"
+      },
+      {
+        "name": "setuptools",
+        "version": "80.9.0",
+        "url": "https://files.pythonhosted.org/packages/a3/dc/17031897dae0efacfea57dfd3a82fdd2a2aeb58e0ff71b77b87e44edc772/setuptools-80.9.0-py3-none-any.whl",
+        "sha256": "062d34222ad13e0cc312a4c02d73f059e86a4acbfbdea8f8f76b28c99f306922"
+      },
+      {
+        "name": "wheel",
+        "version": "0.45.1",
+        "url": "https://files.pythonhosted.org/packages/0b/2c/87f3254fd8ffd29e4c02732eee68a83a1d3c346ae39bc6822dcbcb697f2b/wheel-0.45.1-py3-none-any.whl",
+        "sha256": "708e7481cc80179af0e556bbf0cc00b8444c7321e2700b8d8580231d13017248"
+      },
+      {
+        "name": "tomli",
+        "version": "2.2.1",
+        "url": "https://files.pythonhosted.org/packages/6e/c2/61d3e0f47e2b74ef40a68b9e6ad5984f6241a942f7cd3bbfbdbd03861ea9/tomli-2.2.1-py3-none-any.whl",
+        "sha256": "cb55c73c5f4408779d0cf3eef9f762b9c9f147a77de7b258bef0a5628adc85cc"
+      }
+    ],
+    "configure": [
+      "--target-list=aarch64-softmmu",
+      "--disable-download",
+      "--disable-docs",
+      "--disable-tools",
+      "--disable-guest-agent",
+      "--disable-plugins",
+      "--disable-werror",
+      "--disable-debug-info",
+      "--without-default-features",
+      "--enable-tcg",
+      "--enable-fdt=system"
+    ],
+    "compiler": {
+      "version": "0.15.2",
+      "target": "x86_64-linux-gnu.2.34",
+      "cflags": [
+        "-UNDEBUG"
+      ],
+      "linux_x64": {
+        "url": "https://ziglang.org/download/0.15.2/zig-x86_64-linux-0.15.2.tar.xz",
+        "sha256": "02aa270f183da276e5b5920b1dac44a63f1a49e55050ebde3aecc9eb82f93239",
+        "bytes": 53733924
+      }
+    },
+    "python": "/usr/bin/python3",
+    "make": "/usr/bin/make",
+    "system_libraries": ["ld-linux-x86-64.so.2", "libc.so.6", "libm.so.6", "libpthread.so.0", "libdl.so.2", "librt.so.1"]
+  },
+  "windows_file_backend": {
+    "version": "11.1.2",
+    "source": {
+      "url": "https://download.qemu.org/qemu-11.1.2.tar.xz",
+      "sha256": "731b5681e4bb18be313231579b8efd0296c5b015fa36dc533874b639ba838016"
+    },
+    "patch": {
+      "file": "src/app/qnx-host-windows.patch"
+    },
+    "patched_sources": {
+      "backends/hostmem-file.c": {
+        "before": "c774e5c4f351f9e3c3d66bee287cfed8471f661d199c0a4221fe125501e7712a",
+        "after": "c5ba6913fd8eb367b11c197e6d844578ba39b84bb6de11b84fe114a7533a937d"
+      },
+      "backends/meson.build": {
+        "before": "a9646f884187452927daca2eff09d2222dd4c05c82f852a4182a84683325236e",
+        "after": "c65e371ede0b140c5b3f93c868117a37667bc85c01cc2fc21d55e7e7195f2854"
+      },
+      "include/system/memory.h": {
+        "before": "e18ae2d127d0e427de130a63f6437ed37b17d7d54c873c46007866064c958261",
+        "after": "c363326f5ece37fbbdeac9c7b265e99d56a11c711a42d60f118dc02bdde48d9d"
+      },
+      "include/system/ramblock.h": {
+        "before": "7828b7d84f7a7d514d905ebec85627096764970051f2f3bcf424e9225304d136",
+        "after": "821379f6e92849375eabdf9dda6895df31326c543cd3fa2fa174acf613b2b5f5"
+      },
+      "meson.build": {
+        "before": "7d45b715ca8e740d787eee6d4a1e8ae4a7456aecfe16dda2a7d32a0f2cc10591",
+        "after": "84664fccf246bfba3de32f0d769c1fe15b1ff70b2ef6f8c181c455d6c123b427"
+      },
+      "system/memory.c": {
+        "before": "09a3c9c186629f082f63b50b3ee7c54366c37a62584f6d9f897980cd276aca13",
+        "after": "6233a8f1dc2f5bcacef258b0817777be18b953c972e34bfc7c7141708ab3beed"
+      },
+      "system/physmem.c": {
+        "before": "3210a543353b435a146f7ae4a33608ea849aad038cd9e889ddb3a30c104c063f",
+        "after": "bd60d248e5d0eedb67977beaad44658c60a2139f5b5731c4d02a075a4612e948"
+      },
+      "util/oslib-win32.c": {
+        "before": "9d6c4391188d3787fb71234bc23d4640145f214c20fd5f0147fe4e80689e51de",
+        "after": "84c527509c5e419dbd847ece88377cc53d5d864229444c16af08b4b680eaa5f9"
+      }
+    },
+    "dependencies": {
+      "glib2": {
+        "url": "https://mirror.msys2.org/mingw/ucrt64/mingw-w64-ucrt-x86_64-glib2-2.90.1-1-any.pkg.tar.zst",
+        "sha256": "9a7826349279bcca0c935b01880d812be9de9609aef2205be68fd7a6128c1695"
+      },
+      "zlib": {
+        "url": "https://mirror.msys2.org/mingw/ucrt64/mingw-w64-ucrt-x86_64-zlib-1.3.2-2-any.pkg.tar.zst",
+        "sha256": "841401182976d2f9e17e5c0ebaac51f2a8014140ea53d67625e91c8fb3c85ea0"
+      },
+      "gettext": {
+        "url": "https://mirror.msys2.org/mingw/ucrt64/mingw-w64-ucrt-x86_64-gettext-runtime-1.0-1-any.pkg.tar.zst",
+        "sha256": "ba693dda4ac375af76ce481ff3a6e7481286546cc7dc6d56c7021dae34084157"
+      },
+      "mingw_crt": {
+        "url": "https://mirror.msys2.org/mingw/ucrt64/mingw-w64-ucrt-x86_64-crt-14.0.0.r495.g63ebe6cdb-1-any.pkg.tar.zst",
+        "sha256": "5975fa56060f1d428d2369b6be70b1e63c0512c63031c2bae722b45610d1c1ea"
+      },
+      "pcre2": {
+        "url": "https://mirror.msys2.org/mingw/ucrt64/mingw-w64-ucrt-x86_64-pcre2-10.49-1-any.pkg.tar.zst",
+        "sha256": "63172179db724ac71e2439a7981134c1bcab8049bdddfd349b32b8f76ed52d1e"
+      },
+      "libiconv": {
+        "url": "https://mirror.msys2.org/mingw/ucrt64/mingw-w64-ucrt-x86_64-libiconv-1.19-1-any.pkg.tar.zst",
+        "sha256": "9a500f38c2b91808741c62fae746b3e9110b33a1ecf5c30fa0c66dbedddf7e16"
+      }
+    },
+    "dtc": {
+      "url": "https://mirrors.edge.kernel.org/pub/software/utils/dtc/dtc-1.8.1.tar.xz",
+      "sha256": "23526015a6f1550e0541a53fe7acea1b5a11e3697cdf3a3bdc076abc38f6045d"
+    },
+    "python_wheels": [
+      {
+        "name": "pip",
+        "version": "25.3",
+        "url": "https://files.pythonhosted.org/packages/44/3c/d717024885424591d5376220b5e836c2d5293ce2011523c9de23ff7bf068/pip-25.3-py3-none-any.whl",
+        "sha256": "9655943313a94722b7774661c21049070f6bbb0a1516bf02f7c8d5d9201514cd"
+      },
+      {
+        "name": "setuptools",
+        "version": "80.9.0",
+        "url": "https://files.pythonhosted.org/packages/a3/dc/17031897dae0efacfea57dfd3a82fdd2a2aeb58e0ff71b77b87e44edc772/setuptools-80.9.0-py3-none-any.whl",
+        "sha256": "062d34222ad13e0cc312a4c02d73f059e86a4acbfbdea8f8f76b28c99f306922"
+      },
+      {
+        "name": "wheel",
+        "version": "0.45.1",
+        "url": "https://files.pythonhosted.org/packages/0b/2c/87f3254fd8ffd29e4c02732eee68a83a1d3c346ae39bc6822dcbcb697f2b/wheel-0.45.1-py3-none-any.whl",
+        "sha256": "708e7481cc80179af0e556bbf0cc00b8444c7321e2700b8d8580231d13017248"
+      },
+      {
+        "name": "tomli",
+        "version": "2.2.1",
+        "url": "https://files.pythonhosted.org/packages/6e/c2/61d3e0f47e2b74ef40a68b9e6ad5984f6241a942f7cd3bbfbdbd03861ea9/tomli-2.2.1-py3-none-any.whl",
+        "sha256": "cb55c73c5f4408779d0cf3eef9f762b9c9f147a77de7b258bef0a5628adc85cc"
+      }
+    ],
+    "configure": [
+      "--target-list=aarch64-softmmu",
+      "--disable-download",
+      "--disable-docs",
+      "--disable-tools",
+      "--disable-guest-agent",
+      "--disable-plugins",
+      "--disable-werror",
+      "--without-default-features",
+      "--enable-tcg",
+      "--enable-fdt=system"
+    ],
+    "compiler": {
+      "version": "0.15.2",
+      "target": "x86_64-windows-gnu",
+      "cflags": [
+        "-UNDEBUG"
+      ],
+      "macos_arm64_executable_sha256": "c65cd34917923f575448cc0603dd7c2326da0af0e5c323043d090662dcdf351c",
+      "windows_x64": {
+        "url": "https://ziglang.org/download/0.15.2/zig-x86_64-windows-0.15.2.zip",
+        "sha256": "3a0ed1e8799a2f8ce2a6e6290a9ff22e6906f8227865911fb7ddedc3cc14cb0c",
+        "bytes": 92614574
+      }
+    },
+    "verified_runtime": {
+      "files": {
+        "libintl-8.dll": {
+          "sha256": "0e5a178731e6be6d115442a6ade3df7f03265cd1fc4338f8b6f86a8001cbf582",
+          "bytes": 298164
+        },
+        "libpcre2-8-0.dll": {
+          "sha256": "1f609cde2ce432efb7d2b0c7b84a14a6dbfc9622d1ac1a3cbadf51c5b0b4dada",
+          "bytes": 706022
+        },
+        "qemu-system-aarch64.exe": {
+          "sha256": "fc22d57507565348461ce33cd7d37cdbaa488337568d3622236098f3435a972c",
+          "bytes": 30151680
+        },
+        "zlib1.dll": {
+          "sha256": "11cd91171765cd65f1c3362e3df67e5f5a618a6b88c8cdec899b802eaf1c7b0d",
+          "bytes": 127291
+        },
+        "libglib-2.0-0.dll": {
+          "sha256": "3a1abec0184b238db54399cb9243393d9436d96b8fdb9bd9f2875da207c5b458",
+          "bytes": 1568604
+        },
+        "libiconv-2.dll": {
+          "sha256": "94ec68fb8d342b6c91b6b48a8d95092819cdcd006a7166e0b68062f946afd08a",
+          "bytes": 1141951
+        },
+        "licenses/libiconv/COPYING.LIB": {
+          "sha256": "20e50fe7aae3e56378ebf0417d9de904f55a0e61e4df315333e632a4d3555d95",
+          "bytes": 26419
+        },
+        "licenses/zlib/LICENSE": {
+          "sha256": "e32ff4e00d9d94930537635291da39e7e612703334bf6fde8c7f1686fe8a45a2",
+          "bytes": 1002
+        },
+        "licenses/glib2/COPYING": {
+          "sha256": "fa6f36630bb1e0c571d34b2bbdf188d08495c9dbf58f28cac112f303fc1f58fb",
+          "bytes": 25967
+        },
+        "licenses/qemu/COPYING": {
+          "sha256": "dd3ce02338c3a48abb6ba59b48809f7108a8bd242cb0cc8be90daafa30707c28",
+          "bytes": 17880
+        },
+        "licenses/pcre2/LICENCE.md": {
+          "sha256": "197d8a73ffee0d6b09adba2f9c677b5f5aede24edf89258a68e48248d010d811",
+          "bytes": 4011
+        },
+        "licenses/pcre2/COPYING": {
+          "sha256": "99272c55f3dcfa07a8a7e15a5c1a33096e4727de74241d65fa049fccfdd59507",
+          "bytes": 97
+        },
+        "licenses/gettext-runtime/intl/COPYING.LIB": {
+          "sha256": "20e50fe7aae3e56378ebf0417d9de904f55a0e61e4df315333e632a4d3555d95",
+          "bytes": 26419
+        }
+      },
+      "qnx_file_backend": {
+        "schema": 1,
+        "version": "11.1.2",
+        "engine_sha256": "fc22d57507565348461ce33cd7d37cdbaa488337568d3622236098f3435a972c"
+      }
+    },
+    "build_shell": {
+      "url": "https://github.com/msys2/msys2-installer/releases/download/2026-09-27/msys2-base-x86_64-20260927.tar.xz",
+      "sha256": "ea2f31a0b6ade63914ce441ffb022f0f6aa96982bfefa2326460a26d5fb01322",
+      "bytes": 42860696
+    },
+    "build_tools": {
+      "python": {
+        "url": "https://mirror.msys2.org/msys/x86_64/python-3.12.15-1-x86_64.pkg.tar.zst",
+        "sha256": "5672cd7d84b1415adce1cfc1555e2fc12e489c8cb0c0f787cf2ed6f1ecdf73f8"
+      },
+      "binutils": {
+        "url": "https://mirror.msys2.org/msys/x86_64/binutils-2.47-1-x86_64.pkg.tar.zst",
+        "sha256": "b7ddaca6e8b63774cdb1f5ac2720963cd76f8f62ca7e2667b1b0f008ed7ecba2"
+      },
+      "mpdecimal": {
+        "url": "https://mirror.msys2.org/msys/x86_64/mpdecimal-4.0.1-1-x86_64.pkg.tar.zst",
+        "sha256": "01ae3016641af4d499329c68e00a34664b7c7d9095dc6a859317441507132d41"
+      },
+      "ninja": {
+        "url": "https://mirror.msys2.org/msys/x86_64/ninja-1.13.2-1-x86_64.pkg.tar.zst",
+        "sha256": "f90a948749dfba4bb901c0cec9a28dc92c2c63a79346e9002b1ae4192ed92199"
+      },
+      "pkgconf": {
+        "url": "https://mirror.msys2.org/msys/x86_64/pkgconf-3.0.10-1-x86_64.pkg.tar.zst",
+        "sha256": "ab9fdaf563938752aecd8b5495954e1e04f6ac5721a6522b35374e548fc357c2"
+      },
+      "patch": {
+        "url": "https://mirror.msys2.org/msys/x86_64/patch-2.8-2-x86_64.pkg.tar.zst",
+        "sha256": "df34ebf345d607cabf0b2cbad60f562f775f07985647b84035b40702f62ee9b1"
+      }
+    }
+  }
+}

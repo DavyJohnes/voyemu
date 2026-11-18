@@ -1,0 +1,33 @@
+{
+  "type": "jar",
+  "minSdk": 28,
+  "output": "VoyemuNxpMediaCallbacks.jar",
+  "donorDex": {
+    "original": "Launcher",
+    "sha256": "93f4bea56530bf2de8634b7898fd4275a3c8985ff0392fdc58607ef8bc5b2441",
+    "dex": "classes.dex",
+    "classes": [
+      "com.qinggan.bus.QGBus",
+      "com.qinggan.bus.QGBusEvent",
+      "com.qinggan.bus.QGBusEvent$1",
+      "com.qinggan.bus.QGBusEventFilter",
+      "com.qinggan.bus.QGBusEventHandler",
+      "com.qinggan.bus.impl.ProtocolMessage",
+      "com.qinggan.bus.impl.QGBusImpl",
+      "com.qinggan.bus.impl.QGBusImpl$1",
+      "com.qinggan.bus.impl.QGBusImpl$2",
+      "com.qinggan.bus.impl.QGBusImpl$3",
+      "com.qinggan.bus.impl.SubscribeInfo",
+      "com.qinggan.media.MediaInfo",
+      "com.qinggan.media.MediaInfoEventHelper",
+      "com.qinggan.media.MediaInfoEventHelper$1",
+      "com.qinggan.media.MediaInfoEventHelper$MediaEventHandler",
+      "com.qinggan.media.MediaInfoEventHelper$MediaEventHandlerExt",
+      "com.qinggan.media.MediaInfoEventHelper$MediaEventHandlerExt2",
+      "com.qinggan.media.MediaInfoEventHelper$MediaEventHandlerV2",
+      "com.qinggan.media.MediaInfoEventHelper$MediaInfoEventHandler",
+      "com.qinggan.media.MusicInfo",
+      "com.qinggan.media.RadioInfo"
+    ]
+  }
+}

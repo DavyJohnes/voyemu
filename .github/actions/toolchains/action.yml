@@ -1,0 +1,114 @@
+# Restores or installs one pinned toolchain set of src/dev/ci/toolchains.sh and puts its tools on PATH.
+# The key hashes every pin file and the install code, so a pin change installs and caches a new copy.
+# Kernel sets also restore the kernel host tools and clang that kernel-tool.sh builds and saves.
+name: Pinned toolchains
+description: Restore or install one pinned CI toolchain set
+inputs:
+    set:
+        description: Toolchain set of src/dev/ci/toolchains.sh, or windows for the Windows runner
+        required: true
+    fixture-inputs:
+        description: Install public Java/Android/NDK source-fixture inputs, without OEM or runtime inputs
+        default: 'false'
+runs:
+    using: composite
+    steps:
+        - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+          id: toolchains
+          with:
+              path: |
+                  .local/toolchains
+                  !.local/toolchains/kernel-host
+                  !.local/toolchains/kernel-clang
+                  .local/build/kernel/base
+              key: toolchains-${{ inputs.set }}-fixtures-${{ inputs.fixture-inputs }}-${{ runner.os }}-${{ hashFiles('src/app/toolchain.json', 'src/prepare/toolchain.json', 'src/prepare/libraries.json', 'src/app/dependencies.lock.json', 'src/app/platform/component.json', 'src/app/api/component.json', 'src/guest/qnx/component.json', 'profiles/common-qinggan-*/components/kernel/component.json', 'src/dev/ci/toolchains.sh', '.github/actions/toolchains/action.yml') }}
+        - if: startsWith(inputs.set, 'kernel-')
+          uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+          with:
+              path: |
+                  .local/toolchains/kernel-host
+                  .local/toolchains/kernel-clang
+              key: kernel-host-${{ inputs.set }}-${{ runner.os }}-${{ hashFiles('src/app/toolchain.json', 'profiles/common-qinggan-*/components/kernel/component.json', 'src/prepare/kernel/*.java') }}
+        - if: steps.toolchains.outputs.cache-hit != 'true' && runner.os != 'Windows'
+          shell: bash
+          run: bash src/dev/ci/toolchains.sh "${{ inputs.set }}" "${{ inputs.fixture-inputs }}"
+        - if: runner.os != 'Windows'
+          shell: bash
+          run: bash src/dev/ci/toolchains.sh --env "${{ inputs.set }}"
+        - if: steps.toolchains.outputs.cache-hit != 'true' && runner.os == 'Windows'
+          shell: pwsh
+          run: |
+              $pins = (Get-Content src/app/toolchain.json -Raw | ConvertFrom-Json).optionalTools.windowsBuild
+              foreach ($tool in 'zig', 'cmake', 'ninja', 'jdk') {
+                  $pin = $pins.$tool
+                  $archive = ".local/toolchains/downloads/$(($pin.url -split '/')[-1])"
+                  New-Item -ItemType Directory -Force .local/toolchains/downloads, $pin.directory | Out-Null
+                  curl.exe -fsSL --retry 3 -o $archive $pin.url
+                  if ($LASTEXITCODE -ne 0) { throw "Download failed: $($pin.url)" }
+                  if ((Get-FileHash -Algorithm SHA256 $archive).Hash -ne $pin.sha256) { throw "SHA-256 mismatch: $archive" }
+                  # Zig, CMake and JDK archives wrap one top-level directory; the Ninja archive holds only ninja.exe.
+                  $strip = if ($tool -eq 'ninja') { 0 } else { 1 }
+                  & "$env:SystemRoot\System32\tar.exe" -xf $archive -C $pin.directory --strip-components=$strip
+                  if ($LASTEXITCODE -ne 0) { throw "Extraction failed: $archive" }
+              }
+              # Source archives that the CMake configuration otherwise downloads, named as its offline cache expects.
+              $sources = @((Get-Content src/app/dependencies.lock.json -Raw | ConvertFrom-Json).dependencies | ForEach-Object { @{ url = $_.url; sha = $_.archive_sha256 } })
+              $sources += @{ url = (Get-Content src/app/platform/component.json -Raw | ConvertFrom-Json).window_sdl3.url; sha = (Get-Content src/app/platform/component.json -Raw | ConvertFrom-Json).window_sdl3.sha256 }
+              $media = (Get-Content src/app/api/component.json -Raw | ConvertFrom-Json).windows_media_http2
+              $sources += @{ url = $media.curl.url; sha = $media.curl.sha256 }, @{ url = $media.nghttp2.url; sha = $media.nghttp2.sha256 }
+              New-Item -ItemType Directory -Force .local/toolchains/downloads/sources | Out-Null
+              foreach ($source in $sources) {
+                  if ($source.url -notmatch '\.(tar\.gz|tar\.xz|zip|ttf)$') { throw "Unsupported archive: $($source.url)" }
+                  $archive = ".local/toolchains/downloads/sources/$($source.sha)$($Matches[0])"
+                  curl.exe -fsSL --retry 3 -o $archive $source.url
+                  if ($LASTEXITCODE -ne 0) { throw "Download failed: $($source.url)" }
+                  if ((Get-FileHash -Algorithm SHA256 $archive).Hash -ne $source.sha) { throw "SHA-256 mismatch: $archive" }
+              }
+        - if: steps.toolchains.outputs.cache-hit != 'true' && runner.os == 'Windows' && inputs.fixture-inputs == 'true'
+          shell: pwsh
+          run: |
+              # Reuse the native action installer and repository URL/SHA pins; no deps/OEM fetch.
+              $manifest = Get-Content src/app/toolchain.json -Raw | ConvertFrom-Json
+              $libraries = Get-Content src/prepare/libraries.json -Raw | ConvertFrom-Json
+              New-Item -ItemType Directory -Force .local/toolchains/downloads/native | Out-Null
+              foreach ($role in 'key', 'cert') {
+                  $pin = $manifest.signing.platform.$role
+                  $encoded = curl.exe -fsSL --retry 3 $pin.url
+                  if ($LASTEXITCODE -ne 0) { throw "Download failed: $($pin.url)" }
+                  $destination = ".local/toolchains/downloads/native/$($pin.sha256).blob"
+                  [IO.File]::WriteAllBytes("$PWD/$destination", [Convert]::FromBase64String(($encoded -join '')))
+                  if ((Get-FileHash -Algorithm SHA256 $destination).Hash -ne $pin.sha256) { throw "SHA-256 mismatch: $destination" }
+              }
+              New-Item -ItemType Directory -Force .local/toolchains/java/libraries | Out-Null
+              foreach ($pin in $libraries) {
+                  $destination = ".local/toolchains/java/libraries/$($pin.filename)"
+                  curl.exe -fsSL --retry 3 -o $destination $pin.url
+                  if ($LASTEXITCODE -ne 0) { throw "Download failed: $($pin.url)" }
+                  if ((Get-FileHash -Algorithm SHA256 $destination).Hash -ne $pin.sha256) { throw "SHA-256 mismatch: $destination" }
+              }
+              foreach ($tool in 'buildTools', 'platform', 'ndk', 'cmake') {
+                  $pin = $manifest.sdk.archives.win32.$tool
+                  $archive = ".local/toolchains/downloads/$(($pin.url -split '/')[-1])"
+                  curl.exe -fsSL --retry 3 -o $archive $pin.url
+                  if ($LASTEXITCODE -ne 0) { throw "Download failed: $($pin.url)" }
+                  if ((Get-FileHash -Algorithm SHA256 $archive).Hash -ne $pin.sha256) { throw "SHA-256 mismatch: $archive" }
+                  $destination = switch ($tool) {
+                      buildTools { ".local/toolchains/java-sdk/build-tools/$($manifest.sdk.buildTools)" }
+                      platform { ".local/toolchains/java-sdk/platforms/android-$($manifest.sdk.compileSdk)" }
+                      ndk { ".local/toolchains/native-sdk/ndk/$($manifest.native.ndk)" }
+                      cmake { ".local/toolchains/native-sdk/cmake/$($manifest.native.cmake)" }
+                  }
+                  New-Item -ItemType Directory -Force $destination | Out-Null
+                  $strip = if ($tool -eq 'cmake') { 0 } else { 1 }
+                  & "$env:SystemRoot\System32\tar.exe" -xf $archive -C $destination --strip-components=$strip
+                  if ($LASTEXITCODE -ne 0) { throw "Extraction failed: $archive" }
+              }
+        - if: runner.os == 'Windows'
+          shell: pwsh
+          run: |
+              $pins = (Get-Content src/app/toolchain.json -Raw | ConvertFrom-Json).optionalTools.windowsBuild
+              Add-Content $env:GITHUB_PATH "$PWD\$($pins.cmake.directory)\bin"
+              Add-Content $env:GITHUB_PATH "$PWD\$($pins.ninja.directory)"
+              # Java preparation tests read JAVA_HOME and PATH.
+              Add-Content $env:GITHUB_ENV "JAVA_HOME=$PWD\$($pins.jdk.directory)"
+              Add-Content $env:GITHUB_PATH "$PWD\$($pins.jdk.directory)\bin"

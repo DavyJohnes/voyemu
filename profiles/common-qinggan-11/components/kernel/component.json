@@ -1,0 +1,43 @@
+{
+  "schema": 1,
+  "kind": "development-kernel-source",
+  "android_api": 30,
+  "abi": "arm64-v8a",
+  "release_name": "qinggan-11",
+  "inputs": {
+    "url": "https://android.googlesource.com/kernel/common/+archive/ae78026f427c6692765ce1c2996d0a9cb6e486ef.tar.gz",
+    "commit": "ae78026f427c6692765ce1c2996d0a9cb6e486ef",
+    "tree": "3df236134d223718837ff13d6873598b433cea71",
+    "content_sha256": "14b4eafe72bd82a94548b5cd1c659c9716ee54ad82892a715946f2a2192eba7a",
+    "archive_file": ".local/toolchains/downloads/sources/kernel-common-ae78026f427c6692765ce1c2996d0a9cb6e486ef.tar.gz",
+    "kernel_release": "5.4.86-android11-2-00006-gae78026f427c-ab7595864",
+    "stock_kernel_sha256": "08987ba1309fb275565ddc385134d276d8eab6459f81c016b116fb562433e4fa",
+    "stock_ramdisk_sha256": "74a3ce3aa051f670fef4d70049b4e2f8080d1a9477465e68d847d5971f16fd34"
+  },
+  "toolchain": {
+    "version": "Android clang 12.0.5 r416183b build7284624; CFI/LTO retained",
+    "kbuild_timestamp": "2021-07-29 20:54:47",
+    "hosts": {
+      "darwin-x86_64": {
+        "clang_manifest": "clang-members-darwin-x86_64.json",
+        "clang_directory": ".local/toolchains/kernel-clang/12.0.5-r416183b-db264e839123",
+        "make_sha256": "492d38f81f0e58c05911c964f82d4e8c26f2026a7f90a323900964c3d1537562"
+      },
+      "linux-x86_64": {
+        "clang_manifest": "clang-members-linux-x86_64.json",
+        "clang_directory": ".local/toolchains/kernel-clang/12.0.5-r416183b-linux-3f17560d9bd0",
+        "make_sha256": "ee92765a5dc7556669fd3e7f9fc58c7ba960523d2131052c9b760f5d1a2fc29d"
+      }
+    }
+  },
+  "patches": [
+    "netlink-reset.patch",
+    "host-build.patch",
+    "oid-registry-path.patch"
+  ],
+  "driver": [
+    "cis_can_dev.c",
+    "can_boundary.h",
+    "can_datagram.h"
+  ]
+}

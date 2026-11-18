@@ -1,0 +1,13 @@
+{
+  "type": "jar",
+  "minSdk": 28,
+  "output": "wifi-service.jar",
+  "frameworkBase": {
+    "jar": "/system/framework/wifi-service.jar",
+    "oat": "/system/framework/oat/arm64/wifi-service.odex",
+    "oat_sha256": "de4b76cc354086305253f87d0309cd5058c62925903252aa3bc73e7274e2a054",
+    "vdex": "/system/framework/oat/arm64/wifi-service.vdex",
+    "vdex_sha256": "63754f9e071637d7905f2645210d42a73480156f0afd30c305504b8dfbae6123",
+    "systemServer": true
+  }
+}

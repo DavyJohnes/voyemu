@@ -1,0 +1,12 @@
+{
+  "type": "jar",
+  "minSdk": 28,
+  "output": "android.test.runner.jar",
+  "frameworkBase": {
+    "jar": "/system/framework/android.test.runner.jar",
+    "oat": "/system/framework/oat/arm64/android.test.runner.odex",
+    "oat_sha256": "5ba10718f00325845194e3df653ab86e1a63d081c6f74412e539380b71e7c44f",
+    "vdex": "/system/framework/oat/arm64/android.test.runner.vdex",
+    "vdex_sha256": "bd2bd5eaba41989e707f5362e977f22f6f9c0df47c6f73c0bcdb614f54f05b52"
+  }
+}

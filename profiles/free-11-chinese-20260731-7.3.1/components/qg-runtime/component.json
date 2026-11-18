@@ -1,0 +1,9 @@
+{
+  "type": "native",
+  "minSdk": 28,
+  "output": "libqg_runtime.so",
+  "libs": ["log"],
+  "sourceFiles": {
+    "src/qg_runtime.c": "voyemu/profiles/common/components/qg-runtime/src/qg_runtime.c"
+  }
+}

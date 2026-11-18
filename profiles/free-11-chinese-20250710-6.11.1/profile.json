@@ -1,0 +1,1270 @@
+{
+  "schema": 1,
+  "id": "free-11-chinese-20250710-6.11.1",
+  "referenceProfile": "free-09-chinese-20260106-6.0.3",
+  "android": {
+    "package": "system-images;android-30;default;arm64-v8a",
+    "revision": "1",
+    "url": "https://dl.google.com/android/repository/sys-img/android/arm64-v8a-30_r02.zip",
+    "sha256": "cb50112cf2dd234a71e2a29b0241c23dbb37dd5fc3156c68cc9c49d0f58ad304",
+    "clean_base": {
+      "receipt_sha256": "44b6418f2e7fba56db2813fcb9bae05659fa36cae96dddd5d5fb64692fe984aa",
+      "boot_files": {
+        "kernel-ranchu": "08987ba1309fb275565ddc385134d276d8eab6459f81c016b116fb562433e4fa",
+        "ramdisk.img": "74a3ce3aa051f670fef4d70049b4e2f8080d1a9477465e68d847d5971f16fd34",
+        "build.prop": "09feda2d8af0c2e293c978aeb1658a9925faf9759a8e7188c45b0ae6fec8fe21",
+        "advancedFeatures.ini": "b5abe7e9f4ff5d003b06d486bbe58c5e36b42d7e33dddb1ae5f9a93835a85549",
+        "source.properties": "ef234f316d51bd7567540cebc0cf0ebe296b5e5cfd97c66e4844d0ea1792740d",
+        "VerifiedBootParams.textproto": "caf29e0707a3be35f127566510932a7e56bc0d56a0c888992922b2868f18815d"
+      },
+      "images": {
+        "system.img": "b9879a686e47e26d1ba1c2f2eafd417e5f9415d68a4e03a0c2adae47f3fb53ec",
+        "vendor.img": "42fea0d227f36a51cea5a66d79f6d624d9423732f4eb646c3565e3ad40ff333d"
+      },
+      "logical_partitions": {
+        "metadata_sha256": "f535d7f845ccdbd69a01d41639031e7d1a4950f21dc30df57dc4a438af030eee",
+        "system": {
+          "offset": 3145728,
+          "bytes": 789696512
+        },
+        "system_ext": {
+          "offset": 793772032,
+          "bytes": 106733568
+        }
+      },
+      "files": {
+        "/system/etc/selinux/mapping/30.0.cil": "c14ab911584595a94e6783600371fed23cec1d56b8001383584a3192d028eb60"
+      }
+    },
+    "offline_selinux_labels": "qinggan11-can-early-v1",
+    "development_kernel": {
+      "url": "https://github.com/voyemu/voyemu/releases/download/kernel-qinggan-11-ee991bb5/Image",
+      "sha256": "ee991bb5f76239c072aea2ab721e2888d18af060d3d501d46532686ac5417087",
+      "abi": "arm64-v8a",
+      "provenance": {
+        "source_revision": "ae78026f427c6692765ce1c2996d0a9cb6e486ef",
+        "source_tree": "3df236134d223718837ff13d6873598b433cea71",
+        "source_content_sha256": "14b4eafe72bd82a94548b5cd1c659c9716ee54ad82892a715946f2a2192eba7a",
+        "normalized_config_sha256": "1a5d4ca0b8f118adacc06053cbc0d9819760a7a4480afc4106314612bed0c464",
+        "toolchain": "Android clang 12.0.5 r416183b build7284624; CFI/LTO retained",
+        "configuration_deviations": [
+          "CONFIG_CC_CAN_LINK unset: host has no Linux userland link sysroot; guest runtime unchanged by this capability probe",
+          "CONFIG_UAPI_HEADER_TEST unset by CONFIG_CC_CAN_LINK; generated kernel UAPI headers still built",
+          "CONFIG_UNUSED_KSYMS_WHITELIST rewritten to same 4 977 symbols from 18 pinned source KMI lists"
+        ],
+        "boundary_control_bytes": 176,
+        "stock_module_count": 37,
+        "stock_import_crc_count": 2594,
+        "kernel_release": "5.4.86-android11-2-00006-gae78026f427c-ab7595864"
+      }
+    },
+    "features": {
+      "MultiDisplay": "on",
+      "VirtioInput": "on",
+      "VirtioTablet": "off"
+    }
+  },
+  "emulator": {
+    "port": 5572,
+    "memory": 4096,
+    "gpuMode": "host"
+  },
+  "wheel": {
+    "assets": "profiles/common/wheels/free-2021",
+    "androidRoutes": "src/app/android-wheel-routes.json"
+  },
+  "displays": [
+    {
+      "role": "primary",
+      "guest": "android",
+      "width": 1920,
+      "height": 720,
+      "density": 160
+    },
+    {
+      "role": "secondary",
+      "guest": "android",
+      "width": 1920,
+      "height": 720,
+      "density": 160,
+      "xOffset": 1920,
+      "yOffset": 0,
+      "flag": 0
+    },
+    {
+      "role": "rear",
+      "guest": "android",
+      "width": 1902,
+      "height": 540,
+      "density": 160,
+      "xOffset": 0,
+      "yOffset": 720,
+      "flag": 0
+    }
+  ],
+  "original": {
+    "SystemExtSepolicy": {
+      "file": "policy/system_ext_sepolicy.cil",
+      "bytes": 111621,
+      "sha256": "a14b33a64f12c27e4d6a286a6c94b5dcf9ec46036e7ca728fa28011b3898e88b",
+      "source": {
+        "path": "/system/system_ext/etc/selinux/system_ext_sepolicy.cil"
+      },
+      "acquisition": {
+        "image": "system",
+        "path": "/system/system_ext/etc/selinux/system_ext_sepolicy.cil"
+      }
+    },
+    "VendorSepolicy": {
+      "file": "policy/vendor_sepolicy.cil",
+      "bytes": 901257,
+      "sha256": "8262ed20bac76f884ff89fec2f98794c83bc1db9b7199a26d405acc1d7f6d64f",
+      "source": {
+        "path": "/vendor/etc/selinux/vendor_sepolicy.cil"
+      },
+      "acquisition": {
+        "image": "vendor",
+        "path": "/vendor/etc/selinux/vendor_sepolicy.cil"
+      }
+    },
+    "Launcher": {
+      "file": "Launcher.apk",
+      "sha256": "48665cf9d6bb50b49b3aa0b1aa73bdb0ac5d9d7071240c46c7f13d07d4114d7e",
+      "source": {
+        "package": "com.qinggan.app.launcher"
+      },
+      "bytes": 125528449,
+      "acquisition": {
+        "image": "system",
+        "path": "/system/priv-app/Launcher-release-signed/Launcher-release-signed.apk"
+      }
+    },
+    "MusicConcate": {
+      "file": "MusicConcate.apk",
+      "sha256": "5c4d5470b552c69575d5ea285220249ef2ec54ba79160bc6d004199232b0c389",
+      "source": {
+        "package": "com.qinggan.app.music"
+      },
+      "bytes": 29967969,
+      "acquisition": {
+        "image": "system",
+        "path": "/system/priv-app/MusicConcate-release-signed/MusicConcate-release-signed.apk"
+      }
+    },
+    "Setting": {
+      "file": "Setting.apk",
+      "sha256": "6a902c0458c68b66317fa666f7ee783d38d028392a3c114d1ae3675bdedc2c03",
+      "source": {
+        "package": "com.qinggan.app.setting"
+      },
+      "bytes": 48941119,
+      "acquisition": {
+        "image": "system",
+        "path": "/system/priv-app/Setting-release-signed/Setting-release-signed.apk"
+      }
+    },
+    "VehicleAir": {
+      "file": "VehicleAir.apk",
+      "sha256": "f23357cc0199331ab3ffde0d4e209486698ae9d6c858827b1815cb9c0419aa82",
+      "source": {
+        "package": "com.qinggan.app.vehicle"
+      },
+      "bytes": 130266638,
+      "acquisition": {
+        "image": "system",
+        "path": "/system/priv-app/VehicleAir-release-signed/VehicleAir-release-signed.apk"
+      }
+    },
+    "VehicleSetting": {
+      "file": "VehicleSetting.apk",
+      "sha256": "cd5f85c02e10b4ed99691251caf73b137fb7a152186fad3057578f1c0317dd92",
+      "source": {
+        "package": "com.qinggan.app.vehiclesetting"
+      },
+      "bytes": 425993577,
+      "acquisition": {
+        "image": "system",
+        "path": "/system/priv-app/VehicleSetting-release-signed/VehicleSetting-release-signed.apk"
+      }
+    },
+    "servicesFramework": {
+      "file": "framework/services.jar",
+      "sha256": "85f0387dbeb2b30d301eb0b995e0f2dd278aa84f502cd490aa2dcfc9703697ce",
+      "source": {
+        "path": "/system/framework/services.jar"
+      },
+      "bytes": 14903460,
+      "acquisition": {
+        "image": "system",
+        "path": "/system/framework/services.jar"
+      }
+    },
+    "SystemUI": {
+      "file": "SystemUI.apk",
+      "sha256": "0d5e7a4c4556c19aa417cef3ded9bc0824f58e36346109e75ce0197643ce05fd",
+      "source": {
+        "package": "com.qinggan.systemui"
+      },
+      "bytes": 11134596,
+      "acquisition": {
+        "image": "system",
+        "path": "/system/priv-app/SystemUI-release-signed/SystemUI-release-signed.apk"
+      }
+    },
+    "SystemService": {
+      "file": "SystemService.apk",
+      "sha256": "a53b1d5e52f25d0bb5fb8e84b743f59ef05114b861b8f30f1ada1cbd86215e7b",
+      "source": {
+        "package": "com.qinggan.systemservice"
+      },
+      "bytes": 3382454,
+      "acquisition": {
+        "image": "system",
+        "path": "/system/priv-app/SystemService-release/SystemService-release.apk"
+      }
+    },
+    "QGSettingProvider": {
+      "file": "QGSettingProvider.apk",
+      "sha256": "aa50fb67ef3d63038a5a0001edea8d9d46c4342b5905129b036040670f25ae72",
+      "source": {
+        "package": "com.qinggan.providers.settings"
+      },
+      "bytes": 34763,
+      "acquisition": {
+        "image": "system",
+        "path": "/system/priv-app/QGSettingProvider-release/QGSettingProvider-release.apk"
+      }
+    },
+    "QGAPI": {
+      "file": "framework/QGAPI.jar",
+      "sha256": "e46d3e5db0cf932cd3a39654a2f95620f2668ada8fb32b904c1684f936eca510",
+      "source": {
+        "path": "/system/framework/QGAPI.jar"
+      },
+      "bytes": 1968146,
+      "acquisition": {
+        "image": "system",
+        "path": "/system/framework/QGAPI.jar"
+      }
+    },
+    "QGMOD": {
+      "file": "framework/QGMOD.jar",
+      "sha256": "7f03e06d6e1c5ba77f878eade26edf217caca9b077505121588d83087862b0eb",
+      "source": {
+        "path": "/system/framework/QGMOD.jar"
+      },
+      "bytes": 17714,
+      "acquisition": {
+        "image": "system",
+        "path": "/system/framework/QGMOD.jar"
+      }
+    },
+    "android.car": {
+      "file": "framework/android.car.jar",
+      "sha256": "661bdc014d92b1bfd33abc3bd64edb9c1a8ab6320ac07761026f8878e08bd965",
+      "source": {
+        "path": "/system/framework/android.car.jar"
+      },
+      "bytes": 639718,
+      "acquisition": {
+        "image": "system",
+        "path": "/system/framework/android.car.jar"
+      }
+    },
+    "frameworkResources": {
+      "file": "framework/framework-res.apk",
+      "sha256": "a799487aa6005432d2e18d14f38f26094f94734981717dc90aac47b606f1c8df",
+      "source": {
+        "path": "/system/framework/framework-res.apk"
+      },
+      "bytes": 16837211,
+      "acquisition": {
+        "image": "system",
+        "path": "/system/framework/framework-res.apk"
+      }
+    },
+    "frameworkBase": {
+      "file": "framework/framework.jar",
+      "sha256": "2082ed480804ac83e9022c535a0255c7df6c892665dcb3a7e63eb2378a369973",
+      "source": {
+        "path": "/system/framework/framework.jar"
+      },
+      "bytes": 29915919,
+      "acquisition": {
+        "image": "system",
+        "path": "/system/framework/framework.jar"
+      }
+    },
+    "Ivt8BluetoothAdapter": {
+      "file": "framework/Ivt8BluetoothAdapter.jar",
+      "sha256": "61f7215a031dfcf70974c886d182fae497ac545a58e6c6e2bb3b78956b8e7218",
+      "source": {
+        "path": "/system/framework/Ivt8BluetoothAdapter.jar"
+      },
+      "bytes": 1050290,
+      "acquisition": {
+        "image": "system",
+        "path": "/system/framework/Ivt8BluetoothAdapter.jar"
+      }
+    },
+    "KeyManagerService": {
+      "file": "KeyManagerService.apk",
+      "sha256": "511eaafefe567e5c08f5683ba86aab043dffbfc21efab9e00cdf4cd8caf67505",
+      "source": {
+        "package": "com.qinggan.keymanager.service"
+      },
+      "bytes": 4894492,
+      "acquisition": {
+        "image": "system",
+        "path": "/system/priv-app/KeyManagerService-release/KeyManagerService-release.apk"
+      }
+    },
+    "QGMedia": {
+      "file": "QGMedia.apk",
+      "sha256": "c6f96ac40525aac9600731f7494cc3d23cb969c4a88ff2815526abe7da2e6d2e",
+      "source": {
+        "package": "com.qinggan.media"
+      },
+      "bytes": 66769350,
+      "acquisition": {
+        "image": "system",
+        "path": "/system/priv-app/qgmedia-release-signed/qgmedia-release-signed.apk"
+      }
+    },
+    "Navi": {
+      "file": "Navi.apk",
+      "sha256": "966e2275de7faff2012ec3a2b01b6833f177c58460c1d052305853d97da7f73b",
+      "source": {
+        "package": "com.baidu.naviauto"
+      },
+      "bytes": 226554312,
+      "acquisition": {
+        "image": "system",
+        "path": "/system/priv-app/dueros/Dueros-h97c-signed.apk"
+      }
+    },
+    "Camera": {
+      "file": "Camera.apk",
+      "sha256": "17e34bdc4d4bdfd8a42cc99feb3bc7165f0c1ad90bc131127b1618e45b672507",
+      "source": {
+        "package": "com.qinggan.camera"
+      },
+      "bytes": 15578962,
+      "acquisition": {
+        "image": "system",
+        "path": "/system/priv-app/Camera-release-signed/Camera-release-signed.apk"
+      }
+    },
+    "Gallery": {
+      "file": "Gallery.apk",
+      "sha256": "f716384510601971d1dc80a45304aac09e03530e5073c1497255b2cb810aae30",
+      "source": {
+        "package": "com.qinggan.app.gallery"
+      },
+      "bytes": 39987159,
+      "acquisition": {
+        "image": "system",
+        "path": "/system/priv-app/Gallery-release-signed/Gallery-release-signed.apk"
+      }
+    },
+    "AudioPolicy": {
+      "file": "AudioPolicy-release.apk",
+      "sha256": "83fe6f4fd7a02135fb84e02ef8298cefa42365e970f0760a3b90a60de9582aac",
+      "source": {
+        "package": "com.qinggan.audiopolicy.service"
+      },
+      "bytes": 1750715,
+      "acquisition": {
+        "image": "system",
+        "path": "/system/priv-app/AudioPolicy-release/AudioPolicy-release.apk"
+      }
+    },
+    "BluetoothPhone": {
+      "file": "BluetoothPhone.apk",
+      "sha256": "c3b53187d5161692a338a9504e1fa288dd163896da431bf89b8ad1e8fa56b1f4",
+      "source": {
+        "package": "com.qinggan.bluetoothphone"
+      },
+      "acquisition": {
+        "image": "system",
+        "path": "/system/priv-app/BluetoothPhone-release-signed/BluetoothPhone-release-signed.apk"
+      },
+      "bytes": 17006460
+    },
+    "Hiboard": {
+      "file": "Hiboard.apk",
+      "sha256": "648c91cccacae25b6810f93b44bfa2b7aed71cadee44353a964d09658cb8f858",
+      "source": {
+        "package": "com.qinggan.app.hiboard"
+      },
+      "bytes": 26093661,
+      "acquisition": {
+        "image": "vendor",
+        "path": "/vendor/app/Hiboard-release-signed/Hiboard-release-signed.apk"
+      }
+    },
+    "ThirdScreen": {
+      "file": "ThirdScreen.apk",
+      "sha256": "dee46bafb1e174ab38841f5802722a3bcce1e4dae26e5a70840c04885651508f",
+      "source": {
+        "package": "com.qinggan.app.thirdscreen"
+      },
+      "bytes": 25134388,
+      "acquisition": {
+        "image": "vendor",
+        "path": "/vendor/app/ThirdScreen-release-signed/ThirdScreen-release-signed.apk"
+      }
+    },
+    "theme": {
+      "file": "theme/defaulttheme",
+      "type": "tree",
+      "source": {
+        "path": "/resc/defaulttheme"
+      },
+      "sha256": {
+        "simple/BluetoothPhone-release-signed.apk": "7da62bd3b31b086680f4c6863a2220a9d4f51591b6aeebef7aa477deb459f265",
+        "simple/Calendar-release-signed.apk": "b175bbe7132a2fb56f4ed1eea5efb1ac5e310e36959bf5460eb6a9cd7a2f2bd3",
+        "simple/Camera-release-signed.apk": "789981e6c057b34fa9077cc05f9913166a334ae436bbb702e2f48e6c58b205e0",
+        "simple/Gallery-release-signed.apk": "da1725816d2dbe39c6d2260aa87cc14fe888df70da6a4c8d3b7b7fd8caea24ed",
+        "simple/Hiboard-release-signed.apk": "1b78126cff4a940d41eed6ccf1eb04e61948cfa94b0699285fd9397b049e57e9",
+        "simple/Launcher-release-signed.apk": "ca2e41ba222b7b811e3dbe9a5523cddb6fa358602da477486821cb22bd15fe69",
+        "simple/Login-release-signed.apk": "efa645f12e3a337223d51245de2372b2c93d2059c11aa54d8427180b49e37174",
+        "simple/MessageCenter-release-signed.apk": "aa0fc0f619435ae32ed2aea2ed65242512ef122bdf68f586f0093380384cc73f",
+        "simple/Music-release-signed.apk": "0d0abab44f5472b9776ab38d61e22dbdee04970db3afe6314b71788f68d87498",
+        "simple/NowUI-release-signed.apk": "8ddbbebedd44893b437a24edb2ca0175c5f66b4541ffc024ed8dd56fb68960b8",
+        "simple/QgMedia-release-signed.apk": "073baa123aac68de5be3a1dad51aa6e078e4505fd8616dd1a48f6ad70eb3e714",
+        "simple/QingCastDisplay-release.apk": "ca55fa9722c11378a161fa78446d297e35fdc616c7dcc260b71c888df3d3a5bd",
+        "simple/Radio-release-signed.apk": "a4b07106b0037078863e10f0e2293dc618e8f11ea5aaefa32a47a9ad61db7712",
+        "simple/Roa-release-signed.apk": "e9166ea72e7bcf13c1945a412aa3fedaacb9fcd2acaf84d2624606ff531d6751",
+        "simple/Setting-release-signed.apk": "d6661fcb5015301acc87e5b021396f0456ae8acd84f6a87ed38ad59796f5eefb",
+        "simple/SettingNetwork-release-signed.apk": "26d5f3b38da9b90b335753c55e4e707ce15f56fea9a95f3ee7ff69d68b44462c",
+        "simple/ThirdScreen-release-signed.apk": "d0a12d5b30cff91d8999c4b601e65c3a10f2ffaec0ad999168ed7da57eb6d44e",
+        "simple/UserGuide-release-signed.apk": "bc041625a325bb96998daa672181c939ab23df95cb6f1fa43c127dbfbde6a2f5",
+        "simple/VehicleAir-release-signed.apk": "57dcbfd9fef790b2999a9b90d8c68dc7c2465ba9f512a81360e4713ef76883b2",
+        "simple/VehicleSetting-release-signed.apk": "4b59e8b7f4ce39957260dd95fbe03a9da9bd04cffaaaf08284a1d59da752dea9",
+        "simple/Video-release-signed.apk": "f97a1453ea3318be7bbdafca215122bb5433519ab64029d11bd749ea0567cd63",
+        "simple/VoiceClone-release-signed.apk": "3cbe43f67fd58063932402a5c94e42a93199a685cec92b7d2aa86f375f7922eb",
+        "simple/description.xml": "5610d4b5285b983a9e82319c6f5bf7200aa25736ccaf344022548d0767414cbf"
+      },
+      "bytes": {
+        "simple/BluetoothPhone-release-signed.apk": 1144567,
+        "simple/Calendar-release-signed.apk": 431354,
+        "simple/Camera-release-signed.apk": 502892,
+        "simple/Gallery-release-signed.apk": 781554,
+        "simple/Hiboard-release-signed.apk": 3258679,
+        "simple/Launcher-release-signed.apk": 20981132,
+        "simple/Login-release-signed.apk": 5524376,
+        "simple/MessageCenter-release-signed.apk": 1736346,
+        "simple/Music-release-signed.apk": 6611186,
+        "simple/NowUI-release-signed.apk": 828533,
+        "simple/QgMedia-release-signed.apk": 329114,
+        "simple/QingCastDisplay-release.apk": 373891,
+        "simple/Radio-release-signed.apk": 2700246,
+        "simple/Roa-release-signed.apk": 395222,
+        "simple/Setting-release-signed.apk": 7381304,
+        "simple/SettingNetwork-release-signed.apk": 1729447,
+        "simple/ThirdScreen-release-signed.apk": 2321967,
+        "simple/UserGuide-release-signed.apk": 3299058,
+        "simple/VehicleAir-release-signed.apk": 17348643,
+        "simple/VehicleSetting-release-signed.apk": 7838611,
+        "simple/Video-release-signed.apk": 3023694,
+        "simple/VoiceClone-release-signed.apk": 15993942,
+        "simple/description.xml": 290
+      },
+      "acquisition": {
+        "image": "resc",
+        "path": "/resc/defaulttheme"
+      }
+    },
+    "BootAnimation": {
+      "file": "media/bootanimation.zip",
+      "bytes": 468592,
+      "sha256": "fe2b825fc7349d155ae70719b6fd0c0013864b2b526522f6161f4c71f2ac00d4",
+      "source": {
+        "path": "/system/media/bootanimation.zip"
+      },
+      "acquisition": {
+        "image": "system",
+        "path": "/system/media/bootanimation.zip"
+      }
+    },
+    "BootAnimation1": {
+      "file": "media/bootanimation1.zip",
+      "bytes": 1900651,
+      "sha256": "b40c89d935e76fab165cb4845dd9da137798dc8af309ce4e2d85b54a89b32da4",
+      "source": {
+        "path": "/system/media/bootanimation1.zip"
+      },
+      "acquisition": {
+        "image": "system",
+        "path": "/system/media/bootanimation1.zip"
+      }
+    },
+    "BootAnimation2": {
+      "file": "media/bootanimation2.zip",
+      "bytes": 1229329,
+      "sha256": "2913b7f921cda2883ec27b279558affc52488e46b28e1dbb5f0ffa6c8529fe9f",
+      "source": {
+        "path": "/system/media/bootanimation2.zip"
+      },
+      "acquisition": {
+        "image": "system",
+        "path": "/system/media/bootanimation2.zip"
+      }
+    },
+    "SystemPolicy": {
+      "file": "SystemPolicy-release.apk",
+      "sha256": "02749c34c515b8dd2ecdb6f5030762c292bc47fc3b79214d7965cb5cf56226eb",
+      "source": {
+        "package": "com.qinggan.systempolicy"
+      },
+      "bytes": 12921503,
+      "acquisition": {
+        "image": "system",
+        "path": "/system/priv-app/SystemPolicy-release/SystemPolicy-release.apk"
+      }
+    },
+    "QGBus": {
+      "file": "QGBus-release.apk",
+      "sha256": "a4395872617162e0ee3ef7c57de4387f20cb8200bb46f5798a1bd2fc805284d3",
+      "source": {
+        "package": "com.qinggan.QGBus"
+      },
+      "bytes": 53773,
+      "acquisition": {
+        "image": "system",
+        "path": "/system/priv-app/QGBus-release/QGBus-release.apk"
+      }
+    }
+  },
+  "install": [
+    {
+      "artifact": "patched:keymanager-contexts-api30",
+      "type": "file",
+      "target": "/system/etc/selinux/plat_service_contexts",
+      "mode": "0644"
+    },
+    {
+      "artifact": "component:can-model-observer",
+      "type": "file",
+      "target": "/system/bin/voyemu-can-model-observer",
+      "mode": "0755"
+    },
+    {
+      "artifact": "files:can-simulator-fixture",
+      "type": "file",
+      "target": "/system/etc/voyemu/can-model.fixture",
+      "mode": "0644"
+    },
+    {
+      "artifact": "files:can-simulator-init",
+      "type": "file",
+      "target": "/system/etc/init/can-simulator.rc",
+      "mode": "0644"
+    },
+    {
+      "artifact": "component:can-simulator",
+      "type": "file",
+      "target": "/system/bin/voyemu-can-model",
+      "mode": "0755"
+    },
+    {
+      "artifact": "component:early-inputs",
+      "type": "file",
+      "target": "/system/bin/voyemu-early-inputs",
+      "mode": "0755"
+    },
+    {
+      "artifact": "files:early-inputs-init",
+      "type": "file",
+      "target": "/system/etc/init/early-inputs.rc",
+      "mode": "0644"
+    },
+    {
+      "artifact": "original:QGMOD",
+      "type": "file",
+      "target": "/system/framework/QGMOD.jar"
+    },
+    {
+      "artifact": "original:android.car",
+      "type": "file",
+      "target": "/system/framework/android.car.jar",
+      "mode": "0644"
+    },
+    {
+      "artifact": "patched:can-early-file-contexts-api30",
+      "type": "file",
+      "target": "/system/etc/selinux/plat_file_contexts",
+      "mode": "0644"
+    },
+    {
+      "artifact": "patched:public-qg-runtime-api30",
+      "type": "file",
+      "target": "/system/etc/public.libraries.txt",
+      "mode": "0644"
+    },
+    {
+      "artifact": "files:qinggan-framework",
+      "type": "file",
+      "target": "/system/etc/permissions/voyemu-qinggan-framework.xml",
+      "mode": "0644"
+    },
+    {
+      "artifact": "files:secondary-display-feature",
+      "type": "file",
+      "target": "/system/etc/permissions/voyemu-secondary-display.xml",
+      "mode": "0644"
+    },
+    {
+      "artifact": "component:wheel-platform",
+      "type": "file",
+      "target": "/system/framework/voyemu-free-wheel.jar",
+      "mode": "0644"
+    },
+    {
+      "artifact": "patched:KeyManagerService",
+      "type": "apk",
+      "target": "/system/priv-app/KeyManagerService-release/KeyManagerService-release.apk",
+      "package": "com.qinggan.keymanager.service"
+    },
+    {
+      "artifact": "component:wheel-input",
+      "type": "apk"
+    },
+    {
+      "artifact": "patched:SystemService",
+      "type": "apk"
+    },
+    {
+      "artifact": "patched:SystemUI",
+      "type": "apk"
+    },
+    {
+      "artifact": "patched:Launcher",
+      "type": "apk",
+      "target": "/system/priv-app/Launcher-release-signed/Launcher-release-signed.apk",
+      "package": "com.qinggan.app.launcher"
+    },
+    {
+      "artifact": "patched:Setting",
+      "type": "apk",
+      "target": "/system/priv-app/Setting-release-signed/Setting-release-signed.apk",
+      "package": "com.qinggan.app.setting",
+      "mode": "0644"
+    },
+    {
+      "artifact": "patched:MusicConcate",
+      "type": "apk"
+    },
+    {
+      "artifact": "original:theme",
+      "type": "tree",
+      "target": "/system/resc/defaulttheme"
+    },
+    {
+      "artifact": "component:canbus",
+      "type": "apk",
+      "target": "/system/priv-app/VoyemuCanBus/VoyemuCanBus.apk",
+      "package": "com.qinggan.canbus.service",
+      "mode": "0644"
+    },
+    {
+      "artifact": "component:bootstrap",
+      "type": "apk"
+    },
+    {
+      "artifact": "patched:can-early-property-contexts-api30",
+      "type": "file",
+      "target": "/system/etc/selinux/plat_property_contexts",
+      "mode": "0644"
+    },
+    {
+      "artifact": "patched:selinux-hash-api30",
+      "type": "file",
+      "target": "/system/etc/selinux/plat_sepolicy_and_mapping.sha256",
+      "mode": "0644"
+    },
+    {
+      "artifact": "patched:QGMedia",
+      "type": "apk",
+      "target": "/system/priv-app/qgmedia-release-signed/qgmedia-release-signed.apk",
+      "package": "com.qinggan.media"
+    },
+    {
+      "artifact": "patched:Camera",
+      "type": "apk"
+    },
+    {
+      "artifact": "patched:BluetoothPhone",
+      "type": "apk",
+      "target": "/system/priv-app/BluetoothPhone-release-signed/BluetoothPhone-release-signed.apk",
+      "package": "com.qinggan.bluetoothphone",
+      "mode": "0644"
+    },
+    {
+      "artifact": "patched:can-early-policy-api30",
+      "type": "file",
+      "target": "/system/etc/selinux/plat_sepolicy.cil",
+      "mode": "0644"
+    },
+    {
+      "artifact": "patched:QGAPI",
+      "type": "file",
+      "target": "/system/framework/QGAPI.jar",
+      "mode": "0644"
+    },
+    {
+      "artifact": "patched:api30-stock-statusbar",
+      "type": "file",
+      "target": "/system/system_ext/priv-app/SystemUI/SystemUI.apk",
+      "mode": "0644"
+    },
+    {
+      "artifact": "component:bluetooth",
+      "type": "file",
+      "target": "/system/framework/Ivt8BluetoothAdapter.jar",
+      "mode": "0644"
+    },
+    {
+      "artifact": "component:qg-runtime",
+      "type": "file",
+      "target": "/system/lib64/libqg_runtime.so",
+      "mode": "0644"
+    },
+    {
+      "artifact": "component:oem-power",
+      "type": "apk",
+      "target": "/system/priv-app/VoyemuOemPower/VoyemuOemPower.apk",
+      "package": "com.voyemu.oem"
+    },
+    {
+      "artifact": "files:qg-settings-guest",
+      "type": "file",
+      "target": "/system/etc/voyemu/qg-settings-guest.db",
+      "mode": "0444"
+    },
+    {
+      "artifact": "files:launcher-privapp",
+      "type": "file",
+      "target": "/system/etc/permissions/voyemu-privapp.xml",
+      "mode": "0644"
+    },
+    {
+      "artifact": "files:nvram",
+      "type": "file",
+      "target": "/system/etc/nvram",
+      "mode": "0644",
+      "context": "u:object_r:system_file:s0"
+    },
+    {
+      "artifact": "patched:QGSettingProvider",
+      "type": "apk",
+      "target": "/system/priv-app/QGSettingProvider-release/QGSettingProvider-release.apk",
+      "package": "com.qinggan.providers.settings",
+      "mode": "0644"
+    },
+    {
+      "artifact": "files:hybrid-nvram",
+      "type": "file",
+      "target": "/system/etc/voyemu/hybrid-nvram.img",
+      "mode": "0444"
+    },
+    {
+      "artifact": "patched:VehicleAir",
+      "type": "apk",
+      "target": "/system/priv-app/VehicleAir-release-signed/VehicleAir-release-signed.apk",
+      "package": "com.qinggan.app.vehicle",
+      "mode": "0644"
+    },
+    {
+      "artifact": "patched:VehicleSetting",
+      "type": "apk",
+      "target": "/system/priv-app/VehicleSetting-release-signed/VehicleSetting-release-signed.apk",
+      "package": "com.qinggan.app.vehiclesetting",
+      "mode": "0644"
+    },
+    {
+      "type": "apk",
+      "artifact": "patched:Gallery"
+    },
+    {
+      "artifact": "patched:Hiboard",
+      "type": "apk",
+      "target": "/system/priv-app/Hiboard-release-signed/Hiboard-release-signed.apk",
+      "package": "com.qinggan.app.hiboard"
+    },
+    {
+      "artifact": "patched:ThirdScreen",
+      "type": "apk",
+      "target": "/system/priv-app/ThirdScreen-release-signed/ThirdScreen-release-signed.apk",
+      "package": "com.qinggan.app.thirdscreen"
+    },
+    {
+      "artifact": "patched:AudioPolicy",
+      "type": "apk",
+      "target": "/system/priv-app/AudioPolicy-release/AudioPolicy-release.apk",
+      "package": "com.qinggan.audiopolicy.service"
+    },
+    {
+      "artifact": "files:vendor-overlay",
+      "type": "directory",
+      "target": "/vendor/overlay",
+      "mode": "0755",
+      "context": "u:object_r:vendor_overlay_file:s0"
+    },
+    {
+      "artifact": "patched:api30-startup-volume",
+      "type": "file",
+      "target": "/system/framework/services.jar",
+      "mode": "0644"
+    },
+    {
+      "artifact": "patched:QGBus",
+      "type": "apk",
+      "target": "/system/priv-app/QGBus-release/QGBus-release.apk",
+      "package": "com.qinggan.QGBus"
+    },
+    {
+      "artifact": "patched:SystemPolicy",
+      "type": "apk",
+      "target": "/system/priv-app/SystemPolicy-release/SystemPolicy-release.apk",
+      "package": "com.qinggan.systempolicy"
+    }
+  ],
+  "ownerUpdate": {
+    "file": "update.zip",
+    "bytes": 4226266936,
+    "sha256": "ce6d1ffcd158c91383b61a44ea529bf54238512c520b436973fc0f6222047e42"
+  },
+  "status": "ready",
+  "acquisition": {
+    "format": "pinned-zip-zero-base-zstd-segments",
+    "diff": false,
+    "images": {
+      "system": {
+        "file": "la_system.img",
+        "bytes": 4294967296,
+        "sha256": "ee0c8241b7293b9cd9f936f622c556ac11ab3f92a0f60733e92dca1c1610f5c4",
+        "update": {
+          "kind": "zero-base-zstd-segments",
+          "entries": [
+            "android/la_system/la_system.patch0",
+            "android/la_system/la_system.patch1",
+            "android/la_system/la_system.patch2",
+            "android/la_system/la_system.patch3",
+            "android/la_system/la_system.patch4",
+            "android/la_system/la_system.patch5",
+            "android/la_system/la_system.patch6",
+            "android/la_system/la_system.patch7"
+          ],
+          "segment_bytes": [
+            536870912,
+            536870912,
+            536870912,
+            536870912,
+            536870912,
+            536870912,
+            536870912,
+            536870912
+          ]
+        }
+      },
+      "vendor": {
+        "file": "la_vendor.img",
+        "bytes": 2147483648,
+        "sha256": "3043efb825b6ac90fb3380a84063c16de171bf812e4220200e40364612afdcba",
+        "update": {
+          "kind": "zero-base-zstd-segments",
+          "entries": [
+            "android/la_vendor/la_vendor.patch0",
+            "android/la_vendor/la_vendor.patch1",
+            "android/la_vendor/la_vendor.patch2",
+            "android/la_vendor/la_vendor.patch3"
+          ],
+          "segment_bytes": [
+            536870912,
+            536870912,
+            536870912,
+            536870912
+          ]
+        }
+      },
+      "resc": {
+        "file": "la_resc.img",
+        "bytes": 3221225472,
+        "sha256": "a5d0bc0c357d99c5f85277c13461c763f5a68bf9cf34ca71d425371b9d8decc2",
+        "update": {
+          "kind": "zero-base-zstd-segments",
+          "entries": [
+            "android/la_resc/la_resc.patch0",
+            "android/la_resc/la_resc.patch1",
+            "android/la_resc/la_resc.patch2",
+            "android/la_resc/la_resc.patch3",
+            "android/la_resc/la_resc.patch4",
+            "android/la_resc/la_resc.patch5"
+          ],
+          "segment_bytes": [
+            536870912,
+            536870912,
+            536870912,
+            536870912,
+            536870912,
+            536870912
+          ]
+        }
+      }
+    }
+  },
+  "patches": {
+    "SystemService": {
+      "input": "original:SystemService",
+      "type": "apk",
+      "steps": [
+        "api30-framework-libraries.json",
+        "api30-network.json"
+      ]
+    },
+    "SystemUI": {
+      "input": "original:SystemUI",
+      "type": "apk",
+      "steps": [
+        "api30-framework-libraries.json",
+        "api30-systemui-routing.json"
+      ]
+    },
+    "Launcher": {
+      "input": "original:Launcher",
+      "type": "apk",
+      "steps": [
+        "api30-launcher-power.json",
+        "api30-aqy-provider.json",
+        "api30-launcher-dvr.json",
+        "api30-launcher-canbus.json"
+      ]
+    },
+    "Setting": {
+      "input": "original:Setting",
+      "type": "apk",
+      "steps": [
+        "api30-str-power.json",
+        "api30-settings-voice-clone.json",
+        "api30-settings-voice-mute.json"
+      ]
+    },
+    "MusicConcate": {
+      "input": "original:MusicConcate",
+      "type": "apk",
+      "steps": [
+        "music-optional-arm32.json",
+        "api30-music-page.json",
+        "api30-music-fullscreen.json"
+      ]
+    },
+    "KeyManagerService": {
+      "input": "original:KeyManagerService",
+      "type": "apk",
+      "steps": [
+        "api30-keymanager.json",
+        "api30-key-ingress.json"
+      ]
+    },
+    "QGMedia": {
+      "input": "original:QGMedia",
+      "type": "apk",
+      "steps": [
+        "api30-media-cloud-availability.json",
+        "api30-media-runtime.json",
+        "api30-media-notification-actions.json",
+        "api30-usb-player.json"
+      ]
+    },
+    "Camera": {
+      "input": "original:Camera",
+      "type": "apk",
+      "steps": [
+        "api30-camera-libraries.json",
+        "api30-camera-virtual.json"
+      ]
+    },
+    "BluetoothPhone": {
+      "input": "original:BluetoothPhone",
+      "type": "apk",
+      "steps": [
+        "api30-phone-provider.json"
+      ],
+      "sign": "platform"
+    },
+    "api30-stock-statusbar": {
+      "input": "android:/system_ext/priv-app/SystemUI/SystemUI.apk",
+      "type": "apk",
+      "steps": [
+        "api30-stock-statusbar.json"
+      ]
+    },
+    "keymanager-contexts-api30": {
+      "type": "file",
+      "input": "android:/system/etc/selinux/plat_service_contexts",
+      "steps": [
+        "keymanager-contexts-api30.json"
+      ]
+    },
+    "public-qg-runtime-api30": {
+      "type": "file",
+      "input": "android:/system/etc/public.libraries.txt",
+      "steps": [
+        "public-qg-runtime-api30.json"
+      ]
+    },
+    "can-simulator-contexts-api30": {
+      "type": "file",
+      "input": "android:/system/etc/selinux/plat_file_contexts",
+      "steps": [
+        "can-simulator-contexts-api30.json"
+      ]
+    },
+    "can-early-file-contexts-api30": {
+      "type": "file",
+      "input": "android:/system/etc/selinux/plat_file_contexts",
+      "steps": [
+        "can-simulator-contexts-api30.json",
+        "can-early-file-contexts-api30.json"
+      ]
+    },
+    "can-simulator-policy-api30": {
+      "type": "file",
+      "input": "android:/system/etc/selinux/plat_sepolicy.cil",
+      "steps": [
+        "selinux-services-api30.json",
+        "can-simulator-policy-api30.json"
+      ],
+      "uses": [
+        "original:SystemExtSepolicy",
+        "original:VendorSepolicy"
+      ]
+    },
+    "can-early-policy-api30": {
+      "type": "file",
+      "input": "android:/system/etc/selinux/plat_sepolicy.cil",
+      "steps": [
+        "selinux-services-api30.json",
+        "can-simulator-policy-api30.json",
+        "can-early-policy-api30.json"
+      ],
+      "uses": [
+        "original:SystemExtSepolicy",
+        "original:VendorSepolicy"
+      ]
+    },
+    "can-early-property-contexts-api30": {
+      "type": "file",
+      "input": "android:/system/etc/selinux/plat_property_contexts",
+      "steps": [
+        "property-contexts-api30.json",
+        "can-early-property-contexts-api30.json"
+      ]
+    },
+    "selinux-hash-api30": {
+      "type": "file",
+      "input": "android:/system/etc/selinux/plat_sepolicy_and_mapping.sha256",
+      "steps": [
+        "selinux-hash-api30.json"
+      ],
+      "uses": [
+        "patched:can-early-policy-api30",
+        "android:/system/etc/selinux/mapping/30.0.cil"
+      ]
+    },
+    "QGSettingProvider": {
+      "type": "apk",
+      "input": "original:QGSettingProvider",
+      "steps": [
+        "api30-framework-libraries.json"
+      ]
+    },
+    "VehicleAir": {
+      "input": "original:VehicleAir",
+      "type": "apk",
+      "steps": []
+    },
+    "VehicleSetting": {
+      "input": "original:VehicleSetting",
+      "type": "apk",
+      "steps": []
+    },
+    "Gallery": {
+      "input": "original:Gallery",
+      "type": "apk",
+      "uses": [
+        "component:gallery-arm64-libraries"
+      ],
+      "steps": [
+        "api30-gallery-arm64.json"
+      ]
+    },
+    "Hiboard": {
+      "input": "original:Hiboard",
+      "type": "apk",
+      "steps": [
+        "api30-hiboard-routing.json",
+        "api30-hiboard-startup.json"
+      ]
+    },
+    "ThirdScreen": {
+      "input": "original:ThirdScreen",
+      "type": "apk",
+      "steps": [
+        "api30-framework-libraries.json",
+        "api30-thirdscreen-rear.json"
+      ]
+    },
+    "QGAPI": {
+      "input": "original:QGAPI",
+      "type": "jar",
+      "steps": [
+        "api30-audio-consumer.json"
+      ]
+    },
+    "AudioPolicy": {
+      "input": "original:AudioPolicy",
+      "type": "apk",
+      "steps": [
+        "api30-audio-policy.json"
+      ]
+    },
+    "api30-startup-volume": {
+      "input": "android:/system/framework/services.jar",
+      "type": "jar",
+      "steps": [
+        "api30-startup-volume.json"
+      ]
+    },
+    "SystemPolicy": {
+      "input": "original:SystemPolicy",
+      "type": "apk",
+      "steps": [
+        "api30-systempolicy-hardware.json"
+      ]
+    },
+    "QGBus": {
+      "input": "original:QGBus",
+      "type": "apk",
+      "steps": [
+        "api30-qgbus-libraries.json"
+      ]
+    }
+  },
+  "components": {
+    "bootstrap": "components/bootstrap",
+    "early-inputs": "components/early-inputs",
+    "can-model-observer": "components/can-model-observer",
+    "can-simulator": "components/can-simulator",
+    "canbus": "components/canbus",
+    "wheel-input": "components/wheel-input",
+    "wheel-platform": "components/wheel-platform",
+    "qg-runtime": "components/qg-runtime",
+    "oem-power": "components/oem-power",
+    "bluetooth": "components/bluetooth",
+    "view-observation": "components/view-observation",
+    "gallery-arm64-libraries": "components/gallery-arm64-libraries"
+  },
+  "files": {
+    "qinggan-framework": {
+      "file": "qinggan-framework.xml"
+    },
+    "secondary-display-feature": {
+      "file": "voyemu-secondary-display.xml"
+    },
+    "early-inputs-init": {
+      "file": "early-inputs.rc"
+    },
+    "can-simulator-init": {
+      "file": "can-simulator.rc"
+    },
+    "can-simulator-fixture": {
+      "file": "voyemu-can-model.fixture"
+    },
+    "qg-settings-guest": {
+      "file": "qg-settings-guest.db"
+    },
+    "launcher-privapp": {
+      "file": "voyemu-privapp.xml"
+    },
+    "nvram": {
+      "file": "nvram.txt"
+    },
+    "hybrid-nvram": {
+      "file": "hybrid-fixture.img"
+    }
+  },
+  "configure": {
+    "home": "com.qinggan.app.launcher",
+    "homeActivity": "com.qinggan.app.launcher/com.qinggan.app.launcher.activity.MainActivity",
+    "properties": {
+      "persist.sys.qg.default.theme_path": "/system/resc/defaulttheme/",
+      "persist.app.kuwo.support": "false",
+      "persist.app.skin.support": "false"
+    },
+    "start": [
+      {
+        "component": "com.voyemu.oem/.RegistrationService",
+        "mode": "service"
+      },
+      {
+        "component": "com.qinggan.canbus.service/.CanBusService",
+        "mode": "service"
+      },
+      {
+        "component": "com.qinggan.systemservice/.displaymanager.DisplayManagerService",
+        "mode": "service"
+      },
+      {
+        "component": "com.qinggan.keymanager.service/.KeyManagerService",
+        "mode": "service"
+      },
+      {
+        "component": "com.qinggan.app.setting/.service.MainSettingService",
+        "mode": "service"
+      },
+      {
+        "component": "com.voyemu/com.voyemu.output.SecondScreenService",
+        "mode": "service"
+      },
+      {
+        "component": "com.qinggan.systempolicy/.SystemPolicyService",
+        "mode": "service"
+      }
+    ],
+    "bootProperties": {
+      "ro.qg.presentation": "VirtualDisplay"
+    }
+  },
+  "verify": {
+    "homePriorities": {
+      "com.qinggan.app.launcher/com.qinggan.app.launcher.activity.MainActivity": 100,
+      "com.qinggan.app.launcher/com.qinggan.secondlauncher.activity.SecondMainActivity": 10
+    },
+    "services": [
+      "qg.canbus",
+      "qg.cluster.service",
+      "qg.setting",
+      "qg.display_manager",
+      "multidisplay",
+      "multiwindow",
+      "qg.key_manager",
+      "qg.power_manager",
+      "qg.carsignal",
+      "qg.system_policy",
+      "qg.qgbus_service"
+    ],
+    "activities": [
+      {
+        "component": "com.qinggan.app.launcher/com.qinggan.app.launcher.activity.MainActivity",
+        "display": 0
+      },
+      {
+        "component": "com.qinggan.app.launcher/com.qinggan.secondlauncher.activity.SecondMainActivity",
+        "display": 1
+      }
+    ]
+  }
+}

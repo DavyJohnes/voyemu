@@ -1,0 +1,41 @@
+{
+  "schema": 1,
+  "api": 28,
+  "constants": {
+    "original_sha256_allowlist": [
+      "a20c1ee2c682aad846b93010356d434ef7e43ffb314b21186a91f348ba4c497b"
+    ]
+  },
+  "calls": [
+    {
+      "operation": "donorSlot",
+      "args": [
+        "component:media-callbacks",
+        {
+          "com.qinggan.bus.QGBus": null,
+          "com.qinggan.bus.QGBusEvent": null,
+          "com.qinggan.bus.QGBusEvent$1": null,
+          "com.qinggan.bus.QGBusEventFilter": null,
+          "com.qinggan.bus.QGBusEventHandler": null,
+          "com.qinggan.bus.impl.ProtocolMessage": null,
+          "com.qinggan.bus.impl.QGBusImpl": null,
+          "com.qinggan.bus.impl.QGBusImpl$1": null,
+          "com.qinggan.bus.impl.QGBusImpl$2": null,
+          "com.qinggan.bus.impl.QGBusImpl$3": null,
+          "com.qinggan.bus.impl.SubscribeInfo": null,
+          "com.qinggan.media.MediaInfo": null,
+          "com.qinggan.media.MediaInfoEventHelper": null,
+          "com.qinggan.media.MediaInfoEventHelper$1": null,
+          "com.qinggan.media.MediaInfoEventHelper$MediaEventHandler": null,
+          "com.qinggan.media.MediaInfoEventHelper$MediaEventHandlerExt": null,
+          "com.qinggan.media.MediaInfoEventHelper$MediaEventHandlerExt2": null,
+          "com.qinggan.media.MediaInfoEventHelper$MediaEventHandlerV2": null,
+          "com.qinggan.media.MediaInfoEventHelper$MediaInfoEventHandler": null,
+          "com.qinggan.media.MusicInfo": null,
+          "com.qinggan.media.RadioInfo": null,
+          "com.qinggan.util.Log": null
+        }
+      ]
+    }
+  ]
+}

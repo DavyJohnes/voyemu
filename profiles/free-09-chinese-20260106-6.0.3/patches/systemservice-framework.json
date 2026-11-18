@@ -1,0 +1,17 @@
+{
+  "api": 28,
+  "calls": [
+    {
+      "args": [
+        [
+          "QGAPI",
+          "QGMOD",
+          "QGVehicle"
+        ]
+      ],
+      "operation": "useLibraries"
+    }
+  ],
+  "constants": {},
+  "schema": 1
+}

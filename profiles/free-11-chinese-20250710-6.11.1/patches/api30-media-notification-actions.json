@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "api": 30,
+  "constants": {
+    "original_sha256_allowlist": [
+      "c6f96ac40525aac9600731f7494cc3d23cb969c4a88ff2815526abe7da2e6d2e"
+    ]
+  },
+  "calls": [
+    {
+      "operation": "guardMediaNotification",
+      "args": []
+    }
+  ]
+}

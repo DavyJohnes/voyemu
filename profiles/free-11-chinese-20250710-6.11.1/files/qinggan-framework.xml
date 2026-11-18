@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<permissions>
+    <library name="QGAPI" file="/system/framework/QGAPI.jar" />
+    <library name="QGMOD" file="/system/framework/QGMOD.jar" dependency="QGAPI" />
+    <library name="android.car" file="/system/framework/android.car.jar" />
+    <library name="VoyemuFreeWheel" file="/system/framework/voyemu-free-wheel.jar" />
+</permissions>

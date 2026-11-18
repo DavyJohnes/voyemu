@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "api": 30,
+  "native": true,
+  "input_sha256": "5aa168a2fbb99353449d52a1d05c6baf5a900b4244de381e66173de7ef2028f9",
+  "output_sha256": "da0a10c128b5c52c67e52795090755fd97fc5d02999c26d150bd9afa27d6fdb1",
+  "description": "Exact pinned API30 native CAN simulator policy; appends the registered simulator domain on top of the patched Free A11 cockpit service policy whose su is bounded by the OEM system_ext and vendor su rules."
+}

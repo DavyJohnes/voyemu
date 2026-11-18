@@ -1,0 +1,8 @@
+{
+  "api": 28,
+  "calls": [],
+  "constants": {
+    "KIND": "can-early-file-contexts"
+  },
+  "schema": 1
+}

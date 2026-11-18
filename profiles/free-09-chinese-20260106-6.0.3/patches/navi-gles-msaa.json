@@ -1,0 +1,68 @@
+{
+  "api": 28,
+  "calls": [
+    {
+      "args": [
+        "Lcom/baidu/mapautosdk/component/map/gl/e$c;-><init>()V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "const/16 v1, 0x12",
+                "const/16 v2, 0x3032",
+                "aput v2, v3, v1",
+                "const/16 v1, 0x13",
+                "aput v0, v3, v1"
+              ],
+              "with": [
+                "const/16 v1, 0x12",
+                "const/16 v2, 0x3032",
+                "aput v2, v3, v1",
+                "const/16 v1, 0x13",
+                "const/4 v2, 0x0",
+                "aput v2, v3, v1"
+              ]
+            },
+            {
+              "replace": [
+                "const/16 v0, 0x15",
+                "aput v5, v3, v0"
+              ],
+              "with": [
+                "const/16 v0, 0x15",
+                "const/4 v5, 0x0",
+                "aput v5, v3, v0"
+              ]
+            }
+          ]
+        }
+      ],
+      "operation": "editMethod"
+    },
+    {
+      "args": [
+        "Lcom/baidu/mapautosdk/component/map/gl/e$c;->a([I)[I",
+        {
+          "edits": [
+            {
+              "replace": [
+                "const/16 p1, 0x3040",
+                "aput p1, v1, v2",
+                "const/4 p1, 0x4"
+              ],
+              "with": [
+                "const/16 p1, 0x3038",
+                ".line 45",
+                "aput p1, v1, v2",
+                "const/4 p1, 0x4"
+              ]
+            }
+          ]
+        }
+      ],
+      "operation": "editMethod"
+    }
+  ],
+  "constants": {},
+  "schema": 1
+}

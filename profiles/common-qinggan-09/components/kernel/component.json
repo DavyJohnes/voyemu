@@ -1,0 +1,42 @@
+{
+  "schema": 1,
+  "kind": "development-kernel-source",
+  "android_api": 28,
+  "abi": "arm64-v8a",
+  "release_name": "qinggan-09",
+  "freeze_pending": false,
+  "source": {
+    "url": "https://android.googlesource.com/kernel/goldfish/+archive/cc24b0a8f68af21e7fc2a6480646866d3ccdf83e.tar.gz",
+    "commit": "cc24b0a8f68af21e7fc2a6480646866d3ccdf83e",
+    "tree": "71a22489dcda7d1ab0921f809a1df5255c1b85a5",
+    "content_sha256": "60cf6cd87848277407fb31ce1d6f3a15d525a735342c4cb8db435ebff18ba50d",
+    "archive_file": ".local/toolchains/downloads/sources/goldfish-cc24b0a8f68af21e7fc2a6480646866d3ccdf83e.tar.gz"
+  },
+  "stock_kernel_sha256": "92b3c23e83e4fdf2204b946ca8015d5007993615d60f5ca6e924c24a3ec0a900",
+  "toolchain": {
+    "version": "NDK29.0.14206865 Android clang21.0.0 r563880c; not stock compiler",
+    "kbuild_timestamp": "2023-03-16 16:57:48",
+    "hosts": {
+      "darwin-x86_64": {
+        "clang_sha256": "06f04f4211f423d368e060e8f9a6d05f38005ad399eb8e17b14c509d67376d76",
+        "lld_sha256": "151bec52f15f697949eac5f75873fc62f58031c32eb30d05720d80ab0753b90e",
+        "make_sha256": "492d38f81f0e58c05911c964f82d4e8c26f2026a7f90a323900964c3d1537562"
+      },
+      "linux-x86_64": {
+        "clang_sha256": "d326ed4fc4f71e5315b9ce388fc23ec792f81652ca7b29e66294de6ed2520844",
+        "lld_sha256": "9f7df260a1a6cd02e3274c1d57ff22b2745791b85fb38a958051ebcd31e42900",
+        "make_sha256": "ee92765a5dc7556669fd3e7f9fc58c7ba960523d2131052c9b760f5d1a2fc29d"
+      }
+    }
+  },
+  "patches": [
+    "clang21.patch",
+    "netlink-reset.patch",
+    "oid-registry-path.patch"
+  ],
+  "driver": [
+    "cis_can_dev.c",
+    "can_boundary.h",
+    "can_datagram.h"
+  ]
+}

@@ -1,0 +1,43 @@
+{
+  "schema": 1,
+  "sources": [
+    {
+      "name": "mingw-w64-glib2-2.90.1-1.src.tar.zst",
+      "url": "https://repo.msys2.org/mingw/sources/mingw-w64-glib2-2.90.1-1.src.tar.zst",
+      "sha256": "ac3bc00e4079e6b51dd0a1fb9ccc420fff033b4e9095e4487dbf6cf01312cee6"
+    },
+    {
+      "name": "mingw-w64-zlib-1.3.2-2.src.tar.zst",
+      "url": "https://repo.msys2.org/mingw/sources/mingw-w64-zlib-1.3.2-2.src.tar.zst",
+      "sha256": "eef69dea52357e01b272d6fd6dc4d7c0773f71260cb7bcde6047c8c383518db3"
+    },
+    {
+      "name": "mingw-w64-gettext-1.0-1.src.tar.zst",
+      "url": "https://repo.msys2.org/mingw/sources/mingw-w64-gettext-1.0-1.src.tar.zst",
+      "sha256": "cca0d0c8f60353faccc5ad40405240014e4a7ccc8b1c6ca9f4626aef3097d26e"
+    },
+    {
+      "name": "mingw-w64-crt-14.0.0.r495.g63ebe6cdb-1.src.tar.zst",
+      "url": "https://repo.msys2.org/mingw/sources/mingw-w64-crt-14.0.0.r495.g63ebe6cdb-1.src.tar.zst",
+      "sha256": "08b00d1bc565a2430d7559e40116eccc9137dd41431475d125933cd32a10e769"
+    },
+    {
+      "name": "mingw-w64-pcre2-10.49-1.src.tar.zst",
+      "url": "https://repo.msys2.org/mingw/sources/mingw-w64-pcre2-10.49-1.src.tar.zst",
+      "sha256": "b02f0d5070b7d7f6db5c8ba9b009f28c1a07b9b52aaf7964dc0c8b098e4088d1"
+    },
+    {
+      "name": "mingw-w64-libiconv-1.19-1.src.tar.zst",
+      "url": "https://repo.msys2.org/mingw/sources/mingw-w64-libiconv-1.19-1.src.tar.zst",
+      "sha256": "74428280c17094da5b702c29b2e1a0abae59556ea5dfdd65705cc8ccc1e000fb"
+    }
+  ],
+  "packages": {
+    "9a7826349279bcca0c935b01880d812be9de9609aef2205be68fd7a6128c1695": "mingw-w64-glib2-2.90.1-1.src.tar.zst",
+    "841401182976d2f9e17e5c0ebaac51f2a8014140ea53d67625e91c8fb3c85ea0": "mingw-w64-zlib-1.3.2-2.src.tar.zst",
+    "ba693dda4ac375af76ce481ff3a6e7481286546cc7dc6d56c7021dae34084157": "mingw-w64-gettext-1.0-1.src.tar.zst",
+    "5975fa56060f1d428d2369b6be70b1e63c0512c63031c2bae722b45610d1c1ea": "mingw-w64-crt-14.0.0.r495.g63ebe6cdb-1.src.tar.zst",
+    "63172179db724ac71e2439a7981134c1bcab8049bdddfd349b32b8f76ed52d1e": "mingw-w64-pcre2-10.49-1.src.tar.zst",
+    "9a500f38c2b91808741c62fae746b3e9110b33a1ecf5c30fa0c66dbedddf7e16": "mingw-w64-libiconv-1.19-1.src.tar.zst"
+  }
+}

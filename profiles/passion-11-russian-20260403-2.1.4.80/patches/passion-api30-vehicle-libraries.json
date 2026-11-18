@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "api": 30,
+  "constants": {
+    "original_sha256_allowlist": [
+      "a5fb5daed4a295a568daf0390858a0bd00782b1384e66b13a96f66d43ad43e60"
+    ]
+  },
+  "calls": [
+    {
+      "operation": "useLibraries",
+      "args": [
+        [
+          "android.car",
+          "voyemu.platform.callbacks",
+          "voyemu.window",
+          "voyemu.mega"
+        ]
+      ]
+    }
+  ]
+}

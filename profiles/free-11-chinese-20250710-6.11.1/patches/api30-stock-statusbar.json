@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "api": 30,
+  "calls": [
+    {
+      "operation": "guardStockStatusBar",
+      "args": []
+    }
+  ],
+  "constants": {
+    "original_sha256_allowlist": [
+      "e66e289a7d5f7bd807a1310b91b83758a2eb8b1400dd882d59ebc57bab49c897"
+    ]
+  }
+}

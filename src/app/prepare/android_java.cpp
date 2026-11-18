@@ -1,0 +1,61 @@
+#include "android_java.hpp"
+#include "error.hpp"
+#include "logging.hpp"
+#include "process.hpp"
+namespace voyemu {
+std::filesystem::path install_android_java(const std::filesystem::path &root, const Json &pin,
+                                           bool offline, std::uint64_t reserve,
+                                           const DownloadTransport &transport) {
+    const auto sha = pin.at("sha256").get<std::string>();
+    const auto folder = root / ".local/toolchains/android-java" / sha;
+    const auto archive = folder / "android-java.zip";
+
+    if (std::filesystem::exists(std::filesystem::symlink_status(archive))) {
+        if (!std::filesystem::is_regular_file(std::filesystem::symlink_status(archive)) ||
+            sha256_file(archive) != sha) {
+            throw VoyemuError("ANDROID_JAVA",
+                              "installed guest Java differs from its pin: " + archive.string());
+        }
+
+        return archive;
+    }
+
+    std::filesystem::path blob;
+
+    try {
+        blob = download_pinned({pin.at("url").get<std::string>(), sha, 256ULL << 20},
+                               root / ".local/toolchains/downloads/android-java", offline, reserve,
+                               transport)
+                       .file;
+    } catch (const std::runtime_error &error) {
+        const std::string message = error.what();
+
+        // Only an asset that is not published, not reachable or not cached offline falls back.
+        if (!(message.starts_with("DOWNLOAD_HTTP:") || message.starts_with("DOWNLOAD_TIMEOUT:") ||
+              message.starts_with("DOWNLOAD_LIBRARY:") ||
+              message.starts_with("DOWNLOAD_OFFLINE:"))) {
+            throw;
+        }
+
+        logging::write(logging::Level::info, "prepare", "guest Java compiled by the helper JDK",
+                       {{"sha256", sha}, {"download", message}});
+
+        return {};
+    }
+
+    ensure_private_directory(folder);
+    const auto temporary = folder / (".part-" + random_token());
+    std::filesystem::copy_file(blob, temporary);
+
+    if (sha256_file(temporary) != sha) {
+        std::filesystem::remove(temporary);
+
+        throw VoyemuError("ANDROID_JAVA", "copied guest Java differs from its pin");
+    }
+
+    std::filesystem::rename(temporary, archive);
+    logging::write(logging::Level::info, "prepare", "guest Java downloaded", {{"sha256", sha}});
+
+    return archive;
+}
+} // namespace voyemu

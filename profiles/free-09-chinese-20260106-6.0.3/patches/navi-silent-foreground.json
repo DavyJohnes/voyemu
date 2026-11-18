@@ -1,0 +1,65 @@
+{
+  "api": 28,
+  "calls": [
+    {
+      "args": [
+        "Lcom/pateo/lightnavi/service/MainService;->startForeground()V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "const-string v3, \"MainService\""
+              ],
+              "with": [
+                "const-string v3, \"voyemu.service.navigation.v1\""
+              ]
+            },
+            {
+              "before": [
+                "invoke-virtual {v0, v1}, Landroid/app/NotificationManager;->createNotificationChannel(Landroid/app/NotificationChannel;)V"
+              ],
+              "insert": [
+                "const-string v2, \"MainService\"",
+                "invoke-virtual {v1, v2}, Landroid/app/NotificationChannel;->setName(Ljava/lang/CharSequence;)V",
+                "const/4 v2, 0x0",
+                "invoke-virtual {v1, v2, v2}, Landroid/app/NotificationChannel;->setSound(Landroid/net/Uri;Landroid/media/AudioAttributes;)V"
+              ]
+            }
+          ]
+        }
+      ],
+      "operation": "editMethod"
+    },
+    {
+      "args": [
+        "Lcom/pateo/navilib/location/LocationService;->startForeground()V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "const-string v3, \"LocationService\""
+              ],
+              "with": [
+                "const-string v3, \"voyemu.service.location.v1\""
+              ]
+            },
+            {
+              "before": [
+                "invoke-virtual {v0, v1}, Landroid/app/NotificationManager;->createNotificationChannel(Landroid/app/NotificationChannel;)V"
+              ],
+              "insert": [
+                "const-string v2, \"LocationService\"",
+                "invoke-virtual {v1, v2}, Landroid/app/NotificationChannel;->setName(Ljava/lang/CharSequence;)V",
+                "const/4 v2, 0x0",
+                "invoke-virtual {v1, v2, v2}, Landroid/app/NotificationChannel;->setSound(Landroid/net/Uri;Landroid/media/AudioAttributes;)V"
+              ]
+            }
+          ]
+        }
+      ],
+      "operation": "editMethod"
+    }
+  ],
+  "constants": {},
+  "schema": 1
+}

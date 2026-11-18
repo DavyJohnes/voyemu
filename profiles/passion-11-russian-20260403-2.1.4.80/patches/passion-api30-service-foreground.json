@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "api": 30,
+  "calls": [
+    {
+      "operation": "guardPassionServiceForeground",
+      "args": []
+    }
+  ],
+  "constants": {
+    "original_sha256_allowlist": [
+      "11bd7f83630949a997836753a65e4782f3235cbbe83db037c7b47e25ddd21c5c",
+      "e0e57f7cd9099136541c3ed35e1042fba1762a13640bea7f6a2ac3415f426bf0"
+    ]
+  }
+}

@@ -1,0 +1,7 @@
+#!/bin/sh
+# Runs the pinned Zig rc; the target triple comes from the CMake toolchain file.
+# Zig keeps its cache in .local/build/zig-cache unless the caller sets one.
+root="$(dirname "$0")/../../.."
+export ZIG_GLOBAL_CACHE_DIR="${ZIG_GLOBAL_CACHE_DIR:-$root/.local/build/zig-cache}"
+export ZIG_LOCAL_CACHE_DIR="${ZIG_LOCAL_CACHE_DIR:-$ZIG_GLOBAL_CACHE_DIR}"
+exec "$root/.local/toolchains/zig-0.15.2/zig" rc "$@"

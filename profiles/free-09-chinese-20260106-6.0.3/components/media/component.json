@@ -1,0 +1,23 @@
+{
+  "type": "apk",
+  "minSdk": 28,
+  "targetSdk": 28,
+  "sign": "platform",
+  "donorDex": {
+    "original": "VehicleSetting",
+    "dex": "classes2.dex",
+    "classes": [
+      "com.qinggan.audiopolicy.AudioClient",
+      "com.qinggan.audiopolicy.AudioEQMode",
+      "com.qinggan.audiopolicy.AudioPolicyInfo",
+      "com.qinggan.audiopolicy.IAudioClientCallback",
+      "com.qinggan.audiopolicy.IAudioExceptionCallback",
+      "com.qinggan.audiopolicy.IAudioFadeCallback",
+      "com.qinggan.audiopolicy.IAudioPolicyCallback",
+      "com.qinggan.audiopolicy.IAudioPolicyInfoCallback",
+      "com.qinggan.audiopolicy.IAudioPolicyService",
+      "com.qinggan.audiopolicy.IBTSourceConnected",
+      "com.qinggan.audiopolicy.IBTSourceInfoCallback"
+    ]
+  }
+}

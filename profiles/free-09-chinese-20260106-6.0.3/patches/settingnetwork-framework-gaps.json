@@ -1,0 +1,117 @@
+{
+  "api": 28,
+  "calls": [
+    {
+      "args": [
+        "Lcom/qinggan/setting/netlib/settingwifi/AccessPoint;-><init>(Landroid/content/Context;Ljava/util/Collection;)V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "iget-boolean p2, p1, Landroid/net/wifi/ScanResult;->isCarrierAp:Z",
+                "iput-boolean p2, p0, Lcom/qinggan/setting/netlib/settingwifi/AccessPoint;->mIsCarrierAp:Z",
+                "iget p2, p1, Landroid/net/wifi/ScanResult;->carrierApEapType:I",
+                "iput p2, p0, Lcom/qinggan/setting/netlib/settingwifi/AccessPoint;->mCarrierApEapType:I",
+                "iget-object p1, p1, Landroid/net/wifi/ScanResult;->carrierName:Ljava/lang/String;"
+              ],
+              "with": [
+                "const/4 p2, 0x0",
+                "iput-boolean p2, p0, Lcom/qinggan/setting/netlib/settingwifi/AccessPoint;->mIsCarrierAp:Z",
+                ".line 271",
+                "const/16 p2, -0x1",
+                "iput p2, p0, Lcom/qinggan/setting/netlib/settingwifi/AccessPoint;->mCarrierApEapType:I",
+                ".line 272",
+                "const/4 p1, 0x0"
+              ]
+            }
+          ]
+        }
+      ],
+      "operation": "editMethod"
+    },
+    {
+      "args": [
+        "Lcom/qinggan/setting/netlib/settingwifi/AccessPoint;->setScanResults(Ljava/util/Collection;)V",
+        {
+          "edits": [
+            {
+              "replace": [
+                "iget-boolean v0, p1, Landroid/net/wifi/ScanResult;->isCarrierAp:Z",
+                "iput-boolean v0, p0, Lcom/qinggan/setting/netlib/settingwifi/AccessPoint;->mIsCarrierAp:Z",
+                "iget v0, p1, Landroid/net/wifi/ScanResult;->carrierApEapType:I",
+                "iput v0, p0, Lcom/qinggan/setting/netlib/settingwifi/AccessPoint;->mCarrierApEapType:I",
+                "iget-object p1, p1, Landroid/net/wifi/ScanResult;->carrierName:Ljava/lang/String;"
+              ],
+              "with": [
+                "const/4 v0, 0x0",
+                "iput-boolean v0, p0, Lcom/qinggan/setting/netlib/settingwifi/AccessPoint;->mIsCarrierAp:Z",
+                ".line 1026",
+                "const/16 v0, -0x1",
+                "iput v0, p0, Lcom/qinggan/setting/netlib/settingwifi/AccessPoint;->mCarrierApEapType:I",
+                ".line 1027",
+                "const/4 p1, 0x0"
+              ]
+            }
+          ]
+        }
+      ],
+      "operation": "editMethod"
+    },
+    {
+      "args": [
+        "Lcom/qinggan/app/settingnetwork/NetworkCompactBTActivity;->onBtStateChanged(ZZ)V",
+        {
+          "edits": [
+            {
+              "before": [
+                "invoke-direct {p0, p1, p2}, Lcom/qinggan/app/settingnetwork/NetworkCompactBTActivity;->updateBtStateAndContentVisibility(ZZ)V"
+              ],
+              "insert": [
+                "const/4 v2, 0x0",
+                "if-nez p1, :voyemu_bt_response",
+                "if-eqz p2, :voyemu_bt_response",
+                "iget-object v0, p0, Lcom/qinggan/app/settingnetwork/NetworkCompactBTActivity;->binding:Lcom/qinggan/app/settingnewwork/databinding/ActivityBtBinding;",
+                "iget-object v0, v0, Lcom/qinggan/app/settingnewwork/databinding/ActivityBtBinding;->networkCompactBtLoadingLayout:Landroidx/constraintlayout/widget/ConstraintLayout;",
+                "invoke-virtual {v0}, Landroid/view/View;->getVisibility()I",
+                "move-result v0",
+                "if-nez v0, :voyemu_bt_response",
+                "const/4 v2, 0x1",
+                "const/4 v0, 0x0",
+                "iput-object v0, p0, Lcom/qinggan/app/settingnetwork/NetworkCompactBTActivity;->headsetStatus:Ljava/lang/Boolean;",
+                "const-string v0, \"persist.2ndBtPower.state\"",
+                "const-string v1, \"disable\"",
+                "invoke-static {v0, v1}, Lcom/qinggan/os/SystemProperties;->set(Ljava/lang/String;Ljava/lang/String;)V",
+                ":voyemu_bt_response"
+              ]
+            },
+            {
+              "before": [
+                "return-void"
+              ],
+              "insert": [
+                "if-eqz v2, :voyemu_bt_done",
+                "iget-object v0, p0, Lcom/qinggan/app/settingnetwork/NetworkCompactBTActivity;->binding:Lcom/qinggan/app/settingnewwork/databinding/ActivityBtBinding;",
+                "iget-object v1, v0, Lcom/qinggan/app/settingnewwork/databinding/ActivityBtBinding;->networkCompactBtLoadingLayout:Landroidx/constraintlayout/widget/ConstraintLayout;",
+                "const/16 v2, 0x8",
+                "invoke-virtual {v1, v2}, Landroid/view/View;->setVisibility(I)V",
+                "iget-object v0, v0, Lcom/qinggan/app/settingnewwork/databinding/ActivityBtBinding;->networkCompactBtContentLayout:Landroidx/constraintlayout/widget/ConstraintLayout;",
+                "const/4 v1, 0x0",
+                "invoke-virtual {v0, v1}, Landroid/view/View;->setVisibility(I)V",
+                "iget-object v0, p0, Lcom/qinggan/app/settingnetwork/NetworkCompactBTActivity;->binding:Lcom/qinggan/app/settingnewwork/databinding/ActivityBtBinding;",
+                "iget-object v0, v0, Lcom/qinggan/app/settingnewwork/databinding/ActivityBtBinding;->networkCompactBtNoDeviceText:Landroid/widget/TextView;",
+                "const-string v1, \"Bluetooth is unavailable in this emulator\"",
+                "invoke-virtual {v0, v1}, Landroid/widget/TextView;->setText(Ljava/lang/CharSequence;)V",
+                "const/4 v1, 0x0",
+                "invoke-virtual {v0, v1}, Landroid/view/View;->setVisibility(I)V",
+                ":voyemu_bt_done"
+              ]
+            }
+          ]
+        }
+      ],
+      "operation": "editMethod"
+    }
+  ],
+  "constants": {},
+  "schema": 1
+}

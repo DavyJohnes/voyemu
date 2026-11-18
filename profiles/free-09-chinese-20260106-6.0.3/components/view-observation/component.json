@@ -1,0 +1,5 @@
+{
+  "type": "jar",
+  "minSdk": 28,
+  "output": "view-observation.jar"
+}

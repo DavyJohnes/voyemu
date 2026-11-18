@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "api": 30,
+  "calls": [
+    {
+      "operation": "guardSystemPolicyHardware",
+      "args": []
+    },
+    {
+      "operation": "useLibraries",
+      "args": [
+        [
+          "QGAPI",
+          "android.car"
+        ]
+      ]
+    }
+  ],
+  "constants": {
+    "original_sha256_allowlist": [
+      "02749c34c515b8dd2ecdb6f5030762c292bc47fc3b79214d7965cb5cf56226eb"
+    ]
+  }
+}

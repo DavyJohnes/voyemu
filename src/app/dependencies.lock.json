@@ -1,0 +1,209 @@
+{
+  "schema": 1,
+  "pin_source": "microsoft/vcpkg portfile.cmake as inspected 2026-10-07",
+  "dependencies": [
+    {
+      "name": "imgui",
+      "version": "1.92.9b",
+      "url": "https://github.com/ocornut/imgui/archive/v1.92.9b.tar.gz",
+      "sha512": "1a8fc7e4d7fe8926289ed9598f39dd5b601baffa3b2a7a0889ed0f9a8f252c85710f4ba65b2a6801bb5b46a17d1fd30b5542e11f67b8989c6640b498ef68bb2d",
+      "archive_sha256": "21d8a0a565e85dce943e375db00812c2f3f0ab21f3f0f7964e364a63422d7f99",
+      "files": [
+        {
+          "file": "LICENSE.txt",
+          "bytes": 1083,
+          "sha256": "173506a2d6f7fb67990d257fb2507f188690eca39060c39469ae7bef43aae2a3"
+        },
+        {
+          "file": "imconfig.h",
+          "bytes": 12699,
+          "sha256": "5755e1b8d6ab0d7811a9d7cac0f509878b51fc5ee77e09bd0f235bcb414971e7"
+        },
+        {
+          "file": "imgui.h",
+          "bytes": 433351,
+          "sha256": "0d8db1045db01d908853adfd26ae07c5bc5ab4789d4515f6ea34234a69ade0ca"
+        },
+        {
+          "file": "imgui_internal.h",
+          "bytes": 310755,
+          "sha256": "efba9bccc971cc49ec3da3168968ba412c7ea89745c104a7f5c004c8349bc71f"
+        },
+        {
+          "file": "imgui.cpp",
+          "bytes": 979959,
+          "sha256": "5a1e5128c0305f50b6556a77f71fde35836505883b74c1d6ae44723243f1e8de"
+        },
+        {
+          "file": "imgui_draw.cpp",
+          "bytes": 381779,
+          "sha256": "83d30419a8e06a5f0a8692ee6de186f7ecfddecdc33769e76244837e2975b400"
+        },
+        {
+          "file": "imgui_tables.cpp",
+          "bytes": 270549,
+          "sha256": "b5deabe5b569ab712c11b6556562a646bf88327320fc60a451071b2a36498d72"
+        },
+        {
+          "file": "imgui_widgets.cpp",
+          "bytes": 555245,
+          "sha256": "a8a0b2f65caa5711467d9e3ca4028fded48329ea65e11ec92a968293dc2aa231"
+        },
+        {
+          "file": "imstb_rectpack.h",
+          "bytes": 20346,
+          "sha256": "889b396795202d1457560a797a7242e96f6f132d4b88ca2d69be58bf05e1771f"
+        },
+        {
+          "file": "imstb_textedit.h",
+          "bytes": 60111,
+          "sha256": "a985f5fa0ed97353d493b497961e9eef52082edcd045cf6954b69990ec9d0741"
+        },
+        {
+          "file": "imstb_truetype.h",
+          "bytes": 199503,
+          "sha256": "c51a0f7e7ea760f2366bd3752635ec58e21fccfec4a832501639990ba6ce0528"
+        },
+        {
+          "file": "backends/imgui_impl_sdl3.h",
+          "bytes": 3901,
+          "sha256": "fa184f17d59d31e986df2e827ef964d7b3c28bcba7789643a4aaaed344cb868e"
+        },
+        {
+          "file": "backends/imgui_impl_sdl3.cpp",
+          "bytes": 44853,
+          "sha256": "306060dffa276b574f0541194e8e079c1685c29c1095602a3972de0bb23171e7"
+        },
+        {
+          "file": "backends/imgui_impl_sdlrenderer3.h",
+          "bytes": 3024,
+          "sha256": "553cd6cd3efb8b887954e7f2d804a79538651a5332ef68c812effe27c5c577bc"
+        },
+        {
+          "file": "backends/imgui_impl_sdlrenderer3.cpp",
+          "bytes": 17414,
+          "sha256": "8cb065251a41dcccfc181810b5fec979498c6ffe43fa389a3c86d4d5506e3ca5"
+        }
+      ],
+      "installed_bytes": 3294572,
+      "license": "MIT"
+    },
+    {
+      "name": "json",
+      "version": "3.12.0",
+      "url": "https://github.com/nlohmann/json/archive/v3.12.0.tar.gz",
+      "sha512": "6cc1e86261f8fac21cc17a33da3b6b3c3cd5c116755651642af3c9e99bb3538fd42c1bd50397a77c8fb6821bc62d90e6b91bcdde77a78f58f2416c62fc53b97d",
+      "archive_sha256": "4b92eb0c06d10683f7447ce9406cb97cd4b453be18d7279320f7b2f025c10187",
+      "files": [
+        {
+          "file": "LICENSE.MIT",
+          "bytes": 1076,
+          "sha256": "46a65cffd1ea955132d95a8dd921640714a8d6b537d2e4e482d31145ae95b603"
+        },
+        {
+          "file": "single_include/nlohmann/json.hpp",
+          "bytes": 953436,
+          "sha256": "aaf127c04cb31c406e5b04a63f1ae89369fccde6d8fa7cdda1ed4f32dfc5de63"
+        }
+      ],
+      "installed_bytes": 954512,
+      "license": "MIT"
+    },
+    {
+      "name": "miniz",
+      "version": "3.1.2",
+      "url": "https://github.com/richgel999/miniz/releases/download/3.1.2/miniz-3.1.2.zip",
+      "sha512": "15261f4dfa69851df2d87ea544248b2f8737a50123852071677238004b37b0dd844632e4221624742c7d68a3f4699d7ed51e844e6da0c0cac423ce4d8d70738b",
+      "archive_sha256": "f0446d863f9c19926ad9483c523fdc42e42b8d4a6a431d27e09d49c79a140d9a",
+      "files": [
+        {
+          "file": "LICENSE",
+          "bytes": 1184,
+          "sha256": "0115478d567121238cf6cc1c0c361926cf07a49d9e4c9e66da97fac6a01646b3"
+        },
+        {
+          "file": "miniz.c",
+          "bytes": 350352,
+          "sha256": "e2c1aeb66eef9191d8c3feb164db2def2335a61d039bf04ed849f6b042433b30"
+        },
+        {
+          "file": "miniz.h",
+          "bytes": 76822,
+          "sha256": "b53b62ed122e559b8f679e3cb787a0b0035fe87a58f909da0e44931678f4e85f"
+        }
+      ],
+      "installed_bytes": 428358,
+      "license": "MIT"
+    },
+    {
+      "name": "lzokay",
+      "version": "db2df1fcbebc2ed06c10f727f72567d40f06a2be",
+      "url": "https://github.com/AxioDL/lzokay/archive/db2df1fcbebc2ed06c10f727f72567d40f06a2be.tar.gz",
+      "archive_sha256": "e5314402b590e656474c0087af1f9d6fac727cb7718011791cdab8a61245a066",
+      "license": "MIT",
+      "provenance": "Upstream has no releases or tags; the commit is the latest of master, dated 2023-10-22",
+      "files": [
+        {
+          "file": "LICENSE",
+          "bytes": 1075,
+          "sha256": "28933aedd9381e87e1fabb4491b00dfddd4f24ecac6adb7988fa1df7cf296813"
+        },
+        {
+          "file": "lzokay.cpp",
+          "bytes": 20559,
+          "sha256": "2f4ab24a24a65766f05e2aa60361c624d1a1b80e73164d2248300e0701d91e91"
+        },
+        {
+          "file": "lzokay.hpp",
+          "bytes": 2479,
+          "sha256": "0a6165e6726f27c1abfc1b1bb0613b1a839f4285d5cd6108d62d63cc713645c7"
+        }
+      ]
+    },
+    {
+      "name": "libarchive_headers",
+      "version": "3.8.9",
+      "url": "https://www.libarchive.org/downloads/libarchive-3.8.9.tar.xz",
+      "archive_sha256": "888c934f9d95648ecb9163dc8e23ab80a476ecb81a8f1154704a227b5b676dde",
+      "license": "BSD-2-Clause",
+      "scope": "Headers only; runtime links macOS system libarchive, not Homebrew",
+      "provenance": "Unmodified headers and complete COPYING from the SHA-pinned upstream release archive",
+      "files": [
+        {
+          "file": "archive.h",
+          "bytes": 56071,
+          "sha256": "5dc85c3288bd0f293b9d99101627f1bfbc775a0d400640881bcbf056acca59f2",
+          "upstream_file": "libarchive/archive.h"
+        },
+        {
+          "file": "archive_entry.h",
+          "bytes": 35427,
+          "sha256": "ce6d82c6ed0132022136566195b6b2494a93c0e2db46d968d52624bd296bfcbf",
+          "upstream_file": "libarchive/archive_entry.h"
+        },
+        {
+          "file": "LICENSE.txt",
+          "bytes": 3089,
+          "sha256": "30e556b3959e3985d66efefec5eaac51d4995053caa1d3cffe6eb916f146f229",
+          "upstream_file": "COPYING"
+        }
+      ]
+    },
+    {
+      "name": "noto_sans_sc",
+      "version": "google/fonts a85815a42757630ce188fdad368c2dfc444d4773",
+      "url": "https://raw.githubusercontent.com/google/fonts/a85815a42757630ce188fdad368c2dfc444d4773/ofl/notosanssc/NotoSansSC%5Bwght%5D.ttf",
+      "archive_sha256": "a3041811a78c361b1de50f953c805e0244951c21c5bd412f7232ef0d899af0da",
+      "license": "OFL-1.1",
+      "provenance": "The Noto Sans SC TrueType font of Google Fonts, the latest commit of its directory, dated 2026-03-25",
+      "scope": "Glyphs of the Chinese UI strings at the weights 400 and 500, subset at configure by src/dev/fonts/FontSubset.java",
+      "files": [
+        {
+          "file": "NotoSansSC-VF.ttf",
+          "bytes": 17772300,
+          "sha256": "a3041811a78c361b1de50f953c805e0244951c21c5bd412f7232ef0d899af0da"
+        }
+      ]
+    }
+  ]
+}

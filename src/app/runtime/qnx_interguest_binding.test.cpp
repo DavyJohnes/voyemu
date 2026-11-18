@@ -1,0 +1,245 @@
+#include "qnx_interguest_binding.hpp"
+#include "qnx_owned_ram.hpp"
+#include "qnx_process_ram.hpp"
+#include "qnx_runtime_layout.hpp"
+#ifdef NDEBUG
+#undef NDEBUG
+#endif
+#include <cassert>
+#include <exception>
+#include <functional>
+#include <iostream>
+using namespace voyemu;
+
+static void rejects(const std::function<void()> &f) {
+    bool rejected = false;
+
+    try {
+        f();
+    } catch (...) {
+        rejected = true;
+    }
+
+    assert(rejected);
+}
+
+static Json passion() {
+    return {{"profile", "passion-11-russian-20260403-2.1.4.80"},
+            {"hardware_adapter", "sa8155-passion-21480-developer"},
+            {"interguest_network", qnx_interguest_contract()},
+            {"interguest_ram", qnx_passion_interguest_ram_contract()},
+            {"ram_backend", "file"},
+            {"ram", "${SESSION}/qnx-ram.bin"},
+            {"qemu",
+             {{"args",
+               Json::array(
+                       {"-machine",
+                        "virt-11.0,gic-version=3,virtualization=on,secure=off,memory-backend=qnxmem",
+                        "-m", "11713", "-object",
+                        "memory-backend-file,id=qnxmem,size=11713M,mem-path=${SESSION}/qnx-ram.bin,share=on",
+                        "-serial", "file:${SESSION}/qnx-serial.log"})}}}};
+}
+
+int main() try {
+    for (const auto *adapter : {"", "sa8155-qinggan09", "sa8155-qinggan11-731"}) {
+        const Json legacy = {{"hardware_adapter", adapter},
+                             {"interguest_network", qnx_interguest_contract()}};
+        const auto binding = qnx_interguest_binding(legacy);
+        assert(!binding.passion && binding.geometry == InterguestLink::RamGeometry::free8g &&
+               binding.ram_bytes() == (8ULL << 30));
+        auto wrong = legacy;
+        wrong["interguest_ram"] = qnx_passion_interguest_ram_contract();
+        rejects([&] {
+            qnx_interguest_binding(wrong);
+        });
+    }
+
+    {
+        auto alias = passion();
+        alias["qemu"]["arguments"] = alias["qemu"]["args"];
+        assert(qnx_interguest_binding(alias).passion);
+    }
+    {
+        auto bad = passion();
+        bad["qemu"]["arguments"] = bad["qemu"]["args"];
+        bad["qemu"]["arguments"][3] = "8192";
+        rejects([&] {
+            qnx_interguest_binding(bad);
+        });
+    }
+    {
+        auto bad = passion();
+        bad["qemu"]["arguments"] = bad["qemu"]["args"];
+        bad["qemu"].erase("args");
+        rejects([&] {
+            qnx_interguest_binding(bad);
+        });
+    }
+    {
+        const auto layout = qnx_runtime_layout("sa8155-passion-21480");
+        const auto ram_launch = qnx_ram_launch(QnxEngine::hvf, layout.memory_mib);
+        std::vector<std::string> args{"-machine", ram_launch.machine,
+                                      "-m",       std::to_string(layout.memory_mib),
+                                      "-serial",  "file:${SESSION}/qnx-serial.log"};
+        args.insert(args.end(), ram_launch.options.begin(), ram_launch.options.end());
+        Json launch{{"ram_backend", ram_launch.backend},
+                    {"ram", "${SESSION}/qnx-ram.bin"},
+                    {"qemu", {{"args", args}}}};
+        qnx_runtime_launch_metadata(launch, layout);
+        const auto binding = qnx_ram_binding(launch);
+        assert(binding.passion && binding.ram_bytes() == (11713ULL << 20));
+        assert(qnx_owned_ram_bytes(Json{{"ram_geometry", qnx_owned_ram_geometry(binding)}}) ==
+               (11713ULL << 20));
+        Json seed;
+        qnx_runtime_metadata(seed, layout);
+        assert(!seed.contains("profile"));
+        const auto free = qnx_runtime_layout("sa8155-qinggan09");
+        Json legacy = Json::object();
+        qnx_runtime_launch_metadata(legacy, free);
+        assert(!legacy.contains("profile") && !qnx_ram_binding(legacy).passion);
+    }
+    {
+        auto production = passion();
+        production["hardware_adapter"] = "sa8155-passion-21480";
+        production.erase("interguest_network");
+        production.erase("interguest_ram");
+        const auto ram = qnx_ram_binding(production);
+        assert(ram.passion && ram.ram_bytes() == (11713ULL << 20) &&
+               qnx_owned_ram_geometry(ram) == "Passion11713MiB");
+        assert(qnx_owned_ram_bytes(Json{{"ram_geometry", qnx_owned_ram_geometry(ram)}}) ==
+               (11713ULL << 20));
+
+        for (const auto *key : {"profile", "hardware_adapter", "ram_backend", "ram", "qemu"}) {
+            auto bad = production;
+            bad.erase(key);
+            rejects([&] {
+                qnx_ram_binding(bad);
+            });
+        }
+
+        for (const auto index : {1, 3, 5, 7}) {
+            auto bad = production;
+            bad["qemu"]["args"][index] = "wrong";
+            rejects([&] {
+                qnx_ram_binding(bad);
+            });
+        }
+
+        auto bad = production;
+        bad["qemu"]["args"].push_back("--m");
+        bad["qemu"]["args"].push_back("8192");
+        rejects([&] {
+            qnx_ram_binding(bad);
+        });
+        bad = production;
+        bad["interguest_ram"] = qnx_passion_interguest_ram_contract();
+        rejects([&] {
+            qnx_ram_binding(bad);
+        });
+        bad = production;
+        bad["interguest_network"] = qnx_interguest_contract();
+        rejects([&] {
+            qnx_interguest_binding(bad);
+        });
+    }
+    {
+        const auto ram = qnx_ram_binding(Json::object());
+        assert(!ram.passion &&
+               qnx_owned_ram_bytes(Json{{"ram_geometry", qnx_owned_ram_geometry(ram)}}) ==
+                       (8ULL << 30));
+    }
+    const auto spec = passion();
+    const auto binding = qnx_interguest_binding(spec);
+    assert(binding.passion && binding.geometry == InterguestLink::RamGeometry::passion21480 &&
+           binding.ram_bytes() == (11713ULL << 20));
+
+    for (const char *key :
+         {"profile", "hardware_adapter", "interguest_ram", "ram_backend", "ram", "qemu"}) {
+        auto bad = spec;
+        bad.erase(key);
+        rejects([&] {
+            qnx_interguest_binding(bad);
+        });
+    }
+
+    for (const char *key : {"profile", "hardware_adapter"}) {
+        auto bad = spec;
+        bad[key] = "another";
+        rejects([&] {
+            qnx_interguest_binding(bad);
+        });
+    }
+
+    for (const auto *key : {"schema", "backing_bytes", "mailbox_begin", "mailbox_end_exclusive"}) {
+        auto bad = spec;
+        bad["interguest_ram"][key] = bad["interguest_ram"][key].get<double>();
+        rejects([&] {
+            qnx_interguest_binding(bad);
+        });
+    }
+
+    {
+        auto bad = spec;
+        bad["interguest_ram"]["extra"] = 1;
+        rejects([&] {
+            qnx_interguest_binding(bad);
+        });
+    }
+
+    for (const auto index : {1, 3, 5, 7}) {
+        auto bad = spec;
+        bad["qemu"]["args"][index] = "wrong";
+        rejects([&] {
+            qnx_interguest_binding(bad);
+        });
+    }
+
+    for (const auto *option : {"-machine", "-m", "-object", "-serial"}) {
+        auto bad = spec;
+        bad["qemu"]["args"].push_back(option);
+        bad["qemu"]["args"].push_back(spec["qemu"]["args"][std::string(option) == "-machine"  ? 1
+                                                           : std::string(option) == "-m"      ? 3
+                                                           : std::string(option) == "-object" ? 5
+                                                                                              : 7]);
+        rejects([&] {
+            qnx_interguest_binding(bad);
+        });
+    }
+
+    for (const auto *alias : {"-M", "--machine", "--m", "--object", "--serial"}) {
+        auto bad = spec;
+        bad["qemu"]["args"].push_back(alias);
+        bad["qemu"]["args"].push_back("override");
+        rejects([&] {
+            qnx_interguest_binding(bad);
+        });
+    }
+
+    for (const auto *option : {"-readconfig", "-set", "-mem-path", "-numa"}) {
+        auto bad = spec;
+        bad["qemu"]["args"].push_back(option);
+        bad["qemu"]["args"].push_back("override");
+        rejects([&] {
+            qnx_interguest_binding(bad);
+        });
+    }
+
+    {
+        auto bad = spec;
+        bad["ram_backend"] = "process";
+        rejects([&] {
+            qnx_interguest_binding(bad);
+        });
+    }
+    {
+        auto bad = spec;
+        bad["interguest_network"]["address"] = "172.16.110.30";
+        rejects([&] {
+            qnx_interguest_binding(bad);
+        });
+    }
+} catch (const std::exception &error) {
+    std::cerr << error.what() << '\n';
+
+    return 1;
+}
