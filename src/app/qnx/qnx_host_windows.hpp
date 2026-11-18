@@ -166,7 +166,8 @@ inline void validate_installed_windows_source(const std::filesystem::path &direc
 // MSYS root.
 inline std::vector<std::string> record_msys_archive_links(const std::string &listing,
                                                           const std::filesystem::path &records,
-                                                          const std::string &prefix = "") {
+                                                          const std::string &prefix = "",
+                                                          bool omit_unused_qemu_links = false) {
     auto fail = []() {
         throw VoyemuError("QNX_HOST", "invalid bounded MSYS archive listing");
     };
@@ -292,6 +293,15 @@ inline std::vector<std::string> record_msys_archive_links(const std::string &lis
                 if (c < 32 || c == 127) {
                     fail();
                 }
+            }
+
+            // This build does not compile firmware, Rust, CI fixtures or Linux vhost backends.
+            if (omit_unused_qemu_links &&
+                (sym.empty() || !(name.starts_with("roms/") || name.starts_with("rust/") ||
+                                  name.starts_with("tests/lcitool/") ||
+                                  name.starts_with("subprojects/libvduse/") ||
+                                  name.starts_with("subprojects/libvhost-user/")))) {
+                fail();
             }
 
             // Hard-link names are archive-root-relative; symbolic link names are parent-relative or

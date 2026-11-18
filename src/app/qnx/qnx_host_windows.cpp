@@ -257,10 +257,11 @@ Json install_qnx_host_windows_source(const std::filesystem::path &root, bool off
 
         return tar;
     };
-    auto unpack_recorded =
-            [&](const std::filesystem::path &archive, const std::filesystem::path &destination,
-                const std::string &prefix =
-                        "") -> std::pair<std::filesystem::path, std::filesystem::path> {
+    auto unpack_recorded = [&](const std::filesystem::path &archive,
+                               const std::filesystem::path &destination,
+                               const std::string &prefix = "",
+                               bool omit_unused_qemu_links = false) -> std::filesystem::path {
+        ensure_private_directory(destination);
         const auto intermediate = stage / ("archive-" + std::to_string(++step));
         ensure_private_directory(intermediate);
         run(unpacker, {"x", "-y", "-o" + intermediate.string(), archive.string()}, stage);
@@ -281,7 +282,8 @@ Json install_qnx_host_windows_source(const std::filesystem::path &root, bool off
         const auto listing = run(unpacker, {"l", "-slt", "-ba", "-sccUTF-8", tar.string()}, stage,
                                  {}, 120000, 32ULL << 20);
         require(listing.size() < (32ULL << 20), "archive listing exceeds bound");
-        const auto excluded = record_msys_archive_links(listing, produced, prefix);
+        const auto excluded = record_msys_archive_links(listing, produced, prefix,
+                                                        omit_unused_qemu_links);
         std::filesystem::rename(produced, records);
         std::vector<std::string> args{"x", "-y", "-spd", "-o" + destination.string(), tar.string()};
 
@@ -301,7 +303,7 @@ Json install_qnx_host_windows_source(const std::filesystem::path &root, bool off
         run(unpacker, std::move(args), stage);
         std::filesystem::remove_all(intermediate);
 
-        return std::make_pair(tar, records);
+        return records;
     };
 
     if (std::filesystem::exists(boot)) {
@@ -322,16 +324,16 @@ Json install_qnx_host_windows_source(const std::filesystem::path &root, bool off
         const auto base_extraction = unpack_recorded(base, payload, "msys64");
         const auto msys = payload / "msys64";
         require(std::filesystem::exists(msys / "usr/bin/bash.exe"), "MSYS shell missing");
-        restore_msys_symlinks(msys, base_extraction.second);
+        restore_msys_symlinks(msys, base_extraction);
 
         for (const auto &[name, file] : tools) {
             const auto extraction = unpack_recorded(file, msys);
-            restore_msys_symlinks(msys, extraction.second);
+            restore_msys_symlinks(msys, extraction);
         }
 
         for (const auto &[name, file] : deps) {
             const auto extraction = unpack_recorded(file, msys);
-            restore_msys_symlinks(msys, extraction.second);
+            restore_msys_symlinks(msys, extraction);
         }
 
         unpack(zigarchive, payload, false);
@@ -370,8 +372,8 @@ Json install_qnx_host_windows_source(const std::filesystem::path &root, bool off
 
     if (!std::filesystem::exists(sources)) {
         const auto extract = stage / "sources";
-        auto source_tar = unpack(source, extract, true);
-        (void)source_tar;
+        const auto omitted = unpack_recorded(source, extract, "qemu-11.1.2", true);
+        std::filesystem::remove(omitted);
         const auto tree = extract / "qemu-11.1.2";
 
         for (const auto &[file, sha] : recipe.at("patched_sources").items()) {

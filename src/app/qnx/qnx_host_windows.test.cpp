@@ -215,6 +215,29 @@ int main(int argc, char **argv) {
         //----------- SLT listing -> record producer contract (native owner API) -----------
         const auto work = scratch / "slt";
         ensure_private_directory(work);
+        {
+            const auto rom = "qemu-11.1.2/roms/u-boot/tools/sha1.h";
+            const auto prefix = "qemu-11.1.2";
+            const auto records = work / "qemu-links";
+            const auto listing = slt_regular("qemu-11.1.2/system/physmem.c", 32) +
+                                 slt_symlink(rom, "../include/sha1.h");
+            check(record_msys_archive_links(listing, records, prefix, true) ==
+                          std::vector<std::string>{rom},
+                  "QEMU source extraction excludes exact unused ROM link");
+            expect_throw(
+                    [&] {
+                        record_msys_archive_links(slt_symlink("qemu-11.1.2/system/memory.c",
+                                                              "../include/system/memory.h"),
+                                                  records, prefix, true);
+                    },
+                    "archive listing", "QEMU source link in a compiled directory rejected");
+            expect_throw(
+                    [&] {
+                        record_msys_archive_links(slt_hardlink(rom, "qemu-11.1.2/system/memory.c"),
+                                                  records, prefix, true);
+                    },
+                    "archive listing", "QEMU source hardlink rejected even in an unused directory");
+        }
         { // valid no-links listing: success, consumed records, zero restores, no destinations
             const auto listing = slt_regular("msys64/usr/bin/bash.exe", 2048);
             const auto records = work / "no-links-records";
