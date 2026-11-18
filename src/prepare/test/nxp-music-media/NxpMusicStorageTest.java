@@ -54,7 +54,9 @@ public final class NxpMusicStorageTest {
                 entry.text.toString().equals("External storage")
                         && entry.description
                                 .toString()
-                                .equals("External storage: /storage/emulated/0"),
+                                .equals(
+                                        "External storage: "
+                                                + Environment.directory.getAbsolutePath()),
                 "shared storage mislabeled");
         need(
                 entry.x == 160 && entry.y == 15 && entry.width == 160 && entry.height == 48,

@@ -3709,16 +3709,13 @@ static void project_socket_root_guard() {
 }
 
 static void lifecycle_ipc_deadlines() {
-    auto root = std::filesystem::canonical(std::filesystem::temp_directory_path()) /
-                ("voyemu-ipc-" + random_token().substr(0, 8));
-
-    ensure_private_directory(root);
     std::atomic<bool> stopped = false;
+
 #ifdef _WIN32
     const auto endpoint =
             std::filesystem::path(R"(\\.\pipe\voyemu-session-test-)" + random_token());
 #else
-    const auto endpoint = root / "control.sock";
+    const auto endpoint = native_socket_root() / (random_token() + "-vld.sock");
     assert(endpoint.string().size() < sizeof(sockaddr_un{}.sun_path));
 #endif
     {
@@ -3767,15 +3764,11 @@ static void lifecycle_ipc_deadlines() {
         stopped = true;
         worker.join();
     }
-    std::filesystem::remove_all(root);
 }
 
 static void control_server_stop_reply() {
 #ifndef _WIN32
-    const auto root = std::filesystem::canonical(std::filesystem::temp_directory_path()) /
-                      ("vsr-" + random_token().substr(0, 16));
-    ensure_private_directory(root);
-    const auto endpoint = root / "control.sock";
+    const auto endpoint = native_socket_root() / (random_token() + "-vsr.sock");
     assert(endpoint.string().size() < sizeof(sockaddr_un{}.sun_path));
 
     for (unsigned attempt = 0; attempt < 4; ++attempt) {
@@ -3852,16 +3845,12 @@ static void control_server_stop_reply() {
             ::close(client);
         }
     }
-    std::filesystem::remove_all(root);
 #endif
 }
 
 static void control_server_early_busy_reply() {
 #ifndef _WIN32
-    const auto root = std::filesystem::canonical(std::filesystem::temp_directory_path()) /
-                      ("vbr-" + random_token().substr(0, 16));
-    ensure_private_directory(root);
-    const auto endpoint = root / "s";
+    const auto endpoint = native_socket_root() / (random_token() + "-vbr.sock");
     const auto path = endpoint.string();
     const Json busy{{"ok", false}, {"error", "IPC_BUSY: active connection limit"}};
     auto exchange = [&](const std::string &response, bool accepted) {
@@ -3933,7 +3922,6 @@ static void control_server_early_busy_reply() {
     exchange(busy.dump(), false);
     exchange("{broken}\n", false);
 #endif
-    std::filesystem::remove_all(root);
 #endif
 }
 
@@ -4114,10 +4102,7 @@ static void windows_control_server_stop_reply() {
 
 static void control_server_concurrency() {
 #ifndef _WIN32
-    const auto root = std::filesystem::current_path() / ".local/build" /
-                      ("control-" + random_token().substr(0, 8));
-    ensure_private_directory(root);
-    const auto endpoint = root / "control.sock";
+    const auto endpoint = native_socket_root() / (random_token() + "-vcc.sock");
     assert(endpoint.string().size() < sizeof(sockaddr_un{}.sun_path));
 #else
     const auto endpoint =
@@ -4229,9 +4214,6 @@ static void control_server_concurrency() {
         serving.join();
         assert(first && independent);
     }
-#ifndef _WIN32
-    std::filesystem::remove_all(root);
-#endif
 }
 
 static void owned_android_network_recovery_tests() {

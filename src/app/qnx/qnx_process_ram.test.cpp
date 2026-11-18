@@ -4,6 +4,7 @@
 #include <fstream>
 #include <map>
 #ifdef _WIN32
+#include "../core/private_state_security.hpp"
 #include <winioctl.h>
 #else
 #include <sys/mman.h>
@@ -15,6 +16,27 @@
 #include <string>
 using namespace voyemu;
 #ifdef _WIN32
+static void create_owned_disk(const std::filesystem::path &path, std::uint64_t bytes,
+                              std::string_view marker) {
+    detail::PrivateStateSecurity security;
+    const HANDLE file = CreateFileW(path.c_str(), GENERIC_READ | GENERIC_WRITE,
+                                    FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                                    &security.attributes, CREATE_NEW, FILE_ATTRIBUTE_NORMAL,
+                                    nullptr);
+
+    assert(file != INVALID_HANDLE_VALUE);
+    DWORD returned = 0;
+    assert(DeviceIoControl(file, FSCTL_SET_SPARSE, nullptr, 0, nullptr, 0, &returned, nullptr));
+    LARGE_INTEGER end{};
+    end.QuadPart = bytes;
+    assert(SetFilePointerEx(file, end, nullptr, FILE_BEGIN) && SetEndOfFile(file));
+    end.QuadPart = 0;
+    assert(SetFilePointerEx(file, end, nullptr, FILE_BEGIN));
+    assert(WriteFile(file, marker.data(), static_cast<DWORD>(marker.size()), &returned, nullptr) &&
+           returned == marker.size());
+    CloseHandle(file);
+}
+
 static void diagnostic_persistent_storage() {
     const auto root = std::filesystem::canonical(std::filesystem::temp_directory_path()) /
                       ("voyemu-native-storage-" + random_token());
@@ -34,23 +56,8 @@ static void diagnostic_persistent_storage() {
         const unsigned char header[] = {0xcf, 0xfa, 0xed, 0xfe, 12, 0, 0, 1};
         image.write(reinterpret_cast<const char *>(header), 8);
     }
-    auto create = [](const std::filesystem::path &path, std::uint64_t bytes) {
-        const HANDLE file = CreateFileW(path.c_str(), GENERIC_READ | GENERIC_WRITE,
-                                        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-                                        nullptr, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, nullptr);
-        assert(file != INVALID_HANDLE_VALUE);
-        DWORD returned = 0;
-        assert(DeviceIoControl(file, FSCTL_SET_SPARSE, nullptr, 0, nullptr, 0, &returned, nullptr));
-        LARGE_INTEGER end{};
-        end.QuadPart = bytes;
-        assert(SetFilePointerEx(file, end, nullptr, FILE_BEGIN) && SetEndOfFile(file));
-        end.QuadPart = 0;
-        assert(SetFilePointerEx(file, end, nullptr, FILE_BEGIN));
-        assert(WriteFile(file, "installed", 9, &returned, nullptr) && returned == 9);
-        CloseHandle(file);
-    };
-    create(system, 1025ULL << 20);
-    create(userdata, 32ULL << 20);
+    create_owned_disk(system, 1025ULL << 20, "installed");
+    create_owned_disk(userdata, 32ULL << 20, "installed");
     const auto pin = sha256_file(engine);
     const auto mapping = qnx_persistent_ram_launch(QnxEngine::hvf, system.string(),
                                                    userdata.string());
@@ -137,7 +144,7 @@ static void diagnostic_persistent_storage() {
         QnxPersistentStorage storage(spec);
         const auto retained = root / "retained-userdata";
         std::filesystem::rename(userdata, retained);
-        create(userdata, 32ULL << 20);
+        create_owned_disk(userdata, 32ULL << 20, "installed");
         bool rejected = false;
         try {
             storage.flush();
@@ -477,10 +484,7 @@ int main() try {
 
         for (const auto &disk :
              {std::pair{system, 1025ULL << 20}, std::pair{userdata, 32ULL << 20}}) {
-            std::ofstream file(disk.first);
-            file << "installed";
-            file.close();
-            std::filesystem::resize_file(disk.first, disk.second);
+            create_owned_disk(disk.first, disk.second, "installed");
         }
 
         const auto mapping = qnx_persistent_ram_launch(QnxEngine::tcg_file, system.string(),
@@ -541,11 +545,7 @@ int main() try {
             QnxPersistentStorage invalid(wrong);
         });
         std::filesystem::rename(userdata, root / "original-userdata");
-        {
-            std::ofstream file(userdata);
-            file << "replacement";
-        }
-        std::filesystem::resize_file(userdata, 32ULL << 20);
+        create_owned_disk(userdata, 32ULL << 20, "replacement");
         rejects([&] {
             storage.flush();
         });

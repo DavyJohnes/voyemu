@@ -280,7 +280,9 @@ public final class IpkLinkTest {
                     "test",
                     IpkFrames.phone("COMING_CALL", 1, 0, "A", null),
                     null);
-            await(() -> ivcd.last().data().size() == 1, "phone written once");
+            await(
+                    () -> !ivcd.connections.isEmpty() && ivcd.last().data().size() == 1,
+                    "phone written once");
             ivcd.reply = false;
             await(() -> ivcd.connections.size() == 2, "supervision reconnects");
             check(

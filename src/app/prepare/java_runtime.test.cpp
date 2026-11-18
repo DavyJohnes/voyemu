@@ -2,6 +2,8 @@
 #include "e2fs_helper.hpp"
 #include <fstream>
 #include <iostream>
+#include <memory>
+#include <miniz.h>
 #include <string_view>
 using namespace voyemu;
 
@@ -12,27 +14,36 @@ void check(bool value, const char *message) {
     }
 }
 
-// java-runtime/bin/java (755, "runtime\n") and java-runtime/release, written by
-// JavaRuntimeBuild.zip.
-constexpr std::string_view archive_hex =
-        "504b030414000008000000002100000000000000000000000000110000006a6176612d72756e74696d652f62696e"
-        "2f504b0304140000080800000021002b08d5f50a00000008000000150000006a6176612d72756e74696d652f6269"
-        "6e2f6a6176612b2acd2bc9cc4de50200504b0304140000080800000021003d6a5dba180000001600000014000000"
-        "6a6176612d72756e74696d652f72656c65617365f3720c738c0f730d0af6f4f7b3553232d533d03355e20200504b"
-        "0102140314000008000000002100000000000000000000000000110000000000000000001000ed41000000006a61"
-        "76612d72756e74696d652f62696e2f504b01021403140000080800000021002b08d5f50a00000008000000150000"
-        "000000000000000000ed812f0000006a6176612d72756e74696d652f62696e2f6a617661504b0102140314000008"
-        "0800000021003d6a5dba1800000016000000140000000000000000000000a4816c0000006a6176612d72756e7469"
-        "6d652f72656c65617365504b05060000000003000300c4000000b60000000000";
+std::string runtime_archive(std::string_view java_name) {
+    mz_zip_archive archive{};
 
-std::string decode(std::string_view hex) {
-    std::string bytes;
+    check(mz_zip_writer_init_heap(&archive, 0, 0), "runtime fixture ZIP initialization");
+    struct Writer {
+        mz_zip_archive &archive;
 
-    for (std::size_t i = 0; i < hex.size(); i += 2) {
-        bytes += char(std::stoul(std::string(hex.substr(i, 2)), nullptr, 16));
-    }
+        ~Writer() {
+            mz_zip_writer_end(&archive);
+        }
+    } writer{archive};
 
-    return bytes;
+    const std::string java_path = "java-runtime/bin/" + std::string(java_name);
+    const std::string release = "JAVA_VERSION=\"25.0.5\"\n";
+    const std::string runtime = "runtime\n";
+    check(mz_zip_writer_add_mem(&archive, "java-runtime/bin/", nullptr, 0,
+                                MZ_DEFAULT_COMPRESSION) &&
+                  mz_zip_writer_add_mem(&archive, java_path.c_str(), runtime.data(), runtime.size(),
+                                        MZ_DEFAULT_COMPRESSION) &&
+                  mz_zip_writer_add_mem(&archive, "java-runtime/release", release.data(),
+                                        release.size(), MZ_DEFAULT_COMPRESSION),
+          "runtime fixture ZIP entries");
+
+    void *data = nullptr;
+    std::size_t size = 0;
+    check(mz_zip_writer_finalize_heap_archive(&archive, &data, &size),
+          "runtime fixture ZIP finalization");
+    const std::unique_ptr<void, decltype(&mz_free)> bytes(data, mz_free);
+
+    return std::string(static_cast<const char *>(bytes.get()), size);
 }
 
 std::string failure(const std::function<void()> &action) {
@@ -53,7 +64,12 @@ void missing(const DownloadPin &, const DownloadSink &) {
 int main(int argc, char **) {
     try {
         check(argc == 1, "usage: no arguments");
-        const auto bytes = decode(archive_hex);
+#ifdef _WIN32
+        const auto java_name = "java.exe";
+#else
+        const auto java_name = "java";
+#endif
+        const auto bytes = runtime_archive(java_name);
         const auto sha = sha256_bytes(bytes);
         const std::string host = e2fs_helper_host();
         const Json pins = {
@@ -81,11 +97,6 @@ int main(int argc, char **) {
             ++served;
             sink(bytes);
         };
-#ifdef _WIN32
-        const auto java_name = "java.exe";
-#else
-        const auto java_name = "java";
-#endif
         // Without a recipe JDK of the developer tools the fixture checkout lacks, nothing is
         // linked.
         const auto unpublished = scratch / "unpublished";

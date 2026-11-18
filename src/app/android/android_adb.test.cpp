@@ -402,6 +402,14 @@ static void identity_probe_tests(const std::filesystem::path &self) {
     {
         AndroidIdentityProbe replaced;
         need(replaced.launch(owner, process("replaced")));
+#ifdef _WIN32
+        // The inherited output handle prevents renaming the probe slot until the child exits.
+        const HANDLE child_handle = OpenProcess(SYNCHRONIZE, FALSE, static_cast<DWORD>(replaced.pid()));
+        need(child_handle != nullptr);
+        const auto terminal = WaitForSingleObject(child_handle, 5000);
+        CloseHandle(child_handle);
+        need(terminal == WAIT_OBJECT_0);
+#endif
         const auto slot = replaced.output().parent_path();
         const auto old = root / "retained-original-slot";
         std::filesystem::rename(slot, old);

@@ -4,6 +4,7 @@
 #endif
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
+#include "../core/private_state_security.hpp"
 #include <winsock2.h>
 #include <windows.h>
 #include <winioctl.h>
@@ -72,9 +73,10 @@ int main(int argc, char **argv) try {
     assert(!std::filesystem::exists(root));
     std::filesystem::create_directories(dir);
     const auto ram = dir / "qnx-ram.bin";
+    voyemu::detail::PrivateStateSecurity security;
     HANDLE file = CreateFileW(ram.c_str(), GENERIC_READ | GENERIC_WRITE,
-                              FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr,
-                              CREATE_NEW, FILE_ATTRIBUTE_NORMAL, nullptr);
+                              FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                              &security.attributes, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, nullptr);
     assert(file != INVALID_HANDLE_VALUE);
     DWORD returned = 0;
     assert(DeviceIoControl(file, FSCTL_SET_SPARSE, nullptr, 0, nullptr, 0, &returned, nullptr));
@@ -212,7 +214,7 @@ int main(int argc, char **argv) try {
     };
     // QEMU opens its file chardev for writing and shares only reads; truncation is a new QEMU.
     auto serial_write = [&](const std::string &value, bool append = false) {
-        HANDLE out = CreateFileW(uart.c_str(), GENERIC_WRITE, FILE_SHARE_READ, nullptr,
+        HANDLE out = CreateFileW(uart.c_str(), GENERIC_WRITE, FILE_SHARE_READ, &security.attributes,
                                  append ? OPEN_ALWAYS : CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL,
                                  nullptr);
         assert(out != INVALID_HANDLE_VALUE);

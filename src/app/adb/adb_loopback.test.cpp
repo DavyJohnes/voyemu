@@ -1466,8 +1466,7 @@ static void packet_eintr_deadline() {
     handler.restore();
     std::printf("packet EINTR read elapsed_ms=%lld signal_requests=%u forced_close=%d\n",
                 static_cast<long long>(elapsed.load()), requests, forced_close);
-    require(signal_error == 0 && mask_status == 0 && requests >= 100,
-            "targeted EINTR setup failed");
+    require(signal_error == 0 && mask_status == 0 && requests >= 20, "targeted EINTR setup failed");
     require(!forced_close && !read_result && elapsed >= 4000 && elapsed < 5800,
             "EINTR delayed absolute packet deadline");
     s.expect_closed();

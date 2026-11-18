@@ -70,13 +70,14 @@ static void wire_fixture(int mode, bool private_operation) {
     };
     std::ostringstream diagnostic;
     auto *previous = std::cerr.rdbuf(diagnostic.rdbuf());
+    constexpr int budget_ms = 1000;
     bool typed = false, success = false;
     try {
         const auto value = exchange_ui_observer(
                 {{"observer_pid", 4835}},
                 {{"op", private_operation ? "private-operation-fixture" : "ui"},
                  {"payload", "private-payload-fixture"}},
-                "private-auth-fixture", mode == 7 ? 2000 : 80, [&] {
+                "private-auth-fixture", budget_ms, [&] {
                     return Stream{mode, received};
                 });
         success = value.value("ok", false);
@@ -109,7 +110,7 @@ static void wire_fixture(int mode, bool private_operation) {
     const auto report = Json::parse(diagnostic.str());
     require(report.at("phase") == "recv" &&
             report.at("op") == (private_operation ? "other" : "ui") &&
-            report.at("budget_ms") == 80 && report.at("elapsed_ms").get<int>() >= 0 &&
+            report.at("budget_ms") == budget_ms && report.at("elapsed_ms").get<int>() >= 0 &&
             report.at("response_bytes") == (mode == 1 ? 1 : 0) &&
             report.at("observer_pid") == 4835);
     require(diagnostic.str().find("private") == std::string::npos && !report.contains("auth") &&

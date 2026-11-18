@@ -249,8 +249,8 @@ int main(int argc, char **argv) try {
             DWORD size = sizeof world;
             check(CreateWellKnownSid(WinWorldSid, nullptr, world, &size) != 0,
                   "fixture world identity failed");
-            PSID sid = foreign ? static_cast<PSID>(world)
-                               : reinterpret_cast<TOKEN_USER *>(user.data())->User.Sid;
+            const auto owner = reinterpret_cast<TOKEN_USER *>(user.data())->User.Sid;
+            PSID sid = foreign ? static_cast<PSID>(world) : owner;
             EXPLICIT_ACCESSW access{};
             access.grfAccessPermissions = FILE_ALL_ACCESS;
             access.grfAccessMode = SET_ACCESS;
@@ -261,6 +261,7 @@ int main(int argc, char **argv) try {
             check(SetEntriesInAclW(1, &access, nullptr, &acl) == ERROR_SUCCESS,
                   "fixture ACL build failed");
             check(InitializeSecurityDescriptor(&descriptor, SECURITY_DESCRIPTOR_REVISION) &&
+                          SetSecurityDescriptorOwner(&descriptor, owner, FALSE) &&
                           SetSecurityDescriptorDacl(&descriptor, TRUE, acl, FALSE) &&
                           SetSecurityDescriptorControl(&descriptor, SE_DACL_PROTECTED,
                                                        SE_DACL_PROTECTED),

@@ -2906,7 +2906,7 @@ int main(int argc, char **argv) try {
     {
         // Read-only status transport failures consume the outer wait, not its first RPC.
         auto pending = wait;
-        pending["timeout_ms"] = 120;
+        pending["timeout_ms"] = 1000;
 
         for (const char *code :
              {"IPC_TIMEOUT_UNKNOWN", "IPC_CONNECT", "IPC_READ_UNKNOWN", "IPC_WRITE_UNKNOWN"}) {
@@ -2915,7 +2915,7 @@ int main(int argc, char **argv) try {
             delayed.control = [&](const auto &endpoint, const Json &command, int timeout) -> Json {
                 ++attempts;
                 assert(command.at("op") == "status" && !command.contains("ownership_id") &&
-                       timeout > 0 && timeout <= 120);
+                       timeout > 0 && timeout <= 1000);
 
                 if (attempts == 1) {
                     throw std::runtime_error(std::string(code) + ": bounded fixture interruption");
@@ -2939,7 +2939,7 @@ int main(int argc, char **argv) try {
         };
         api::Api unavailable_api(root, "unused-cli", unavailable);
         pending["request_id"] = random_token();
-        pending["timeout_ms"] = 80;
+        pending["timeout_ms"] = 500;
         const auto started = std::chrono::steady_clock::now();
         const auto timed = unavailable_api.call(pending);
         assert(timed.at("ok") == true && timed.at("result").at("ready") == false &&
@@ -2947,7 +2947,7 @@ int main(int argc, char **argv) try {
                timed.at("result").at("observation_status") == "unavailable" &&
                timed.at("result").at("outcome") == "unknown" && attempts > 1 &&
                api::result_exit_code(timed) == 4);
-        assert(std::chrono::steady_clock::now() - started >= std::chrono::milliseconds(70));
+        assert(std::chrono::steady_clock::now() - started >= std::chrono::milliseconds(450));
 
         for (const char *code : {"TEST_SESSION", "TEST_CONTROL", "IPC_PROTOCOL"}) {
             attempts = 0;

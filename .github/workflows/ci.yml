@@ -46,7 +46,7 @@ jobs:
             - run: cmake -S src/app -B .local/build/source-fixtures -G Ninja -DCMAKE_TOOLCHAIN_FILE="$PWD/src/dev/toolchains/${{ matrix.toolchain }}.cmake" -DBUILD_TESTING=ON -DVOYEMU_BUILD_GRAPHICS=OFF
             - run: cmake --build .local/build/source-fixtures --target native_component_test --parallel 1
             # Select actual source behavior suites; copyrighted/manual owner inputs stay explicitly excluded.
-            - run: ctest --test-dir .local/build/source-fixtures --label-regex '^deps$' --label-exclude '^oem$' --tests-regex '^(prepare_java_(host_unit|phone_behavior|phone_peer|native_component_handoff|android_stubs_source)|guest_android_api_java|nxp_music_media|passion_carsettings_source|qinggan09_equipment_artifacts|nxp_climate|canbus_source|nxp_wheel)$' --no-tests=error --output-on-failure --parallel 1 --output-junit source-fixtures.xml
+            - run: ctest --test-dir .local/build/source-fixtures --label-regex '^deps$' --label-exclude '^oem$' --tests-regex '^(prepare_java_(host_unit|phone_behavior|phone_peer|native_component_handoff|android_stubs_source)|guest_android_api_java|nxp_phone|nxp_music_media|passion_carsettings_source|qinggan09_equipment_artifacts|nxp_climate|canbus_source|nxp_wheel)$' --no-tests=error --output-on-failure --parallel 1 --output-junit source-fixtures.xml
             - run: cmake -DRESULT="$PWD/.local/build/source-fixtures/source-fixtures.xml" -P src/dev/ci/source-fixtures-result.cmake
 
     lint:
@@ -147,7 +147,9 @@ jobs:
             # Cross-built binaries run through Wine below; no PDB may be produced.
             - run: test -f .local/build/windows-cross/voyemu.exe && test -z "$(find .local/build/windows-cross -name '*.pdb' -print -quit)"
             - run: bash src/dev/ci/wine-install.sh
-            - run: xvfb-run -a wineboot -u
+            - run: |
+                  mkdir -p "$WINEPREFIX"
+                  xvfb-run -a wineboot -u
             - run: xvfb-run -a cmake -DBUILD="$PWD/.local/build/windows-cross" -DWINE="$(command -v wine)" -P src/dev/ci/wine-tests.cmake
             - if: always()
               run: |
@@ -178,4 +180,42 @@ jobs:
             - run: cmake --build .local/build/windows-native --parallel 4
             - run: .\.local\build\windows-native\voyemu.exe --help
             # Host-only checks exclude dependency and OEM suites; missing inputs remain failures in strict suites.
-            - run: ctest --test-dir .local/build/windows-native --label-exclude 'oem|deps' --output-on-failure --parallel 1
+            - name: Run native Windows host tests
+              id: host-tests
+              run: ctest --test-dir .local/build/windows-native --label-exclude 'oem|deps' --output-on-failure --parallel 1
+            - name: Diagnose Windows admission storage
+              if: failure() && steps.host-tests.outcome == 'failure'
+              run: |
+                  whoami /user
+                  $test = Join-Path $PWD '.local/build/windows-native/admission_windows_test.exe'
+                  $parents = @((Join-Path $PWD '.local/build/tmp'), $env:USERPROFILE)
+                  $seen = @{}
+                  foreach ($parent in $parents) {
+                      for ($path = [IO.DirectoryInfo]::new($parent); $path; $path = $path.Parent) {
+                          if ($seen.ContainsKey($path.FullName)) { continue }
+                          $seen[$path.FullName] = $true
+                          try {
+                              $acl = Get-Acl -LiteralPath $path.FullName
+                              [pscustomobject]@{
+                                  Path = $path.FullName
+                                  Attributes = $path.Attributes
+                                  Owner = $acl.Owner
+                                  Group = $acl.Group
+                                  Sddl = $acl.Sddl
+                              } | Format-List
+                          } catch {
+                              Write-Host "ACL read failed for $($path.FullName): $($_.Exception.Message)"
+                          }
+                      }
+                      $probe = Join-Path $parent ("voyemu-admission-probe-" + [guid]::NewGuid())
+                      try {
+                          $PSNativeCommandUseErrorActionPreference = $false
+                          & $test --worker $probe
+                          Write-Host "Admission worker under $parent returned $LASTEXITCODE (10 = admitted)"
+                      } finally {
+                          if (Test-Path -LiteralPath $probe) {
+                              Remove-Item -LiteralPath $probe -Recurse -Force
+                          }
+                      }
+                  }
+                  exit 0

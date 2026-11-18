@@ -70,6 +70,9 @@ native_sources() {
     done < <(jq -er '.dependencies[] | [.url, .archive_sha256] | @tsv' src/app/dependencies.lock.json
         jq -er '.window_sdl3 | [.url, .sha256] | @tsv' src/app/platform/component.json
         jq -er '.windows_media_http2.curl, .windows_media_http2.nghttp2 | [.url, .sha256] | @tsv' src/app/api/component.json)
+    while IFS=$'\t' read -r url sha; do
+        fetch "$url" "$sha" "$downloads/sources/$sha.blob"
+    done < <(jq -er '.headers[] | [.url, .sha256] | @tsv' src/guest/qnx/component.json)
 }
 
 # Formatters, Checkstyle, Error Prone, Java libraries, D8, apksigner and android.jar of the lint job.

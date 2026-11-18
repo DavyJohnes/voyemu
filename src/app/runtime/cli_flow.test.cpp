@@ -3722,20 +3722,21 @@ int main(int argc, char **argv) try {
         }
 
         if (state_flow) {
-            const auto probes_started = std::chrono::steady_clock::now();
+            std::chrono::steady_clock::duration probe_time{};
 
             for (unsigned i = 0; i < 16; ++i) {
+                const auto probes_started = std::chrono::steady_clock::now();
+
                 for (const auto owned_port : {port, port + 1}) {
                     require(!tcp_port_free(owned_port),
                             "owned fixture listener disappeared during repeated probes");
                 }
 
+                probe_time += std::chrono::steady_clock::now() - probes_started;
                 std::this_thread::sleep_for(std::chrono::milliseconds(10));
             }
 
-            const auto probes_ms = std::chrono::duration<double, std::milli>(
-                                           std::chrono::steady_clock::now() - probes_started)
-                                           .count();
+            const auto probes_ms = std::chrono::duration<double, std::milli>(probe_time).count();
             require(probes_ms < 700, "owned fixture listener backlog delayed repeated probes: " +
                                              std::to_string(probes_ms) + "ms");
             require(json({"status"})["deliveries"]["android"].value("native_listener_ownership",
@@ -3910,8 +3911,12 @@ int main(int argc, char **argv) try {
         require(sha256_file(config_template) == prepared_config_sha256,
                 "stop changed immutable prepared template");
         require_disks();
-        require(stopped["deliveries"]["android"]["quickboot"]["checkpoint_saved"] == quickboot,
-                "checkpoint eligibility ignored retained native listener ownership");
+        const auto &stopped_android = stopped.at("deliveries").at("android");
+        const auto &stopped_checkpoint = stopped_android.at("quickboot");
+        require(stopped_checkpoint.at("checkpoint_saved") == quickboot,
+                "unexpected checkpoint result: " +
+                        stopped_checkpoint.value("save_status", "unknown") +
+                        "; shutdown=" + stopped_android.at("shutdown").dump());
         require(read_private_json(root / "held-input.json").empty(),
                 "stop left guest input held before checkpoint");
 

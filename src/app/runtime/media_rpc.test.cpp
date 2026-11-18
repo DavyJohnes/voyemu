@@ -7,6 +7,7 @@
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
+#include "../core/private_state_security.hpp"
 #include <windows.h>
 #include <aclapi.h>
 
@@ -75,6 +76,14 @@ int main(int argc, char **argv) try {
     ensure_private_directory(root);
     const auto descriptor = root / "pid_123.ini", record = root / "connection.json";
     auto ini = [&](const std::string &extra = "") {
+#ifdef _WIN32
+        if (!std::filesystem::exists(descriptor)) {
+            voyemu::detail::PrivateStateSecurity security;
+            HANDLE owned = CreateFileW(descriptor.c_str(), GENERIC_WRITE, 0, &security.attributes,
+                                       CREATE_NEW, FILE_ATTRIBUTE_NORMAL, nullptr);
+            assert(owned != INVALID_HANDLE_VALUE && CloseHandle(owned));
+        }
+#endif
         std::ofstream file(descriptor);
         file << "port.serial=5566\ngrpc.port=45992\ngrpc.token=" << std::string(32, '1') << "\n"
              << extra;

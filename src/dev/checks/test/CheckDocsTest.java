@@ -501,7 +501,12 @@ public final class CheckDocsTest {
 
         String java = ProcessHandle.current().info().command().orElse("java");
         Process process =
-                new ProcessBuilder(java, "-Xmx128m", checker.toString(), root.toString())
+                new ProcessBuilder(
+                                java,
+                                "-Xmx128m",
+                                "-Dstdout.encoding=UTF-8",
+                                checker.toString(),
+                                root.toString())
                         .redirectErrorStream(true)
                         .start();
         String result = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);

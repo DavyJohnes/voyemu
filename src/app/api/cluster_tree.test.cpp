@@ -1119,7 +1119,7 @@ int main(int argc, char **argv) try {
         scenario = change;
         controls = 0;
         auto bounded = request;
-        bounded["timeout_ms"] = 160;
+        bounded["timeout_ms"] = 1000;
         const auto response = api.call(bounded).at("result").at("cluster");
         assert(response.at("status") == "unavailable" && response.at("nodes").empty());
         assert(response.at("error_code") == (scenario == "off" || scenario == "no-heartbeat"

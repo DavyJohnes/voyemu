@@ -64,6 +64,13 @@ runs:
                   if ($LASTEXITCODE -ne 0) { throw "Download failed: $($source.url)" }
                   if ((Get-FileHash -Algorithm SHA256 $archive).Hash -ne $source.sha) { throw "SHA-256 mismatch: $archive" }
               }
+              $headers = (Get-Content src/guest/qnx/component.json -Raw | ConvertFrom-Json).headers
+              foreach ($pin in $headers.PSObject.Properties.Value) {
+                  $file = ".local/toolchains/downloads/sources/$($pin.sha256).blob"
+                  curl.exe -fsSL --retry 3 -o $file $pin.url
+                  if ($LASTEXITCODE -ne 0) { throw "Download failed: $($pin.url)" }
+                  if ((Get-FileHash -Algorithm SHA256 $file).Hash -ne $pin.sha256) { throw "SHA-256 mismatch: $file" }
+              }
         - if: steps.toolchains.outputs.cache-hit != 'true' && runner.os == 'Windows' && inputs.fixture-inputs == 'true'
           shell: pwsh
           run: |

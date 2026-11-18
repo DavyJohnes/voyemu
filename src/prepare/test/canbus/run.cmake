@@ -21,9 +21,15 @@ function(run_java CLASSPATH CLASS)
     message(STATUS "${CLASS}: passed ${OUTPUT}")
 endfunction()
 function(compile OUTPUT_DIRECTORY)
+    cmake_parse_arguments(PARSE_ARGV 1 COMPILE "" "CLASSPATH" "")
+    set(OPTIONS)
+    if(DEFINED COMPILE_CLASSPATH)
+        string(REPLACE ";" "\\;" CLASSPATH "${COMPILE_CLASSPATH}")
+        list(APPEND OPTIONS -cp "${CLASSPATH}")
+    endif()
     file(MAKE_DIRECTORY "${OUTPUT_DIRECTORY}")
     execute_process(COMMAND "${JAVAC}" -J-Xmx512m --release 25 -encoding UTF-8 -proc:none -nowarn
-        -d "${OUTPUT_DIRECTORY}" ${ARGN}
+        -d "${OUTPUT_DIRECTORY}" ${OPTIONS} ${COMPILE_UNPARSED_ARGUMENTS}
         TIMEOUT 300 RESULT_VARIABLE RESULT OUTPUT_VARIABLE OUTPUT ERROR_VARIABLE ERROR)
     if(NOT RESULT EQUAL 0)
         message(FATAL_ERROR "Compilation ${OUTPUT_DIRECTORY}: ${RESULT}\n${OUTPUT}\n${ERROR}")
@@ -81,7 +87,7 @@ else()
 endif()
 endif()
 file(GLOB_RECURSE PREPARE "${ROOT}/src/prepare/java/*.java")
-compile("${WORK}/host" -cp "${JAVA_SOURCE_CLASSPATH}" ${PREPARE}
+compile("${WORK}/host" CLASSPATH "${JAVA_SOURCE_CLASSPATH}" ${PREPARE}
     "${ROOT}/src/prepare/test/java/com/voyemu/prepare/CanbusComponentRegression.java"
     "${ROOT}/src/prepare/test/java/com/voyemu/prepare/CanbusApiParity.java"
     "${ROOT}/src/prepare/test/java/com/voyemu/prepare/CanbusPersistentStartTest.java"

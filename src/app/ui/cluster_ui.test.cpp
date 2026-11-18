@@ -4995,15 +4995,12 @@ void asynchronous_client() {
 } // namespace
 
 static void lifecycle_client_deadlines() {
-    auto root = std::filesystem::weakly_canonical(std::filesystem::temp_directory_path()) /
-                ("voyemu-ui-ipc-" + random_token().substr(0, 8));
-
-    ensure_private_directory(root);
     std::atomic<bool> stopped = false, entered = false, completed = false;
+
 #ifdef _WIN32
     const auto endpoint = std::filesystem::path(R"(\\.\pipe\voyemu-ui-test-)" + random_token());
 #else
-    const auto endpoint = root / "control.sock";
+    const auto endpoint = native_socket_root() / (random_token() + "-ui.sock");
 #endif
     const auto canonical = initial_state();
     {
@@ -5077,7 +5074,6 @@ static void lifecycle_client_deadlines() {
         stopped = true;
         worker.join();
     }
-    std::filesystem::remove_all(root);
 }
 
 int main(int argc, char **argv) {

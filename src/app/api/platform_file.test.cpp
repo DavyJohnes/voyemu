@@ -9,6 +9,7 @@
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
+#include "../core/private_state_security.hpp"
 #include <windows.h>
 #include <aclapi.h>
 #include <sddl.h>
@@ -90,10 +91,21 @@ void metadata(const std::filesystem::path &path) {
 }
 
 void write(const std::filesystem::path &path, const std::string &value) {
+#ifdef _WIN32
+    detail::PrivateStateSecurity security;
+    HANDLE file = CreateFileW(path.c_str(), GENERIC_WRITE, 0, &security.attributes, CREATE_NEW,
+                              FILE_ATTRIBUTE_NORMAL, nullptr);
+    assert(file != INVALID_HANDLE_VALUE);
+    DWORD written = 0;
+    assert(WriteFile(file, value.data(), static_cast<DWORD>(value.size()), &written, nullptr) &&
+           written == value.size());
+    assert(CloseHandle(file));
+#else
     std::ofstream file(path, std::ios::binary);
 
     file << value;
     assert(file.good());
+#endif
 }
 
 bool change_owner(const std::filesystem::path &path) {

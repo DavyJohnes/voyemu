@@ -268,7 +268,16 @@ int main(int argc, char **argv) {
 #ifdef _WIN32
         auto actual = manifest;
         const auto executable = root / "runtime.exe", replacement = root / "replacement.exe";
-        std::filesystem::copy_file(std::filesystem::canonical(argv[0]), executable);
+        {
+            voyemu::detail::PrivateStateSecurity security;
+            HANDLE owned = CreateFileW(executable.c_str(), GENERIC_WRITE, 0, &security.attributes,
+                                       CREATE_NEW, FILE_ATTRIBUTE_NORMAL, nullptr);
+            assert(owned != INVALID_HANDLE_VALUE && CloseHandle(owned));
+            std::ifstream source(std::filesystem::canonical(argv[0]), std::ios::binary);
+            std::ofstream target(executable, std::ios::binary);
+            target << source.rdbuf();
+            assert(source && target);
+        }
         std::filesystem::copy_file(executable, replacement);
         actual["runtime"] = {{"path", executable.string()}, {"sha256", sha256_file(executable)}};
         ProviderRegistry live(jobs);
