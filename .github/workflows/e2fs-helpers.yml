@@ -72,7 +72,7 @@ jobs:
     release:
         name: Release ${{ needs.build.outputs.tag }}
         needs: build
-        if: github.ref_type == 'tag'
+        if: github.repository == 'voyemu/voyemu-deps' && github.ref_type == 'tag'
         runs-on: ubuntu-24.04
         timeout-minutes: 10
         permissions:
@@ -87,6 +87,6 @@ jobs:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
                   TAG: ${{ needs.build.outputs.tag }}
               run: |
-                  gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --title "$TAG" \
+                  gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --latest=false --title "$TAG" \
                       --notes "Reproducible e2fsprogs image helpers built at $GITHUB_SHA by src/app/prepare/e2fsprogs_build.cmake from the pinned e2fsprogs release tarball and the helper sources with the pinned Zig. NOTICE is the e2fsprogs license notice." \
                       asset/*

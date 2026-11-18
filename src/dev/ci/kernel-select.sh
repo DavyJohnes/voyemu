@@ -13,7 +13,7 @@ case "$kernel" in
     *) echo "Unknown kernel $kernel" >&2; exit 1 ;;
 esac
 base=$(jq -er '.optionalTools.kernelBuild.releaseBase | strings' src/app/toolchain.json)
-[[ "$base" == "https://github.com/$GITHUB_REPOSITORY/releases/download/" ]] || { echo "Release base $base is not this repository" >&2; exit 1; }
+[[ "$base" == "https://github.com/voyemu/voyemu-deps/releases/download/" ]] || { echo "Invalid dependency release base: $base" >&2; exit 1; }
 sha=
 for profile in "${profiles[@]}"; do
     pin=$(jq -er '.android.development_kernel.sha256 | strings' "profiles/$profile/profile.json")

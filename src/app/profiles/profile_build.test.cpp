@@ -2165,7 +2165,7 @@ static void api30_publication_checks(const std::filesystem::path &stage, bool ol
     auto invalid_kernel = original_profile;
     invalid_kernel["android"]["development_kernel"] = {
             {"url",
-             "https://github.com/voyemu/voyemu/releases/download/kernel-fixture-00000000/Image"},
+             "https://github.com/voyemu/voyemu-deps/releases/download/kernel-fixture-00000000/Image"},
             {"sha256", std::string(64, '0')},
             {"abi", "arm64-v8a"},
             {"provenance",
@@ -2202,7 +2202,7 @@ static void api30_publication_checks(const std::filesystem::path &stage, bool ol
     std::ofstream(kernel_file) << kernel_bytes;
     auto development = invalid_kernel;
     development["android"]["development_kernel"]["url"] =
-            "https://github.com/voyemu/voyemu/releases/download/kernel-fixture-" +
+            "https://github.com/voyemu/voyemu-deps/releases/download/kernel-fixture-" +
             kernel_sha.substr(0, 8) + "/Image";
     development["android"]["development_kernel"]["sha256"] = kernel_sha;
     write_private_json(definition, development);
@@ -2572,7 +2572,7 @@ static void qnx_reuse_checks(const std::filesystem::path &stage) {
     ensure_private_directory(dir);
     auto put = [](const std::filesystem::path &p, const std::string &text) {
         ensure_private_directory(p.parent_path());
-        std::ofstream(p) << text;
+        std::ofstream(p, std::ios::binary) << text;
     };
     Json definition = {{"status", "incomplete"},
                        {"android_recipe_fixture", "changed after original acceptance"}};

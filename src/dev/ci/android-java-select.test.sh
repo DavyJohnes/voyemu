@@ -14,7 +14,7 @@ b=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 printf '%s  %s\n' "$a" android-java.zip > expected-sums
 set_sha=$(sha256sum < expected-sums)
 tag="android-java-${set_sha:0:8}"
-base="https://github.com/voyemu/voyemu/releases/download/$tag/"
+base="https://github.com/voyemu/voyemu-deps/releases/download/$tag/"
 # Writes the manifest from the variables that each case changes after reset.
 write() {
     mkdir -p src/app
@@ -61,7 +61,7 @@ url='"url":"https://example.invalid/android-java.zip",'
 reject foreign-url
 reset
 GITHUB_REPOSITORY=fork/voyemu
-reject foreign-repository
+accept independent-checkout-repository
 reset
 url=
 reject missing-url

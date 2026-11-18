@@ -27,7 +27,7 @@
       }
     },
     "development_kernel": {
-      "url": "https://github.com/voyemu/voyemu/releases/download/kernel-qinggan-09-0f6e1b40/Image",
+      "url": "https://github.com/voyemu/voyemu-deps/releases/download/kernel-qinggan-09-0f6e1b40/Image",
       "sha256": "0f6e1b40166c5fdd42070b7100604e76872df0ea2c73a7d0b65c485fff184df9",
       "abi": "arm64-v8a",
       "provenance": {

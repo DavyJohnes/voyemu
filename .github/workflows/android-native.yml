@@ -61,7 +61,7 @@ jobs:
     release:
         name: Release ${{ needs.build.outputs.tag }}
         needs: build
-        if: github.ref_type == 'tag'
+        if: github.repository == 'voyemu/voyemu-deps' && github.ref_type == 'tag'
         runs-on: ubuntu-24.04
         timeout-minutes: 10
         permissions:
@@ -76,6 +76,6 @@ jobs:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
                   TAG: ${{ needs.build.outputs.tag }}
               run: |
-                  gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --title "$TAG" \
+                  gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --latest=false --title "$TAG" \
                       --notes "Native Android components built at $GITHUB_SHA by build_native_component_recipe from the profile components and their pinned AOSP sources with the pinned NDK; no OEM input. Assets are <profile>-<component>-<output>." \
                       asset/*

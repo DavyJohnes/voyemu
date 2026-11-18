@@ -11,7 +11,7 @@ sha=$(jq -er '.javaHelper.sha256 | strings' "$pins")
 lines="$sha  java-helper.zip"$'\n'
 set_sha=$(printf '%s' "$lines" | sha256sum)
 tag="java-helper-${set_sha:0:8}"
-base="https://github.com/$GITHUB_REPOSITORY/releases/download/$tag/"
+base="https://github.com/voyemu/voyemu-deps/releases/download/$tag/"
 url=$(jq -er '.javaHelper.url | strings' "$pins")
 [[ "$url" == "${base}java-helper.zip" ]] || { echo "URL $url does not name ${base}java-helper.zip" >&2; exit 1; }
 if [[ "$GITHUB_REF_TYPE" == tag && "$GITHUB_REF_NAME" != "$tag" ]]; then

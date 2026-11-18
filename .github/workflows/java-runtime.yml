@@ -55,7 +55,7 @@ jobs:
     release:
         name: Release ${{ needs.build.outputs.tag }}
         needs: build
-        if: github.ref_type == 'tag'
+        if: github.repository == 'voyemu/voyemu-deps' && github.ref_type == 'tag'
         runs-on: ubuntu-24.04
         timeout-minutes: 10
         permissions:
@@ -70,6 +70,6 @@ jobs:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
                   TAG: ${{ needs.build.outputs.tag }}
               run: |
-                  gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --title "$TAG" \
+                  gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --latest=false --title "$TAG" \
                       --notes "Java runtimes of preparation linked at $GITHUB_SHA by src/prepare/JavaRuntimeBuild.java from the pinned Temurin 25 jmods with the jlink of the pinned JDK; modules and jmods are pinned in src/app/toolchain.json javaRuntime. Assets are java-runtime-<host>.zip; the GPLv2 with Classpath Exception texts of the JDK are under java-runtime/legal." \
                       asset/*

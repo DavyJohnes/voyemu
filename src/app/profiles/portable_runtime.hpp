@@ -182,8 +182,12 @@ inline Json portable_development_kernel(const Json &definition) {
     const auto url = d.at("url").get<std::string>();
     const auto suffix = "-" + sha.substr(0, 8) + "/Image";
 
-    if (!sha256_text(sha) || !url.starts_with(development_kernel_release_base() + "kernel-") ||
-        !url.ends_with(suffix) ||
+    // Prepared machines can carry the original release URL in their verified manifest.
+    const bool release_url =
+            url.starts_with(development_kernel_release_base() + "kernel-") ||
+            url.starts_with("https://github.com/voyemu/voyemu/releases/download/kernel-");
+
+    if (!sha256_text(sha) || !release_url || !url.ends_with(suffix) ||
         url.find_first_not_of("abcdefghijklmnopqrstuvwxyzI0123456789-./:") != std::string::npos) {
         throw VoyemuError("PORTABLE_RUNTIME", "invalid development kernel URL or pin");
     }

@@ -14,7 +14,7 @@ for host in darwin-arm64 linux-x64 win32-x64; do
 done
 set_sha=$(printf '%s' "$lines" | sha256sum)
 tag="java-runtime-${set_sha:0:8}"
-base="https://github.com/$GITHUB_REPOSITORY/releases/download/$tag/"
+base="https://github.com/voyemu/voyemu-deps/releases/download/$tag/"
 while read -r sha file; do
     host=${file#java-runtime-}
     host=${host%.zip}

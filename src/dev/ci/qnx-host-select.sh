@@ -27,7 +27,7 @@ else
     [[ "$sha" =~ ^[0-9a-f]{64}$ ]] || { echo "Invalid SHA-256 in the $section prebuilt pin" >&2; exit 1; }
     tag="qnx-host-$host-${sha:0:8}"
     url=$(jq -er '.url | strings' <<< "$pin") || { echo "Invalid $section prebuilt pin" >&2; exit 1; }
-    expected="https://github.com/$GITHUB_REPOSITORY/releases/download/$tag/$asset"
+    expected="https://github.com/voyemu/voyemu-deps/releases/download/$tag/$asset"
     [[ "$url" == "$expected" ]] || { echo "The $section prebuilt URL $url does not name $expected" >&2; exit 1; }
     if [[ "$GITHUB_REF_TYPE" == tag && "$GITHUB_REF_NAME" != "$tag" ]]; then
         echo "Tag $GITHUB_REF_NAME differs from the $section prebuilt pin $tag" >&2

@@ -11,7 +11,7 @@ export GITHUB_REPOSITORY GITHUB_REF_TYPE GITHUB_REF_NAME INPUT_HOST
 export GITHUB_OUTPUT="$work/output"
 sha=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 tag=qnx-host-macos-arm64-aaaaaaaa
-url="https://github.com/voyemu/voyemu/releases/download/$tag/qnx-host-macos-arm64.zip"
+url="https://github.com/voyemu/voyemu-deps/releases/download/$tag/qnx-host-macos-arm64.zip"
 # Writes the manifest from the variables that each case changes after reset.
 write() {
     mkdir -p src/app
@@ -59,7 +59,7 @@ grep -qx "runner=ubuntu-24.04" "$GITHUB_OUTPUT"
 grep -qx "toolchain=zig-linux-x64" "$GITHUB_OUTPUT"
 reset
 GITHUB_REF_TYPE=tag GITHUB_REF_NAME=qnx-host-linux-x64-aaaaaaaa
-linux="{\"url\":\"https://github.com/voyemu/voyemu/releases/download/qnx-host-linux-x64-aaaaaaaa/qnx-host-linux-x64.zip\",\"sha256\":\"$sha\"}"
+linux="{\"url\":\"https://github.com/voyemu/voyemu-deps/releases/download/qnx-host-linux-x64-aaaaaaaa/qnx-host-linux-x64.zip\",\"sha256\":\"$sha\"}"
 accept tag-linux linux-x64 "$sha" qnx-host-linux-x64-aaaaaaaa
 reset
 GITHUB_REF_TYPE=tag GITHUB_REF_NAME=qnx-host-windows-x64-aaaaaaaa
@@ -75,7 +75,7 @@ INPUT_HOST=linux-arm64
 reject unknown-host
 reset
 GITHUB_REPOSITORY=fork/voyemu
-reject foreign-repository
+accept independent-checkout-repository macos-arm64 "$sha" "$tag"
 reset
 mac="{\"url\":\"https://example.invalid/qnx-host-macos-arm64.zip\",\"sha256\":\"$sha\"}"
 reject foreign-url

@@ -185,7 +185,7 @@ jobs:
                   built=$(sha256sum "asset/$ASSET" | cut -d' ' -f1)
                   echo "Built $ASSET $built; pin ${PIN:-pending}"
                   if [[ -z "$PIN" ]]; then
-                      echo "Pin https://github.com/$GITHUB_REPOSITORY/releases/download/qnx-host-$HOST-${built:0:8}/$ASSET with SHA-256 $built" >> "$GITHUB_STEP_SUMMARY"
+                      echo "Pin https://github.com/voyemu/voyemu-deps/releases/download/qnx-host-$HOST-${built:0:8}/$ASSET with SHA-256 $built" >> "$GITHUB_STEP_SUMMARY"
                   else
                       [[ "$built" == "$PIN" ]] || { echo "Built asset differs from the prebuilt pin" >&2; exit 1; }
                   fi
@@ -198,7 +198,7 @@ jobs:
     release:
         name: Release ${{ needs.select.outputs.tag }}
         needs: [select, check]
-        if: github.ref_type == 'tag'
+        if: github.repository == 'voyemu/voyemu-deps' && github.ref_type == 'tag'
         runs-on: ubuntu-24.04
         timeout-minutes: 10
         permissions:
@@ -213,6 +213,6 @@ jobs:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
                   TAG: ${{ needs.select.outputs.tag }}
               run: |
-                  gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --title "$TAG" \
+                  gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --latest=false --title "$TAG" \
                       --notes "QNX engine built at $GITHUB_SHA from the recipe in src/app/qnx-host.json: QEMU 11.1.2 with the patches of the repository; licenses and SOURCE-INFO.txt inside the binary archive; source companion and its checksum beside it, build instructions inside the source companion, build record in build.json." \
                       asset/*

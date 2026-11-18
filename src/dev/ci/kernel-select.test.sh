@@ -9,7 +9,7 @@ trap 'rm -rf "$work"' EXIT
 cd "$work"
 export GITHUB_REPOSITORY=voyemu/voyemu GITHUB_REF_TYPE=branch GITHUB_REF_NAME=main INPUT_KERNEL=qinggan-11
 export GITHUB_OUTPUT="$work/output"
-base=https://github.com/voyemu/voyemu/releases/download/
+base=https://github.com/voyemu/voyemu-deps/releases/download/
 p09=free-09-chinese-20260106-6.0.3
 p11=free-11-chinese-20260731-7.3.1
 p611=free-11-chinese-20250710-6.11.1

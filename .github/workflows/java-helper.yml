@@ -61,7 +61,7 @@ jobs:
     release:
         name: Release ${{ needs.build.outputs.tag }}
         needs: build
-        if: github.ref_type == 'tag'
+        if: github.repository == 'voyemu/voyemu-deps' && github.ref_type == 'tag'
         runs-on: ubuntu-24.04
         timeout-minutes: 10
         permissions:
@@ -76,6 +76,6 @@ jobs:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
                   TAG: ${{ needs.build.outputs.tag }}
               run: |
-                  gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --title "$TAG" \
+                  gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --latest=false --title "$TAG" \
                       --notes "Java helper of preparation built at $GITHUB_SHA by src/prepare/JavaHelperBuild.java with javac of the pinned JDK from src/prepare/java and the Maven libraries pinned in src/prepare/libraries.json; no OEM input. java-helper.zip holds voyemu-java-helper.jar, build-receipt.json and lib/ without d8.jar and apksigner.jar, which preparation takes from the pinned build tools." \
                       asset/*

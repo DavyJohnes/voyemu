@@ -16,7 +16,7 @@ printf '%s  %s\n' "$a" sa8155-qinggan09-front.so "$b" sa8155-qinggan09-readstub.
     "$c" sa8155-passion-21480-front.so > expected-sums
 set_sha=$(sha256sum < expected-sums)
 tag="qnx-guest-${set_sha:0:8}"
-base="https://github.com/voyemu/voyemu/releases/download/$tag/"
+base="https://github.com/voyemu/voyemu-deps/releases/download/$tag/"
 # Writes the manifest from the variables that each case changes after reset.
 write() {
     mkdir -p src/app
@@ -72,7 +72,7 @@ passion_url=https://example.invalid/sa8155-passion-21480-front.so
 reject foreign-url
 reset
 GITHUB_REPOSITORY=fork/voyemu
-reject foreign-repository
+accept independent-checkout-repository
 reset
 front_url=
 reject missing-url

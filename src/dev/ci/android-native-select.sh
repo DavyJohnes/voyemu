@@ -22,7 +22,7 @@ done <<< "$rows"
 [[ -n "$lines" ]] || { echo "No androidNativeComponents pins" >&2; exit 1; }
 set_sha=$(printf '%s' "$lines" | sha256sum)
 tag="android-native-${set_sha:0:8}"
-base="https://github.com/$GITHUB_REPOSITORY/releases/download/$tag/"
+base="https://github.com/voyemu/voyemu-deps/releases/download/$tag/"
 while read -r sha asset <&3 && read -r url <&4; do
     [[ "$url" == "$base$asset" ]] || { echo "$asset URL $url does not name $base$asset" >&2; exit 1; }
 done 3<<< "${lines%$'\n'}" 4<<< "${urls%$'\n'}"

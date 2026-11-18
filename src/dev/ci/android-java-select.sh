@@ -11,7 +11,7 @@ sha=$(jq -er '.androidJava.sha256 | strings' "$pins")
 lines="$sha  android-java.zip"$'\n'
 set_sha=$(printf '%s' "$lines" | sha256sum)
 tag="android-java-${set_sha:0:8}"
-base="https://github.com/$GITHUB_REPOSITORY/releases/download/$tag/"
+base="https://github.com/voyemu/voyemu-deps/releases/download/$tag/"
 url=$(jq -er '.androidJava.url | strings' "$pins")
 [[ "$url" == "${base}android-java.zip" ]] || { echo "URL $url does not name ${base}android-java.zip" >&2; exit 1; }
 if [[ "$GITHUB_REF_TYPE" == tag && "$GITHUB_REF_NAME" != "$tag" ]]; then

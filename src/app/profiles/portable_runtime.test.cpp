@@ -1936,7 +1936,7 @@ void qinggan11_development_activation_checks(const std::filesystem::path &root,
     const auto kernel = boot / "kernel-ranchu";
     put(kernel, "owned Free A11 6.11.1 development kernel fixture");
     const auto dev_sha = sha256_file(kernel);
-    Json dev = {{"url", "https://github.com/voyemu/voyemu/releases/download/kernel-fixture-" +
+    Json dev = {{"url", "https://github.com/voyemu/voyemu-deps/releases/download/kernel-fixture-" +
                                 dev_sha.substr(0, 8) + "/Image"},
                 {"sha256", dev_sha},
                 {"abi", "arm64-v8a"},
@@ -2814,7 +2814,7 @@ int main(int argc, char **argv) {
                     {"android",
                      {{"development_kernel",
                        {{"url",
-                         "https://github.com/voyemu/voyemu/releases/download/kernel-fixture-" +
+                         "https://github.com/voyemu/voyemu-deps/releases/download/kernel-fixture-" +
                                  sha.substr(0, 8) + "/Image"},
                         {"sha256", sha},
                         {"abi", "arm64-v8a"},
@@ -2843,12 +2843,19 @@ int main(int argc, char **argv) {
                 check(denied, "invalid development descriptor accepted");
             }
 
+            auto legacy = definition;
+            auto &legacy_kernel = legacy["android"]["development_kernel"];
+            legacy_kernel["url"] = "https://github.com/voyemu/voyemu/releases/download/"
+                                   "kernel-fixture-aaaaaaaa/Image";
+            check(portable_development_kernel(legacy) == legacy_kernel,
+                  "old release URL survives in prepared machine descriptors");
+
             // Only the release asset named by the Image pin is accepted.
             for (const auto *url :
-                 {"https://github.com/voyemu/voyemu/releases/download/kernel-fixture-bbbbbbbb/Image",
+                 {"https://github.com/voyemu/voyemu-deps/releases/download/kernel-fixture-bbbbbbbb/Image",
                   "https://example.com/voyemu/voyemu/releases/download/kernel-fixture-aaaaaaaa/Image",
-                  "https://github.com/voyemu/voyemu/releases/download/fixture-aaaaaaaa/Image",
-                  "https://github.com/voyemu/voyemu/releases/download/kernel-fixture-aaaaaaaa/Image?x"}) {
+                  "https://github.com/voyemu/voyemu-deps/releases/download/fixture-aaaaaaaa/Image",
+                  "https://github.com/voyemu/voyemu-deps/releases/download/kernel-fixture-aaaaaaaa/Image?x"}) {
                 auto bad = definition;
                 bad["android"]["development_kernel"]["url"] = url;
                 bool denied = false;
@@ -3091,7 +3098,7 @@ int main(int argc, char **argv) {
                         {"clean_base", android_base(28).at("clean_base")},
                         {"development_kernel",
                          {{"url",
-                           "https://github.com/voyemu/voyemu/releases/download/kernel-fixture-" +
+                           "https://github.com/voyemu/voyemu-deps/releases/download/kernel-fixture-" +
                                    sha.substr(0, 8) + "/Image"},
                           {"sha256", sha},
                           {"abi", "arm64-v8a"},

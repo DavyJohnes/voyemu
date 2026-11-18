@@ -20,7 +20,7 @@ printf '%s  %s\n' "$a" a9-offline-labels-darwin-arm64 "$b" api30-root-layout-dar
     "$e" a9-offline-labels-win32-x64 "$f" api30-root-layout-win32-x64 > expected-sums
 set_sha=$(sha256sum < expected-sums)
 tag="e2fs-helpers-${set_sha:0:8}"
-base="https://github.com/voyemu/voyemu/releases/download/$tag/"
+base="https://github.com/voyemu/voyemu-deps/releases/download/$tag/"
 # Writes the manifest from the variables that each case changes after reset.
 write() {
     mkdir -p src/app
@@ -77,7 +77,7 @@ linux_url=https://example.invalid/api30-root-layout
 reject foreign-url
 reset
 GITHUB_REPOSITORY=fork/voyemu
-reject foreign-repository
+accept independent-checkout-repository
 reset
 darwin_url=
 reject missing-url

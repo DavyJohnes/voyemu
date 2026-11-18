@@ -8,7 +8,7 @@
   "referenceProfile": "free-09-chinese-20260106-6.0.3",
   "android": {
     "development_kernel": {
-      "url": "https://github.com/voyemu/voyemu/releases/download/kernel-qinggan-11-ee991bb5/Image",
+      "url": "https://github.com/voyemu/voyemu-deps/releases/download/kernel-qinggan-11-ee991bb5/Image",
       "sha256": "ee991bb5f76239c072aea2ab721e2888d18af060d3d501d46532686ac5417087",
       "abi": "arm64-v8a",
       "provenance": {

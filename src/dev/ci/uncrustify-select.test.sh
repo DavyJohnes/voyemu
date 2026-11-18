@@ -14,7 +14,7 @@ printf '%s  %s\n' aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
     cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc uncrustify-0.83.0-win32-x64.exe > expected-sums
 set_sha=$(sha256sum < expected-sums)
 tag="uncrustify-0.83.0-${set_sha:0:8}"
-base="https://github.com/voyemu/voyemu/releases/download/$tag/"
+base="https://github.com/voyemu/voyemu-deps/releases/download/$tag/"
 # Writes the manifest from the variables that each case changes after reset.
 write() {
     mkdir -p src/app
@@ -69,7 +69,7 @@ windows_url=https://example.invalid/uncrustify.exe
 reject foreign-url
 reset
 GITHUB_REPOSITORY=fork/voyemu
-reject foreign-repository
+accept independent-checkout-repository
 reset
 version=0.84.0
 reject version-drift
