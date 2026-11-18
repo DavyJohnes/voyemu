@@ -204,6 +204,11 @@ case "$set_name" in
         if $env_only; then
             add_path "$(jq -er .optionalTools.linuxBuild.cmake.directory "$pins")/bin"
             add_path "$(jq -er .optionalTools.linuxBuild.ninja.directory "$pins")"
+            if [[ "$set_name" != uncrustify ]]; then
+                jdk="$(jq -er .optionalTools.linuxBuild.jdk.directory "$pins")"
+                echo "JAVA_HOME=$PWD/$jdk" >> "$GITHUB_ENV"
+                add_path "$jdk/bin"
+            fi
             exit 0
         fi
         for tool in zig cmake ninja; do
