@@ -1,4 +1,4 @@
-# Keeps the toolchain caches of ci, kernels and uncrustify alive. GitHub evicts a cache entry that
+# Keeps the toolchain caches of CI, product releases and manual resource builds alive. GitHub evicts a cache entry that
 # nobody restored for 7 days; restoring an entry refreshes it, and a missing entry is installed again
 # from its pins without a build. Mondays and Thursdays give gaps of at most 4 days.
 name: caches
@@ -13,9 +13,9 @@ permissions:
 
 jobs:
     refresh:
-        name: Refresh ${{ matrix.set }}
+        name: Refresh ${{ matrix.set }} (fixtures ${{ matrix.fixtures || 'false' }})
         runs-on: ${{ matrix.runner }}
-        timeout-minutes: 30
+        timeout-minutes: 45
         strategy:
             fail-fast: false
             matrix:
@@ -27,6 +27,9 @@ jobs:
                     - { set: uncrustify, runner: ubuntu-24.04 }
                     - { set: macos, runner: macos-15 }
                     - { set: windows, runner: windows-2022 }
+                    - { set: linux, runner: ubuntu-24.04, fixtures: 'true' }
+                    - { set: macos, runner: macos-15, fixtures: 'true' }
+                    - { set: windows, runner: windows-2022, fixtures: 'true' }
                     - { set: kernel-qinggan-09, runner: ubuntu-24.04 }
                     - { set: kernel-qinggan-11, runner: ubuntu-24.04 }
         steps:
@@ -37,3 +40,4 @@ jobs:
             - uses: ./.github/actions/toolchains
               with:
                   set: ${{ matrix.set }}
+                  fixture-inputs: ${{ matrix.fixtures || 'false' }}
