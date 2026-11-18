@@ -74,7 +74,7 @@
 // Helpers shared by the parts of the portable runtime; each part includes this header.
 namespace voyemu::portable_detail {
 inline constexpr Check need{"PORTABLE_RUNTIME"};
-void ordinary(const std::filesystem::path &path);
+void ordinary(const std::filesystem::path &path, bool allow_windows_spelling = false);
 void inside(const std::filesystem::path &root, const std::filesystem::path &path);
 Json checked_file(const std::filesystem::path &file, const std::string &sha,
                   std::uint64_t maximum = 8ULL << 30,

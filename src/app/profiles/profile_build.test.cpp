@@ -1676,9 +1676,10 @@ static void frontend_binding_checks(const std::filesystem::path &stage) {
 
     if (bound_path("executable") != built_root / window_name ||
         bound_path("assets") != prepared / "ui/wheel" ||
-        bound_path("splash") != prepared / "ui/splash.png" ||
-        built.at("startup") !=
-                Json::array({(prepared / "ui/startup/display0.zip").string(), nullptr}) ||
+        bound_path("splash") != prepared / "ui/splash.png" || built.at("startup").size() != 2 ||
+        !built.at("startup")[1].is_null() ||
+        std::filesystem::path(built.at("startup")[0].get<std::string>()) !=
+                prepared / "ui/startup/display0.zip" ||
         built.at("pins").size() != 6 || built_pins.size() != 6) {
         throw std::runtime_error("machine-local default frontend binding differs");
     }

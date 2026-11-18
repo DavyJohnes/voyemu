@@ -46,10 +46,20 @@ void image_group(const std::filesystem::path &seed, const Json &files,
 } // namespace
 
 namespace portable_detail {
-void ordinary(const std::filesystem::path &path) {
-    need(path.is_absolute() && path.lexically_normal() == path &&
-                 std::filesystem::canonical(path) == path,
-         ("canonical path required: " + path.string()).c_str());
+void ordinary(const std::filesystem::path &path, [[maybe_unused]] bool allow_windows_spelling) {
+    const auto message = "canonical path required: " + path.string();
+
+    need(path.is_absolute() && path.lexically_normal() == path, message.c_str());
+    auto canonical = std::filesystem::canonical(path);
+    bool matches = canonical == path;
+#ifdef _WIN32
+    if (!matches && allow_windows_spelling) {
+        auto spelling = path;
+        matches = CompareStringOrdinal(canonical.make_preferred().c_str(), -1,
+                                       spelling.make_preferred().c_str(), -1, TRUE) == CSTR_EQUAL;
+    }
+#endif
+    need(matches, message.c_str());
 
     // The volume root is not inspected, so a reparse point anywhere below it still rejects the
     // path.

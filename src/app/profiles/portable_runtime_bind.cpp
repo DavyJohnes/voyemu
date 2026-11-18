@@ -856,7 +856,7 @@ std::filesystem::path bind_machine_configuration(const std::filesystem::path &ro
 
             if (machine.selected) {
                 const std::filesystem::path recorded_seed = record.at("seed").get<std::string>();
-                ordinary(recorded_seed);
+                ordinary(recorded_seed, true);
                 need(canonical_machine_name(profile, record.at("machine").get<std::string>()) ==
                                      machine.name &&
                              std::filesystem::equivalent(recorded_seed, seed),

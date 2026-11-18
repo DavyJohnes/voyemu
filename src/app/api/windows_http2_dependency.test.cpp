@@ -125,6 +125,13 @@ void serve(SOCKET listener, Server &state) {
 
     state.ok = state.offset == message.size();
     nghttp2_session_del(session);
+    // Keep the receive side open for pending client control frames. Closing
+    // with unread data can reset TCP before the client reads the trailers.
+    assert(shutdown(client, SD_SEND) == 0);
+
+    while (recv(client, reinterpret_cast<char *>(input.data()), static_cast<int>(input.size()), 0) >
+           0) {}
+
     closesocket(client);
 }
 

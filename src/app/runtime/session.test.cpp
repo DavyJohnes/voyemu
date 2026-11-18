@@ -3957,16 +3957,13 @@ struct SessionInterguestSnapshotFixture {
                    network.contains("sent_frames") && network.contains("reconnects") &&
                    before.at("qnx_pid") == 0 && session.deliveries_ == original);
             const auto ram = directory / "qnx-ram.bin";
-            HANDLE file = CreateFileW(ram.c_str(), GENERIC_READ | GENERIC_WRITE,
-                                      FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, CREATE_NEW,
-                                      FILE_ATTRIBUTE_NORMAL, nullptr);
+            create_qnx_ram(ram, 8ULL << 30);
+            HANDLE file = CreateFileW(ram.c_str(), GENERIC_WRITE,
+                                      FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING,
+                                      FILE_FLAG_OPEN_REPARSE_POINT, nullptr);
             assert(file != INVALID_HANDLE_VALUE);
             DWORD count = 0;
-            assert(DeviceIoControl(file, FSCTL_SET_SPARSE, nullptr, 0, nullptr, 0, &count,
-                                   nullptr));
             LARGE_INTEGER size{};
-            size.QuadPart = 8ULL << 30;
-            assert(SetFilePointerEx(file, size, nullptr, FILE_BEGIN) && SetEndOfFile(file));
             size.QuadPart = 0x10010000;
             assert(SetFilePointerEx(file, size, nullptr, FILE_BEGIN));
             const std::array<std::uint32_t, 8> invalid{0xbeefeeee, 1};

@@ -465,7 +465,6 @@ void owned_recovery_tests(const std::filesystem::path &base, const std::filesyst
                 {"machine", external_name},
                 {"seed", external.string()},
                 {"manifest_sha256", external_activation.at("manifest_sha256")}};
-        write_private_json(directory / "machine-selection.json", external_selection);
         const auto external_directory = native_session_directory(
                 root, profile, voyemu::machine_identity(profile, external_name), id);
         ensure_private_directory(external_directory);
@@ -477,6 +476,7 @@ void owned_recovery_tests(const std::filesystem::path &base, const std::filesyst
             }
         }
 
+        write_private_json(external_directory / "machine-selection.json", external_selection);
         auto external_active = selection;
         external_active["directory"] = external_directory.string();
         const auto external_active_path =
