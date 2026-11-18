@@ -20,7 +20,7 @@ public final class GuestJavaRecipeTest {
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("schema", 1);
         data.put("android", Map.of("package", "system-images;android-30;default;arm64-v8a"));
-        data.put("components", Map.of());
+        data.put("components", Map.of("native", "components/native"));
         data.put("patches", Map.of());
 
         if (local != null) {
@@ -28,6 +28,21 @@ public final class GuestJavaRecipeTest {
         }
 
         Files.writeString(directory.resolve("profile.json"), Json.write(data));
+        Path nativeComponent = Files.createDirectories(directory.resolve("components/native"));
+        Files.writeString(
+                nativeComponent.resolve("component.json"),
+                Json.write(
+                        Map.of(
+                                "type",
+                                "native",
+                                "externalSources",
+                                Map.of(
+                                        "src/test.cpp",
+                                        Map.of(
+                                                "url",
+                                                "http://invalid",
+                                                "sha256",
+                                                "0".repeat(64))))));
 
         return directory;
     }

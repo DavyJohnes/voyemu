@@ -248,13 +248,19 @@ final class Artifacts {
     // The component source with its shared, external and edited files, as every build compiles it.
     private record Materialized(Map<String, Object> definition, Path source, Path dir) {}
 
-    private Materialized materialize(String name) throws Exception {
+    private Path componentSource(String name) throws Exception {
         Object selected = Json.obj(profile.data(), "components").get(name);
 
         Failure.require(
                 selected instanceof String, "ARTIFACT_MISSING", "Unknown component: " + name, 2);
-        Path original = Storage.confined(recipe, (String) selected);
+
+        return Storage.confined(recipe, (String) selected);
+    }
+
+    private Materialized materialize(String name) throws Exception {
+        Path original = componentSource(name);
         Path dir = work.resolve("component-" + name);
+
         Storage.directory(dir);
         Path source = dir.resolve("source");
         FilesSupport.copyTree(original, source);
@@ -291,10 +297,18 @@ final class Artifacts {
         List<GuestJava.Unit> units = new ArrayList<>();
 
         for (String name : new TreeSet<>(Json.obj(profile.data(), "components").keySet())) {
-            Materialized materialized = materialize(name);
-            Map<String, Object> definition = materialized.definition();
-            Path source = materialized.source(), own = source.resolve("src");
+            Path config = Storage.confined(componentSource(name), "component.json");
+            Map<String, Object> definition = Json.object(Json.parse(Files.readString(config)));
             String type = Json.str(definition, "type");
+
+            if (!type.equals("jar")
+                    && !type.equals("apk")
+                    && !definition.containsKey("api30ViewObservation")) {
+                continue;
+            }
+
+            Materialized materialized = materialize(name);
+            Path source = materialized.source(), own = source.resolve("src");
             int minimum =
                     definition.containsKey("minSdk")
                             ? Math.toIntExact(Json.integer(definition, "minSdk"))
@@ -319,7 +333,7 @@ final class Artifacts {
                                         : GuestJava.COMPILE_ONLY,
                                 null,
                                 minimum));
-            } else if (compiled && type.equals("apk")) {
+            } else if (compiled) {
                 linkComponentResources(
                         tools.buildTool("aapt2"),
                         tools.platform(),
