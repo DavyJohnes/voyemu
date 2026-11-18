@@ -8,6 +8,10 @@ on:
     workflow_dispatch:
     # The release workflow runs the same checks before it builds the archives.
     workflow_call:
+        inputs:
+            macos_only:
+                type: boolean
+                default: false
 
 permissions:
     contents: read
@@ -22,11 +26,8 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                include:
-                    - { host: linux-x64, runner: ubuntu-24.04, set: linux, toolchain: zig-linux-x64 }
-                    - { host: macos-arm64, runner: macos-15, set: macos, toolchain: zig-macos-arm64 }
-                    - { host: windows-x64, runner: windows-2022, set: windows, toolchain: zig-windows-x64 }
-        runs-on: ${{ matrix.runner }}
+                host: ${{ fromJSON(inputs.macos_only && '["macos-arm64"]' || '["linux-x64","macos-arm64","windows-x64"]') }}
+        runs-on: ${{ matrix.host == 'macos-arm64' && 'macos-15' || matrix.host == 'windows-x64' && 'windows-2022' || 'ubuntu-24.04' }}
         timeout-minutes: 45
         defaults:
             run:
@@ -39,11 +40,11 @@ jobs:
                   persist-credentials: false
             - uses: ./.github/actions/toolchains
               with:
-                  set: ${{ matrix.set }}
+                  set: ${{ matrix.host == 'macos-arm64' && 'macos' || matrix.host == 'windows-x64' && 'windows' || 'linux' }}
                   fixture-inputs: 'true'
             - if: runner.os == 'macOS'
               run: sudo xcode-select --switch /Library/Developer/CommandLineTools
-            - run: cmake -S src/app -B .local/build/source-fixtures -G Ninja -DCMAKE_TOOLCHAIN_FILE="$PWD/src/dev/toolchains/${{ matrix.toolchain }}.cmake" -DBUILD_TESTING=ON -DVOYEMU_BUILD_GRAPHICS=OFF
+            - run: cmake -S src/app -B .local/build/source-fixtures -G Ninja -DCMAKE_TOOLCHAIN_FILE="$PWD/src/dev/toolchains/zig-${{ matrix.host }}.cmake" -DBUILD_TESTING=ON -DVOYEMU_BUILD_GRAPHICS=OFF
             - run: cmake --build .local/build/source-fixtures --target native_component_test --parallel 1
             # Select actual source behavior suites; copyrighted/manual owner inputs stay explicitly excluded.
             - run: ctest --test-dir .local/build/source-fixtures --label-regex '^deps$' --label-exclude '^oem$' --tests-regex '^(prepare_java_(host_unit|phone_behavior|phone_peer|native_component_handoff|android_stubs_source)|guest_android_api_java|nxp_phone|nxp_music_media|passion_carsettings_source|qinggan09_equipment_artifacts|nxp_climate|canbus_source|nxp_wheel)$' --no-tests=error --output-on-failure --parallel 1 --output-junit source-fixtures.xml
@@ -65,6 +66,7 @@ jobs:
             - run: cmake --build .local/build/lint --target lint --parallel 4 -- -k 0
 
     linux:
+        if: ${{ !inputs.macos_only }}
         name: Linux x64 Release (Zig)
         runs-on: ubuntu-24.04
         timeout-minutes: 60
@@ -90,6 +92,7 @@ jobs:
             - run: ctest --test-dir .local/build/linux --label-exclude 'oem|deps' --output-on-failure --parallel 2
 
     tidy-check-windows:
+        if: ${{ !inputs.macos_only }}
         name: clang-tidy check (Windows x64 MinGW, Zig cross-build)
         runs-on: ubuntu-24.04
         timeout-minutes: 60
@@ -127,6 +130,7 @@ jobs:
             - run: ctest --test-dir .local/build/native-host --label-exclude 'oem|deps' --output-on-failure --parallel 1
 
     windows-cross:
+        if: ${{ !inputs.macos_only }}
         name: Windows x64 MinGW Release (Zig cross-build, Wine)
         runs-on: ubuntu-24.04
         timeout-minutes: 45
@@ -167,6 +171,7 @@ jobs:
                   fi
 
     windows-native:
+        if: ${{ !inputs.macos_only }}
         name: Windows x64 MinGW Release (Zig native)
         runs-on: windows-2022
         timeout-minutes: 60

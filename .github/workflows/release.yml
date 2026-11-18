@@ -4,11 +4,18 @@
 # archives and SHA256SUMS and writes Formula/voyemu.rb of voyemu/homebrew-tap with the
 # HOMEBREW_TAP_TOKEN secret. The tag must name the VOYEMU_VERSION of src/app/CMakeLists.txt. A version
 # with a suffix, such as 1.0.0-beta1, is a prerelease: GitHub marks it so and the tap stays unchanged.
+# Dispatch on a prerelease tag with macos_only for a macOS-only prerelease.
 name: release
 
 on:
     push:
         tags: ["v*"]
+    workflow_dispatch:
+        inputs:
+            macos_only:
+                description: Publish only the macOS Apple Silicon archive (prerelease tag only)
+                type: boolean
+                default: false
 
 permissions:
     contents: read
@@ -17,17 +24,16 @@ jobs:
     checks:
         name: Checks
         uses: ./.github/workflows/ci.yml
+        with:
+            macos_only: ${{ inputs.macos_only == true }}
 
     build:
         name: Build ${{ matrix.host }}
         strategy:
             fail-fast: true
             matrix:
-                include:
-                    - { host: linux-x64, runner: ubuntu-24.04, set: linux, toolchain: zig-linux-x64, launcher: voyemu }
-                    - { host: macos-arm64, runner: macos-15, set: macos, toolchain: zig-macos-arm64, launcher: voyemu }
-                    - { host: windows-x64, runner: ubuntu-24.04, set: windows-cross, toolchain: zig-windows-x64, launcher: voyemu.exe }
-        runs-on: ${{ matrix.runner }}
+                host: ${{ fromJSON(inputs.macos_only && '["macos-arm64"]' || '["linux-x64","macos-arm64","windows-x64"]') }}
+        runs-on: ${{ matrix.host == 'macos-arm64' && 'macos-15' || 'ubuntu-24.04' }}
         timeout-minutes: 60
         env:
             TMPDIR: ${{ github.workspace }}/.local/build/tmp/release
@@ -38,10 +44,10 @@ jobs:
             - run: mkdir -p .local/build/tmp/release
             - uses: ./.github/actions/toolchains
               with:
-                  set: ${{ matrix.set }}
+                  set: ${{ matrix.host == 'macos-arm64' && 'macos' || matrix.host == 'windows-x64' && 'windows-cross' || 'linux' }}
             - if: runner.os == 'macOS'
               run: sudo xcode-select --switch /Library/Developer/CommandLineTools && xcrun --sdk macosx --show-sdk-path
-            - run: cmake -S src/app -B .local/build/release -G Ninja -DCMAKE_TOOLCHAIN_FILE="$PWD/src/dev/toolchains/${{ matrix.toolchain }}.cmake" -DBUILD_TESTING=OFF
+            - run: cmake -S src/app -B .local/build/release -G Ninja -DCMAKE_TOOLCHAIN_FILE="$PWD/src/dev/toolchains/zig-${{ matrix.host }}.cmake" -DBUILD_TESTING=OFF
             - run: cmake --build .local/build/release --target voyemu --parallel 4
             # The Windows launcher cannot run on the Linux runner; the other two must report the tag version.
             - if: matrix.host != 'windows-x64'
@@ -57,12 +63,14 @@ jobs:
               with:
                   name: stage-${{ matrix.host }}
                   path: |
-                      .local/build/stage/${{ matrix.launcher }}
+                      .local/build/stage/${{ matrix.host == 'windows-x64' && 'voyemu.exe' || 'voyemu' }}
                       .local/build/stage/notices/
                   if-no-files-found: error
 
     package:
         name: Package
+        env:
+            MACOS_ONLY: ${{ inputs.macos_only == true }}
         needs: [checks, build]
         runs-on: ubuntu-24.04
         timeout-minutes: 30
@@ -86,12 +94,18 @@ jobs:
               env:
                   TAG: ${{ github.ref_name }}
               run: |
+                  test "$GITHUB_REF_TYPE" = tag
+                  [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]
                   version=${TAG#v}
-                  chmod +x .local/build/stages/stage-linux-x64/voyemu
-                  test "$(.local/build/stages/stage-linux-x64/voyemu --version)" = "Voyemu $version"
                   prerelease=false
                   if [[ "$version" == *-* ]]; then
                       prerelease=true
+                  fi
+                  if [[ "$MACOS_ONLY" == true ]]; then
+                      test "$prerelease" = true
+                  else
+                      chmod +x .local/build/stages/stage-linux-x64/voyemu
+                      test "$(.local/build/stages/stage-linux-x64/voyemu --version)" = "Voyemu $version"
                   fi
                   {
                       echo "version=$version"
@@ -101,10 +115,18 @@ jobs:
               env:
                   VERSION: ${{ steps.version.outputs.version }}
               run: |
-                  export JAR="$PWD/$(jq -er .optionalTools.linuxBuild.jdk.directory src/app/toolchain.json)/bin/jar"
-                  for host in macos-arm64 linux-x64 windows-x64; do
+                  hosts=(macos-arm64)
+                  if [[ "$MACOS_ONLY" == false ]]; then
+                      export JAR="$PWD/$(jq -er .optionalTools.linuxBuild.jdk.directory src/app/toolchain.json)/bin/jar"
+                      hosts+=(linux-x64 windows-x64)
+                  fi
+                  for host in "${hosts[@]}"; do
                       bash src/dev/release/archive.sh "$VERSION" "$host" ".local/build/stages/stage-$host" .local/build/release
                   done
+                  if [[ "$MACOS_ONLY" == true ]]; then
+                      archive=$(bash src/dev/release/archive.sh "$VERSION" macos-arm64 .local/build/stages/stage-macos-arm64 .local/build/release-repeat)
+                      cmp "$archive" ".local/build/release/${archive##*/}"
+                  fi
                   cd .local/build/release
                   cat ./*.sha256 > SHA256SUMS
                   rm ./*.sha256
@@ -119,7 +141,11 @@ jobs:
             - name: Write the release notes
               env:
                   VERSION: ${{ steps.version.outputs.version }}
-              run: bash src/dev/release/notes.sh "$VERSION" CHANGELOG.md .local/build/notes.md
+              run: |
+                  bash src/dev/release/notes.sh "$VERSION" CHANGELOG.md .local/build/notes.md
+                  if [[ "$MACOS_ONLY" == true ]]; then
+                      printf '\nThis prerelease includes the macOS Apple Silicon archive. Windows and Linux archives will follow after validation.\n' >> .local/build/notes.md
+                  fi
             - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
               with:
                   name: release
