@@ -404,7 +404,8 @@ static void identity_probe_tests(const std::filesystem::path &self) {
         need(replaced.launch(owner, process("replaced")));
 #ifdef _WIN32
         // The inherited output handle prevents renaming the probe slot until the child exits.
-        const HANDLE child_handle = OpenProcess(SYNCHRONIZE, FALSE, static_cast<DWORD>(replaced.pid()));
+        const HANDLE child_handle = OpenProcess(SYNCHRONIZE, FALSE,
+                                                static_cast<DWORD>(replaced.pid()));
         need(child_handle != nullptr);
         const auto terminal = WaitForSingleObject(child_handle, 5000);
         CloseHandle(child_handle);

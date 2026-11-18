@@ -335,7 +335,7 @@ int main(int argc, char **argv) {
             const auto sha = pin.at("sha256").get<std::string>();
             check(std::regex_match(sha, std::regex("[0-9a-f]{64}")) &&
                           pin.at("url") ==
-                                  "https://github.com/voyemu/voyemu/releases/download/qnx-host-" +
+                                  "https://github.com/voyemu/voyemu-deps/releases/download/qnx-host-" +
                                           host + "-" + sha.substr(0, 8) + "/qnx-host-" + host +
                                           ".zip",
                   "release asset pin of " + section);

@@ -154,8 +154,16 @@ jobs:
             - if: always()
               run: |
                   if [[ -d "$WINEPREFIX" ]]; then
-                      wineserver -k
-                      wineserver -w
+                      kill_status=0
+                      kill_output=$(wineserver -k 2>&1) || kill_status=$?
+                      if [[ -n "$kill_output" ]]; then
+                          printf '%s\n' "$kill_output" >&2
+                      fi
+                      timeout 20s wineserver -w
+                      # Wine returns 1 without a diagnostic when the server already exited.
+                      if [[ "$kill_status" != 1 || -n "$kill_output" ]]; then
+                          exit "$kill_status"
+                      fi
                   fi
 
     windows-native:
