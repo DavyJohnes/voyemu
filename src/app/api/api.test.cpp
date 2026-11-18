@@ -479,11 +479,11 @@ void owned_recovery_tests(const std::filesystem::path &base, const std::filesyst
 
         auto external_active = selection;
         external_active["directory"] = external_directory.string();
-        write_private_json(
+        const auto external_active_path =
                 native_current_active_directory(root, profile,
                                                 voyemu::machine_identity(profile, external_name)) /
-                        (profile + ".json"),
-                external_active);
+                (profile + ".json");
+        write_private_json(external_active_path, external_active);
         auto external_supervisor = supervisor;
         external_supervisor["directory"] = external_directory.string();
         write_private_json(external_directory / "session-owner.json", external_supervisor);
@@ -524,6 +524,7 @@ void owned_recovery_tests(const std::filesystem::path &base, const std::filesyst
             external_refused();
             write_private_json(external_scoped / "activation.json", external_activation);
         }
+        std::filesystem::remove(external_active_path);
         std::filesystem::remove(external_directory / "machine-selection.json");
         std::filesystem::remove_all(external);
         write_private_json(scoped / "android-launch.json", launch);

@@ -7,6 +7,7 @@
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
+#include "private_state_security.hpp"
 #include <windows.h>
 #include <winioctl.h>
 #else
@@ -100,8 +101,10 @@ void create_qnx_ram(const std::filesystem::path &path, std::uint64_t bytes) {
     }
 
 #ifdef _WIN32
+    detail::PrivateStateSecurity security;
     const HANDLE file = CreateFileW(path.c_str(), GENERIC_READ | GENERIC_WRITE | DELETE,
-                                    FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, CREATE_NEW,
+                                    FILE_SHARE_READ | FILE_SHARE_WRITE, &security.attributes,
+                                    CREATE_NEW,
                                     FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OPEN_REPARSE_POINT, nullptr);
 
     if (file == INVALID_HANDLE_VALUE) {

@@ -26,11 +26,19 @@ class PrivateJsonLock {
 
 public:
     explicit PrivateJsonLock(const std::filesystem::path &path) {
-        auto canonical =
-                (std::filesystem::canonical(std::filesystem::absolute(path).parent_path()) /
-                 path.filename())
-                        .make_preferred()
-                        .wstring();
+        std::error_code error;
+        const auto parent =
+                std::filesystem::canonical(std::filesystem::absolute(path).parent_path(), error);
+
+        if (error == std::errc::no_such_file_or_directory) {
+            throw VoyemuError("STATE_EXTENT", "invalid file");
+        }
+
+        if (error) {
+            throw VoyemuError("STATE_LOCK", "canonical path identity failed: " + error.message());
+        }
+
+        auto canonical = (parent / path.filename()).make_preferred().wstring();
         const auto folded_size = LCMapStringEx(LOCALE_NAME_INVARIANT, LCMAP_LOWERCASE,
                                                canonical.data(), static_cast<int>(canonical.size()),
                                                nullptr, 0, nullptr, nullptr, 0);

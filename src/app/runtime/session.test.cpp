@@ -1769,7 +1769,7 @@ struct SessionPersistenceFixture {
                 const auto original_deadline = session.qnx_deadline_;
                 const auto until = [&](const auto &predicate) {
                     const auto deadline = std::chrono::steady_clock::now() + event_wait;
-                    std::string last;
+                    std::string first, last;
 
                     while (!predicate() && std::chrono::steady_clock::now() < deadline) {
                         try {
@@ -1778,13 +1778,21 @@ struct SessionPersistenceFixture {
                             }
                         } catch (const std::exception &error) {
                             last = error.what();
+
+                            if (first.empty()) {
+                                first = last;
+                            }
                         }
 
                         std::this_thread::sleep_for(std::chrono::milliseconds(1));
                     }
 
                     if (!predicate()) {
-                        throw std::runtime_error("automatic reboot fixture " + test + ": " + last);
+                        throw std::runtime_error(
+                                "automatic reboot fixture " + test + ": " + last +
+                                "; first poll error: " + first + "; QEMU exit " +
+                                std::to_string(session.qnx_.exit_code()) +
+                                "; console: " + read(directory / "qnx-console.log"));
                     }
                 };
                 until([&] {

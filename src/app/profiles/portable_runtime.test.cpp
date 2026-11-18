@@ -2915,7 +2915,7 @@ int main(int argc, char **argv) {
                                      .parent_path();
         const auto scratch = argc == 3 ? std::filesystem::canonical(argv[2])
                                        : project / ".local/build/tmp";
-        const auto fixture = scratch / ("voyemu-portable-runtime-" + random_token());
+        const auto fixture = scratch / ("pr-" + random_token().substr(0, 16));
         const auto root = fixture / "project";
         ensure_private_directory(root);
         struct Cleanup {

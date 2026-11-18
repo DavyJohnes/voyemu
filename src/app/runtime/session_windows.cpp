@@ -965,6 +965,13 @@ void Session::prepare_android_media_input() {
 
 void Session::bound_android_request(const Json &operation,
                                     std::chrono::steady_clock::time_point received) {
+    const auto op = operation.value("op", std::string{});
+
+    // Cluster observations already validate and enforce their own deadline.
+    if (op == "test_cluster_ui" || op == "test_cluster_system") {
+        return;
+    }
+
     if (operation.contains("timeout_ms")) {
         if (!operation.at("timeout_ms").is_number_integer()) {
             throw VoyemuError("IPC_BOUNDS", "integer control timeout required");

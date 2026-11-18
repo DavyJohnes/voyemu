@@ -133,16 +133,24 @@ Json install_qnx_host_windows_source(const std::filesystem::path &root, bool off
     require(std::filesystem::space(root).available >= reserve + (4ULL << 30),
             "insufficient source build disk reserve");
     const auto token = random_token();
-    const auto stage = root / ".local/build/tmp" / ("qnx-windows-source-" + token);
+    // The pinned QEMU tar contains nested ROM paths up to 180 characters long.
+    const auto stage = root / ".local/build/tmp" / ("qw-" + token);
     ensure_private_directory(stage);
     QnxHostBuildStage cleanup{stage, root / ".local/build" / ("qnx-windows-source-" + token)};
     const auto cache = root / ".local/toolchains/downloads/qnx-host";
     ensure_private_directory(cache);
     auto get = [&](const Json &spec) {
-        return download_pinned({spec.at("url").get<std::string>(),
-                                spec.at("sha256").get<std::string>(), 512ULL << 20},
-                               cache, offline, reserve)
-                .file;
+        const auto url = spec.at("url").get<std::string>();
+
+        try {
+            return download_pinned({url, spec.at("sha256").get<std::string>(), 512ULL << 20}, cache,
+                                   offline, reserve)
+                    .file;
+        } catch (const VoyemuError &error) {
+            const auto code = std::string(error.code());
+            throw VoyemuError(code.c_str(),
+                              url + ": " + std::string(error.what()).substr(code.size() + 2));
+        }
     };
     const auto source = get(recipe.at("source")), dtc = get(recipe.at("dtc")),
                base = get(recipe.at("build_shell")),

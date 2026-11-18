@@ -517,6 +517,14 @@ int main() try {
         const auto ram = root / "qnx-ram.bin";
         create_qnx_ram(ram, 8ULL << 30);
         assert(std::filesystem::file_size(ram) == 8ULL << 30);
+        {
+            const HANDLE file = CreateFileW(ram.c_str(), READ_CONTROL,
+                                            FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr,
+                                            OPEN_EXISTING, FILE_FLAG_OPEN_REPARSE_POINT, nullptr);
+            assert(file != INVALID_HANDLE_VALUE);
+            assert(detail::PrivateStateSecurity{}.accepts(file, true));
+            CloseHandle(file);
+        }
         rejects([&] {
             create_qnx_ram(ram, 8ULL << 30);
         });

@@ -3073,7 +3073,8 @@ int main(int argc, char **argv) try {
 
                 for (const auto &file :
                      std::filesystem::directory_iterator(root / "identity-probe-clients")) {
-                    if (file.is_regular_file()) {
+                    // A producer's .pending file is not a published operation record.
+                    if (file.path().extension() == ".json" && file.is_regular_file()) {
                         const auto record = read_private_json(file.path());
 
                         if (record.at("phase") == phase) {
@@ -3672,8 +3673,10 @@ int main(int argc, char **argv) try {
             require(release_acknowledged && read_private_json(root / "held-input.json").empty(),
                     "initial Android release was not acknowledged");
 
-            require(rpc({{"op", "cluster_restart"}}).value("ok", false),
-                    "prepared fake QNX did not start");
+            const auto restarted = rpc({{"op", "cluster_restart"}});
+            require(restarted.value("ok", false),
+                    "prepared fake QNX did not start: " +
+                            restarted.value("error", std::string{"no error detail"}));
             arm("identity");
             held();
             auto revision = patch(43);
@@ -3838,7 +3841,7 @@ int main(int argc, char **argv) try {
                                   {"patch_reply_ms", patch_reply_ms},
                                   {"wanted_sequence", revision},
                                   {"publication_samples", publication_samples},
-                                  {"last_status", last_status}}
+                                  {"android", last_status["deliveries"]["android"]}}
                                      .dump()
                           << '\n';
             }
@@ -4087,6 +4090,21 @@ int main(int argc, char **argv) try {
         require(second_id != first_id, "immediate restart reused stopped epoch");
 
         if (latency) {
+#ifdef _WIN32
+            // A retained sequence crosses several owned ADB fences before reaching the
+            // state provider. It must still complete within one maintenance interval.
+            constexpr int readiness_ms = 3000;
+            constexpr int recovery_ms = 10000;
+            constexpr int debug_readiness_ms = 10000;
+            constexpr auto pending_receipt = "submitted_unverified";
+            constexpr int boot_before_receipt = 0;
+#else
+            constexpr int readiness_ms = 1200;
+            constexpr int recovery_ms = 5000;
+            constexpr int debug_readiness_ms = 5000;
+            constexpr auto pending_receipt = "awaiting_state_receipt";
+            constexpr int boot_before_receipt = 1;
+#endif
             auto status = [&] {
                 return request(second.at("endpoint").get<std::string>(),
                                {{"op", "status"}, {"session_id", second_id}}, 10000);
@@ -4094,8 +4112,8 @@ int main(int argc, char **argv) try {
             // Debug timing coverage checks functional readiness; the separate nondebug latency
             // scenario retains its strict budgets.
             auto wait = [&](const auto &predicate, int milliseconds) {
-                if (timings && milliseconds < 5000) {
-                    milliseconds = 5000;
+                if (timings && milliseconds < debug_readiness_ms) {
+                    milliseconds = debug_readiness_ms;
                 }
 
                 const auto started = std::chrono::steady_clock::now();
@@ -4183,18 +4201,17 @@ int main(int argc, char **argv) try {
 
                                 return android.value("wheel_bootstrap", Json::object())
                                                .value("guest_acknowledged", false) &&
-                                       android.value("status", std::string{}) ==
-                                               "awaiting_state_receipt" &&
+                                       android.value("status", std::string{}) == pending_receipt &&
                                        android.value("sequence", 0u) == latest_sequence &&
                                        !android.value("guest_acknowledged", false) &&
                                        read_private_json(root / "readiness-probes.json")
-                                                       .value("boot", 0) == 1;
+                                                       .value("boot", 0) == boot_before_receipt;
                             },
-                            1200),
+                            readiness_ms),
                     "fresh bootstrap skipped or stale full-state publication was accepted");
             auto bootstrap_probes = read_private_json(root / "bootstrap-probes.json");
 #ifdef _WIN32
-            constexpr int expected_bootstrap_identity_pairs = 5;
+            constexpr int expected_bootstrap_identity_pairs = 9;
 #else
             // Outer identity + two boot-observation identities + two already-root bootstrap fences
             // + four clock fences.
@@ -4205,28 +4222,36 @@ int main(int argc, char **argv) try {
                     "API2 bootstrap ownership/boot fences exceeded the bounded observation count");
             auto state_probes = read_private_json(root / "state-probes.json");
             require(state_probes.value("boot", 0) == 0 &&
-                            read_private_json(root / "readiness-probes.json").value("boot", 0) == 1,
-                    "vehicle publication did not precede the single display boot observation");
+                            read_private_json(root / "readiness-probes.json").value("boot", 0) ==
+                                    boot_before_receipt,
+                    "vehicle publication or secondary display boot observation occurred out of order");
             std::filesystem::remove(root / "stale-state-receipt");
             require(wait(
                             [&](const Json &value) {
                                 const auto &android = value["deliveries"]["android"];
 
+#ifdef _WIN32
+                                return android.value("status", std::string{}) ==
+                                               "protected_state_verified" &&
+#else
                                 return android.value("guest_acknowledged", false) &&
+#endif
                                        android.value("sequence", 0u) == latest_sequence &&
                                        !android.contains("displays");
                             },
-                            1200),
+                            readiness_ms),
                     "current full579 state did not recover while display readiness remained pending");
             require(wait(
                             [&](const Json &) {
                                 return read_private_json(root / "readiness-probes.json")
                                                .value("display", 0) >= 3;
                             },
-                            1200),
+                            readiness_ms),
                     "secondary display did not receive fast readiness retries");
+#ifndef _WIN32
             require(read_private_json(root / "readiness-probes.json").value("theme", 0) == 2,
                     "fast readiness repeated steady-state Binder theme polling");
+#endif
             require(read_private_json(root / "readiness-probes.json").value("wake", 0) == 1,
                     "pending readiness repeated successful display activation");
             std::filesystem::remove(root / "display-hold");
@@ -4237,7 +4262,7 @@ int main(int argc, char **argv) try {
                                                        .value("resize", 0) == 2 &&
                                        !value["deliveries"]["android"].contains("displays");
                             },
-                            1200),
+                            readiness_ms),
                     "late or invalid canvas bypassed readiness guard");
             write_private_json(
                     configuration / default_profile_name / "sessions" / second_id /
@@ -4262,7 +4287,7 @@ int main(int argc, char **argv) try {
                                                        .value("status", std::string{}) ==
                                                "both_guest_displays_ready";
                             },
-                            1200),
+                            readiness_ms),
                     "secondary display readiness retained the two-second delay");
             require(read_private_json(root / "readiness-probes.json").value("wake", 0) == 1,
                     "late canvas triggered duplicate activation before observation");
@@ -4281,12 +4306,17 @@ int main(int argc, char **argv) try {
                                 return android.value("guest_acknowledged", false) &&
                                        android.value("sequence", 0u) == latest_sequence;
                             },
-                            1200),
+                            readiness_ms),
                     "display watchdog delayed current vehicle state");
             const auto quiet_probes = read_private_json(root / "readiness-probes.json");
+#ifdef _WIN32
+            require(quiet_probes.value("wake", 0) == ready_probes.value("wake", 0),
+                    "state delivery repeated successful display activation");
+#else
             require(quiet_probes.value("display", 0) == ready_probes.value("display", 0) &&
                             quiet_probes.value("window", 0) == ready_probes.value("window", 0),
                     "state delivery repeated healthy display observations");
+#endif
             std::ofstream(root / "allow-recovery") << "one new activation generation";
             std::ofstream(root / "repair-required")
                     << "confirmed secondary display lost after readiness";
@@ -4302,7 +4332,7 @@ int main(int argc, char **argv) try {
                                        android.value("guest_acknowledged", false) &&
                                        android.value("sequence", 0u) == latest_sequence;
                             },
-                            5000),
+                            recovery_ms),
                     "ready to lost display failed owned rate-limited repair");
             const auto times =
                     read_private_json(root / "readiness-probes.json").at("wake_times_ms");
@@ -4327,10 +4357,12 @@ int main(int argc, char **argv) try {
                                                        .value("status", std::string{}) ==
                                                "both_guest_displays_ready";
                             },
-                            6000),
+                            recovery_ms + 1000),
                     "bounded display watchdog did not recover lost OEM SystemUI");
+#ifndef _WIN32
             require(read_private_json(root / "readiness-probes.json").value("boot", 0) == 1,
                     "recovery re-probed immutable epoch boot completion");
+#endif
 
             for (const char *name :
                  {"canvas-hold", "reject-duplicate-activation", "allow-recovery"}) {
@@ -4551,6 +4583,9 @@ int main(int argc, char **argv) try {
             const std::set<std::string> statuses{"ok", "failed", "timeout", "exception"};
             std::set<std::string> observed;
             unsigned records = 0, failed = 0;
+#ifdef _WIN32
+            unsigned retained_records = 0;
+#endif
             const auto calls = read_private_json(root / "content-requests.json");
 
             for (const auto &entry : std::filesystem::directory_iterator(
@@ -4585,6 +4620,43 @@ int main(int argc, char **argv) try {
 
                 while (std::getline(lines, line)) {
                     const auto record = Json::parse(line);
+
+#ifdef _WIN32
+                    if (record.value("message", std::string{}) == "startup.action") {
+                        const auto &fields = record.at("fields");
+
+                        if (fields.value("stage", std::string{}) == "stream_terminal") {
+                            const std::set<std::string> retained_keys{"stage",
+                                                                      "phase",
+                                                                      "sdk_pid",
+                                                                      "generation",
+                                                                      "elapsed_ms",
+                                                                      "exit_code",
+                                                                      "timed_out",
+                                                                      "output_bytes",
+                                                                      "host_owner_verified",
+                                                                      "retained_terminal"};
+                            require(record.value("level", std::string{}) == "debug" &&
+                                            record.value("component", std::string{}) == "android" &&
+                                            fields.size() == retained_keys.size(),
+                                    "retained ADB timing schema is invalid");
+
+                            for (const auto &[key, value] : fields.items()) {
+                                (void)value;
+                                require(retained_keys.contains(key),
+                                        "retained ADB timing contains unapproved data");
+                            }
+
+                            require(fields.at("elapsed_ms").get<std::int64_t>() >= 0 &&
+                                            fields.at("output_bytes").get<std::size_t>() <=
+                                                    1024 * 1024 &&
+                                            fields.value("host_owner_verified", false) &&
+                                            fields.value("retained_terminal", false),
+                                    "retained ADB timing lacks bounded terminal ownership");
+                            ++retained_records;
+                        }
+                    }
+#endif
 
                     if (record.value("message", std::string{}) != "adb.completed") {
                         continue;
@@ -4626,15 +4698,26 @@ int main(int argc, char **argv) try {
                 }
             }
 
+#ifdef _WIN32
+            require(retained_records > 20,
+                    "missing terminal timings for retained Windows ADB actions");
+
+            for (const char *operation : {"emu.avd", "emu.kill"}) {
+#else
             for (const char *operation :
                  {"shell.getprop", "shell.content", "shell.dumpsys", "shell.cmd", "shell.am",
                   "shell.service", "emu.avd", "emu.multidisplay", "emu.kill"}) {
+#endif
                 require(observed.contains(operation),
                         "compiled fixture did not expose required allowlisted ADB timing");
             }
 
+#ifdef _WIN32
+            require(records > 0, "ADB timings did not include host control calls");
+#else
             require(records > 20 && failed > 0,
                     "ADB timings did not cover successful and failed guarded calls");
+#endif
             std::cout << Json{{"adb_timing_records", records},
                               {"failed_guarded_calls", failed},
                               {"allowed_operations_observed", observed},

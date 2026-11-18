@@ -166,7 +166,13 @@ jobs:
                   else
                       root="$temp/rp/b/voyemu"
                   fi
+                  if [[ "$RUNNER_OS" == Windows ]]; then
+                      root=${root%/voyemu}
+                  fi
                   mkdir -p "$root" .local/build/qnx-host/out
+                  if [[ "$RUNNER_OS" == Windows ]]; then
+                      printf 'QNX_BUILD_ROOT=%s\n' "$(cygpath -m "$root")" >> "$GITHUB_ENV"
+                  fi
                   git archive HEAD | tar -x -C "$root"
                   if [[ "$RUNNER_OS" != Windows ]]; then
                       mkdir -p "$root/.local/toolchains/native-sdk"
@@ -178,6 +184,14 @@ jobs:
                       out=$(cygpath -w "$PWD/.local/build/qnx-host/out/${{ needs.select.outputs.asset }}")
                       .local/build/qnx-host/qnx_host_windows_test.exe --source-root "$(cygpath -w "$root")" "$out"
                   fi
+            - name: Retain Windows source diagnostics
+              if: failure() && runner.os == 'Windows' && env.QNX_BUILD_ROOT != ''
+              uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+              with:
+                  name: qnx-host-windows-x64-${{ matrix.copy }}-diagnostics
+                  path: ${{ env.QNX_BUILD_ROOT }}/.local/build/qnx-windows-source-*/*.log
+                  if-no-files-found: ignore
+                  retention-days: 7
             # The macOS recipe uses the compiler and Python of the runner, the Linux recipe its Python and make;
             # the Windows recipe pins all its tools.
             - name: Record the build

@@ -3829,7 +3829,7 @@ int main(int argc, char **argv) {
         }
 
         ensure_private_directory(parent);
-        const auto stage = parent / ("profile-build-guards-" + random_token());
+        const auto stage = parent / ("pb-" + random_token().substr(0, 16));
         ensure_private_directory(stage);
         struct Cleanup {
             std::filesystem::path p;
