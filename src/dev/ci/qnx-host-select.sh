@@ -1,8 +1,7 @@
 #!/bin/bash
 # Selects the QNX engine of the qnx-host workflow and checks its prebuilt pin in src/app/qnx-host.json.
-# A tag run builds the engine of tag qnx-host-<host>-<sha8>, whose pin must name the asset
-# qnx-host-<host>.zip of that release of this repository. A manual run builds the engine of INPUT_HOST;
-# while its pin is null the run only reports the built SHA-256 to pin. Run from the checkout root.
+# A resource tag must match the published pin. A branch run needs explicit reproducibility
+# mode to build when a pin is pending. Run from the checkout root.
 set -euo pipefail
 if [[ "$GITHUB_REF_TYPE" == tag ]]; then
     [[ "$GITHUB_REF_NAME" =~ ^qnx-host-(macos-arm64|linux-x64|windows-x64)-[0-9a-f]{8}$ ]] || { echo "Unexpected tag $GITHUB_REF_NAME" >&2; exit 1; }
@@ -20,6 +19,7 @@ asset="qnx-host-$host.zip"
 pin=$(jq -ec ".prebuilt.$section" src/app/qnx-host.json || true)
 if [[ "$pin" == null ]]; then
     [[ "$GITHUB_REF_TYPE" != tag ]] || { echo "The $section prebuilt pin is pending; pin the asset of a manual run first" >&2; exit 1; }
+    [[ "${REPRODUCIBLE:-false}" == true ]] || { echo "A pending prebuilt pin requires reproducible=true" >&2; exit 1; }
     sha=
     tag="qnx-host-$host"
 else
@@ -34,7 +34,18 @@ else
         exit 1
     fi
 fi
+reproducible=${REPRODUCIBLE:-false}
+verified_run=${VERIFIED_RUN:-}
+[[ "$reproducible" == true || "$reproducible" == false ]]
+if [[ "$GITHUB_REF_TYPE" == tag ]]; then
+    [[ "$reproducible" == false ]] || { echo "Check reproducibility on a branch before dispatching the resource tag" >&2; exit 1; }
+    [[ -z "$verified_run" || "$verified_run" =~ ^[0-9]+$ ]] || { echo "Expected a numeric verified_run" >&2; exit 1; }
+else
+    [[ -z "$verified_run" ]] || { echo "verified_run requires a resource tag" >&2; exit 1; }
+fi
 {
+    echo "reproducible=$reproducible"
+    echo "verified_run=$verified_run"
     echo "host=$host"
     echo "runner=$runner"
     echo "set=$set"

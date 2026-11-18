@@ -7,7 +7,7 @@ mkdir -p "$project/.local/build/jobs"
 work=$(mktemp -d "$project/.local/build/jobs/qnx-host-select.XXXXXXXX")
 trap 'rm -rf "$work"' EXIT
 cd "$work"
-export GITHUB_REPOSITORY GITHUB_REF_TYPE GITHUB_REF_NAME INPUT_HOST
+export GITHUB_REPOSITORY GITHUB_REF_TYPE GITHUB_REF_NAME INPUT_HOST REPRODUCIBLE VERIFIED_RUN
 export GITHUB_OUTPUT="$work/output"
 sha=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 tag=qnx-host-macos-arm64-aaaaaaaa
@@ -20,6 +20,7 @@ write() {
 reset() {
     GITHUB_REF_TYPE=branch GITHUB_REF_NAME=main GITHUB_REPOSITORY=voyemu/voyemu INPUT_HOST=macos-arm64
     mac="{\"url\":\"$url\",\"sha256\":\"$sha\"}"
+    REPRODUCIBLE=false VERIFIED_RUN=
     linux=null
     windows=null
     : > "$GITHUB_OUTPUT"
@@ -47,13 +48,17 @@ reset
 accept manual-pinned macos-arm64 "$sha" "$tag"
 reset
 GITHUB_REF_TYPE=tag GITHUB_REF_NAME=$tag
+VERIFIED_RUN=12345
 accept tag macos-arm64 "$sha" "$tag"
+grep -qx 'verified_run=12345' "$GITHUB_OUTPUT"
 reset
 INPUT_HOST=windows-x64
+reject pending-without-reproducibility
+REPRODUCIBLE=true
 accept manual-pending windows-x64 "" qnx-host-windows-x64
 grep -qx "runner=windows-2022" "$GITHUB_OUTPUT"
 reset
-INPUT_HOST=linux-x64
+INPUT_HOST=linux-x64 REPRODUCIBLE=true
 accept manual-pending-linux linux-x64 "" qnx-host-linux-x64
 grep -qx "runner=ubuntu-24.04" "$GITHUB_OUTPUT"
 grep -qx "toolchain=zig-linux-x64" "$GITHUB_OUTPUT"
@@ -91,3 +96,12 @@ reject missing-sha256
 reset
 mac="{\"sha256\":\"$sha\"}"
 reject missing-url
+reset
+VERIFIED_RUN=123
+reject verified-run-on-branch
+reset
+GITHUB_REF_TYPE=tag GITHUB_REF_NAME=$tag VERIFIED_RUN=abc
+reject nonnumeric-run
+reset
+GITHUB_REF_TYPE=tag GITHUB_REF_NAME=$tag REPRODUCIBLE=true
+reject reproducibility-on-tag

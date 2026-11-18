@@ -1,19 +1,21 @@
-# QNX engines: QEMU with the patches of src/app/qnx-host.json, built from its recipes on the runner of
-# each host. A run builds the engine of one host twice in different project roots and checks that both
-# assets match byte for byte. A tag qnx-host-<host>-<sha8> also checks the asset against the prebuilt
-# pin in qnx-host.json and publishes it as the release asset that deps downloads; while that pin is
-# null, a manual run reports the SHA-256 to pin.
+# Verify reproducibility on demand. A resource tag dispatch reuses a checked archive
+# from a successful producer run or builds once against the published recipe pin.
 name: qnx-host
 
 on:
-    push:
-        tags: ["qnx-host-*"]
     workflow_dispatch:
         inputs:
             host:
                 description: Engine to build
                 type: choice
                 options: [macos-arm64, linux-x64, windows-x64]
+            reproducible:
+                description: Build twice in different roots and compare (branch only)
+                type: boolean
+                default: false
+            verified_run:
+                description: Successful reproducibility run to reuse (resource tag only)
+                type: string
 
 permissions:
     contents: read
@@ -34,18 +36,65 @@ jobs:
             sha: ${{ steps.select.outputs.sha }}
             tag: ${{ steps.select.outputs.tag }}
             commit: ${{ github.sha }}
+            reproducible: ${{ steps.select.outputs.reproducible }}
+            verified_run: ${{ steps.select.outputs.verified_run }}
         steps:
             - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
               with:
                   persist-credentials: false
                   ref: ${{ github.sha }}
-            - name: Check selection fixtures
-              run: bash src/dev/ci/qnx-host-select.test.sh
+            - name: Check selection and reuse fixtures
+              run: |
+                  bash src/dev/ci/qnx-host-select.test.sh
+                  bash src/dev/ci/qnx-host-reuse.test.sh
             - name: Select the engine and its prebuilt pin
               id: select
               env:
-                  INPUT_HOST: ${{ github.event.inputs.host }}
+                  INPUT_HOST: ${{ inputs.host }}
+                  REPRODUCIBLE: ${{ inputs.reproducible }}
+                  VERIFIED_RUN: ${{ inputs.verified_run }}
               run: bash src/dev/ci/qnx-host-select.sh
+
+    reuse:
+        name: Retrieve verified ${{ needs.select.outputs.host }} archive
+        needs: select
+        runs-on: ubuntu-24.04
+        timeout-minutes: 10
+        permissions:
+            actions: read
+            contents: read
+        outputs:
+            reused: ${{ steps.retrieve.outputs.reused }}
+        steps:
+            - if: needs.select.outputs.verified_run != ''
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  persist-credentials: false
+                  ref: ${{ needs.select.outputs.commit }}
+            - name: Verify producer and download archive
+              id: retrieve
+              env:
+                  GH_TOKEN: ${{ secrets.QNX_ARTIFACT_READ_TOKEN || secrets.GITHUB_TOKEN }}
+                  PRODUCER_REPO: ${{ secrets.QNX_ARTIFACT_READ_TOKEN != '' && 'voyemu/voyemu' || github.repository }}
+                  VERIFIED_RUN: ${{ needs.select.outputs.verified_run }}
+                  HOST: ${{ needs.select.outputs.host }}
+                  ASSET: ${{ needs.select.outputs.asset }}
+                  PIN: ${{ needs.select.outputs.sha }}
+                  COMMIT: ${{ needs.select.outputs.commit }}
+              run: |
+                  if [[ -z "$VERIFIED_RUN" ]]; then
+                      echo "reused=false" >> "$GITHUB_OUTPUT"
+                  else
+                      bash src/dev/ci/qnx-host-reuse.sh "$VERIFIED_RUN" "$HOST" "$ASSET" "$PIN" "$COMMIT" out "$PRODUCER_REPO"
+                  fi
+            - if: steps.retrieve.outputs.reused == 'true'
+              uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+              with:
+                  name: ${{ needs.select.outputs.tag }}-asset
+                  path: |
+                      out/${{ needs.select.outputs.asset }}
+                      out/build.json
+                  if-no-files-found: error
 
     sources:
         name: Sources ${{ needs.select.outputs.host }}
@@ -73,11 +122,12 @@ jobs:
 
     build:
         name: Build ${{ needs.select.outputs.host }} (${{ matrix.copy }})
-        needs: select
+        needs: [select, reuse]
+        if: needs.reuse.outputs.reused == 'false'
         strategy:
             fail-fast: false
             matrix:
-                copy: [asset, repeat]
+                copy: ${{ fromJSON(needs.select.outputs.reproducible == 'true' && '["asset","repeat"]' || '["asset"]') }}
         runs-on: ${{ needs.select.outputs.runner }}
         timeout-minutes: 180
         defaults:
@@ -155,15 +205,24 @@ jobs:
 
     check:
         name: Check ${{ needs.select.outputs.tag }}
-        needs: [select, build, sources]
+        needs: [select, reuse, build, sources]
+        if: >-
+            ${{ !cancelled() && needs.select.result == 'success' && needs.reuse.result == 'success' &&
+                needs.sources.result == 'success' && (needs.build.result == 'success' ||
+                (needs.reuse.outputs.reused == 'true' && needs.build.result == 'skipped')) }}
         runs-on: ubuntu-24.04
         timeout-minutes: 10
         steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  persist-credentials: false
+                  ref: ${{ needs.select.outputs.commit }}
             - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
               with:
                   name: ${{ needs.select.outputs.tag }}-asset
                   path: asset
-            - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+            - if: needs.select.outputs.reproducible == 'true'
+              uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
               with:
                   name: ${{ needs.select.outputs.tag }}-repeat
                   path: repeat
@@ -175,19 +234,35 @@ jobs:
               env:
                   HOST: ${{ needs.select.outputs.host }}
               run: cd asset && sha256sum -c "qnx-host-$HOST-sources.tar.sha256"
-            - name: Compare both builds and the pin
+            - name: Verify the engine archive and the pin
               env:
                   ASSET: ${{ needs.select.outputs.asset }}
                   PIN: ${{ needs.select.outputs.sha }}
                   HOST: ${{ needs.select.outputs.host }}
+                  REPRODUCIBLE: ${{ needs.select.outputs.reproducible }}
               run: |
-                  cmp "asset/$ASSET" "repeat/$ASSET" || { echo "The two builds differ" >&2; exit 1; }
+                  if [[ "$REPRODUCIBLE" == true ]]; then
+                      cmp "asset/$ASSET" "repeat/$ASSET" || { echo "The two builds differ" >&2; exit 1; }
+                  fi
                   built=$(sha256sum "asset/$ASSET" | cut -d' ' -f1)
-                  echo "Built $ASSET $built; pin ${PIN:-pending}"
+                  echo "Verified $ASSET $built; pin ${PIN:-pending}"
                   if [[ -z "$PIN" ]]; then
                       echo "Pin https://github.com/voyemu/voyemu-deps/releases/download/qnx-host-$HOST-${built:0:8}/$ASSET with SHA-256 $built" >> "$GITHUB_STEP_SUMMARY"
                   else
                       [[ "$built" == "$PIN" ]] || { echo "Built asset differs from the prebuilt pin" >&2; exit 1; }
+                  fi
+                  if [[ "$HOST" == windows-x64 && -n "$PIN" ]]; then
+                      engine=qemu-system-aarch64.exe
+                      expected=$(jq -er --arg file "$engine" '.windows_file_backend.verified_runtime.files[$file] |
+                          [.sha256, (.bytes | tostring)] | @tsv' src/app/qnx-host.json)
+                      read -r sha bytes <<< "$expected"
+                      [[ $(unzip -p "asset/$ASSET" "$engine" | sha256sum | cut -d' ' -f1) == "$sha" ]]
+                      [[ $(unzip -p "asset/$ASSET" "$engine" | wc -c) -eq "$bytes" ]]
+                      [[ $(jq -er '.windows_file_backend.verified_runtime.qnx_file_backend.engine_sha256' src/app/qnx-host.json) == "$sha" ]]
+                  fi
+                  if [[ "$REPRODUCIBLE" == true ]]; then
+                      jq -n --arg commit "$GITHUB_SHA" --arg host "$HOST" --arg sha "$built" \
+                          '{schema: 1, commit: $commit, host: $host, sha256: $sha, reproducible: true}' > asset/verification.json
                   fi
             - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
               with:
@@ -213,6 +288,7 @@ jobs:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
                   TAG: ${{ needs.select.outputs.tag }}
               run: |
+                  producer=$(jq -er '.commit | select(test("^[0-9a-f]{40}$"))' asset/build.json)
                   gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --latest=false --title "$TAG" \
-                      --notes "QNX engine built at $GITHUB_SHA from the recipe in src/app/qnx-host.json: QEMU 11.1.2 with the patches of the repository; licenses and SOURCE-INFO.txt inside the binary archive; source companion and its checksum beside it, build instructions inside the source companion, build record in build.json." \
+                      --notes "QNX engine built at $producer from the recipe in src/app/qnx-host.json: QEMU 11.1.2 with the patches of the repository; licenses and SOURCE-INFO.txt inside the binary archive; source companion and its checksum beside it, build instructions inside the source companion, build record in build.json." \
                       asset/*
