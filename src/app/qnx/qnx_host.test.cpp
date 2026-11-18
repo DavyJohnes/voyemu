@@ -397,7 +397,7 @@ int main(int argc, char **argv) {
                       os::FileLock(root / ".local/toolchains/qnx-host.lock", true).held(),
               "offline missing input cannot publish and lock released");
         const auto &win = c.at("windows_file_backend");
-        check(win.at("version") == "11.1.2" && win.at("patched_sources").size() == 8 &&
+        check(win.at("version") == "11.1.2" && win.at("patched_sources").size() == 9 &&
                       win.at("dependencies").size() == 6,
               "complete Windows source recipe");
         check(win.at("verified_runtime").at("files").size() == 13 &&
