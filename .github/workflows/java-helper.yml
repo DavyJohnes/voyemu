@@ -34,6 +34,9 @@ jobs:
                   set: linux
                   fixture-inputs: 'true'
             - name: Build the helper twice
+              # The pinned ZIP records the Moscow offset in its 1980 timestamp extra fields.
+              env:
+                  TZ: Europe/Moscow
               run: |
                   out="$PWD/.local/build/java-helper"
                   javac --release 25 -d "$out/recipe" src/prepare/java/com/voyemu/prepare/Json.java \
