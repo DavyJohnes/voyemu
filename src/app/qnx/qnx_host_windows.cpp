@@ -356,14 +356,14 @@ Json install_qnx_host_windows_source(const std::filesystem::path &root, bool off
                                            {"PIP_NO_INDEX", "1"},
                                            {"PYTHONHASHSEED", "0"},
                                            {"PYTHONDONTWRITEBYTECODE", "1"},
-                                           {"MSYS2_ARG_CONV_EXCL", "*"},
                                            {"ZIG_GLOBAL_CACHE_DIR", zig_cache},
                                            {"ZIG_LOCAL_CACHE_DIR", zig_cache}};
     auto script = [&](const std::string &bytes, const std::filesystem::path &cwd,
                       int timeout = 120000) {
         const auto file = stage / ("command-" + std::to_string(step) + ".sh");
-        save(file, "#!/bin/sh\nset -eu\nexport PATH=" + shell(posix(msys / "usr/bin")) +
-                           ":/usr/bin:/bin\n" + bytes + "\n");
+        // Bash and pinned MSYS tools use POSIX paths, while Zig is a native Windows process.
+        save(file, "#!/bin/sh\nset -eu\nunset MSYS2_ARG_CONV_EXCL\nexport PATH=" +
+                           shell(posix(msys / "usr/bin")) + ":/usr/bin:/bin\n" + bytes + "\n");
 
         return run(bash, {"--noprofile", "--norc", posix(file)}, cwd, env, timeout);
     };
@@ -433,8 +433,9 @@ Json install_qnx_host_windows_source(const std::filesystem::path &root, bool off
     // The rc adapter answers the meson windres detection
     // probe (single '/?' argument) so configure detects a windows resource compiler.
     wrapper("rc",
-            "if [ \"$#\" = 1 ] && [ \"$1\" = '/?' ]; then echo 'LLVM Resource Converter interface adapter using Zig rc'; exit 0; fi\nexec " +
-                    z + " rc /:output-format coff /:target x86_64 /i " +
+            "if [ \"$#\" = 1 ] && [ \"$1\" = '/?' ]; then echo 'LLVM Resource Converter interface adapter using Zig rc'; exit 0; fi\n"
+            "MSYS2_ARG_CONV_EXCL='/nologo;/fo' exec " +
+                    z + " rc -:output-format coff -:target x86_64 -i " +
                     shell(posix(zigroot / "lib/libc/include/any-windows-any")) + " \"$@\"");
     const auto fdtsrc = fdt / "dtc-1.8.1/libfdt", fdtdst = stage / "fdt-prefix";
     ensure_private_directory(fdtdst / "lib/pkgconfig");
