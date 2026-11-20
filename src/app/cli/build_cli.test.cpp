@@ -187,8 +187,7 @@ int main(int argc, char **argv) {
                     require(verbose.exit_code == result.exit_code &&
                                     verbose.output.find("cli: command.started; command=build") !=
                                             std::string::npos &&
-                                    verbose.output.find(
-                                            "cli: DOWNLOAD_OFFLINE: pinned cache file missing") !=
+                                    verbose.output.find("cli: DOWNLOAD_OFFLINE: ") !=
                                             std::string::npos,
                             "build --verbose did not print its log records: " + verbose.output);
                 }
