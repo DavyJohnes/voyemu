@@ -784,6 +784,7 @@ Json build_qnx_guest_modules(const std::filesystem::path &root, std::string_view
     const bool qinggan11 = spec.platform == QnxGuestPlatform::qinggan11,
                passion = spec.platform == QnxGuestPlatform::passion,
                qinggan09 = spec.platform == QnxGuestPlatform::qinggan09;
+
     need(initial_native_state.is_object() && (qinggan11 || initial_native_state.empty()),
          "QNX_GUEST_INITIAL_STATE_ADAPTER");
 

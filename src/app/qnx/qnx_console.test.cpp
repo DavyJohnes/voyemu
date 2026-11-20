@@ -353,6 +353,7 @@ int main(int argc, char **argv) {
 
                 assert(foreign_rejected);
             }
+
             assert(changed.size() == prepared.size());
 
             for (std::size_t i = 0; i < prepared.size(); ++i) {
