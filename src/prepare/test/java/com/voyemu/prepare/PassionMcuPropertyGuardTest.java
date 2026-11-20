@@ -107,7 +107,7 @@ public final class PassionMcuPropertyGuardTest {
         Files.createDirectories(out);
         Path normal =
                 PassionMcuPropertyGuard.compileHelper(
-                        PassionMcuPropertyGuard.PROFILE,
+                        TestProfiles.SYNTHETIC,
                         30,
                         apk,
                         Path.of(args[2]),
@@ -155,14 +155,11 @@ public final class PassionMcuPropertyGuardTest {
         checkHelperReceipt(apk, out, helper);
 
         final byte[] dex = factory;
-        PassionMcuPropertyGuard.validate(PassionMcuPropertyGuard.PROFILE, 30, apk, dex);
-        byte[] patched =
-                PassionMcuPropertyGuard.apply(PassionMcuPropertyGuard.PROFILE, 30, apk, dex);
+        PassionMcuPropertyGuard.validate(TestProfiles.SYNTHETIC, 30, apk, dex);
+        byte[] patched = PassionMcuPropertyGuard.apply(TestProfiles.SYNTHETIC, 30, apk, dex);
         Files.write(out.resolve("patched-classes16.dex"), patched);
-        rejects(() -> PassionMcuPropertyGuard.apply("foreign", 30, apk, dex));
-        rejects(() -> PassionMcuPropertyGuard.apply(PassionMcuPropertyGuard.PROFILE, 29, apk, dex));
-        rejects(() ->
-                PassionMcuPropertyGuard.apply(PassionMcuPropertyGuard.PROFILE, 30, apk, patched));
+        rejects(() -> PassionMcuPropertyGuard.apply(TestProfiles.SYNTHETIC, 29, apk, dex));
+        rejects(() -> PassionMcuPropertyGuard.apply(TestProfiles.SYNTHETIC, 30, apk, patched));
         System.out.println(
                 "PASS exact original hook, all-class inverse, profile/API/tamper/already-patched"
                         + " guards; signatures="

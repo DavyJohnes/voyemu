@@ -37,8 +37,7 @@ import java.util.TreeMap;
  */
 public final class PassionNexusPowerGuard {
     static final String NAME = "passion-api30-nexus-power";
-    static final String PROFILE = "passion-11-russian-20260403-2.1.4.80",
-            PIN = "603805fbc8aa50ff473cd34d2082366bd5cfa6ed9439f37188e9301e1b812b11",
+    static final String PIN = "603805fbc8aa50ff473cd34d2082366bd5cfa6ed9439f37188e9301e1b812b11",
             OWNER = "Lcom/mega/nexus/server/ScreenStateProcessor;",
             ROUTER = "Lcom/voyemu/display/OemDisplayPower;";
     static final Set<String> METHODS =
@@ -330,11 +329,7 @@ public final class PassionNexusPowerGuard {
     }
 
     static void validate(String profile, int api, Path apk, byte[] dex) throws Exception {
-        check(
-                PROFILE.equals(profile)
-                        && api == 30
-                        && FilesSupport.hash(apk).equals(PIN)
-                        && dex != null);
+        check(api == 30 && FilesSupport.hash(apk).equals(PIN) && dex != null);
         var original = new DexBackedDexFile(Opcodes.forApi(30), dex);
         int selected = 0;
 

@@ -29,8 +29,7 @@ import java.util.List;
 
 /** Only the exact emulated Passion camera may fall back after exhausting EXTERNAL cameras. */
 final class PassionCameraVirtualGuard {
-    static final String PROFILE = "passion-11-russian-20260403-2.1.4.80",
-            NAME = "passion-api30-camera-virtual",
+    static final String NAME = "passion-api30-camera-virtual",
             APK = "e0e57f7cd9099136541c3ed35e1042fba1762a13640bea7f6a2ac3415f426bf0",
             OWNER = "Lcom/voyah/camera/camera/CameraPreviewManager;";
 
@@ -56,11 +55,7 @@ final class PassionCameraVirtualGuard {
     }
 
     static void validate(String profile, int api, Path apk, byte[] bytes) throws Exception {
-        need(
-                PROFILE.equals(profile)
-                        && api == 30
-                        && FilesSupport.hash(apk).equals(APK)
-                        && bytes != null);
+        need(api == 30 && FilesSupport.hash(apk).equals(APK) && bytes != null);
         int n = 0;
 
         for (var c : new DexBackedDexFile(Opcodes.forApi(30), bytes).getClasses()) {

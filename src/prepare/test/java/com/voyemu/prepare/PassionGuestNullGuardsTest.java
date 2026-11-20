@@ -182,14 +182,14 @@ public class PassionGuestNullGuardsTest {
             Path original =
                     root.resolve(
                             ".local/profiles/"
-                                    + PassionGuestNullGuards.PROFILE
+                                    + TestProfiles.pinning(root, PassionGuestNullGuards.ECU.apk())
                                     + "/originals/"
                                     + t.role()
                                     + ".apk");
             byte[] raw = dex(original);
             byte[] changed =
                     PassionGuestNullGuards.applyPrepared(
-                            PassionGuestNullGuards.PROFILE, 30, original, raw, t);
+                            TestProfiles.SYNTHETIC, 30, original, raw, t);
             Method before = method(raw, t), after = method(changed, t);
             PassionGuestNullGuards.validateAfter(before, after, t);
             var mutated = new MutableMethodImplementation(after.getImplementation());
@@ -305,22 +305,15 @@ public class PassionGuestNullGuardsTest {
         int negatives = 0;
         boolean ecu = t.equals(PassionGuestNullGuards.ECU);
 
-        reject(() -> PassionGuestNullGuards.applyPrepared("foreign", 30, original, raw, t));
-        negatives++;
         reject(() ->
-                PassionGuestNullGuards.applyPrepared(
-                        PassionGuestNullGuards.PROFILE, 29, original, raw, t));
+                PassionGuestNullGuards.applyPrepared(TestProfiles.SYNTHETIC, 29, original, raw, t));
         negatives++;
 
         if (ecu) {
             byte[] prior =
-                    PassionVehicleBluetoothGuard.apply(
-                            PassionGuestNullGuards.PROFILE, 30, original, raw);
-            prior =
-                    PassionAmbientLightGuard.apply(
-                            PassionGuestNullGuards.PROFILE, 30, original, prior);
-            PassionGuestNullGuards.applyPrepared(
-                    PassionGuestNullGuards.PROFILE, 30, original, prior, t);
+                    PassionVehicleBluetoothGuard.apply(TestProfiles.SYNTHETIC, 30, original, raw);
+            prior = PassionAmbientLightGuard.apply(TestProfiles.SYNTHETIC, 30, original, prior);
+            PassionGuestNullGuards.applyPrepared(TestProfiles.SYNTHETIC, 30, original, prior, t);
         }
 
         return negatives;

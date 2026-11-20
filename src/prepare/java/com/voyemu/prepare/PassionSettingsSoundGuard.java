@@ -40,8 +40,7 @@ import java.util.Set;
 
 /** OEM CarAudio path stays intact; null Car gets real Android stream controls. */
 final class PassionSettingsSoundGuard {
-    static final String PROFILE = "passion-11-russian-20260403-2.1.4.80",
-            APK = "8d7798dd439ffa39d8af491ff23458d321c8c7659b53ea3672ab4d199189e4b4",
+    static final String APK = "8d7798dd439ffa39d8af491ff23458d321c8c7659b53ea3672ab4d199189e4b4",
             OWNER = "Lcom/android/car/settings/sound/VolumeSettingsPreferenceController;";
     static final String NAME = "passion-api30-settings-sound";
     static final Set<String> SOURCES =
@@ -78,11 +77,7 @@ final class PassionSettingsSoundGuard {
     }
 
     static void validate(String profile, int api, Path apk, byte[] dex) throws Exception {
-        need(
-                PROFILE.equals(profile)
-                        && api == 30
-                        && FilesSupport.hash(apk).equals(APK)
-                        && dex != null);
+        need(api == 30 && FilesSupport.hash(apk).equals(APK) && dex != null);
         int count = 0;
 
         for (var c : new DexBackedDexFile(Opcodes.forApi(30), dex).getClasses()) {
@@ -106,7 +101,7 @@ final class PassionSettingsSoundGuard {
     static Path compileHelper(
             String profile, int api, Path apk, Path source, Path platform, Path work)
             throws Exception {
-        need(PROFILE.equals(profile) && api == 30 && FilesSupport.hash(apk).equals(APK));
+        need(api == 30 && FilesSupport.hash(apk).equals(APK));
         validateSource(source);
         Path dex =
                 GuestJava.dex(new GuestJava.Unit(source, api), platform, work)

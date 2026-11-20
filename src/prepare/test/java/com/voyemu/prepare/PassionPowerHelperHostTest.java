@@ -36,7 +36,11 @@ public final class PassionPowerHelperHostTest {
                                 platform.toString(),
                                 "-d",
                                 classes.toString()));
-        Path patches = root.resolve("profiles/" + PassionDisplayPowerGuard.PROFILE + "/patches");
+        Path patches =
+                root.resolve(
+                        "profiles/"
+                                + TestProfiles.declaring(root, PassionDisplayPowerGuard.NAME)
+                                + "/patches");
 
         for (String helper : List.of("passion-api30-display-power", "passion-api30-nexus-power")) {
             javaSources(patches.resolve(helper + "/src"))

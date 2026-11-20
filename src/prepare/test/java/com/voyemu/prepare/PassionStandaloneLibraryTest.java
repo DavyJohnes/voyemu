@@ -59,7 +59,7 @@ public final class PassionStandaloneLibraryTest {
                 owner =
                         root.resolve(
                                 ".local/profiles/"
-                                        + PassionStandaloneLibrary.PROFILE
+                                        + TestProfiles.pinning(root, PassionStandaloneLibrary.PIN)
                                         + "/originals/framework/framework.jar");
         check(FilesSupport.hash(owner).equals(PassionStandaloneLibrary.PIN), "actual owner pin");
         var artifacts = Json.obj(Json.object(Json.parse(Files.readString(result))), "artifacts");
@@ -73,7 +73,9 @@ public final class PassionStandaloneLibraryTest {
                                     Files.readString(
                                             root.resolve(
                                                     "profiles/"
-                                                            + PassionStandaloneLibrary.PROFILE
+                                                            + TestProfiles.pinning(
+                                                                    root,
+                                                                    PassionStandaloneLibrary.PIN)
                                                             + "/components/"
                                                             + component
                                                             + "/component.json"))));
@@ -89,32 +91,18 @@ public final class PassionStandaloneLibraryTest {
             byte[] before = NativeCore.entries(original).get("classes.dex");
             check(
                     PassionStandaloneLibrary.selected(
-                            PassionStandaloneLibrary.PROFILE,
-                            30,
-                            PassionStandaloneLibrary.PIN,
-                            outputName,
-                            expected),
+                            30, PassionStandaloneLibrary.PIN, outputName, expected),
                     "finite exact scope");
-
-            for (String other :
-                    List.of(
-                            "free-09-chinese-20260106-6.0.3",
-                            "free-11-chinese-20260731-7.3.1",
-                            "")) {
-                check(
-                        !PassionStandaloneLibrary.selected(
-                                other, 30, PassionStandaloneLibrary.PIN, outputName, expected),
-                        "other profiles retain byte path unchanged");
-            }
-
+            check(
+                    !PassionStandaloneLibrary.selected(30, "0".repeat(64), outputName, expected),
+                    "other originals retain byte path unchanged");
             int rejected = 0;
 
-            for (int mode = 0; mode < 4; mode++) {
+            for (int mode : new int[] {0, 2, 3}) {
                 try {
                     PassionStandaloneLibrary.selected(
-                            PassionStandaloneLibrary.PROFILE,
                             mode == 0 ? 28 : 30,
-                            mode == 1 ? "0".repeat(64) : PassionStandaloneLibrary.PIN,
+                            PassionStandaloneLibrary.PIN,
                             mode == 2 ? "unrelated.jar" : outputName,
                             mode == 3 ? Set.of() : expected);
                 } catch (Failure failure) {
@@ -125,7 +113,7 @@ public final class PassionStandaloneLibraryTest {
                 }
             }
 
-            check(rejected == 4, "all finite scope negatives");
+            check(rejected == 3, "all finite scope negatives");
             byte[] after = PassionStandaloneLibrary.apply(before, expected);
             Map<String, ClassDef> types = new TreeMap<>();
 

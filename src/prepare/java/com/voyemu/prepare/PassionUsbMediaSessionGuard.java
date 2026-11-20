@@ -31,8 +31,7 @@ import java.util.Set;
 
 /** Adds a lifecycle-bound callback to the exact OEM USB media browser service. */
 final class PassionUsbMediaSessionGuard {
-    static final String PROFILE = "passion-11-russian-20260403-2.1.4.80",
-            APK = "a3c788860d5df27277d53ffbf838daaefddb6ab098ad52b636671dd70b34765d",
+    static final String APK = "a3c788860d5df27277d53ffbf838daaefddb6ab098ad52b636671dd70b34765d",
             NAME = "passion-api30-usb-media-session";
     static final String OWNER = "Lcom/voyah/baselibrary/player/MultiMediaBrowserService;",
             HELPER = "Lcom/voyemu/media/PassionUsbMediaSession;",
@@ -80,11 +79,7 @@ final class PassionUsbMediaSessionGuard {
     }
 
     static void validate(String profile, int api, Path apk, byte[] bytes) throws Exception {
-        need(
-                PROFILE.equals(profile)
-                        && api == 30
-                        && FilesSupport.hash(apk).equals(APK)
-                        && bytes != null);
+        need(api == 30 && FilesSupport.hash(apk).equals(APK) && bytes != null);
         var c = owner(new DexBackedDexFile(Opcodes.forApi(30), bytes));
         int count = 0;
 
@@ -116,7 +111,7 @@ final class PassionUsbMediaSessionGuard {
     static Path compileHelper(
             String profile, int api, Path apk, Path source, Path platform, Path work)
             throws Exception {
-        need(PROFILE.equals(profile) && api == 30 && FilesSupport.hash(apk).equals(APK));
+        need(api == 30 && FilesSupport.hash(apk).equals(APK));
         validateSource(source);
         Path dex =
                 GuestJava.dex(new GuestJava.Unit(source, api), platform, work)

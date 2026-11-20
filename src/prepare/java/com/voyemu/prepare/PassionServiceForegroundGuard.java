@@ -26,8 +26,7 @@ import java.util.TreeMap;
 
 /** Silence only three pinned service-status notifications; media playback is unchanged. */
 final class PassionServiceForegroundGuard {
-    static final String PROFILE = "passion-11-russian-20260403-2.1.4.80",
-            NAME = "passion-api30-service-foreground";
+    static final String NAME = "passion-api30-service-foreground";
     static final String VIDEO = "11bd7f83630949a997836753a65e4782f3235cbbe83db037c7b47e25ddd21c5c",
             CAMERA = "e0e57f7cd9099136541c3ed35e1042fba1762a13640bea7f6a2ac3415f426bf0";
     static final String SOUND =
@@ -269,7 +268,7 @@ final class PassionServiceForegroundGuard {
     }
 
     static void validate(String profile, int api, Path original, byte[] dex) throws Exception {
-        require(PROFILE.equals(profile) && api == 30 && dex != null);
+        require(api == 30 && dex != null);
         String pin = FilesSupport.hash(original);
         require(PINS.contains(pin));
 

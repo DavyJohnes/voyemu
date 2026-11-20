@@ -137,7 +137,12 @@ public final class PassionPhoneRecipeTest {
         reject(name, foreignPins, new Target());
 
         if (args.length > 0) {
-            Path profile = Path.of(args[0]).resolve("profiles/" + PassionPhoneGuard.PROFILE);
+            Path profile =
+                    Path.of(args[0])
+                            .resolve(
+                                    "profiles/"
+                                            + TestProfiles.declaring(
+                                                    Path.of(args[0]), PassionPhoneGuard.NAME));
             PassionPhoneGuard.validateHelperSource(
                     profile.resolve("patches/" + PassionPhoneGuard.HELPER_ROOT));
             var real =

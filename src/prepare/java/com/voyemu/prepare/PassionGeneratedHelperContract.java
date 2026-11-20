@@ -22,12 +22,8 @@ final class PassionGeneratedHelperContract {
                 ok, "PASSION_GENERATED_HELPER", "Declared generated helper ABI required", 5);
     }
 
-    static Set<String> requested(String profile, Map<String, Object> patches) {
+    static Set<String> requested(Map<String, Object> patches) {
         Set<String> result = new TreeSet<>();
-
-        if (!PassionSettingsSoundGuard.PROFILE.equals(profile)) {
-            return result;
-        }
 
         for (String artifact : Set.of(SOUND, USB)) {
             String name = artifact.substring("patched:".length());

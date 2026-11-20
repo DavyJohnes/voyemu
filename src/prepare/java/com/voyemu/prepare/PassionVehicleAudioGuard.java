@@ -28,8 +28,7 @@ import java.util.List;
 
 /** Keep the optional automotive audio manager absent when the clean guest has no audio Binder. */
 final class PassionVehicleAudioGuard {
-    static final String PROFILE = "passion-11-russian-20260403-2.1.4.80",
-            NAME = "passion-api30-vehicle-audio";
+    static final String NAME = "passion-api30-vehicle-audio";
     static final String PIN = PassionVehicleBluetoothGuard.PIN;
     static final String OWNER = "Lcom/voyah/car/bluetooth/utils/AudioSwitchHelper;",
             METHOD = "bind$lambda-0";
@@ -304,11 +303,7 @@ final class PassionVehicleAudioGuard {
     }
 
     static void validate(String profile, int api, Path original, byte[] dex) throws Exception {
-        require(
-                PROFILE.equals(profile)
-                        && api == 30
-                        && FilesSupport.hash(original).equals(PIN)
-                        && dex != null);
+        require(api == 30 && FilesSupport.hash(original).equals(PIN) && dex != null);
         var source = new DexBackedDexFile(Opcodes.forApi(30), dex);
         validateMethod(method(source));
         validateNullable(nullableMethod(source, OBSERVER), true);

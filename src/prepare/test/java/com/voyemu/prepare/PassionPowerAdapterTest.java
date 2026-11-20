@@ -86,7 +86,8 @@ public final class PassionPowerAdapterTest {
                                 Files.readString(
                                         root.resolve(
                                                 "profiles/"
-                                                        + PassionPowerAdapter.PROFILE
+                                                        + TestProfiles.pinning(
+                                                                root, PassionPowerAdapter.PIN)
                                                         + "/components/mega-compat/component.json"))));
         var recipe = Json.obj(definition, "donorDex");
         Path work =
@@ -113,7 +114,7 @@ public final class PassionPowerAdapterTest {
                             work.resolve("after"),
                             "voyemu-mega.jar",
                             new DexOperations.DonorTarget(
-                                    30, PassionPowerAdapter.PROFILE, PassionPowerAdapter.NAME));
+                                    30, TestProfiles.SYNTHETIC, PassionPowerAdapter.NAME));
             byte[] bytes = NativeCore.entries(patched).get("classes.dex");
             var after = classes(bytes);
             check(
@@ -168,16 +169,11 @@ public final class PassionPowerAdapterTest {
             }
 
             check(replaced == 2, "exactly2 unsupported methods");
-            reject(() ->
-                    PassionPowerAdapter.apply(
-                            "free-11-chinese-20260731-7.3.1", 30, original, before));
-            reject(() ->
-                    PassionPowerAdapter.apply(PassionPowerAdapter.PROFILE, 28, original, before));
-            reject(() ->
-                    PassionPowerAdapter.apply(PassionPowerAdapter.PROFILE, 30, original, bytes));
+            reject(() -> PassionPowerAdapter.apply(TestProfiles.SYNTHETIC, 28, original, before));
+            reject(() -> PassionPowerAdapter.apply(TestProfiles.SYNTHETIC, 30, original, bytes));
             Path wrong = work.resolve("wrong.jar");
             NativeCore.zip(wrong, Map.of("classes.dex", before), false);
-            reject(() -> PassionPowerAdapter.apply(PassionPowerAdapter.PROFILE, 30, wrong, before));
+            reject(() -> PassionPowerAdapter.apply(TestProfiles.SYNTHETIC, 30, wrong, before));
             Path invalid = work.resolve("invalid");
             reject(() ->
                     DexOperations.donorJar(
@@ -187,8 +183,7 @@ public final class PassionPowerAdapterTest {
                             platform,
                             invalid,
                             "x.jar",
-                            new DexOperations.DonorTarget(
-                                    30, PassionPowerAdapter.PROFILE, "unknown")));
+                            new DexOperations.DonorTarget(30, TestProfiles.SYNTHETIC, "unknown")));
             check(!Files.exists(invalid), "unknown adapter rejected before output");
             check(
                     FilesSupport.hash(original).equals(PassionPowerAdapter.PIN),

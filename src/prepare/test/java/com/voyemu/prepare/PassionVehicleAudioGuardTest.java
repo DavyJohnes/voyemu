@@ -46,7 +46,7 @@ public final class PassionVehicleAudioGuardTest {
         Path apk =
                 root.resolve(
                         ".local/profiles/"
-                                + PassionVehicleAudioGuard.PROFILE
+                                + TestProfiles.declaring(root, PassionVehicleAudioGuard.NAME)
                                 + "/originals/LY_Car.apk");
         byte[] dex;
 
@@ -54,13 +54,12 @@ public final class PassionVehicleAudioGuardTest {
             dex = z.getInputStream(z.getEntry("classes3.dex")).readAllBytes();
         }
 
-        PassionVehicleAudioGuard.validate(PassionVehicleAudioGuard.PROFILE, 30, apk, dex);
+        PassionVehicleAudioGuard.validate(TestProfiles.SYNTHETIC, 30, apk, dex);
         var originalInstrument =
                 PassionVehicleInstrumentGuard.method(new DexBackedDexFile(Opcodes.forApi(30), dex));
         PassionVehicleInstrumentGuard.validateScratch(originalInstrument, 3);
         reject(() -> PassionVehicleInstrumentGuard.validateScratch(originalInstrument, 1));
-        byte[] after =
-                PassionVehicleAudioGuard.apply(PassionVehicleAudioGuard.PROFILE, 30, apk, dex);
+        byte[] after = PassionVehicleAudioGuard.apply(TestProfiles.SYNTHETIC, 30, apk, dex);
         var method =
                 PassionVehicleAudioGuard.method(new DexBackedDexFile(Opcodes.forApi(30), after));
         checkGuardedRegistration(method);
@@ -280,16 +279,11 @@ public final class PassionVehicleAudioGuardTest {
     }
 
     static void rejectWrongInputs(Path apk, Path out, byte[] dex, byte[] after) throws Exception {
-        reject(() -> PassionVehicleAudioGuard.apply("foreign", 30, apk, dex));
-        reject(() ->
-                PassionVehicleAudioGuard.apply(PassionVehicleAudioGuard.PROFILE, 28, apk, dex));
-        reject(() ->
-                PassionVehicleAudioGuard.apply(PassionVehicleAudioGuard.PROFILE, 30, apk, null));
-        reject(() ->
-                PassionVehicleAudioGuard.apply(PassionVehicleAudioGuard.PROFILE, 30, apk, after));
+        reject(() -> PassionVehicleAudioGuard.apply(TestProfiles.SYNTHETIC, 28, apk, dex));
+        reject(() -> PassionVehicleAudioGuard.apply(TestProfiles.SYNTHETIC, 30, apk, null));
+        reject(() -> PassionVehicleAudioGuard.apply(TestProfiles.SYNTHETIC, 30, apk, after));
         Path wrong = out.resolve("wrong.apk");
         Files.writeString(wrong, "wrong");
-        reject(() ->
-                PassionVehicleAudioGuard.apply(PassionVehicleAudioGuard.PROFILE, 30, wrong, dex));
+        reject(() -> PassionVehicleAudioGuard.apply(TestProfiles.SYNTHETIC, 30, wrong, dex));
     }
 }

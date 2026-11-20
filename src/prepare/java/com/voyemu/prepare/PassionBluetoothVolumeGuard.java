@@ -475,7 +475,7 @@ final class PassionBluetoothVolumeGuard {
 
     static void validateOriginalChain(String profile, int api, Path original, byte[] raw)
             throws Exception {
-        require(PassionServiceForegroundGuard.PROFILE.equals(profile) && api == 30 && raw != null);
+        require(api == 30 && raw != null);
         String apk = FilesSupport.hash(original);
         require(PINS.contains(apk));
         byte[] prepared =
@@ -488,7 +488,7 @@ final class PassionBluetoothVolumeGuard {
     }
 
     static void validate(String profile, int api, Path original, byte[] dex) throws Exception {
-        require(PassionServiceForegroundGuard.PROFILE.equals(profile) && api == 30 && dex != null);
+        require(api == 30 && dex != null);
         String apk = FilesSupport.hash(original);
         require(PINS.contains(apk));
 

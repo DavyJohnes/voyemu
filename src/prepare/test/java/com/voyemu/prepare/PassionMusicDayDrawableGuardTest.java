@@ -41,24 +41,18 @@ public final class PassionMusicDayDrawableGuardTest {
         }
 
         byte[] result =
-                PassionMusicDayDrawableGuard.apply(
-                        PassionMusicDayDrawableGuard.PROFILE, 30, original, source);
+                PassionMusicDayDrawableGuard.apply(TestProfiles.SYNTHETIC, 30, original, source);
 
         if (result.length != originalTable.length + 48) {
             throw new AssertionError();
         }
 
         deny(() ->
-                PassionMusicDayDrawableGuard.apply(
-                        "free-11-chinese-20260731-7.3.1", 30, original, source));
-        deny(() ->
-                PassionMusicDayDrawableGuard.apply(
-                        PassionMusicDayDrawableGuard.PROFILE, 28, original, source));
+                PassionMusicDayDrawableGuard.apply(TestProfiles.SYNTHETIC, 28, original, source));
         var changed = new TreeMap<String, byte[]>(source);
         changed.put("resources.arsc", result);
         deny(() ->
-                PassionMusicDayDrawableGuard.apply(
-                        PassionMusicDayDrawableGuard.PROFILE, 30, original, changed));
+                PassionMusicDayDrawableGuard.apply(TestProfiles.SYNTHETIC, 30, original, changed));
         changed.put("resources.arsc", originalTable);
 
         for (String name : PassionMusicDayDrawableGuard.NAMES) {
@@ -66,14 +60,13 @@ public final class PassionMusicDayDrawableGuardTest {
             byte[] saved = changed.remove(asset);
             deny(() ->
                     PassionMusicDayDrawableGuard.apply(
-                            PassionMusicDayDrawableGuard.PROFILE, 30, original, changed));
+                            TestProfiles.SYNTHETIC, 30, original, changed));
             changed.put(asset, saved);
         }
 
         changed.remove("res/drawable/selector_seekbar_thumb.xml");
         deny(() ->
-                PassionMusicDayDrawableGuard.apply(
-                        PassionMusicDayDrawableGuard.PROFILE, 30, original, changed));
+                PassionMusicDayDrawableGuard.apply(TestProfiles.SYNTHETIC, 30, original, changed));
         var probe = new TreeMap<String, byte[]>();
         probe.put("AndroidManifest.xml", source.get("AndroidManifest.xml"));
         probe.put("resources.arsc", result);

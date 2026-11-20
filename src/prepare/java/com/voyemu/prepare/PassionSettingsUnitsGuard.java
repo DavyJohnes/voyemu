@@ -20,9 +20,7 @@ import java.util.Set;
 
 /** Keep OEM units unavailable when the Android Car service is absent, without a lifecycle crash. */
 final class PassionSettingsUnitsGuard {
-    static final String PROFILE = PassionSettingsSoundGuard.PROFILE,
-            APK = PassionSettingsSoundGuard.APK,
-            NAME = "passion-api30-settings-units";
+    static final String APK = PassionSettingsSoundGuard.APK, NAME = "passion-api30-settings-units";
     static final String OWNER = "Lcom/android/car/settings/units/CarUnitsManager;";
     static final Set<String> METHODS = Set.of("connect", "disconnect");
 
@@ -47,11 +45,7 @@ final class PassionSettingsUnitsGuard {
     }
 
     static void validate(String profile, int api, Path apk, byte[] bytes) throws Exception {
-        need(
-                PROFILE.equals(profile)
-                        && api == 30
-                        && FilesSupport.hash(apk).equals(APK)
-                        && bytes != null);
+        need(api == 30 && FilesSupport.hash(apk).equals(APK) && bytes != null);
         int n = 0;
 
         for (var c : new DexBackedDexFile(Opcodes.forApi(30), bytes).getClasses()) {

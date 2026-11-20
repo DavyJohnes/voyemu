@@ -30,8 +30,7 @@ import java.util.TreeMap;
 
 /** Keep the two OEM sidebars outside AOSP's reserved bottom-navigation-bar geometry. */
 final class PassionSidebarGuard {
-    static final String PROFILE = "passion-11-russian-20260403-2.1.4.80",
-            NAME = "passion-api30-sidebars";
+    static final String NAME = "passion-api30-sidebars";
     static final String PIN = "4032f14c0fc49fd52514737309d2af67c9d4ff9340dd534874f46cbe2e748c00";
     static final String OWNER = "Lcom/voyah/os/carsystemui/navigation/NavigationBarManager;";
     static final String ROUTER = "Lcom/voyemu/output/PassionSidebarWindow;";
@@ -118,11 +117,7 @@ final class PassionSidebarGuard {
     }
 
     static void validate(String profile, int api, Path original, byte[] dex) throws Exception {
-        require(
-                PROFILE.equals(profile)
-                        && api == 30
-                        && FilesSupport.hash(original).equals(PIN)
-                        && dex != null);
+        require(api == 30 && FilesSupport.hash(original).equals(PIN) && dex != null);
         validateMethod(method(new DexBackedDexFile(Opcodes.forApi(30), dex)));
     }
 

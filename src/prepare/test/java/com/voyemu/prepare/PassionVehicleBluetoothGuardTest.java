@@ -40,7 +40,7 @@ public final class PassionVehicleBluetoothGuardTest {
         Path apk =
                 root.resolve(
                         ".local/profiles/"
-                                + PassionVehicleBluetoothGuard.PROFILE
+                                + TestProfiles.declaring(root, PassionVehicleBluetoothGuard.NAME)
                                 + "/originals/LY_Car.apk");
         byte[] dex;
 
@@ -50,9 +50,7 @@ public final class PassionVehicleBluetoothGuardTest {
 
         var before = new DexBackedDexFile(Opcodes.forApi(30), dex);
         check(PassionVehicleBluetoothGuard.methods(before).size() == 4);
-        byte[] after =
-                PassionVehicleBluetoothGuard.apply(
-                        PassionVehicleBluetoothGuard.PROFILE, 30, apk, dex);
+        byte[] after = PassionVehicleBluetoothGuard.apply(TestProfiles.SYNTHETIC, 30, apk, dex);
         var modified = new DexBackedDexFile(Opcodes.forApi(30), after);
         int methods = 0;
 
@@ -104,22 +102,12 @@ public final class PassionVehicleBluetoothGuardTest {
         }
 
         check(methods == 4);
-        reject(() ->
-                PassionVehicleBluetoothGuard.apply("free-11-chinese-20260731-7.3.1", 30, apk, dex));
-        reject(() ->
-                PassionVehicleBluetoothGuard.apply(
-                        PassionVehicleBluetoothGuard.PROFILE, 28, apk, dex));
-        reject(() ->
-                PassionVehicleBluetoothGuard.apply(
-                        PassionVehicleBluetoothGuard.PROFILE, 30, apk, null));
-        reject(() ->
-                PassionVehicleBluetoothGuard.apply(
-                        PassionVehicleBluetoothGuard.PROFILE, 30, apk, after));
+        reject(() -> PassionVehicleBluetoothGuard.apply(TestProfiles.SYNTHETIC, 28, apk, dex));
+        reject(() -> PassionVehicleBluetoothGuard.apply(TestProfiles.SYNTHETIC, 30, apk, null));
+        reject(() -> PassionVehicleBluetoothGuard.apply(TestProfiles.SYNTHETIC, 30, apk, after));
         Path wrong = out.resolve("wrong.apk");
         Files.writeString(wrong, "wrong owner");
-        reject(() ->
-                PassionVehicleBluetoothGuard.apply(
-                        PassionVehicleBluetoothGuard.PROFILE, 30, wrong, dex));
+        reject(() -> PassionVehicleBluetoothGuard.apply(TestProfiles.SYNTHETIC, 30, wrong, dex));
         reject(() -> PassionVehicleBluetoothGuard.methods(modified));
         byte[] settings;
 
@@ -127,11 +115,10 @@ public final class PassionVehicleBluetoothGuardTest {
             settings = z.getInputStream(z.getEntry("classes.dex")).readAllBytes();
         }
 
-        PassionVehicleBluetoothGuard.validateSettings(
-                PassionVehicleBluetoothGuard.PROFILE, 30, apk, settings);
+        PassionVehicleBluetoothGuard.validateSettings(TestProfiles.SYNTHETIC, 30, apk, settings);
         byte[] guardedSettings =
                 PassionVehicleBluetoothGuard.applySettings(
-                        PassionVehicleBluetoothGuard.PROFILE, 30, apk, settings);
+                        TestProfiles.SYNTHETIC, 30, apk, settings);
         var settingsMethod =
                 PassionBluetoothRoleGuard.method(
                         new DexBackedDexFile(Opcodes.forApi(30), guardedSettings));
@@ -156,14 +143,12 @@ public final class PassionVehicleBluetoothGuardTest {
         check(checked == 2);
         reject(() ->
                 PassionVehicleBluetoothGuard.applySettings(
-                        PassionVehicleBluetoothGuard.PROFILE, 28, apk, settings));
+                        TestProfiles.SYNTHETIC, 28, apk, settings));
         reject(() ->
                 PassionVehicleBluetoothGuard.applySettings(
-                        PassionVehicleBluetoothGuard.PROFILE, 30, apk, guardedSettings));
-        reject(() -> PassionVehicleBluetoothGuard.applySettings("foreign", 30, apk, settings));
+                        TestProfiles.SYNTHETIC, 30, apk, guardedSettings));
         reject(() ->
-                PassionVehicleBluetoothGuard.applySettings(
-                        PassionVehicleBluetoothGuard.PROFILE, 30, apk, null));
+                PassionVehicleBluetoothGuard.applySettings(TestProfiles.SYNTHETIC, 30, apk, null));
         Files.write(out.resolve("classes.dex"), guardedSettings);
         Path output = out.resolve("classes2.dex");
         Files.write(output, after);

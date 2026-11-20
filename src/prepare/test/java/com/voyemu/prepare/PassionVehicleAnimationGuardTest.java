@@ -198,7 +198,7 @@ public final class PassionVehicleAnimationGuardTest {
         Path apk =
                 root.resolve(
                         ".local/profiles/"
-                                + PassionVehicleAnimationGuard.PROFILE
+                                + TestProfiles.declaring(root, PassionVehicleAnimationGuard.NAME)
                                 + "/originals/LY_Car.apk");
         byte[] raw;
 
@@ -207,8 +207,7 @@ public final class PassionVehicleAnimationGuardTest {
         }
 
         byte[] prepared =
-                PassionVehicleAnimationGuard.prepareOriginal(
-                        PassionVehicleAnimationGuard.PROFILE, 30, apk, raw);
+                PassionVehicleAnimationGuard.prepareOriginal(TestProfiles.SYNTHETIC, 30, apk, raw);
 
         for (byte[] input : List.of(raw, prepared)) {
             var types = PassionVehicleAnimationGuard.classes(input);
@@ -266,22 +265,19 @@ public final class PassionVehicleAnimationGuardTest {
 
         byte[] after =
                 PassionVehicleAnimationGuard.applyPrepared(
-                        PassionVehicleAnimationGuard.PROFILE, 30, apk, prepared);
-        reject(() -> PassionVehicleAnimationGuard.applyPrepared("foreign", 30, apk, prepared));
+                        TestProfiles.SYNTHETIC, 30, apk, prepared);
         reject(() ->
                 PassionVehicleAnimationGuard.applyPrepared(
-                        PassionVehicleAnimationGuard.PROFILE, 28, apk, prepared));
+                        TestProfiles.SYNTHETIC, 28, apk, prepared));
         reject(() ->
-                PassionVehicleAnimationGuard.applyPrepared(
-                        PassionVehicleAnimationGuard.PROFILE, 30, apk, null));
+                PassionVehicleAnimationGuard.applyPrepared(TestProfiles.SYNTHETIC, 30, apk, null));
         reject(() ->
-                PassionVehicleAnimationGuard.applyPrepared(
-                        PassionVehicleAnimationGuard.PROFILE, 30, apk, after));
+                PassionVehicleAnimationGuard.applyPrepared(TestProfiles.SYNTHETIC, 30, apk, after));
         Path wrong = out.resolve("wrong.apk");
         Files.writeString(wrong, "wrong");
         reject(() ->
                 PassionVehicleAnimationGuard.applyPrepared(
-                        PassionVehicleAnimationGuard.PROFILE, 30, wrong, prepared));
+                        TestProfiles.SYNTHETIC, 30, wrong, prepared));
         System.out.println(
                 "Actual raw/prepared null-binding RED; guarded cleanup matrix GREEN; original"
                         + " lifecycle and all-class inverse preserved");

@@ -61,7 +61,7 @@ public final class PassionMusicForegroundGuardTest {
         Path original =
                 root.resolve(
                         ".local/profiles/"
-                                + PassionMusicForegroundGuard.PROFILE
+                                + TestProfiles.declaring(root, PassionMusicForegroundGuard.NAME)
                                 + "/originals/LY_Multimedia.apk");
         byte[] dex;
 
@@ -79,9 +79,7 @@ public final class PassionMusicForegroundGuardTest {
                 PassionMusicForegroundGuard.method(new DexBackedDexFile(Opcodes.forApi(30), dex));
         PassionMusicForegroundGuard.validateMethod(before);
         reject(() -> PassionMusicForegroundGuard.validateAfter(before));
-        byte[] out =
-                PassionMusicForegroundGuard.apply(
-                        PassionMusicForegroundGuard.PROFILE, 30, original, dex);
+        byte[] out = PassionMusicForegroundGuard.apply(TestProfiles.SYNTHETIC, 30, original, dex);
         var after =
                 PassionMusicForegroundGuard.method(new DexBackedDexFile(Opcodes.forApi(30), out));
         PassionMusicForegroundGuard.validateAfter(after);
@@ -94,23 +92,12 @@ public final class PassionMusicForegroundGuardTest {
                 PassionMusicForegroundGuard.validateBridgeAfter(changed(bridgeAfter, 17, 3, 1)));
         reject(() ->
                 PassionMusicForegroundGuard.validateBridgeAfter(changed(bridgeAfter, 17, 4, 0)));
-        reject(() ->
-                PassionMusicForegroundGuard.apply(
-                        "free-11-chinese-20260731-7.3.1", 30, original, dex));
-        reject(() ->
-                PassionMusicForegroundGuard.apply(
-                        PassionMusicForegroundGuard.PROFILE, 28, original, dex));
-        reject(() ->
-                PassionMusicForegroundGuard.apply(
-                        PassionMusicForegroundGuard.PROFILE, 30, original, null));
-        reject(() ->
-                PassionMusicForegroundGuard.apply(
-                        PassionMusicForegroundGuard.PROFILE, 30, original, out));
+        reject(() -> PassionMusicForegroundGuard.apply(TestProfiles.SYNTHETIC, 28, original, dex));
+        reject(() -> PassionMusicForegroundGuard.apply(TestProfiles.SYNTHETIC, 30, original, null));
+        reject(() -> PassionMusicForegroundGuard.apply(TestProfiles.SYNTHETIC, 30, original, out));
         Path wrong = stage.resolve("wrong.apk");
         Files.writeString(wrong, "not owner");
-        reject(() ->
-                PassionMusicForegroundGuard.apply(
-                        PassionMusicForegroundGuard.PROFILE, 30, wrong, dex));
+        reject(() -> PassionMusicForegroundGuard.apply(TestProfiles.SYNTHETIC, 30, wrong, dex));
         reject(() -> PassionMusicForegroundGuard.validateAfter(changed(after, 13, 3, 0)));
         reject(() -> PassionMusicForegroundGuard.validateAfter(changed(after, 13, 2, 1)));
         var originalEntries = NativeCore.entries(original);
@@ -118,18 +105,12 @@ public final class PassionMusicForegroundGuardTest {
         chained.put(
                 "classes.dex",
                 PassionBluetoothRoleGuard.apply(
-                        PassionBluetoothRoleGuard.PROFILE,
-                        30,
-                        original,
-                        chained.get("classes.dex")));
+                        TestProfiles.SYNTHETIC, 30, original, chained.get("classes.dex")));
         byte[] role = chained.get("classes.dex");
         chained.put(
                 "classes2.dex",
                 PassionMusicForegroundGuard.apply(
-                        PassionMusicForegroundGuard.PROFILE,
-                        30,
-                        original,
-                        chained.get("classes2.dex")));
+                        TestProfiles.SYNTHETIC, 30, original, chained.get("classes2.dex")));
         check(Arrays.equals(role, chained.get("classes.dex")));
         int changes = 0;
 

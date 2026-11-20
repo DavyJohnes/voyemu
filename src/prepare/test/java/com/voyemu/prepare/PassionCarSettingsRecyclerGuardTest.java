@@ -45,8 +45,7 @@ public final class PassionCarSettingsRecyclerGuardTest {
                         != Opcode.SGET,
                 "RED: OEM does not reuse Car UI recycler without automotive feature");
         byte[] output =
-                PassionCarSettingsRecyclerGuard.apply(
-                        PassionCarSettingsRecyclerGuard.PROFILE, 30, apk, input);
+                PassionCarSettingsRecyclerGuard.apply(TestProfiles.SYNTHETIC, 30, apk, input);
         var actual = new DexBackedDexFile(Opcodes.forApi(30), output);
         var after = PassionCarSettingsRecyclerGuard.method(actual);
         var ops = new ArrayList<Instruction>();
@@ -77,10 +76,7 @@ public final class PassionCarSettingsRecyclerGuardTest {
                                         PassionCarSettingsRecyclerGuard.rewrite(actual, true)
                                                 .getClasses())),
                 "Inverse restores all classes and debug metadata");
-        reject(() -> PassionCarSettingsRecyclerGuard.apply("other", 30, apk, input));
-        reject(() ->
-                PassionCarSettingsRecyclerGuard.apply(
-                        PassionCarSettingsRecyclerGuard.PROFILE, 29, apk, input));
+        reject(() -> PassionCarSettingsRecyclerGuard.apply(TestProfiles.SYNTHETIC, 29, apk, input));
         System.out.println(
                 "OEM recycler RED -> guarded path GREEN; fallback and inverse verified; runtime"
                         + " pending");

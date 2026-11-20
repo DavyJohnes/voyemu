@@ -697,8 +697,7 @@ public final class PreparationMain {
         }
 
         boolean powerHelpers =
-                PassionPowerHelperContract.requested(
-                        profile.referenceProfile(), Json.obj(profile.data(), "patches"));
+                PassionPowerHelperContract.requested(Json.obj(profile.data(), "patches"));
         Map<String, Path> artifacts = builder.build();
         registry.verifySource(profile);
         requireUnchanged(tracked, profile, storage, checked);
@@ -707,9 +706,8 @@ public final class PreparationMain {
                         artifacts,
                         powerHelpers,
                         PassionGeneratedHelperContract.requested(
-                                profile.referenceProfile(), Json.obj(profile.data(), "patches")),
-                        PassionMcuHelperContract.requested(
-                                profile.referenceProfile(), Json.obj(profile.data(), "patches")));
+                                Json.obj(profile.data(), "patches")),
+                        PassionMcuHelperContract.requested(Json.obj(profile.data(), "patches")));
         plan.put("artifacts", outputs);
         plan.put("artifacts_built", true);
 

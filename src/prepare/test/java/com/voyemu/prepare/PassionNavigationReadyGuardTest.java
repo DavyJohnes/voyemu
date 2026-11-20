@@ -45,12 +45,13 @@ public class PassionNavigationReadyGuardTest {
                 original =
                         root.resolve(
                                 ".local/profiles/"
-                                        + PassionNavigationReadyGuard.PROFILE
+                                        + TestProfiles.pinning(
+                                                root, PassionNavigationReadyGuard.APK)
                                         + "/originals/LY_Launcher.apk");
         byte[] raw = dex(original);
         byte[] changed =
                 PassionNavigationReadyGuard.applyPrepared(
-                        PassionNavigationReadyGuard.PROFILE, 30, original, raw);
+                        TestProfiles.SYNTHETIC, 30, original, raw);
         var before = PassionServiceForegroundGuard.classes(raw);
         var after = PassionServiceForegroundGuard.classes(changed);
         int negative = 0;
@@ -98,23 +99,16 @@ public class PassionNavigationReadyGuardTest {
             negative++;
         }
 
-        reject(() -> PassionNavigationReadyGuard.applyPrepared("foreign", 30, original, raw));
-        negative++;
         reject(() ->
                 PassionNavigationReadyGuard.applyPrepared(
-                        PassionNavigationReadyGuard.PROFILE, 29, original, raw));
+                        TestProfiles.SYNTHETIC, 29, original, raw));
         negative++;
-        byte[] prior =
-                PassionSidebarGuard.apply(PassionNavigationReadyGuard.PROFILE, 30, original, raw);
-        prior =
-                PassionBluetoothVolumeGuard.apply(
-                        PassionNavigationReadyGuard.PROFILE, 30, original, prior);
-        prior =
-                PassionLauncherAudioGuard.apply(
-                        PassionNavigationReadyGuard.PROFILE, 30, original, prior);
+        byte[] prior = PassionSidebarGuard.apply(TestProfiles.SYNTHETIC, 30, original, raw);
+        prior = PassionBluetoothVolumeGuard.apply(TestProfiles.SYNTHETIC, 30, original, prior);
+        prior = PassionLauncherAudioGuard.apply(TestProfiles.SYNTHETIC, 30, original, prior);
         byte[] prepared =
                 PassionNavigationReadyGuard.applyPrepared(
-                        PassionNavigationReadyGuard.PROFILE, 30, original, prior);
+                        TestProfiles.SYNTHETIC, 30, original, prior);
         Files.writeString(
                 out.resolve("nav-guard-receipt.json"),
                 Json.write(

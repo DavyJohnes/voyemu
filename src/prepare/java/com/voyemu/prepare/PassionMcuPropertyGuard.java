@@ -26,7 +26,6 @@ import java.util.TreeMap;
 
 /** Only the original Monza factory's IProperty argument is decorated. */
 final class PassionMcuPropertyGuard {
-    static final String PROFILE = "passion-11-russian-20260403-2.1.4.80";
     static final String PIN = "5cd091682a3ba6aa054a0b545a2c5a853e3e5bff7129f7319ebe8d583eccea98";
     static final String OWNER = "Lcom/mega/car/CarServiceFactory;",
             BRIDGE = "Lcom/voyemu/vehicle/PassionMcuBridge;";
@@ -194,11 +193,7 @@ final class PassionMcuPropertyGuard {
     static Path compileHelper(
             String profile, int api, Path apk, Path source, Path platform, Path work)
             throws Exception {
-        require(
-                PROFILE.equals(profile)
-                        && api == 30
-                        && FilesSupport.hash(apk).equals(PIN)
-                        && !Files.exists(work));
+        require(api == 30 && FilesSupport.hash(apk).equals(PIN) && !Files.exists(work));
         require(GuestJava.sources(source).equals(SOURCES));
         Path output =
                 GuestJava.dex(new GuestJava.Unit(source, api), platform, work.resolve("java"));
@@ -251,11 +246,7 @@ final class PassionMcuPropertyGuard {
     }
 
     static void validate(String profile, int api, Path apk, byte[] dex) throws Exception {
-        require(
-                PROFILE.equals(profile)
-                        && api == 30
-                        && FilesSupport.hash(apk).equals(PIN)
-                        && dex != null);
+        require(api == 30 && FilesSupport.hash(apk).equals(PIN) && dex != null);
         rewrite(new DexBackedDexFile(Opcodes.forApi(30), dex), false);
     }
 

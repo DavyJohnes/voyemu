@@ -22,7 +22,10 @@ public class PassionSystemExtReceiptTest {
         Map<String, Object> base =
                 Json.obj(
                         new ProfileRegistry(Path.of(args[0]).toRealPath())
-                                .get("passion-11-russian-20260403-2.1.4.80")
+                                .get(
+                                        TestProfiles.declaring(
+                                                Path.of(args[0]).toRealPath(),
+                                                PassionSecondaryNavigationGuard.NAME))
                                 .data(),
                         "android");
         Map<String, Object> receipt =

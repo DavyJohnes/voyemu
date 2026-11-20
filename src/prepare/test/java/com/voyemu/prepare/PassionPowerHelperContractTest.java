@@ -76,7 +76,11 @@ public final class PassionPowerHelperContractTest {
 
         Files.createDirectories(work.getParent());
         Files.createDirectory(work);
-        Path patches = root.resolve("profiles/" + PassionDisplayPowerGuard.PROFILE + "/patches");
+        Path patches =
+                root.resolve(
+                        "profiles/"
+                                + TestProfiles.declaring(root, PassionDisplayPowerGuard.NAME)
+                                + "/patches");
         Map<String, Object> absent =
                 Map.of(
                         "passion-api30-secondary-navigation", Map.of("steps", List.of()),
@@ -92,17 +96,10 @@ public final class PassionPowerHelperContractTest {
                                 Map.of("steps", List.of("passion-api30-display-power.json")),
                         "MegaNexusService",
                                 Map.of("steps", List.of("passion-api30-nexus-power.json")));
-        check(
-                !PassionPowerHelperContract.requested(PassionDisplayPowerGuard.PROFILE, absent),
-                "no-power graph changed");
-        reject(() ->
-                PassionPowerHelperContract.requested(PassionDisplayPowerGuard.PROFILE, partial));
-        check(
-                !PassionPowerHelperContract.requested("unrelated", Map.of()),
-                "unrelated profile changed");
-        check(
-                PassionPowerHelperContract.requested(PassionDisplayPowerGuard.PROFILE, declared),
-                "declared graph missed");
+        check(!PassionPowerHelperContract.requested(absent), "no-power graph changed");
+        reject(() -> PassionPowerHelperContract.requested(partial));
+        check(!PassionPowerHelperContract.requested(Map.of()), "undeclared graph changed");
+        check(PassionPowerHelperContract.requested(declared), "declared graph missed");
 
         for (String artifact :
                 List.of(PassionPowerHelperContract.SDK, PassionPowerHelperContract.OEM)) {

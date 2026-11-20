@@ -34,11 +34,8 @@ public class PassionSettingsBluetoothRoleGuardTest {
 
         reject(() ->
                 PassionBluetoothRoleGuard.validateMethod(PassionBluetoothRoleGuard.method(dex)));
-        PassionSettingsBluetoothRoleGuard.validate(
-                PassionSettingsBluetoothRoleGuard.PROFILE, 30, p, d);
-        byte[] out =
-                PassionSettingsBluetoothRoleGuard.apply(
-                        PassionSettingsBluetoothRoleGuard.PROFILE, 30, p, d);
+        PassionSettingsBluetoothRoleGuard.validate(TestProfiles.SYNTHETIC, 30, p, d);
+        byte[] out = PassionSettingsBluetoothRoleGuard.apply(TestProfiles.SYNTHETIC, 30, p, d);
         var actual = new DexBackedDexFile(Opcodes.forApi(30), out);
         var m = PassionSettingsBluetoothRoleGuard.method(actual);
         int at = 0;
@@ -63,13 +60,8 @@ public class PassionSettingsBluetoothRoleGuardTest {
             throw new AssertionError("optional role flag must be false");
         }
 
-        reject(() -> PassionSettingsBluetoothRoleGuard.apply("other", 30, p, d));
-        reject(() ->
-                PassionSettingsBluetoothRoleGuard.apply(
-                        PassionSettingsBluetoothRoleGuard.PROFILE, 29, p, d));
-        reject(() ->
-                PassionSettingsBluetoothRoleGuard.apply(
-                        PassionSettingsBluetoothRoleGuard.PROFILE, 30, p, out));
+        reject(() -> PassionSettingsBluetoothRoleGuard.apply(TestProfiles.SYNTHETIC, 29, p, d));
+        reject(() -> PassionSettingsBluetoothRoleGuard.apply(TestProfiles.SYNTHETIC, 30, p, out));
         System.out.println(
                 "CarSettings role OEM RED -> false optional role GREEN, full inverse + four"
                         + " rejection cases PASS");

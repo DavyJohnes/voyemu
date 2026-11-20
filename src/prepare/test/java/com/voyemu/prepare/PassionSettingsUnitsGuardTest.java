@@ -25,7 +25,7 @@ public final class PassionSettingsUnitsGuardTest {
     public static void main(String[] a) throws Exception {
         Path apk = Path.of(a[0]);
         byte[] raw = NativeCore.entries(apk).get("classes5.dex");
-        String p = PassionSettingsUnitsGuard.PROFILE;
+        String p = TestProfiles.SYNTHETIC;
 
         PassionSettingsUnitsGuard.validateOriginalChain(p, 30, apk, raw);
         byte[] prior = PassionSettingsSoundGuard.apply(p, 30, apk, raw),
@@ -58,7 +58,6 @@ public final class PassionSettingsUnitsGuardTest {
             throw new AssertionError("both lifecycle methods required");
         }
 
-        rejects(() -> PassionSettingsUnitsGuard.apply("wrong", 30, apk, prior));
         rejects(() -> PassionSettingsUnitsGuard.apply(p, 29, apk, prior));
         rejects(() -> PassionSettingsUnitsGuard.apply(p, 30, apk, out));
         System.out.println(

@@ -22,7 +22,7 @@ public class GuestChainPreflightTest {
             Path original =
                     root.resolve(
                             ".local/profiles/"
-                                    + PassionGuestNullGuards.PROFILE
+                                    + TestProfiles.pinning(root, PassionGuestNullGuards.ECU.apk())
                                     + "/originals/"
                                     + role
                                     + ".apk");
@@ -33,10 +33,10 @@ public class GuestChainPreflightTest {
 
             if (role.equals("LY_Launcher")) {
                 PassionNavigationReadyGuard.validateOriginalChain(
-                        PassionGuestNullGuards.PROFILE, 30, original, raw);
+                        TestProfiles.SYNTHETIC, 30, original, raw);
             } else {
                 PassionGuestNullGuards.validateOriginalChain(
-                        PassionGuestNullGuards.PROFILE,
+                        TestProfiles.SYNTHETIC,
                         30,
                         original,
                         raw,

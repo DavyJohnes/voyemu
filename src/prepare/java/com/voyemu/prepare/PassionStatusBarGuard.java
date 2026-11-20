@@ -23,8 +23,7 @@ import java.util.TreeMap;
 
 /** Only the pinned AOSP status-bar window is collapsed; OEM bars retain their own lifecycle. */
 final class PassionStatusBarGuard {
-    static final String PROFILE = "passion-11-russian-20260403-2.1.4.80",
-            NAME = "passion-api30-statusbar";
+    static final String NAME = "passion-api30-statusbar";
     static final String PIN = "e66e289a7d5f7bd807a1310b91b83758a2eb8b1400dd882d59ebc57bab49c897";
     static final String OWNER = "Lcom/android/systemui/statusbar/phone/StatusBarWindowController;",
             ROUTER = "Lcom/voyemu/output/PassionStatusBarWindow;";
@@ -68,11 +67,7 @@ final class PassionStatusBarGuard {
     }
 
     static void validate(String profile, int api, Path original, byte[] dex) throws Exception {
-        require(
-                PROFILE.equals(profile)
-                        && api == 30
-                        && original != null
-                        && FilesSupport.hash(original).equals(PIN));
+        require(api == 30 && original != null && FilesSupport.hash(original).equals(PIN));
         require(dex != null);
 
         for (var m : methods(dex)) {

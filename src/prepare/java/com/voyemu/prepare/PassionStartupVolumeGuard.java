@@ -8,9 +8,7 @@ import java.nio.file.Path;
  * rewrite itself delegates to the same instruction sequence.
  */
 final class PassionStartupVolumeGuard {
-    static final String PROFILE = "passion-11-russian-20260403-2.1.4.80",
-            NAME = "passion-api30-startup-volume",
-            DEX = "classes.dex";
+    static final String NAME = "passion-api30-startup-volume", DEX = "classes.dex";
     static final String PIN = "c6992cdc2a3e23d5aeb6ab77e7a7f6889cfcf5c262c6ed86825e6fcbf601681d";
 
     private PassionStartupVolumeGuard() {}
@@ -24,21 +22,13 @@ final class PassionStartupVolumeGuard {
     }
 
     static void validate(String profile, int api, Path original, byte[] dex) throws Exception {
-        need(
-                PROFILE.equals(profile)
-                        && api == 30
-                        && dex != null
-                        && PIN.equals(FilesSupport.hash(original)));
+        need(api == 30 && dex != null && PIN.equals(FilesSupport.hash(original)));
         StartupVolumeGuard.rewriter().validate(PassionServiceForegroundGuard.classes(dex));
     }
 
     static void validateOriginalChain(String profile, int api, Path original, byte[] dex)
             throws Exception {
-        need(
-                PROFILE.equals(profile)
-                        && api == 30
-                        && PIN.equals(FilesSupport.hash(original))
-                        && dex != null);
+        need(api == 30 && PIN.equals(FilesSupport.hash(original)) && dex != null);
         validate(
                 profile,
                 api,
@@ -55,11 +45,7 @@ final class PassionStartupVolumeGuard {
 
     static byte[] apply(String profile, int api, Path original, byte[] predecessor)
             throws Exception {
-        need(
-                PROFILE.equals(profile)
-                        && api == 30
-                        && predecessor != null
-                        && PIN.equals(FilesSupport.hash(original)));
+        need(api == 30 && predecessor != null && PIN.equals(FilesSupport.hash(original)));
 
         return StartupVolumeGuard.rewriter()
                 .applyBytes(PassionServiceForegroundGuard.classes(predecessor));

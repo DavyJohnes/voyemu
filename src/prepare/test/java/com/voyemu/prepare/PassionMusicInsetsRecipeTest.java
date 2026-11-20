@@ -141,7 +141,13 @@ public final class PassionMusicInsetsRecipeTest {
         reject(name, foreignPins, new Target());
 
         if (args.length > 0) {
-            Path profile = Path.of(args[0]).resolve("profiles/" + PassionMusicInsetsGuard.PROFILE);
+            Path profile =
+                    Path.of(args[0])
+                            .resolve(
+                                    "profiles/"
+                                            + TestProfiles.declaring(
+                                                    Path.of(args[0]),
+                                                    PassionMusicInsetsGuard.NAME));
             var real =
                     Json.object(Json.parse(Files.readString(profile.resolve("patches/" + name))));
             real.put("sourceSha256", "a".repeat(64));

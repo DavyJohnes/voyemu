@@ -27,8 +27,7 @@ import java.util.Set;
 
 /** The clean API30 stack does not offer the owner's optional Bluetooth role-switch extension. */
 final class PassionBluetoothRoleGuard {
-    static final String PROFILE = "passion-11-russian-20260403-2.1.4.80",
-            NAME = "passion-api30-bluetooth-role";
+    static final String NAME = "passion-api30-bluetooth-role";
     static final Set<String> PINS =
             Set.of(
                     "a3c788860d5df27277d53ffbf838daaefddb6ab098ad52b636671dd70b34765d",
@@ -133,7 +132,7 @@ final class PassionBluetoothRoleGuard {
     static void validate(String profile, int api, Path original, byte[] dex) throws Exception {
         String pin = FilesSupport.hash(original);
 
-        require(PROFILE.equals(profile) && api == 30 && PINS.contains(pin) && dex != null);
+        require(api == 30 && PINS.contains(pin) && dex != null);
         validateMethod(method(new DexBackedDexFile(Opcodes.forApi(30), dex)));
     }
 

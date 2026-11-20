@@ -28,8 +28,7 @@ import java.util.TreeMap;
 /** Exact pinned SDK power hooks; helper placement is a separate ordinary recipe dependency. */
 public final class PassionDisplayPowerGuard {
     static final String NAME = "passion-api30-display-power";
-    static final String PROFILE = "passion-11-russian-20260403-2.1.4.80",
-            PIN = "c6992cdc2a3e23d5aeb6ab77e7a7f6889cfcf5c262c6ed86825e6fcbf601681d",
+    static final String PIN = "c6992cdc2a3e23d5aeb6ab77e7a7f6889cfcf5c262c6ed86825e6fcbf601681d",
             DMS = "Lcom/android/server/display/DisplayManagerService;",
             BINDER = "Lcom/android/server/display/DisplayManagerService$BinderService;";
 
@@ -47,11 +46,7 @@ public final class PassionDisplayPowerGuard {
     }
 
     static void validate(String profile, int api, Path jar, byte[] dex) throws Exception {
-        check(
-                PROFILE.equals(profile)
-                        && api == 30
-                        && FilesSupport.hash(jar).equals(PIN)
-                        && dex != null);
+        check(api == 30 && FilesSupport.hash(jar).equals(PIN) && dex != null);
         int count = 0;
 
         for (var c : new DexBackedDexFile(Opcodes.forApi(30), dex).getClasses()) {

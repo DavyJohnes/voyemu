@@ -34,8 +34,7 @@ import java.util.TreeMap;
  * behavior.
  */
 final class PassionMusicForegroundGuard {
-    static final String PROFILE = "passion-11-russian-20260403-2.1.4.80",
-            NAME = "passion-api30-music-foreground";
+    static final String NAME = "passion-api30-music-foreground";
     static final String PIN = "a3c788860d5df27277d53ffbf838daaefddb6ab098ad52b636671dd70b34765d";
     static final String OWNER = "Lcom/voyah/local/core/service/MusicService;",
             OLD_ID = "MusicService",
@@ -212,11 +211,7 @@ final class PassionMusicForegroundGuard {
     }
 
     static void validate(String profile, int api, Path original, byte[] dex) throws Exception {
-        require(
-                PROFILE.equals(profile)
-                        && api == 30
-                        && FilesSupport.hash(original).equals(PIN)
-                        && dex != null);
+        require(api == 30 && FilesSupport.hash(original).equals(PIN) && dex != null);
         var source = new DexBackedDexFile(Opcodes.forApi(30), dex);
         validateMethod(method(source));
         validateMethod(method(source, BRIDGE));

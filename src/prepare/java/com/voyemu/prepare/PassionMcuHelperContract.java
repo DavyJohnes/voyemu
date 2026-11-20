@@ -9,9 +9,8 @@ final class PassionMcuHelperContract {
 
     private PassionMcuHelperContract() {}
 
-    static boolean requested(String profile, Map<String, Object> patches) {
-        return PassionMcuPropertyGuard.PROFILE.equals(profile)
-                && patches.containsKey("MonzaCarService")
+    static boolean requested(Map<String, Object> patches) {
+        return patches.containsKey("MonzaCarService")
                 && Json.list(Json.obj(patches, "MonzaCarService").get("steps"))
                         .contains("passion-api30-mcu-property.json");
     }

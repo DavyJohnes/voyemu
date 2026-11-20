@@ -142,7 +142,10 @@ public final class PassionSettingsAudioBluetoothRecipeTest {
             reject(name, recipe(List.of(op)), wrong);
             Path file =
                     root.resolve(
-                            "profiles/" + PassionSettingsSoundGuard.PROFILE + "/patches/" + name);
+                            "profiles/"
+                                    + TestProfiles.declaring(root, PassionSettingsSoundGuard.NAME)
+                                    + "/patches/"
+                                    + name);
             var real = Json.object(Json.parse(Files.readString(file)));
             real.put("sourceSha256", "a".repeat(64));
             Target current = new Target();
@@ -153,19 +156,14 @@ public final class PassionSettingsAudioBluetoothRecipeTest {
         Path source =
                 root.resolve(
                         "profiles/"
-                                + PassionSettingsSoundGuard.PROFILE
+                                + TestProfiles.declaring(root, PassionSettingsSoundGuard.NAME)
                                 + "/patches/"
                                 + PassionSettingsSoundGuard.NAME
                                 + "/src");
         PassionSettingsSoundGuard.validateSource(source);
         Path dex =
                 PassionSettingsSoundGuard.compileHelper(
-                        PassionSettingsSoundGuard.PROFILE,
-                        30,
-                        apk,
-                        source,
-                        platform,
-                        work.resolve("helper"));
+                        TestProfiles.SYNTHETIC, 30, apk, source, platform, work.resolve("helper"));
         check(Files.isRegularFile(dex));
         System.out.println(
                 "Passion Settings exact recipe dispatch, negative cases and pinned helper DEX"

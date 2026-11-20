@@ -29,9 +29,7 @@ import java.util.List;
  * Fit the pinned Music activity below the OEM status bar and select its local OEM night palette.
  */
 final class PassionMusicInsetsGuard {
-    static final String PROFILE = PassionMusicForegroundGuard.PROFILE,
-            NAME = "passion-api30-music-insets",
-            PIN = PassionMusicForegroundGuard.PIN;
+    static final String NAME = "passion-api30-music-insets", PIN = PassionMusicForegroundGuard.PIN;
     static final String OWNER = "Lcom/voyah/multimedia/ui/MainActivity;";
     static final String IMMERSIVE =
             "Lcom/voyah/baselibrary/utils/WindowScreenUtil;->setTransparentImmersive(Landroid/view/Window;)V";
@@ -87,11 +85,7 @@ final class PassionMusicInsetsGuard {
     }
 
     static void validate(String profile, int api, Path original, byte[] dex) throws Exception {
-        require(
-                PROFILE.equals(profile)
-                        && api == 30
-                        && FilesSupport.hash(original).equals(PIN)
-                        && dex != null);
+        require(api == 30 && FilesSupport.hash(original).equals(PIN) && dex != null);
         validateMethod(method(new DexBackedDexFile(Opcodes.forApi(30), dex)));
     }
 

@@ -162,21 +162,18 @@ public final class PassionStatusBarGuardTest {
         }
 
         check(red, "Original must fail desired lifecycle policy");
-        byte[] output = PassionStatusBarGuard.apply(PassionStatusBarGuard.PROFILE, 30, original, d);
+        byte[] output = PassionStatusBarGuard.apply(TestProfiles.SYNTHETIC, 30, original, d);
         verify(d, output);
-        reject(() -> PassionStatusBarGuard.apply("other", 30, original, d));
-        reject(() -> PassionStatusBarGuard.apply(PassionStatusBarGuard.PROFILE, 28, original, d));
-        reject(() ->
-                PassionStatusBarGuard.apply(PassionStatusBarGuard.PROFILE, 30, original, null));
-        reject(() ->
-                PassionStatusBarGuard.apply(PassionStatusBarGuard.PROFILE, 30, original, output));
-        reject(() -> PassionStatusBarGuard.apply(PassionStatusBarGuard.PROFILE, 30, null, d));
+        reject(() -> PassionStatusBarGuard.apply(TestProfiles.SYNTHETIC, 28, original, d));
+        reject(() -> PassionStatusBarGuard.apply(TestProfiles.SYNTHETIC, 30, original, null));
+        reject(() -> PassionStatusBarGuard.apply(TestProfiles.SYNTHETIC, 30, original, output));
+        reject(() -> PassionStatusBarGuard.apply(TestProfiles.SYNTHETIC, 30, null, d));
         Path destination = Path.of(a[1]);
         Path wrong = destination.resolveSibling("wrong-original.apk");
         Files.writeString(wrong, "wrong original", StandardOpenOption.CREATE_NEW);
 
         try {
-            reject(() -> PassionStatusBarGuard.apply(PassionStatusBarGuard.PROFILE, 30, wrong, d));
+            reject(() -> PassionStatusBarGuard.apply(TestProfiles.SYNTHETIC, 30, wrong, d));
         } finally {
             Files.delete(wrong);
         }

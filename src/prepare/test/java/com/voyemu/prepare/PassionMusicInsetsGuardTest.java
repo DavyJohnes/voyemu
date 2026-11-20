@@ -153,13 +153,12 @@ public final class PassionMusicInsetsGuardTest {
                 original =
                         root.resolve(
                                 ".local/profiles/"
-                                        + PassionMusicInsetsGuard.PROFILE
+                                        + TestProfiles.declaring(root, PassionMusicInsetsGuard.NAME)
                                         + "/originals/LY_Multimedia.apk");
         var originalEntries = NativeCore.entries(original);
         byte[] raw = originalEntries.get("classes2.dex");
         byte[] prepared =
-                PassionMusicForegroundGuard.apply(
-                        PassionMusicInsetsGuard.PROFILE, 30, original, raw);
+                PassionMusicForegroundGuard.apply(TestProfiles.SYNTHETIC, 30, original, raw);
         var source = dex(prepared);
 
         check(helperVisibility(source) == 0x700, "Pinned shared helper original 0x700");
@@ -175,15 +174,12 @@ public final class PassionMusicInsetsGuardTest {
 
         Files.createDirectory(stage);
         check(visibilityAtContent(source) == 0x700, "Regression exists in actual preguard input");
-        PassionMusicInsetsGuard.validateOriginalChain(
-                PassionMusicInsetsGuard.PROFILE, 30, original, raw);
-        PassionMusicInsetsGuard.validate(PassionMusicInsetsGuard.PROFILE, 30, original, prepared);
+        PassionMusicInsetsGuard.validateOriginalChain(TestProfiles.SYNTHETIC, 30, original, raw);
+        PassionMusicInsetsGuard.validate(TestProfiles.SYNTHETIC, 30, original, prepared);
         var before = PassionMusicInsetsGuard.method(source);
         PassionMusicInsetsGuard.validateMethod(before);
         reject(() -> PassionMusicInsetsGuard.validateAfter(before));
-        byte[] out =
-                PassionMusicInsetsGuard.apply(
-                        PassionMusicInsetsGuard.PROFILE, 30, original, prepared);
+        byte[] out = PassionMusicInsetsGuard.apply(TestProfiles.SYNTHETIC, 30, original, prepared);
         var actual = dex(out);
         var after = PassionMusicInsetsGuard.method(actual);
         PassionMusicInsetsGuard.validateAfter(after);
@@ -280,19 +276,12 @@ public final class PassionMusicInsetsGuardTest {
 
     static void rejectWrongInputs(
             Path original, Path stage, byte[] raw, byte[] prepared, byte[] out) throws Exception {
-        reject(() -> PassionMusicInsetsGuard.apply("other", 30, original, prepared));
-        reject(() ->
-                PassionMusicInsetsGuard.apply(
-                        PassionMusicInsetsGuard.PROFILE, 29, original, prepared));
-        reject(() ->
-                PassionMusicInsetsGuard.apply(PassionMusicInsetsGuard.PROFILE, 30, original, null));
-        reject(() ->
-                PassionMusicInsetsGuard.apply(PassionMusicInsetsGuard.PROFILE, 30, original, out));
+        reject(() -> PassionMusicInsetsGuard.apply(TestProfiles.SYNTHETIC, 29, original, prepared));
+        reject(() -> PassionMusicInsetsGuard.apply(TestProfiles.SYNTHETIC, 30, original, null));
+        reject(() -> PassionMusicInsetsGuard.apply(TestProfiles.SYNTHETIC, 30, original, out));
         Path wrong = stage.resolve("wrong.apk");
         Files.writeString(wrong, "wrong original");
-        reject(() ->
-                PassionMusicInsetsGuard.apply(
-                        PassionMusicInsetsGuard.PROFILE, 30, wrong, prepared));
+        reject(() -> PassionMusicInsetsGuard.apply(TestProfiles.SYNTHETIC, 30, wrong, prepared));
     }
 
     static void checkAfterMutations(Method before, Method after) throws Exception {
@@ -335,10 +324,7 @@ public final class PassionMusicInsetsGuardTest {
         chained.put(
                 "classes.dex",
                 PassionBluetoothRoleGuard.apply(
-                        PassionBluetoothRoleGuard.PROFILE,
-                        30,
-                        original,
-                        chained.get("classes.dex")));
+                        TestProfiles.SYNTHETIC, 30, original, chained.get("classes.dex")));
         chained.put("classes2.dex", prepared);
         var prior = new TreeMap<String, byte[]>(chained);
         chained.put("classes2.dex", out);

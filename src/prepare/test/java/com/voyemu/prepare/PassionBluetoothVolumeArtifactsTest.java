@@ -37,8 +37,8 @@ public final class PassionBluetoothVolumeArtifactsTest {
 
         Files.createDirectory(stage);
         var request = Json.object(Json.parse(Files.readString(Path.of(args[3]))));
-        var registry = new ProfileRegistry(root, PassionServiceForegroundGuard.PROFILE);
-        var profile = registry.get(PassionServiceForegroundGuard.PROFILE);
+        var registry = new ProfileRegistry(root, TestProfiles.SYNTHETIC);
+        var profile = registry.get(TestProfiles.SYNTHETIC);
         Path local = root.resolve(".local");
         var storage =
                 new Storage(

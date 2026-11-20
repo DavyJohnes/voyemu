@@ -19,8 +19,7 @@ import java.util.TreeMap;
 
 /** A restored Electric fragment may be destroyed before its binding exists. */
 final class PassionVehicleAnimationGuard {
-    static final String PROFILE = "passion-11-russian-20260403-2.1.4.80",
-            NAME = "passion-api30-vehicle-animation";
+    static final String NAME = "passion-api30-vehicle-animation";
     static final String PIN = "a5fb5daed4a295a568daf0390858a0bd00782b1384e66b13a96f66d43ad43e60";
     static final String OWNER = "Lcom/voyah/car/ui/power/ElectricFragmentN;",
             METHOD = "clearAnimation";
@@ -170,8 +169,7 @@ final class PassionVehicleAnimationGuard {
 
     static void validateInput(String profile, int api, Path original, byte[] dex) throws Exception {
         need(
-                PROFILE.equals(profile)
-                        && api == 30
+                api == 30
                         && original != null
                         && FilesSupport.hash(original).equals(PIN)
                         && dex != null);

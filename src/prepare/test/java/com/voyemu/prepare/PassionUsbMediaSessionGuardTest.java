@@ -28,11 +28,10 @@ public final class PassionUsbMediaSessionGuardTest {
             raw = zip.getInputStream(zip.getEntry("classes2.dex")).readAllBytes();
         }
 
-        String profile = PassionUsbMediaSessionGuard.PROFILE;
+        String profile = TestProfiles.SYNTHETIC;
         PassionUsbMediaSessionGuard.validateOriginalChain(profile, 30, apk, raw);
         byte[] foreground = PassionMusicForegroundGuard.apply(profile, 30, apk, raw),
                 prepared = PassionMusicInsetsGuard.apply(profile, 30, apk, foreground);
-        rejects(() -> PassionUsbMediaSessionGuard.validate("wrong", 30, apk, prepared));
         rejects(() -> PassionUsbMediaSessionGuard.validate(profile, 29, apk, prepared));
         byte[] patched = PassionUsbMediaSessionGuard.apply(profile, 30, apk, prepared);
         rejects(() -> PassionUsbMediaSessionGuard.apply(profile, 30, apk, patched));

@@ -492,8 +492,7 @@ public final class PassionStatusBarInsetsPolicyTest {
         }
 
         byte[] passion =
-                PassionSecondaryNavigationGuard.apply(
-                        PassionSecondaryNavigationGuard.PROFILE, 30, input, raw);
+                PassionSecondaryNavigationGuard.apply(TestProfiles.SYNTHETIC, 30, input, raw);
         var actual = dex(passion);
         primaryPath(dex(free), actual);
         debugMetadata(dex(raw), actual);
@@ -519,7 +518,11 @@ public final class PassionStatusBarInsetsPolicyTest {
                                                 .getClasses())),
                 "All-class semantic inverse, handlers/debug and primary path restored");
         configurationMatrix(dex(free), actual);
-        Path profileRoot = root.resolve("profiles/" + PassionSecondaryNavigationGuard.PROFILE);
+        Path profileRoot =
+                root.resolve(
+                        "profiles/"
+                                + TestProfiles.declaring(
+                                        root, PassionSecondaryNavigationGuard.NAME));
         var factory = DocumentBuilderFactory.newInstance();
         factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
         var xml =

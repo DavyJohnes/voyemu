@@ -21,8 +21,7 @@ import java.util.TreeMap;
 
 /** Guard the reproduced optional automotive manager without inventing mute state. */
 final class PassionLauncherAudioGuard {
-    static final String PROFILE = PassionServiceForegroundGuard.PROFILE,
-            NAME = "passion-api30-launcher-audio",
+    static final String NAME = "passion-api30-launcher-audio",
             PIN = "4032f14c0fc49fd52514737309d2af67c9d4ff9340dd534874f46cbe2e748c00";
     static final String OWNER = "Lcom/voyah/os/carsystemui/viewmodel/ExpandStatusViewModel;",
             BAR = "Lcom/voyah/os/carsystemui/view/ExpandStatusBar;",
@@ -178,11 +177,7 @@ final class PassionLauncherAudioGuard {
     }
 
     static void validate(String profile, int api, Path original, byte[] dex) throws Exception {
-        require(
-                PROFILE.equals(profile)
-                        && api == 30
-                        && PIN.equals(FilesSupport.hash(original))
-                        && dex != null);
+        require(api == 30 && PIN.equals(FilesSupport.hash(original)) && dex != null);
         transform(classes(dex), false);
     }
 

@@ -51,8 +51,7 @@ public class PassionSettingsSoundGuardTest {
             }
         }
 
-        var out =
-                PassionSettingsSoundGuard.apply(PassionSettingsSoundGuard.PROFILE, 30, apk, input);
+        var out = PassionSettingsSoundGuard.apply(TestProfiles.SYNTHETIC, 30, apk, input);
         var actual = new DexBackedDexFile(Opcodes.forApi(30), out);
 
         if (!FrameworkDexMaterializer.semantic(before.getClasses())
@@ -62,9 +61,7 @@ public class PassionSettingsSoundGuardTest {
             throw new AssertionError("inverse differs");
         }
 
-        reject(() -> PassionSettingsSoundGuard.apply("other", 30, apk, input));
-        reject(() ->
-                PassionSettingsSoundGuard.apply(PassionSettingsSoundGuard.PROFILE, 29, apk, input));
+        reject(() -> PassionSettingsSoundGuard.apply(TestProfiles.SYNTHETIC, 29, apk, input));
         System.out.println(
                 "OEM null Car RED -> 3 guarded paths GREEN; full inverse and 4 negatives PASS;"
                         + " guest pending");

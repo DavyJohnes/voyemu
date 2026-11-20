@@ -142,7 +142,12 @@ public final class PassionSettingsUnitsRecipeTest {
 
         if (args.length > 0) {
             Path profile =
-                    Path.of(args[0]).resolve("profiles/" + PassionSettingsUnitsGuard.PROFILE);
+                    Path.of(args[0])
+                            .resolve(
+                                    "profiles/"
+                                            + TestProfiles.declaring(
+                                                    Path.of(args[0]),
+                                                    PassionSettingsUnitsGuard.NAME));
             var real =
                     Json.object(Json.parse(Files.readString(profile.resolve("patches/" + name))));
             real.put("sourceSha256", "a".repeat(64));

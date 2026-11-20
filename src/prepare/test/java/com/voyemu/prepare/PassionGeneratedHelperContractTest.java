@@ -94,20 +94,14 @@ public final class PassionGeneratedHelperContractTest {
                         "LY_Multimedia",
                         Map.of("steps", List.of("passion-api30-usb-media-session.json")));
         check(
-                PassionGeneratedHelperContract.requested(
-                                PassionSettingsSoundGuard.PROFILE, declared)
+                PassionGeneratedHelperContract.requested(declared)
                         .equals(
                                 Set.of(
                                         PassionGeneratedHelperContract.SOUND,
                                         PassionGeneratedHelperContract.USB)));
-        check(PassionGeneratedHelperContract.requested("foreign", declared).isEmpty());
+        check(PassionGeneratedHelperContract.requested(Map.of()).isEmpty());
         check(
                 PassionGeneratedHelperContract.requested(
-                                PassionSettingsSoundGuard.PROFILE, Map.of())
-                        .isEmpty());
-        check(
-                PassionGeneratedHelperContract.requested(
-                                PassionSettingsSoundGuard.PROFILE,
                                 Map.of(
                                         "CarSettings",
                                         Map.of("steps", List.of()),
@@ -137,27 +131,27 @@ public final class PassionGeneratedHelperContractTest {
             Path source =
                     root.resolve(
                             "profiles/"
-                                    + PassionSettingsSoundGuard.PROFILE
+                                    + TestProfiles.declaring(root, PassionSettingsSoundGuard.NAME)
                                     + "/patches/"
                                     + name
                                     + "/src");
             Path original =
                     root.resolve(
                             ".local/profiles/"
-                                    + PassionSettingsSoundGuard.PROFILE
+                                    + TestProfiles.declaring(root, PassionSettingsSoundGuard.NAME)
                                     + "/originals/"
                                     + (sound ? "CarSettings.apk" : "LY_Multimedia.apk"));
             Path helper =
                     sound
                             ? PassionSettingsSoundGuard.compileHelper(
-                                    PassionSettingsSoundGuard.PROFILE,
+                                    TestProfiles.SYNTHETIC,
                                     30,
                                     original,
                                     source,
                                     platform,
                                     work.resolve(name))
                             : PassionUsbMediaSessionGuard.compileHelper(
-                                    PassionSettingsSoundGuard.PROFILE,
+                                    TestProfiles.SYNTHETIC,
                                     30,
                                     original,
                                     source,

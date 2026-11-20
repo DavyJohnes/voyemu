@@ -41,7 +41,7 @@ public class PassionAmbientLightGuardTest {
         Path apk =
                 root.resolve(
                         ".local/profiles/"
-                                + PassionAmbientLightGuard.PROFILE
+                                + TestProfiles.declaring(root, PassionAmbientLightGuard.NAME)
                                 + "/originals/LY_Car.apk");
         int total = 0;
 
@@ -55,24 +55,17 @@ public class PassionAmbientLightGuardTest {
             byte[] ear;
 
             if (dex.equals("classes2.dex")) {
-                ear =
-                        PassionVehicleBluetoothGuard.apply(
-                                PassionAmbientLightGuard.PROFILE, 30, apk, raw);
+                ear = PassionVehicleBluetoothGuard.apply(TestProfiles.SYNTHETIC, 30, apk, raw);
             } else {
-                byte[] audio =
-                        PassionVehicleAudioGuard.apply(
-                                PassionAmbientLightGuard.PROFILE, 30, apk, raw);
-                ear =
-                        PassionBluetoothVolumeGuard.apply(
-                                PassionAmbientLightGuard.PROFILE, 30, apk, audio);
+                byte[] audio = PassionVehicleAudioGuard.apply(TestProfiles.SYNTHETIC, 30, apk, raw);
+                ear = PassionBluetoothVolumeGuard.apply(TestProfiles.SYNTHETIC, 30, apk, audio);
             }
 
             String original = NativeCore.hash(raw);
             PassionAmbientLightGuard.validateOriginalChain(
-                    PassionAmbientLightGuard.PROFILE, 30, apk, dex, raw);
+                    TestProfiles.SYNTHETIC, 30, apk, dex, raw);
             check(original.equals(NativeCore.hash(raw)));
-            byte[] patched =
-                    PassionAmbientLightGuard.apply(PassionAmbientLightGuard.PROFILE, 30, apk, ear);
+            byte[] patched = PassionAmbientLightGuard.apply(TestProfiles.SYNTHETIC, 30, apk, ear);
             var before = PassionAmbientLightGuard.classes(ear);
             var after = PassionAmbientLightGuard.classes(patched);
             int count = 0;
@@ -116,9 +109,7 @@ public class PassionAmbientLightGuardTest {
 
             check(count == (dex.equals("classes2.dex") ? 8 : 3));
             total += count;
-            reject(() -> PassionAmbientLightGuard.apply("foreign", 30, apk, ear));
-            reject(() ->
-                    PassionAmbientLightGuard.apply(PassionAmbientLightGuard.PROFILE, 28, apk, ear));
+            reject(() -> PassionAmbientLightGuard.apply(TestProfiles.SYNTHETIC, 28, apk, ear));
             Files.write(out.resolve(dex), patched);
         }
 

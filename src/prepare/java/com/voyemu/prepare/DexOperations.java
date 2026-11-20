@@ -195,8 +195,7 @@ final class DexOperations {
                 "DONOR_API_UNSUPPORTED",
                 "Pinned donor library API and owner scope differ",
                 3);
-        boolean standalone =
-                PassionStandaloneLibrary.selected(profile, api, pin, outputName, expected);
+        boolean standalone = PassionStandaloneLibrary.selected(api, pin, outputName, expected);
         Failure.require(
                 !Files.exists(work) && outputName.matches("[A-Za-z0-9_.-]+\\.jar"),
                 "DONOR_OUTPUT_INVALID",
@@ -242,7 +241,6 @@ final class DexOperations {
         Failure.require(
                 compatibilityAdapter.isEmpty()
                         || (compatibilityAdapter.equals(PassionPowerAdapter.NAME)
-                                && profile.equals(PassionPowerAdapter.PROFILE)
                                 && api == 30
                                 && Json.str(recipe, "sha256").equals(PassionPowerAdapter.PIN)
                                 && Json.str(recipe, "dex").equals("classes4.dex")),

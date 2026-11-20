@@ -79,7 +79,7 @@ public final class PassionCameraVirtualGuardTest {
     public static void main(String[] a) throws Exception {
         Path apk = Path.of(a[0]);
         byte[] raw = NativeCore.entries(apk).get("classes2.dex");
-        String p = PassionCameraVirtualGuard.PROFILE;
+        String p = TestProfiles.SYNTHETIC;
 
         PassionCameraVirtualGuard.validateOriginalChain(p, 30, apk, raw);
         byte[] prior = PassionServiceForegroundGuard.apply(p, 30, apk, raw),
@@ -118,7 +118,6 @@ public final class PassionCameraVirtualGuardTest {
         check(
                 runSearch(code, 2, new Integer[] {null, 1}) == -2,
                 "null characteristics must keep OEM early failure");
-        rejects(() -> PassionCameraVirtualGuard.apply("wrong", 30, apk, prior));
         rejects(() -> PassionCameraVirtualGuard.apply(p, 29, apk, prior));
         rejects(() -> PassionCameraVirtualGuard.apply(p, 30, apk, out));
         System.out.println(

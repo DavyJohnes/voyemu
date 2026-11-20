@@ -1,8 +1,8 @@
 package com.voyemu.prepare;
 
-import static com.voyemu.prepare.PassionNexusPowerGuard.PROFILE;
 import static com.voyemu.prepare.PassionNexusPowerGuard.apply;
 import static com.voyemu.prepare.PassionNexusPowerGuard.check;
+import static com.voyemu.prepare.TestProfiles.SYNTHETIC;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -17,18 +17,14 @@ public final class PassionNexusPowerGuardTest {
             dex = z.getInputStream(z.getEntry("classes.dex")).readAllBytes();
         }
 
-        byte[] out = apply(PROFILE, 30, apk, dex);
+        byte[] out = apply(SYNTHETIC, 30, apk, dex);
         Files.write(Path.of(args[1]), out);
 
-        for (int mode = 0; mode < 3; mode++) {
+        for (int mode = 1; mode < 3; mode++) {
             boolean denied = false;
 
             try {
-                apply(
-                        mode == 0 ? "other" : PROFILE,
-                        mode == 1 ? 28 : 30,
-                        apk,
-                        mode == 2 ? out : dex);
+                apply(SYNTHETIC, mode == 1 ? 28 : 30, apk, mode == 2 ? out : dex);
             } catch (IllegalArgumentException expected) {
                 denied = true;
             }
@@ -38,7 +34,7 @@ public final class PassionNexusPowerGuardTest {
 
         System.out.println(
                 "PASS private exact4 OEM hooks: actual APK/DEX/method pins,"
-                        + " profile/API/already-patched negatives, policy code retained; inverse"
+                        + " API/already-patched negatives, policy code retained; inverse"
                         + " every class/try/branch/debug preserved. Not installed or runtime"
                         + " accepted.");
     }

@@ -54,7 +54,8 @@ public final class PassionBluetoothRoleGuardTest {
             Path apk =
                     root.resolve(
                                     ".local/profiles/"
-                                            + PassionBluetoothRoleGuard.PROFILE
+                                            + TestProfiles.declaring(
+                                                    root, PassionBluetoothRoleGuard.NAME)
                                             + "/originals")
                             .resolve(Path.of(file).getFileName());
             byte[] dex;
@@ -66,9 +67,7 @@ public final class PassionBluetoothRoleGuardTest {
             var before =
                     PassionBluetoothRoleGuard.method(new DexBackedDexFile(Opcodes.forApi(30), dex));
             PassionBluetoothRoleGuard.validateMethod(before);
-            byte[] after =
-                    PassionBluetoothRoleGuard.apply(
-                            PassionBluetoothRoleGuard.PROFILE, 30, apk, dex);
+            byte[] after = PassionBluetoothRoleGuard.apply(TestProfiles.SYNTHETIC, 30, apk, dex);
             var body =
                     PassionBluetoothRoleGuard.method(
                                     new DexBackedDexFile(Opcodes.forApi(30), after))
@@ -109,23 +108,12 @@ public final class PassionBluetoothRoleGuardTest {
             }
 
             check(at == 56 && checks == 4);
-            reject(() ->
-                    PassionBluetoothRoleGuard.apply(
-                            "free-11-chinese-20260731-7.3.1", 30, apk, dex));
-            reject(() ->
-                    PassionBluetoothRoleGuard.apply(
-                            PassionBluetoothRoleGuard.PROFILE, 28, apk, dex));
-            reject(() ->
-                    PassionBluetoothRoleGuard.apply(
-                            PassionBluetoothRoleGuard.PROFILE, 30, apk, null));
-            reject(() ->
-                    PassionBluetoothRoleGuard.apply(
-                            PassionBluetoothRoleGuard.PROFILE, 30, apk, after));
+            reject(() -> PassionBluetoothRoleGuard.apply(TestProfiles.SYNTHETIC, 28, apk, dex));
+            reject(() -> PassionBluetoothRoleGuard.apply(TestProfiles.SYNTHETIC, 30, apk, null));
+            reject(() -> PassionBluetoothRoleGuard.apply(TestProfiles.SYNTHETIC, 30, apk, after));
             Path wrong = stage.resolve("wrong-" + files);
             Files.writeString(wrong, "wrong owner");
-            reject(() ->
-                    PassionBluetoothRoleGuard.apply(
-                            PassionBluetoothRoleGuard.PROFILE, 30, wrong, dex));
+            reject(() -> PassionBluetoothRoleGuard.apply(TestProfiles.SYNTHETIC, 30, wrong, dex));
             var originalBody = before.getImplementation();
             var changed = new ArrayList<Instruction>();
             at = 0;

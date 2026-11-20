@@ -18,20 +18,22 @@ final class PassionPowerHelperContract {
 
     private PassionPowerHelperContract() {}
 
-    static boolean requested(String profile, Map<String, Object> patches) {
-        if (!PassionDisplayPowerGuard.PROFILE.equals(profile)) {
-            return false;
-        }
-
+    static boolean requested(Map<String, Object> patches) {
         boolean sdk =
-                Json.list(Json.obj(patches, "passion-api30-secondary-navigation").get("steps"))
-                        .contains("passion-api30-display-power.json");
-        boolean oem =
-                Json.list(Json.obj(patches, "MegaNexusService").get("steps"))
-                        .contains("passion-api30-nexus-power.json");
+                declares(
+                        patches,
+                        "passion-api30-secondary-navigation",
+                        "passion-api30-display-power.json");
+        boolean oem = declares(patches, "MegaNexusService", "passion-api30-nexus-power.json");
+
         Failure.require(sdk == oem, "PASSION_POWER_HELPER", "Partial power graph rejected", 5);
 
         return sdk;
+    }
+
+    private static boolean declares(Map<String, Object> patches, String artifact, String step) {
+        return patches.containsKey(artifact)
+                && Json.list(Json.obj(patches, artifact).get("steps")).contains(step);
     }
 
     static String slot(String artifact) {

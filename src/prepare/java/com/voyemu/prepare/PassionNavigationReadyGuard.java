@@ -22,8 +22,7 @@ import java.util.TreeMap;
 
 /** Private equal-width three-site factory/show + real service field lifecycle boundary. */
 final class PassionNavigationReadyGuard {
-    static final String PROFILE = "passion-11-russian-20260403-2.1.4.80",
-            APK = "4032f14c0fc49fd52514737309d2af67c9d4ff9340dd534874f46cbe2e748c00",
+    static final String APK = "4032f14c0fc49fd52514737309d2af67c9d4ff9340dd534874f46cbe2e748c00",
             HELPER = "Lcom/voyemu/output/PassionNavigationReady;";
 
     record Target(
@@ -253,14 +252,14 @@ final class PassionNavigationReadyGuard {
 
     static void validatePrepared(String profile, int api, Path original, byte[] dex)
             throws Exception {
-        require(PROFILE.equals(profile) && api == 30 && FilesSupport.hash(original).equals(APK));
+        require(api == 30 && FilesSupport.hash(original).equals(APK));
         var classes = PassionServiceForegroundGuard.classes(dex);
         transform(classes, classes, false);
     }
 
     static void validateOriginalChain(String profile, int api, Path original, byte[] raw)
             throws Exception {
-        require(PROFILE.equals(profile) && api == 30 && FilesSupport.hash(original).equals(APK));
+        require(api == 30 && FilesSupport.hash(original).equals(APK));
         byte[] prior = PassionSidebarGuard.apply(profile, api, original, raw);
         prior = PassionBluetoothVolumeGuard.apply(profile, api, original, prior);
         prior = PassionLauncherAudioGuard.apply(profile, api, original, prior);
@@ -274,7 +273,7 @@ final class PassionNavigationReadyGuard {
     }
 
     static byte[] applyPrepared(String profile, int api, Path apk, byte[] dex) throws Exception {
-        require(PROFILE.equals(profile) && api == 30 && FilesSupport.hash(apk).equals(APK));
+        require(api == 30 && FilesSupport.hash(apk).equals(APK));
         var before = PassionServiceForegroundGuard.classes(dex);
         var expected = transform(before, before, false);
         byte[] output =

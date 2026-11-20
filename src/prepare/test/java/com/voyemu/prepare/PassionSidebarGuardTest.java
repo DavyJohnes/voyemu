@@ -95,7 +95,7 @@ public final class PassionSidebarGuardTest {
         Path original =
                 root.resolve(
                         ".local/profiles/"
-                                + PassionSidebarGuard.PROFILE
+                                + TestProfiles.declaring(root, PassionSidebarGuard.NAME)
                                 + "/originals/LY_Launcher.apk");
         byte[] dex;
 
@@ -105,7 +105,7 @@ public final class PassionSidebarGuardTest {
 
         Method before = PassionSidebarGuard.method(new DexBackedDexFile(Opcodes.forApi(30), dex));
         PassionSidebarGuard.validateMethod(before);
-        byte[] output = PassionSidebarGuard.apply(PassionSidebarGuard.PROFILE, 30, original, dex);
+        byte[] output = PassionSidebarGuard.apply(TestProfiles.SYNTHETIC, 30, original, dex);
         Method after = PassionSidebarGuard.method(new DexBackedDexFile(Opcodes.forApi(30), output));
         int address = 0, count = 0, configured = 0;
 
@@ -134,14 +134,12 @@ public final class PassionSidebarGuardTest {
         }
 
         check(count == 2 && configured == 2 && address == 176);
-        reject(() ->
-                PassionSidebarGuard.apply("free-11-chinese-20260731-7.3.1", 30, original, dex));
-        reject(() -> PassionSidebarGuard.apply(PassionSidebarGuard.PROFILE, 28, original, dex));
-        reject(() -> PassionSidebarGuard.apply(PassionSidebarGuard.PROFILE, 30, original, null));
-        reject(() -> PassionSidebarGuard.apply(PassionSidebarGuard.PROFILE, 30, original, output));
+        reject(() -> PassionSidebarGuard.apply(TestProfiles.SYNTHETIC, 28, original, dex));
+        reject(() -> PassionSidebarGuard.apply(TestProfiles.SYNTHETIC, 30, original, null));
+        reject(() -> PassionSidebarGuard.apply(TestProfiles.SYNTHETIC, 30, original, output));
         Path wrong = stage.resolve("wrong.apk");
         Files.writeString(wrong, "not the owner");
-        reject(() -> PassionSidebarGuard.apply(PassionSidebarGuard.PROFILE, 30, wrong, dex));
+        reject(() -> PassionSidebarGuard.apply(TestProfiles.SYNTHETIC, 30, wrong, dex));
         reject(() -> PassionSidebarGuard.validateMethod(altered(before, 39, 6, 2018)));
         reject(() -> PassionSidebarGuard.validateMethod(altered(before, 39, 7, 2019)));
         reject(() -> PassionSidebarGuard.validateMethod(altered(before, 128, 7, 2018)));

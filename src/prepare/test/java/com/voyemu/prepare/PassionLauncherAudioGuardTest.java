@@ -73,7 +73,7 @@ public class PassionLauncherAudioGuardTest {
         Path original =
                 root.resolve(
                         ".local/profiles/"
-                                + PassionLauncherAudioGuard.PROFILE
+                                + TestProfiles.declaring(root, PassionLauncherAudioGuard.NAME)
                                 + "/originals/LY_Launcher.apk");
         byte[] raw;
 
@@ -81,20 +81,14 @@ public class PassionLauncherAudioGuardTest {
             raw = z.getInputStream(z.getEntry("classes3.dex")).readAllBytes();
         }
 
-        byte[]
-                sidebar =
-                        PassionSidebarGuard.apply(
-                                PassionLauncherAudioGuard.PROFILE, 30, original, raw),
+        byte[] sidebar = PassionSidebarGuard.apply(TestProfiles.SYNTHETIC, 30, original, raw),
                 ear =
                         PassionBluetoothVolumeGuard.apply(
-                                PassionLauncherAudioGuard.PROFILE, 30, original, sidebar);
+                                TestProfiles.SYNTHETIC, 30, original, sidebar);
         String rawHash = NativeCore.hash(raw);
-        PassionLauncherAudioGuard.validateOriginalChain(
-                PassionLauncherAudioGuard.PROFILE, 30, original, raw);
+        PassionLauncherAudioGuard.validateOriginalChain(TestProfiles.SYNTHETIC, 30, original, raw);
         check(rawHash.equals(NativeCore.hash(raw)));
-        byte[] output =
-                PassionLauncherAudioGuard.apply(
-                        PassionLauncherAudioGuard.PROFILE, 30, original, ear);
+        byte[] output = PassionLauncherAudioGuard.apply(TestProfiles.SYNTHETIC, 30, original, ear);
         var before = PassionLauncherAudioGuard.classes(ear);
         var after = PassionLauncherAudioGuard.classes(output);
         int methods = 0, negatives = 0;
@@ -155,11 +149,7 @@ public class PassionLauncherAudioGuardTest {
             }
         }
 
-        reject(() -> PassionLauncherAudioGuard.apply("foreign", 30, original, ear));
-        negatives++;
-        reject(() ->
-                PassionLauncherAudioGuard.apply(
-                        PassionLauncherAudioGuard.PROFILE, 28, original, ear));
+        reject(() -> PassionLauncherAudioGuard.apply(TestProfiles.SYNTHETIC, 28, original, ear));
         negatives++;
         check(methods == 3);
         Files.write(stage.resolve("LY_Launcher.dex"), output);

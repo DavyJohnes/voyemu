@@ -37,7 +37,7 @@ public final class PassionDiagnosticsGuardTest {
         Path original =
                 root.resolve(
                         ".local/profiles/"
-                                + PassionDiagnosticsGuard.PROFILE
+                                + TestProfiles.declaring(root, PassionDiagnosticsGuard.NAME)
                                 + "/originals/MonzaCarService.apk");
         byte[] dex;
 
@@ -55,8 +55,7 @@ public final class PassionDiagnosticsGuardTest {
                                         h.getExceptionType()))); // actual fatal
         // exception was
         // unhandled
-        byte[] output =
-                PassionDiagnosticsGuard.apply(PassionDiagnosticsGuard.PROFILE, 30, original, dex);
+        byte[] output = PassionDiagnosticsGuard.apply(TestProfiles.SYNTHETIC, 30, original, dex);
         var after = new DexBackedDexFile(Opcodes.forApi(30), output);
         var changed = PassionDiagnosticsGuard.method(after);
         var handlers = changed.getImplementation().getTryBlocks().get(0).getExceptionHandlers();
@@ -84,18 +83,12 @@ public final class PassionDiagnosticsGuardTest {
                         == after.getClasses()
                                 .size()); // apply() also semantically checks ALL classes/members
         // after normalizing only the new catch
-        reject(() ->
-                PassionDiagnosticsGuard.apply("free-11-chinese-20260731-7.3.1", 30, original, dex));
-        reject(() ->
-                PassionDiagnosticsGuard.apply(PassionDiagnosticsGuard.PROFILE, 28, original, dex));
-        reject(() ->
-                PassionDiagnosticsGuard.apply(PassionDiagnosticsGuard.PROFILE, 30, original, null));
-        reject(() ->
-                PassionDiagnosticsGuard.apply(
-                        PassionDiagnosticsGuard.PROFILE, 30, original, output));
+        reject(() -> PassionDiagnosticsGuard.apply(TestProfiles.SYNTHETIC, 28, original, dex));
+        reject(() -> PassionDiagnosticsGuard.apply(TestProfiles.SYNTHETIC, 30, original, null));
+        reject(() -> PassionDiagnosticsGuard.apply(TestProfiles.SYNTHETIC, 30, original, output));
         Path bad = stage.resolve("wrong.apk");
         Files.writeString(bad, "not the owner original");
-        reject(() -> PassionDiagnosticsGuard.apply(PassionDiagnosticsGuard.PROFILE, 30, bad, dex));
+        reject(() -> PassionDiagnosticsGuard.apply(TestProfiles.SYNTHETIC, 30, bad, dex));
         Path produced = stage.resolve("classes15.dex");
         Files.write(produced, output);
         Process proc =

@@ -142,7 +142,12 @@ public final class PassionCarSettingsRecyclerRecipeTest {
 
         if (args.length > 0) {
             Path profile =
-                    Path.of(args[0]).resolve("profiles/" + PassionCarSettingsRecyclerGuard.PROFILE);
+                    Path.of(args[0])
+                            .resolve(
+                                    "profiles/"
+                                            + TestProfiles.declaring(
+                                                    Path.of(args[0]),
+                                                    PassionCarSettingsRecyclerGuard.NAME));
             var real =
                     Json.object(Json.parse(Files.readString(profile.resolve("patches/" + name))));
             real.put("sourceSha256", "a".repeat(64));

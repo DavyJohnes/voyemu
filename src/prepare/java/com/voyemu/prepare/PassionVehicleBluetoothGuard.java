@@ -31,8 +31,7 @@ import java.util.TreeMap;
  * (-1), role switching returns unsupported false.
  */
 final class PassionVehicleBluetoothGuard {
-    static final String PROFILE = "passion-11-russian-20260403-2.1.4.80",
-            NAME = "passion-api30-vehicle-bluetooth";
+    static final String NAME = "passion-api30-vehicle-bluetooth";
     static final String PIN = "a5fb5daed4a295a568daf0390858a0bd00782b1384e66b13a96f66d43ad43e60";
     static final String OWNER = "Lcom/mega/nexus/bluetooth/MegaBluetoothAdapter;";
     static final List<String> METHODS =
@@ -145,11 +144,7 @@ final class PassionVehicleBluetoothGuard {
     }
 
     static void validate(String profile, int api, Path original, byte[] dex) throws Exception {
-        require(
-                PROFILE.equals(profile)
-                        && api == 30
-                        && FilesSupport.hash(original).equals(PIN)
-                        && dex != null);
+        require(api == 30 && FilesSupport.hash(original).equals(PIN) && dex != null);
         methods(new DexBackedDexFile(Opcodes.forApi(30), dex));
     }
 
@@ -295,11 +290,7 @@ final class PassionVehicleBluetoothGuard {
 
     static void validateSettings(String profile, int api, Path original, byte[] dex)
             throws Exception {
-        require(
-                PROFILE.equals(profile)
-                        && api == 30
-                        && FilesSupport.hash(original).equals(PIN)
-                        && dex != null);
+        require(api == 30 && FilesSupport.hash(original).equals(PIN) && dex != null);
         PassionBluetoothRoleGuard.validateMethod(
                 PassionBluetoothRoleGuard.method(new DexBackedDexFile(Opcodes.forApi(30), dex)));
     }

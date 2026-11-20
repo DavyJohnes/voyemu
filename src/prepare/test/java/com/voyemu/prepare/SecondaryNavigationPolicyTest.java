@@ -41,7 +41,9 @@ public final class SecondaryNavigationPolicyTest {
                 root.resolve("profiles/" + SecondaryNavigationGuard.PROFILE + "/profile.json");
         Path passionFile =
                 root.resolve(
-                        "profiles/" + PassionSecondaryNavigationGuard.PROFILE + "/profile.json");
+                        "profiles/"
+                                + TestProfiles.declaring(root, PassionSecondaryNavigationGuard.NAME)
+                                + "/profile.json");
         String freePin = FilesSupport.hash(freeFile), passionPin = FilesSupport.hash(passionFile);
         Map<String, Object> free = Json.object(Json.parse(Files.readString(freeFile))),
                 passion = Json.object(Json.parse(Files.readString(passionFile)));
@@ -55,9 +57,7 @@ public final class SecondaryNavigationPolicyTest {
         }
 
         byte[] a = SecondaryNavigationGuard.apply(SecondaryNavigationGuard.PROFILE, 30, input, dex);
-        byte[] b =
-                PassionSecondaryNavigationGuard.apply(
-                        PassionSecondaryNavigationGuard.PROFILE, 30, input, dex);
+        byte[] b = PassionSecondaryNavigationGuard.apply(TestProfiles.SYNTHETIC, 30, input, dex);
         check(
                 !Arrays.equals(a, b),
                 "Passion statusbar capability must be an explicit profile-only delta");
@@ -92,7 +92,7 @@ public final class SecondaryNavigationPolicyTest {
         data.put("patches", nodes);
         var profile =
                 new ProfileRegistry.Profile(
-                        PassionSecondaryNavigationGuard.PROFILE, "test-inactive", data, "", recipe);
+                        TestProfiles.SYNTHETIC, "test-inactive", data, "", recipe);
         var adapter =
                 new Artifacts(
                         new Artifacts.PatchedProfile(profile, Map.of(step, metadata)),
@@ -126,22 +126,15 @@ public final class SecondaryNavigationPolicyTest {
     }
 
     private static void rejectForeignBindings(Path input, byte[] dex, byte[] b) throws Exception {
-        denied(() ->
-                SecondaryNavigationGuard.apply(
-                        PassionSecondaryNavigationGuard.PROFILE, 30, input, dex));
+        denied(() -> SecondaryNavigationGuard.apply(TestProfiles.SYNTHETIC, 30, input, dex));
         denied(() ->
                 PassionSecondaryNavigationGuard.apply(
                         SecondaryNavigationGuard.PROFILE, 30, input, dex));
-        denied(() ->
-                PassionSecondaryNavigationGuard.apply(
-                        PassionSecondaryNavigationGuard.PROFILE, 28, input, dex));
+        denied(() -> PassionSecondaryNavigationGuard.apply(TestProfiles.SYNTHETIC, 28, input, dex));
         denied(() -> PassionSecondaryNavigationGuard.apply("unknown", 30, input, dex));
+        denied(() -> PassionSecondaryNavigationGuard.apply(TestProfiles.SYNTHETIC, 30, input, b));
         denied(() ->
-                PassionSecondaryNavigationGuard.apply(
-                        PassionSecondaryNavigationGuard.PROFILE, 30, input, b));
-        denied(() ->
-                PassionSecondaryNavigationGuard.apply(
-                        PassionSecondaryNavigationGuard.PROFILE, 30, input, null));
+                PassionSecondaryNavigationGuard.apply(TestProfiles.SYNTHETIC, 30, input, null));
     }
 
     private static void checkResolvedEntries(Path jar, Path input, byte[] b) throws Exception {

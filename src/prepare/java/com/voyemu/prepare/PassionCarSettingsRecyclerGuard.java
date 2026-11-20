@@ -31,8 +31,7 @@ import java.util.List;
 
 /** Reuse only the existing Car UI recycler, preserving the OEM fallback. */
 final class PassionCarSettingsRecyclerGuard {
-    static final String PROFILE = "passion-11-russian-20260403-2.1.4.80",
-            NAME = "passion-api30-settings-recycler";
+    static final String NAME = "passion-api30-settings-recycler";
     static final String PIN = "8d7798dd439ffa39d8af491ff23458d321c8c7659b53ea3672ab4d199189e4b4";
     static final String OWNER = "Landroidx/preference/PreferenceFragmentCompat;",
             CAR = "Lcom/android/car/ui/recyclerview/CarUiRecyclerView;";
@@ -86,11 +85,7 @@ final class PassionCarSettingsRecyclerGuard {
     }
 
     static void validate(String profile, int api, Path original, byte[] dex) throws Exception {
-        require(
-                PROFILE.equals(profile)
-                        && api == 30
-                        && FilesSupport.hash(original).equals(PIN)
-                        && dex != null);
+        require(api == 30 && FilesSupport.hash(original).equals(PIN) && dex != null);
         validateMethod(method(new DexBackedDexFile(Opcodes.forApi(30), dex)));
     }
 

@@ -9,8 +9,7 @@ import java.util.Map;
 
 /** Supply only three absent daytime entries using their existing exact OEM assets. */
 final class PassionMusicDayDrawableGuard {
-    static final String PROFILE = "passion-11-russian-20260403-2.1.4.80",
-            NAME = "passion-api30-music-day-drawables";
+    static final String NAME = "passion-api30-music-day-drawables";
     static final String PIN = "a3c788860d5df27277d53ffbf838daaefddb6ab098ad52b636671dd70b34765d";
     static final int PACKAGE = 105636,
             DAY = 479796,
@@ -61,7 +60,7 @@ final class PassionMusicDayDrawableGuard {
 
     static void validate(String profile, int api, Path original, Map<String, byte[]> entries)
             throws Exception {
-        require(PROFILE.equals(profile) && api == 30 && FilesSupport.hash(original).equals(PIN));
+        require(api == 30 && FilesSupport.hash(original).equals(PIN));
         byte[] table = entries.get("resources.arsc");
         require(table != null && table.length == 706764);
         requireTableLayout(table);

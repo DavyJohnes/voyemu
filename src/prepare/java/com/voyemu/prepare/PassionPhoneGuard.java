@@ -39,8 +39,7 @@ import java.util.Set;
 
 /** Exact emulator phone entrypoints; real HFP/PBAP connection claims remain untouched. */
 final class PassionPhoneGuard {
-    static final String PROFILE = "passion-11-russian-20260403-2.1.4.80",
-            NAME = "passion-api30-phone";
+    static final String NAME = "passion-api30-phone";
     static final String APK = "5bc0f97b94009b2e5aa6cb9759ea2547ab17cdadfbb8021d5e9cb6d6c6589047";
     static final String HELPER_ROOT = "passion-api30-phone/src",
             HELPER_SOURCE = "com/voyemu/passion/phone/PassionOemPhone.java";
@@ -189,11 +188,7 @@ final class PassionPhoneGuard {
     }
 
     static void validate(String profile, int api, Path apk, byte[] bytes) throws Exception {
-        need(
-                PROFILE.equals(profile)
-                        && api == 30
-                        && FilesSupport.hash(apk).equals(APK)
-                        && bytes != null);
+        need(api == 30 && FilesSupport.hash(apk).equals(APK) && bytes != null);
         int count = 0, classes = 0;
 
         for (var c : new DexBackedDexFile(Opcodes.forApi(30), bytes).getClasses()) {

@@ -23,8 +23,7 @@ import java.util.TreeMap;
 // Unsupported OEM backlight operations report false at the MEGA compatibility boundary.
 // No vehicle/power state is invented and no cleanbase PowerManager class is changed.
 final class PassionPowerAdapter {
-    static final String PROFILE = "passion-11-russian-20260403-2.1.4.80",
-            NAME = "passion-api30-power";
+    static final String NAME = "passion-api30-power";
     static final String PIN = "ec2933b1c42f1932cd46117a475b84d83371c9b19130930f43ffd4c455ca6bd3";
     static final String OWNER = "Lcom/mega/nexus/os/MegaPowerManagerAdapter;";
 
@@ -100,7 +99,7 @@ final class PassionPowerAdapter {
     }
 
     static byte[] apply(String profile, int api, Path original, byte[] donor) throws Exception {
-        require(PROFILE.equals(profile) && api == 30 && FilesSupport.hash(original).equals(PIN));
+        require(api == 30 && FilesSupport.hash(original).equals(PIN));
         ClassDef source = null;
 
         for (ClassDef type : DexOperations.dex(original, "classes4.dex", 30).getClasses()) {

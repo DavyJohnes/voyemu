@@ -23,8 +23,7 @@ import java.util.TreeMap;
  * invented.
  */
 final class PassionDiagnosticsGuard {
-    static final String PROFILE = "passion-11-russian-20260403-2.1.4.80",
-            NAME = "passion-api30-diagnostics";
+    static final String NAME = "passion-api30-diagnostics";
     static final String PIN = "5cd091682a3ba6aa054a0b545a2c5a853e3e5bff7129f7319ebe8d583eccea98";
     static final String OWNER = "Lcom/mega/car/service/BluetoothMacReader;";
     static final String MISSING = "Ljava/util/NoSuchElementException;";
@@ -61,7 +60,7 @@ final class PassionDiagnosticsGuard {
     }
 
     static void validate(String profile, int api, Path original, byte[] dex) throws Exception {
-        require(PROFILE.equals(profile) && api == 30 && FilesSupport.hash(original).equals(PIN));
+        require(api == 30 && FilesSupport.hash(original).equals(PIN));
         require(dex != null);
         var body = method(new DexBackedDexFile(Opcodes.forApi(30), dex)).getImplementation();
         require(body.getRegisterCount() == 7 && body.getTryBlocks().size() == 1);

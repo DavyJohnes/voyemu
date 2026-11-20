@@ -29,8 +29,7 @@ import java.util.TreeMap;
 
 /** Guard the reproduced optional ambient service without inventing light state. */
 final class PassionAmbientLightGuard {
-    static final String PROFILE = PassionServiceForegroundGuard.PROFILE,
-            NAME = "passion-api30-ambient-light",
+    static final String NAME = "passion-api30-ambient-light",
             PIN = "a5fb5daed4a295a568daf0390858a0bd00782b1384e66b13a96f66d43ad43e60";
     static final String OWNER = "Lcom/voyah/platform/amblight/api/AmbientLightSettings;",
             FRAGMENT = "Lcom/voyah/car/ui/body/LightingFragmentN;",
@@ -332,11 +331,7 @@ final class PassionAmbientLightGuard {
     }
 
     static void validate(String profile, int api, Path original, byte[] dex) throws Exception {
-        require(
-                PROFILE.equals(profile)
-                        && api == 30
-                        && PIN.equals(FilesSupport.hash(original))
-                        && dex != null);
+        require(api == 30 && PIN.equals(FilesSupport.hash(original)) && dex != null);
         transform(classes(dex), false);
     }
 

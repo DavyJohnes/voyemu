@@ -1,10 +1,10 @@
 package com.voyemu.prepare;
 
-import static com.voyemu.prepare.PassionStartupVolumeGuard.PROFILE;
 import static com.voyemu.prepare.PassionStartupVolumeGuard.apply;
 import static com.voyemu.prepare.PassionStartupVolumeGuard.validate;
 import static com.voyemu.prepare.PassionStartupVolumeGuard.validateOriginal;
 import static com.voyemu.prepare.PassionStartupVolumeGuard.validateOriginalChain;
+import static com.voyemu.prepare.TestProfiles.SYNTHETIC;
 
 import org.jf.dexlib2.iface.ClassDef;
 
@@ -23,16 +23,16 @@ public final class PassionStartupVolumeGuardTest {
             dex = z.getInputStream(z.getEntry(PassionStartupVolumeGuard.DEX)).readAllBytes();
         }
 
-        validateOriginalChain(PROFILE, 30, jar, dex);
-        dex = PassionDisplayPowerGuard.apply(PROFILE, 30, jar, dex);
-        validateOriginal(PROFILE, 30, jar, dex);
-        byte[] result = apply(PROFILE, 30, jar, dex);
+        validateOriginalChain(SYNTHETIC, 30, jar, dex);
+        dex = PassionDisplayPowerGuard.apply(SYNTHETIC, 30, jar, dex);
+        validateOriginal(SYNTHETIC, 30, jar, dex);
+        byte[] result = apply(SYNTHETIC, 30, jar, dex);
         Files.write(out, result);
 
         // Deterministic and idempotent-by-pin: the same input always produces the same bytes; the
         // patched
         // DEX can never be accepted as a predecessor again.
-        if (!Arrays.equals(result, apply(PROFILE, 30, jar, dex))) {
+        if (!Arrays.equals(result, apply(SYNTHETIC, 30, jar, dex))) {
             throw new AssertionError("startup volume output differs");
         }
 
@@ -40,9 +40,9 @@ public final class PassionStartupVolumeGuardTest {
         var before = PassionServiceForegroundGuard.classes(dex);
         var patched = PassionServiceForegroundGuard.classes(result);
         checkPatchedClasses(before, patched);
-        int negatives = foreignRejections(false, jar, dex, "foreign startup identity accepted");
+        int negatives = foreignRejections(false, jar, dex, "foreign startup API accepted");
 
-        if (!rejected(false, PROFILE, 30, jar, result)) {
+        if (!rejected(false, SYNTHETIC, 30, jar, result)) {
             throw new AssertionError("already patched DEX accepted as predecessor");
         }
 
@@ -50,7 +50,7 @@ public final class PassionStartupVolumeGuardTest {
         Path wrong = Files.createTempFile("wrong", ".jar");
         Files.write(wrong, new byte[] {1});
 
-        if (!rejected(false, PROFILE, 30, wrong, dex)) {
+        if (!rejected(false, SYNTHETIC, 30, wrong, dex)) {
             throw new AssertionError("wrong jar pin accepted");
         }
 
@@ -65,15 +65,15 @@ public final class PassionStartupVolumeGuardTest {
         // the same
         // foreign/wrong-pin inputs and accept only the pinned original.
         int validationNegatives =
-                foreignRejections(true, jar, dex, "foreign validate identity accepted");
+                foreignRejections(true, jar, dex, "foreign validate API accepted");
 
-        if (!rejected(true, PROFILE, 30, jar, result)) {
+        if (!rejected(true, SYNTHETIC, 30, jar, result)) {
             throw new AssertionError("patched validate DEX accepted as predecessor");
         }
 
         validationNegatives++;
 
-        if (!rejected(true, PROFILE, 30, wrong, dex)) {
+        if (!rejected(true, SYNTHETIC, 30, wrong, dex)) {
             throw new AssertionError("wrong validate jar pin accepted");
         }
 
@@ -84,8 +84,8 @@ public final class PassionStartupVolumeGuardTest {
                     "expected exactly 5 rejected validate identities, got " + validationNegatives);
         }
 
-        validate(PROFILE, 30, jar, dex);
-        validateOriginal(PROFILE, 30, jar, dex);
+        validate(SYNTHETIC, 30, jar, dex);
+        validateOriginal(SYNTHETIC, 30, jar, dex);
         System.out.println(
                 "PASS Passion startup volume guard: pinned jar/DEX identity, streams to minimum,"
                         + " groups to zero, later controls stock, inverse-exact serialization;"
@@ -167,17 +167,11 @@ public final class PassionStartupVolumeGuardTest {
             throws Exception {
         int negatives = 0;
 
-        for (var profile : new String[] {"other", PROFILE}) {
-            for (int api : new int[] {28, 30}) {
-                if (!profile.equals(PROFILE) || api != 30) {
-                    if (!rejected(validation, profile, api, jar, dex)) {
-                        throw new AssertionError(message);
-                    }
-
-                    negatives++;
-                }
-            }
+        if (!rejected(validation, SYNTHETIC, 28, jar, dex)) {
+            throw new AssertionError(message);
         }
+
+        negatives++;
 
         return negatives;
     }

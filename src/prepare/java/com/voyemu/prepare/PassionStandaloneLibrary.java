@@ -18,7 +18,6 @@ import java.util.TreeMap;
 // Standalone shared libraries are not bootclasspath DEX. Retain all executable/member
 // semantics, omitting only boot hidden-API metadata rejected by the pinned ART verifier.
 final class PassionStandaloneLibrary {
-    static final String PROFILE = "passion-11-russian-20260403-2.1.4.80";
     static final String PIN = "ec2933b1c42f1932cd46117a475b84d83371c9b19130930f43ffd4c455ca6bd3";
     static final Map<String, Set<String>> CLASSES =
             Map.ofEntries(
@@ -79,17 +78,12 @@ final class PassionStandaloneLibrary {
                 3);
     }
 
-    static boolean selected(
-            String profile, int api, String pin, String output, Set<String> classes) {
-        if (!PROFILE.equals(profile)) {
+    static boolean selected(int api, String pin, String output, Set<String> classes) {
+        if (!PIN.equals(pin)) {
             return false;
         }
 
-        require(
-                api == 30
-                        && PIN.equals(pin)
-                        && CLASSES.containsKey(output)
-                        && CLASSES.get(output).equals(classes));
+        require(api == 30 && CLASSES.containsKey(output) && CLASSES.get(output).equals(classes));
 
         return true;
     }

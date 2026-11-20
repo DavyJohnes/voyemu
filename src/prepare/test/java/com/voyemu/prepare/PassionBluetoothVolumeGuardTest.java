@@ -49,38 +49,31 @@ public final class PassionBluetoothVolumeGuardTest {
             Path original =
                     root.resolve(
                             ".local/profiles/"
-                                    + PassionServiceForegroundGuard.PROFILE
+                                    + TestProfiles.declaring(
+                                            root, PassionServiceForegroundGuard.NAME)
                                     + "/originals/"
                                     + role
                                     + ".apk");
             byte[] raw = dex(original, role.equals("LY_Video") ? "classes2.dex" : "classes3.dex");
             byte[] input =
                     role.equals("LY_Launcher")
-                            ? PassionSidebarGuard.apply(
-                                    PassionServiceForegroundGuard.PROFILE, 30, original, raw)
+                            ? PassionSidebarGuard.apply(TestProfiles.SYNTHETIC, 30, original, raw)
                             : role.equals("LY_Car")
                                     ? PassionVehicleAudioGuard.apply(
-                                            PassionServiceForegroundGuard.PROFILE,
-                                            30,
-                                            original,
-                                            raw)
+                                            TestProfiles.SYNTHETIC, 30, original, raw)
                                     : PassionServiceForegroundGuard.apply(
-                                            PassionServiceForegroundGuard.PROFILE,
-                                            30,
-                                            original,
-                                            raw);
+                                            TestProfiles.SYNTHETIC, 30, original, raw);
             // Production global preflight sees RAW entries; actual recipe application sees prior
             // transforms.
             PassionBluetoothVolumeGuard.validateOriginalChain(
-                    PassionServiceForegroundGuard.PROFILE, 30, original, raw);
+                    TestProfiles.SYNTHETIC, 30, original, raw);
             reject(() ->
                     PassionBluetoothVolumeGuard.validateOriginalChain(
-                            PassionServiceForegroundGuard.PROFILE, 30, original, input));
+                            TestProfiles.SYNTHETIC, 30, original, input));
             negatives++;
             var before = PassionBluetoothVolumeGuard.classes(input);
             byte[] output =
-                    PassionBluetoothVolumeGuard.apply(
-                            PassionServiceForegroundGuard.PROFILE, 30, original, input);
+                    PassionBluetoothVolumeGuard.apply(TestProfiles.SYNTHETIC, 30, original, input);
             var after = PassionBluetoothVolumeGuard.classes(output);
 
             for (var c : before.values()) {
@@ -139,15 +132,12 @@ public final class PassionBluetoothVolumeGuardTest {
                 }
             }
 
-            reject(() -> PassionBluetoothVolumeGuard.apply("foreign", 30, original, input));
+            reject(() ->
+                    PassionBluetoothVolumeGuard.apply(TestProfiles.SYNTHETIC, 28, original, input));
             negatives++;
             reject(() ->
                     PassionBluetoothVolumeGuard.apply(
-                            PassionServiceForegroundGuard.PROFILE, 28, original, input));
-            negatives++;
-            reject(() ->
-                    PassionBluetoothVolumeGuard.apply(
-                            PassionServiceForegroundGuard.PROFILE, 30, original, output));
+                            TestProfiles.SYNTHETIC, 30, original, output));
             negatives++;
             Files.write(stage.resolve(role + ".dex"), output);
         }

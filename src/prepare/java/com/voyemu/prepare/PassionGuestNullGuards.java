@@ -19,7 +19,6 @@ import java.util.TreeMap;
 
 /** Private exact null boundaries; no fabricated ECU version or successful Nexus write. */
 final class PassionGuestNullGuards {
-    static final String PROFILE = "passion-11-russian-20260403-2.1.4.80";
 
     record Target(String role, String owner, String method, String apk, int registers) {}
 
@@ -161,13 +160,13 @@ final class PassionGuestNullGuards {
 
     static void validatePrepared(String profile, int api, Path original, byte[] dex, Target t)
             throws Exception {
-        require(PROFILE.equals(profile) && api == 30 && FilesSupport.hash(original).equals(t.apk));
+        require(api == 30 && FilesSupport.hash(original).equals(t.apk));
         transform(PassionServiceForegroundGuard.classes(dex), t, false);
     }
 
     static void validateOriginalChain(String profile, int api, Path original, byte[] raw, Target t)
             throws Exception {
-        require(PROFILE.equals(profile) && api == 30 && FilesSupport.hash(original).equals(t.apk));
+        require(api == 30 && FilesSupport.hash(original).equals(t.apk));
         byte[] prior = raw;
 
         if (ECU.equals(t)) {
@@ -180,7 +179,7 @@ final class PassionGuestNullGuards {
 
     static byte[] applyPrepared(String profile, int api, Path original, byte[] dex, Target t)
             throws Exception {
-        require(PROFILE.equals(profile) && api == 30 && FilesSupport.hash(original).equals(t.apk));
+        require(api == 30 && FilesSupport.hash(original).equals(t.apk));
         var before = PassionServiceForegroundGuard.classes(dex);
         var expected = transform(before, t, false);
         byte[] result =

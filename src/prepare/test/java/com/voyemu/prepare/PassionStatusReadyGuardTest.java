@@ -61,25 +61,20 @@ public class PassionStatusReadyGuardTest {
         Path original =
                 root.resolve(
                         ".local/profiles/"
-                                + PassionStatusReadyGuard.PROFILE
+                                + TestProfiles.pinning(root, PassionStatusReadyGuard.APK)
                                 + "/originals/LY_Launcher.apk");
         byte[] raw = dex(original);
         String rawBefore = NativeCore.hash(raw);
-        byte[] pipeline =
-                PassionSidebarGuard.apply(PassionStatusReadyGuard.PROFILE, 30, original, raw);
+        byte[] pipeline = PassionSidebarGuard.apply(TestProfiles.SYNTHETIC, 30, original, raw);
         pipeline =
-                PassionBluetoothVolumeGuard.apply(
-                        PassionStatusReadyGuard.PROFILE, 30, original, pipeline);
-        pipeline =
-                PassionLauncherAudioGuard.apply(
-                        PassionStatusReadyGuard.PROFILE, 30, original, pipeline);
+                PassionBluetoothVolumeGuard.apply(TestProfiles.SYNTHETIC, 30, original, pipeline);
+        pipeline = PassionLauncherAudioGuard.apply(TestProfiles.SYNTHETIC, 30, original, pipeline);
         final byte[] prior =
                 PassionNavigationReadyGuard.applyPrepared(
-                        PassionStatusReadyGuard.PROFILE, 30, original, pipeline);
+                        TestProfiles.SYNTHETIC, 30, original, pipeline);
         check(rawBefore.equals(NativeCore.hash(raw)));
         byte[] changed =
-                PassionStatusReadyGuard.applyPrepared(
-                        PassionStatusReadyGuard.PROFILE, 30, original, prior);
+                PassionStatusReadyGuard.applyPrepared(TestProfiles.SYNTHETIC, 30, original, prior);
         var before = PassionServiceForegroundGuard.classes(prior);
         var after = PassionServiceForegroundGuard.classes(changed);
         int negative = 0, sites = 0;
@@ -135,19 +130,16 @@ public class PassionStatusReadyGuardTest {
             }
         }
 
-        reject(() -> PassionStatusReadyGuard.applyPrepared("foreign", 30, original, prior));
+        reject(() ->
+                PassionStatusReadyGuard.applyPrepared(TestProfiles.SYNTHETIC, 29, original, prior));
         negative++;
         reject(() ->
                 PassionStatusReadyGuard.applyPrepared(
-                        PassionStatusReadyGuard.PROFILE, 29, original, prior));
-        negative++;
-        reject(() ->
-                PassionStatusReadyGuard.applyPrepared(
-                        PassionStatusReadyGuard.PROFILE,
+                        TestProfiles.SYNTHETIC,
                         30,
                         root.resolve(
                                 ".local/profiles/"
-                                        + PassionStatusReadyGuard.PROFILE
+                                        + TestProfiles.pinning(root, PassionStatusReadyGuard.APK)
                                         + "/originals/LY_AVM.apk"),
                         prior));
         negative++;
@@ -162,7 +154,7 @@ public class PassionStatusReadyGuardTest {
         PassionStatusReadyGuard.validateHelperSource(
                 root.resolve(
                         "profiles/"
-                                + PassionStatusReadyGuard.PROFILE
+                                + TestProfiles.pinning(root, PassionStatusReadyGuard.APK)
                                 + "/patches/passion-api30-status-ready/src"));
         Files.write(out.resolve("status.dex"), changed);
         Files.writeString(

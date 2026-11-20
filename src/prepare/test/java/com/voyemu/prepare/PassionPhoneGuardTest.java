@@ -161,7 +161,7 @@ public final class PassionPhoneGuardTest {
 
     public static void main(String[] args) throws Exception {
         Path apk = Path.of(args[0]);
-        String profile = PassionPhoneGuard.PROFILE;
+        String profile = TestProfiles.SYNTHETIC;
         var entries = NativeCore.entries(apk);
 
         testDialerManifest(entries.get("AndroidManifest.xml"));
@@ -223,7 +223,6 @@ public final class PassionPhoneGuardTest {
         }
 
         need(calls == 2 && lifecycle == 2 && gates == 31 && outgoing == 6 && panels == 3);
-        rejects(() -> PassionPhoneGuard.apply("foreign", 30, apk, raw));
         rejects(() -> PassionPhoneGuard.apply(profile, 29, apk, raw));
         rejects(() -> PassionPhoneGuard.apply(profile, 30, apk, out));
         System.out.println(

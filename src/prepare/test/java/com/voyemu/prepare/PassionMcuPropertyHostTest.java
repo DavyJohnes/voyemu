@@ -40,7 +40,9 @@ public final class PassionMcuPropertyHostTest {
                         + "*";
         Path source =
                 root.resolve(
-                        "profiles/passion-11-russian-20260403-2.1.4.80/patches/passion-api30-mcu-property/src");
+                        "profiles/"
+                                + TestProfiles.declaring(root, "passion-api30-mcu-property")
+                                + "/patches/passion-api30-mcu-property/src");
         Path prepare = root.resolve("src/prepare/java/com/voyemu/prepare");
         Path tests = root.resolve("src/prepare/test/java/com/voyemu");
         Path guard = work.resolve("guard");

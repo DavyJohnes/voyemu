@@ -64,7 +64,8 @@ public final class PassionServiceForegroundGuardTest {
             Path original =
                     root.resolve(
                             ".local/profiles/"
-                                    + PassionServiceForegroundGuard.PROFILE
+                                    + TestProfiles.declaring(
+                                            root, PassionServiceForegroundGuard.NAME)
                                     + "/originals/"
                                     + name
                                     + ".apk");
@@ -81,7 +82,7 @@ public final class PassionServiceForegroundGuardTest {
 
             byte[] after =
                     PassionServiceForegroundGuard.apply(
-                            PassionServiceForegroundGuard.PROFILE, 30, original, before);
+                            TestProfiles.SYNTHETIC, 30, original, before);
 
             for (var t : targets) {
                 var m = method(after, t);
@@ -92,15 +93,11 @@ public final class PassionServiceForegroundGuardTest {
 
             reject(() ->
                     PassionServiceForegroundGuard.apply(
-                            "free-11-chinese-20260731-7.3.1", 30, original, before));
+                            TestProfiles.SYNTHETIC, 28, original, before));
             negatives++;
             reject(() ->
                     PassionServiceForegroundGuard.apply(
-                            PassionServiceForegroundGuard.PROFILE, 28, original, before));
-            negatives++;
-            reject(() ->
-                    PassionServiceForegroundGuard.apply(
-                            PassionServiceForegroundGuard.PROFILE, 30, original, after));
+                            TestProfiles.SYNTHETIC, 30, original, after));
             negatives++;
             Path out = stage.resolve(name + "-classes2.dex");
             Files.write(out, after);
@@ -120,12 +117,12 @@ public final class PassionServiceForegroundGuardTest {
         Path launcher =
                 root.resolve(
                         ".local/profiles/"
-                                + PassionServiceForegroundGuard.PROFILE
+                                + TestProfiles.declaring(root, PassionServiceForegroundGuard.NAME)
                                 + "/originals/LY_Launcher.apk");
         byte[] launcherDex = dex(launcher, "classes3.dex");
         reject(() ->
                 PassionServiceForegroundGuard.apply(
-                        PassionServiceForegroundGuard.PROFILE, 30, launcher, launcherDex));
+                        TestProfiles.SYNTHETIC, 30, launcher, launcherDex));
         negatives++;
         int launcherMethods = launcherForegroundMethods(launcherDex);
         check(launcherMethods == 1 && sites == 3);
