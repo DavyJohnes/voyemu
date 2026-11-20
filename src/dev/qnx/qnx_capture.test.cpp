@@ -10,9 +10,7 @@
 int main(int argc, char **argv) try {
     using namespace voyemu;
     auto root = std::filesystem::temp_directory_path() / "owned-capture-fixture";
-    auto session =
-            root /
-            ".local/machines/free-09-chinese-20260106-6.0.3/sessions/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    auto session = root / ".local/machines/test-profile/sessions/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
     auto output = root / ".local/build/tmp/result";
     assert(qnx_capture_project(session, output) == root);
     auto rejects = [](const std::function<void()> &action) {
@@ -35,25 +33,31 @@ int main(int argc, char **argv) try {
         qnx_capture_project(session.parent_path() / "../foreign", output);
     });
     rejects([&] {
+        qnx_capture_project(root / "other/.local/machines/test-profile/sessions/not-a-token",
+                            output);
+    });
+    qnx_capture_journal(root, "test-profile",
+                        root / ".local/machines/test-profile/checkpoints/fresh-candidate/gpu");
+    rejects([&] {
+        qnx_capture_journal(root, "test-profile",
+                            root / ".local/machines/test-profile/checkpoints");
+    });
+    rejects([&] {
+        qnx_capture_journal(
+                root, "test-profile",
+                root / ".local/machines/test-profile/checkpoints/other-profile/fresh-candidate/gpu");
+    });
+    rejects([&] {
+        qnx_capture_journal(root, "test-profile",
+                            root / ".local/machines/test-profile/checkpoints/../gpu");
+    });
+    rejects([&] {
+        qnx_capture_journal(root, "other-profile",
+                            root / ".local/machines/test-profile/checkpoints/fresh-candidate/gpu");
+    });
+    rejects([&] {
         qnx_capture_project(
-                root / "other/.local/machines/free-09-chinese-20260106-6.0.3/sessions/not-a-token",
-                output);
-    });
-    qnx_capture_journal(
-            root,
-            root / ".local/machines/free-09-chinese-20260106-6.0.3/checkpoints/fresh-candidate/gpu");
-    rejects([&] {
-        qnx_capture_journal(root,
-                            root / ".local/machines/free-09-chinese-20260106-6.0.3/checkpoints");
-    });
-    rejects([&] {
-        qnx_capture_journal(
-                root,
-                root / ".local/machines/free-09-chinese-20260106-6.0.3/checkpoints/other-profile/fresh-candidate/gpu");
-    });
-    rejects([&] {
-        qnx_capture_journal(
-                root, root / ".local/machines/free-09-chinese-20260106-6.0.3/checkpoints/../gpu");
+                root / ".local/machines/.hidden/sessions/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", output);
     });
     auto seed = qnx_capture_initial_state(
             Json{{"initial_state", {{"gear", 0}, {"speed", 0}, {"aeb_sts", 1}}}});

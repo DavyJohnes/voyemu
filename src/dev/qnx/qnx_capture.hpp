@@ -17,10 +17,10 @@ inline std::filesystem::path qnx_capture_project(const std::filesystem::path &se
 
     if (token.size() != 32 || token.find_first_not_of("0123456789abcdef") != std::string::npos ||
         parent.filename() != "sessions" ||
-        parent.parent_path().filename() != "free-09-chinese-20260106-6.0.3" ||
+        !valid_profile_name(parent.parent_path().filename().string()) ||
         parent.parent_path().parent_path().filename() != "machines" ||
         parent.parent_path().parent_path().parent_path().filename() != ".local") {
-        throw std::runtime_error("QNX_CAPTURE_PATH: owned Free A9 session required");
+        throw std::runtime_error("QNX_CAPTURE_PATH: owned profile machine session required");
     }
 
     auto root = parent.parent_path().parent_path().parent_path().parent_path();
@@ -33,20 +33,21 @@ inline std::filesystem::path qnx_capture_project(const std::filesystem::path &se
     return root;
 }
 
-inline void qnx_capture_journal(const std::filesystem::path &root,
+inline void qnx_capture_journal(const std::filesystem::path &root, std::string_view profile,
                                 const std::filesystem::path &journal) {
-    if (!journal.is_absolute() || journal.lexically_normal() != journal) {
+    if (!journal.is_absolute() || journal.lexically_normal() != journal ||
+        !valid_profile_name(profile)) {
         throw std::runtime_error("QNX_CAPTURE_PATH: normalized absolute journal required");
     }
 
-    const auto relative = journal.lexically_relative(
-            root / ".local/machines/free-09-chinese-20260106-6.0.3/checkpoints");
+    const auto relative = journal.lexically_relative(root / ".local/machines" /
+                                                     std::string(profile) / "checkpoints");
     std::vector<std::filesystem::path> parts(relative.begin(), relative.end());
 
     if (parts.size() != 2 || parts[1] != "gpu" || parts[0].string().empty() ||
         parts[0].string().find_first_not_of("abcdefghijklmnopqrstuvwxyz0123456789-") !=
                 std::string::npos) {
-        throw std::runtime_error("QNX_CAPTURE_PATH: dedicated Free A9 checkpoint journal required");
+        throw std::runtime_error("QNX_CAPTURE_PATH: dedicated checkpoint journal required");
     }
 }
 

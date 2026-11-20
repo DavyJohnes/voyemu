@@ -164,7 +164,7 @@ int main(int argc, char **argv) {
             throw std::runtime_error("QNX_CAPTURE_CONFIG: explicit cold specification required");
         }
 
-        const auto profile = directory.parent_path().filename().string();
+        const auto profile = directory.parent_path().parent_path().filename().string();
         const auto key = qnx_checkpoint_key(cold, profile);
         const auto graphics = cold.at("graphics").at("executable").get<std::string>();
 
@@ -181,7 +181,7 @@ int main(int argc, char **argv) {
                 throw std::runtime_error("QNX_CAPTURE_PATH: explicit journal required");
             }
 
-            qnx_capture_journal(root, journal);
+            qnx_capture_journal(root, profile, journal);
 
             if (std::filesystem::is_symlink(journal) || !std::filesystem::is_directory(journal) ||
                 !std::filesystem::is_empty(journal)) {
