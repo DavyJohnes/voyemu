@@ -2,7 +2,7 @@
   "type": "jar",
   "minSdk": 30,
   "output": "framework.jar",
-  "api30ViewObservation": "profiles/free-09-chinese-20260106-6.0.3/components/view-observation/src",
+  "api30ViewObservation": "profiles/common/components/view-observation/src",
   "guestLibs": [
     "/system/framework/framework.jar"
   ]

@@ -2,5 +2,10 @@
   "type": "apk",
   "minSdk": 28,
   "targetSdk": 28,
-  "sign": "platform"
+  "sign": "platform",
+  "sourceFiles": {
+    "AndroidManifest.xml": "voyemu/profiles/common-qinggan-09/components/bootstrap/AndroidManifest.xml",
+    "src/com/voyemu/output/BootReceiver.java": "voyemu/profiles/common-qinggan-09/components/bootstrap/src/com/voyemu/output/BootReceiver.java",
+    "src/com/voyemu/output/SecondScreenService.java": "voyemu/profiles/common-qinggan-09/components/bootstrap/src/com/voyemu/output/SecondScreenService.java"
+  }
 }

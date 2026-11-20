@@ -68,8 +68,7 @@ public final class JavaDexCompileOnlyTest {
             }
         }
 
-        Path bluetooth =
-                root.resolve("profiles/free-09-chinese-20260106-6.0.3/components/bluetooth/src");
+        Path bluetooth = root.resolve("profiles/common/components/bluetooth/src");
         Set<String> bluetoothNames =
                 inventory(
                         DexOperations.javaDex(

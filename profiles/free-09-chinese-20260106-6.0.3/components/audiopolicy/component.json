@@ -19,5 +19,23 @@
       "com.qinggan.audiopolicy.IBTSourceConnected",
       "com.qinggan.audiopolicy.IBTSourceInfoCallback"
     ]
+  },
+  "sourceFiles": {
+    "AndroidManifest.xml": "voyemu/profiles/common-qinggan-09/components/audiopolicy/AndroidManifest.xml",
+    "src/com/qinggan/audiopolicy/AudioPolicyStubService.java": "voyemu/profiles/common-qinggan-09/components/audiopolicy/src/com/qinggan/audiopolicy/AudioPolicyStubService.java",
+    "src/com/qinggan/audiopolicy/AudioStartupProvider.java": "voyemu/profiles/common-qinggan-09/components/audiopolicy/src/com/qinggan/audiopolicy/AudioStartupProvider.java",
+    "src/com/qinggan/audiopolicy/StartupAudioPolicy.java": "voyemu/profiles/common-qinggan-09/components/audiopolicy/src/com/qinggan/audiopolicy/StartupAudioPolicy.java",
+    "src/com/qinggan/util/Log.java": "voyemu/profiles/common-qinggan-09/components/audiopolicy/src/com/qinggan/util/Log.java",
+    "src/compile-only/com/qinggan/audiopolicy/AudioClient.java": "voyemu/profiles/common-qinggan-09/components/audiopolicy/src/compile-only/com/qinggan/audiopolicy/AudioClient.java",
+    "src/compile-only/com/qinggan/audiopolicy/AudioEQMode.java": "voyemu/profiles/common-qinggan-09/components/audiopolicy/src/compile-only/com/qinggan/audiopolicy/AudioEQMode.java",
+    "src/compile-only/com/qinggan/audiopolicy/AudioPolicyInfo.java": "voyemu/profiles/common-qinggan-09/components/audiopolicy/src/compile-only/com/qinggan/audiopolicy/AudioPolicyInfo.java",
+    "src/compile-only/com/qinggan/audiopolicy/IAudioClientCallback.java": "voyemu/profiles/common-qinggan-09/components/audiopolicy/src/compile-only/com/qinggan/audiopolicy/IAudioClientCallback.java",
+    "src/compile-only/com/qinggan/audiopolicy/IAudioExceptionCallback.java": "voyemu/profiles/common-qinggan-09/components/audiopolicy/src/compile-only/com/qinggan/audiopolicy/IAudioExceptionCallback.java",
+    "src/compile-only/com/qinggan/audiopolicy/IAudioFadeCallback.java": "voyemu/profiles/common-qinggan-09/components/audiopolicy/src/compile-only/com/qinggan/audiopolicy/IAudioFadeCallback.java",
+    "src/compile-only/com/qinggan/audiopolicy/IAudioPolicyCallback.java": "voyemu/profiles/common-qinggan-09/components/audiopolicy/src/compile-only/com/qinggan/audiopolicy/IAudioPolicyCallback.java",
+    "src/compile-only/com/qinggan/audiopolicy/IAudioPolicyInfoCallback.java": "voyemu/profiles/common-qinggan-09/components/audiopolicy/src/compile-only/com/qinggan/audiopolicy/IAudioPolicyInfoCallback.java",
+    "src/compile-only/com/qinggan/audiopolicy/IAudioPolicyService.java": "voyemu/profiles/common-qinggan-09/components/audiopolicy/src/compile-only/com/qinggan/audiopolicy/IAudioPolicyService.java",
+    "src/compile-only/com/qinggan/audiopolicy/IBTSourceConnected.java": "voyemu/profiles/common-qinggan-09/components/audiopolicy/src/compile-only/com/qinggan/audiopolicy/IBTSourceConnected.java",
+    "src/compile-only/com/qinggan/audiopolicy/IBTSourceInfoCallback.java": "voyemu/profiles/common-qinggan-09/components/audiopolicy/src/compile-only/com/qinggan/audiopolicy/IBTSourceInfoCallback.java"
   }
 }

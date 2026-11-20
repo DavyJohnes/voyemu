@@ -8,14 +8,6 @@ import java.util.TreeMap;
  * Exact clean Android30 framework; the API28 wrapper's descriptor and instructions are identical.
  */
 final class Api30ViewObservation {
-    static final String PROFILE = "free-11-chinese-20260731-7.3.1";
-
-    static boolean supports(String profile) {
-        return PROFILE.equals(profile)
-                || "free-11-chinese-20250710-6.11.1".equals(profile)
-                || "passion-11-russian-20260403-2.1.4.80".equals(profile);
-    }
-
     static final String PIN = "c17a2b45ae03bad051528fc1a9487a5c320b43b2fd4bf11c9b615cfda2ffe633";
 
     private static void require(boolean value) {
@@ -29,12 +21,11 @@ final class Api30ViewObservation {
     static Path source(ProfileRegistry.Profile profile, java.util.Map<String, Object> component)
             throws Exception {
         require(
-                supports(profile.id())
-                        && profile.sourceRoot() != null
+                profile.sourceRoot() != null
                         && profile.sourceRoot().isAbsolute()
                         && profile.sourceRoot().toRealPath().equals(profile.sourceRoot()));
-        String relative = "profiles/free-09-chinese-20260106-6.0.3/components/view-observation/src";
-        require(relative.equals(Json.str(component, "api30ViewObservation")));
+        String relative = Json.str(component, "api30ViewObservation");
+        require(relative.matches("profiles/common[a-z0-9-]*/components/view-observation/src"));
         Path source = Storage.confined(profile.sourceRoot(), relative);
         require(
                 FilesSupport.tree(source)
@@ -64,7 +55,7 @@ final class Api30ViewObservation {
 
     static Path build(String profile, int api, Path original, Path helper, Path output)
             throws Exception {
-        require(supports(profile) && api == 30 && FilesSupport.hash(original).equals(PIN));
+        require(api == 30 && FilesSupport.hash(original).equals(PIN));
         var entries = new TreeMap<>(NativeCore.entries(original));
         require(
                 entries.keySet().stream()

@@ -19,7 +19,7 @@
   "sourceFiles": {
     "AndroidManifest.xml": "voyemu/profiles/common/components/audiopolicy-disabled/AndroidManifest.xml",
     "src/com/qinggan/audiopolicy/AudioPolicyStubService.java": "voyemu/profiles/common/components/audiopolicy-disabled/src/com/qinggan/audiopolicy/AudioPolicyStubService.java",
-    "src/com/qinggan/util/Log.java": "voyemu/profiles/free-09-chinese-20260106-6.0.3/components/audiopolicy/src/com/qinggan/util/Log.java"
+    "src/com/qinggan/util/Log.java": "voyemu/profiles/common-qinggan-09/components/audiopolicy/src/com/qinggan/util/Log.java"
   },
   "upstreamEdits": "upstream.edits.json"
 }

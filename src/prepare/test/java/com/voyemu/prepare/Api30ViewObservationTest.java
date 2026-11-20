@@ -97,10 +97,7 @@ public final class Api30ViewObservationTest {
                 helper = Path.of(args[2]),
                 output = Path.of(args[3]);
 
-        for (String owner :
-                new String[] {
-                    Api30ViewObservation.PROFILE, "passion-11-russian-20260403-2.1.4.80"
-                }) {
+        for (String owner : owners(root)) {
             checkOwnerSource(root, output, owner);
         }
 
@@ -123,10 +120,9 @@ public final class Api30ViewObservationTest {
             // Rejection is the expected outcome.
         }
 
-        Api30ViewObservation.build(Api30ViewObservation.PROFILE, 30, original, helper, output);
+        Api30ViewObservation.build(TestProfiles.SYNTHETIC, 30, original, helper, output);
         Path passionOutput = output.resolveSibling("passion-framework.jar");
-        Api30ViewObservation.build(
-                "passion-11-russian-20260403-2.1.4.80", 30, original, helper, passionOutput);
+        Api30ViewObservation.build(TestProfiles.SYNTHETIC, 30, original, helper, passionOutput);
         var passionEntries = NativeCore.entries(passionOutput);
         var before = NativeCore.entries(original);
         var after = NativeCore.entries(output);
@@ -203,6 +199,39 @@ public final class Api30ViewObservationTest {
                     + " flags and fail-closed owner/API/repatch cases passed");
     }
 
+    // The source profiles that install a framework.jar built on the declared API30 bridge.
+    private static java.util.List<String> owners(Path root) throws Exception {
+        var owners = new java.util.ArrayList<String>();
+
+        try (var entries = Files.list(root.resolve("profiles"))) {
+            for (Path directory : entries.sorted().toList()) {
+                Path component = directory.resolve("components/view-observation/component.json");
+
+                if (Files.isRegularFile(component)
+                        && Json.object(Json.parse(Files.readString(component)))
+                                .containsKey("api30ViewObservation")
+                        && Json.list(
+                                        Json.object(
+                                                        Json.parse(
+                                                                Files.readString(
+                                                                        directory.resolve(
+                                                                                "profile.json"))))
+                                                .get("install"))
+                                .stream()
+                                .map(Json::object)
+                                .anyMatch(item ->
+                                        "/system/framework/framework.jar"
+                                                .equals(item.get("target")))) {
+                    owners.add(directory.getFileName().toString());
+                }
+            }
+        }
+
+        check(owners.size() >= 2);
+
+        return owners;
+    }
+
     private static void checkOwnerSource(Path root, Path output, String owner) throws Exception {
         var profile =
                 Json.object(
@@ -228,10 +257,9 @@ public final class Api30ViewObservationTest {
                         .equals(root.resolve(Json.str(component, "api30ViewObservation"))));
         checkRejectedSources(root, output, owner, selected, component);
 
+        boolean originalNavi = Json.obj(profile, "patches").containsKey("original-navi-framework");
         String installedBridge =
-                owner.equals(Api30ViewObservation.PROFILE)
-                        ? "patched:original-navi-framework"
-                        : "component:view-observation";
+                originalNavi ? "patched:original-navi-framework" : "component:view-observation";
         check(
                 Json.list(profile.get("install")).stream()
                         .map(Json::object)
@@ -240,7 +268,7 @@ public final class Api30ViewObservationTest {
                                         && "/system/framework/framework.jar"
                                                 .equals(item.get("target"))));
 
-        if (owner.equals(Api30ViewObservation.PROFILE)) {
+        if (originalNavi) {
             var naviFramework = Json.obj(Json.obj(profile, "patches"), "original-navi-framework");
             check(
                     "jar".equals(naviFramework.get("type"))
@@ -290,22 +318,6 @@ public final class Api30ViewObservationTest {
 
         try {
             Api30ViewObservation.source(selected, badPath);
-        } catch (Failure expected) {
-            rejectedSource = true;
-        }
-
-        check(rejectedSource);
-        rejectedSource = false;
-
-        try {
-            Api30ViewObservation.source(
-                    new ProfileRegistry.Profile(
-                            "unsupported-profile",
-                            selected.revision(),
-                            selected.data(),
-                            selected.resourcePrefix(),
-                            root),
-                    component);
         } catch (Failure expected) {
             rejectedSource = true;
         }
@@ -367,22 +379,10 @@ public final class Api30ViewObservationTest {
         corruptedJarBytes[corruptedJarBytes.length - 1] ^= 1;
         Files.write(corruptedJar, corruptedJarBytes);
 
-        for (String owner :
-                new String[] {
-                    Api30ViewObservation.PROFILE, "passion-11-russian-20260403-2.1.4.80"
-                }) {
+        {
             try {
-                Api30ViewObservation.build(owner, 30, corruptedJar, helper, output);
-                throw new AssertionError();
-            } catch (Failure expected) {
-                // Rejection is the expected outcome.
-            }
-        }
-
-        for (String owner :
-                new String[] {"unsupported-profile", "free-09-chinese-20260106-6.0.3"}) {
-            try {
-                Api30ViewObservation.build(owner, 30, original, helper, output);
+                Api30ViewObservation.build(
+                        TestProfiles.SYNTHETIC, 30, corruptedJar, helper, output);
                 throw new AssertionError();
             } catch (Failure expected) {
                 // Rejection is the expected outcome.
@@ -522,25 +522,23 @@ public final class Api30ViewObservationTest {
 
     private static void checkRejectedOwners(Path original, Path helper, Path output)
             throws Exception {
-        for (String owner :
-                new String[] {
-                    "passion-11-russian-20260403-2.1.4.80", Api30ViewObservation.PROFILE
-                }) {
+        {
             try {
-                Api30ViewObservation.build(owner, 28, original, helper, output);
+                Api30ViewObservation.build(TestProfiles.SYNTHETIC, 28, original, helper, output);
                 throw new AssertionError();
             } catch (Failure expected) {
                 // Rejection is the expected outcome.
             }
         }
 
-        for (String owner :
-                new String[] {
-                    Api30ViewObservation.PROFILE, "passion-11-russian-20260403-2.1.4.80"
-                }) {
+        {
             try {
                 Api30ViewObservation.build(
-                        owner, 30, output, helper, output.resolveSibling("twice.jar"));
+                        TestProfiles.SYNTHETIC,
+                        30,
+                        output,
+                        helper,
+                        output.resolveSibling("twice.jar"));
                 throw new AssertionError();
             } catch (Failure expected) {
                 // Rejection is the expected outcome.

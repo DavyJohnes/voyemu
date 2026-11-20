@@ -12,12 +12,29 @@ public final class ViewObservationTest {
         }
     }
 
+    // The first source profile whose view-observation component declares the API30 bridge.
+    private static String owner(Path root) throws Exception {
+        try (var entries = Files.list(root.resolve("profiles"))) {
+            for (Path directory : entries.sorted().toList()) {
+                Path component = directory.resolve("components/view-observation/component.json");
+
+                if (Files.isRegularFile(component)
+                        && Json.object(Json.parse(Files.readString(component)))
+                                .containsKey("api30ViewObservation")) {
+                    return directory.getFileName().toString();
+                }
+            }
+        }
+
+        throw new AssertionError("No API30 view-observation component");
+    }
+
     public static void main(String[] args) throws Exception {
         Path root = Path.of(args[0]).toRealPath(),
                 original = Path.of(args[1]),
                 helper = Path.of(args[2]),
                 output = Path.of(args[3]);
-        String id = "free-11-chinese-20250710-6.11.1";
+        String id = owner(root);
         var data =
                 Json.object(
                         Json.parse(
@@ -34,8 +51,6 @@ public final class ViewObservationTest {
                                                         + id
                                                         + "/components/view-observation/component.json"))));
 
-        check(Api30ViewObservation.supports(id));
-        check(!Api30ViewObservation.supports(id + "-other"));
         check(
                 Api30ViewObservation.source(profile, component)
                         .equals(root.resolve(Json.str(component, "api30ViewObservation"))));
@@ -52,13 +67,6 @@ public final class ViewObservationTest {
         try {
             Api30ViewObservation.build(id, 28, original, helper, output);
             throw new AssertionError("wrong API accepted");
-        } catch (Failure expected) {
-            // Rejection is the expected outcome.
-        }
-
-        try {
-            Api30ViewObservation.build(id + "-other", 30, original, helper, output);
-            throw new AssertionError("wrong profile accepted");
         } catch (Failure expected) {
             // Rejection is the expected outcome.
         }

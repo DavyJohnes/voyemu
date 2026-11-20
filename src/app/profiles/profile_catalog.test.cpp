@@ -417,7 +417,7 @@ static void verify_qinggan11_view_graph(const std::filesystem::path &profiles) {
                        {"minSdk", 30},
                        {"output", "framework.jar"},
                        {"api30ViewObservation",
-                        "profiles/free-09-chinese-20260106-6.0.3/components/view-observation/src"},
+                        "profiles/common/components/view-observation/src"},
                        {"guestLibs", Json::array({"/system/framework/framework.jar"})}},
           "actual API30 view bridge component contract remains exact");
     check(qinggan11_wheel_capability(definition) == qinggan11_partial_wheel_capability(),

@@ -19,6 +19,8 @@ string(RANDOM LENGTH 16 ALPHABET 0123456789abcdef TOKEN)
 set(WORK "${ROOT}/.local/build/jobs/prepare-java-android-stubs-${TOKEN}")
 set(T "${ROOT}/src/prepare/test")
 set(A9 "${ROOT}/profiles/free-09-chinese-20260106-6.0.3")
+set(COMMON "${ROOT}/profiles/common")
+set(COMMON09 "${ROOT}/profiles/common-qinggan-09")
 set(F611 "${ROOT}/profiles/free-11-chinese-20250710-6.11.1")
 set(F731 "${ROOT}/profiles/free-11-chinese-20260731-7.3.1")
 set(PASSION "${ROOT}/profiles/passion-11-russian-20260403-2.1.4.80")
@@ -76,20 +78,20 @@ check(com.voyemu.prepare.PassionBluetoothVolumeTest
 check(com.voyemu.prepare.PassionOneKeyMuteTest
     FILES "${T}/fixtures/passion-onekey-mute" "${WINDOW}/PassionOneKeyMute.java")
 check(com.voyemu.prepare.SyntheticPhonePeerTest
-    FILES "${A9}/components/bluetooth/src/SyntheticPhonePeer.java")
+    FILES "${COMMON}/components/bluetooth/src/SyntheticPhonePeer.java")
 check(com.voyemu.prepare.SyntheticPhonePeerJournalConcurrencyTest
-    FILES "${A9}/components/bluetooth/src/SyntheticPhonePeer.java")
+    FILES "${COMMON}/components/bluetooth/src/SyntheticPhonePeer.java")
 check(com.voyemu.prepare.SyntheticPhonePeerJournalConcurrencyTest
     FILES "${ROOT}/profiles/free-09-chinese-20221230-nxp-rc45/components/phone-bluetooth/src/SyntheticPhonePeer.java")
 # The OEM-shaped test bases of fixture/oem replace the stub-cls declarations they double.
-file(GLOB_RECURSE A9_BLUETOOTH "${A9}/components/bluetooth/src/*.java")
-list(FILTER A9_BLUETOOTH EXCLUDE REGEX "/stub-cls/com/qinggan/bluetooth/(profile/(BTAdapter|BluetoothCall|A2dp|BTDevice|SimpleHfpCallback|SimplePbapCallback)|BTDeviceManager|bean/(BTContactItem|BTPhoneNumber))\\.java$")
+file(GLOB_RECURSE COMMON_BLUETOOTH "${COMMON}/components/bluetooth/src/*.java")
+list(FILTER COMMON_BLUETOOTH EXCLUDE REGEX "/stub-cls/com/qinggan/bluetooth/(profile/(BTAdapter|BluetoothCall|A2dp|BTDevice|SimpleHfpCallback|SimplePbapCallback)|BTDeviceManager|bean/(BTContactItem|BTPhoneNumber))\\.java$")
 check(com.voyemu.prepare.SyntheticPhonePeerCallbacksTest
     ARGS "${WORK}/SyntheticPhonePeerCallbacksTest"
     CLASSPATH "${PLATFORM}" SOURCEPATH "${ROOT}/src/prepare/java"
     FILES "${T}/fixtures/phone-peer-process/android" "${T}/fixtures/phone-peer-process/com"
         "${T}/fixtures/phone-peer-process/org" "${T}/fixtures/phone-pbap-race/com"
-        "${T}/fixtures/phone-peer-process/fixture/oem" ${A9_BLUETOOTH})
+        "${T}/fixtures/phone-peer-process/fixture/oem" ${COMMON_BLUETOOTH})
 check(com.voyemu.input.FreeKeyInputSessionTest
     SOURCEPATH "${T}/free-startup-audio" "${F731}/components/wheel-input/src")
 check(com.voyemu.input.FreeKeySubmissionTest
@@ -111,14 +113,14 @@ check(com.voyemu.input.PhonePeerProviderTest
 check(com.voyemu.input.PhonePeerProviderSettingsTest
     SOURCEPATH "${T}/phone-peer-provider" "${T}/phone-provider" "${F611}/patches/phone-provider/src")
 check(com.voyemu.input.WheelInputSessionTest
-    FILES "${A9}/components/oem-services/src/com/voyemu/input/WheelInputSession.java")
+    FILES "${COMMON09}/components/oem-services/src/com/voyemu/input/WheelInputSession.java")
 check(com.voyemu.oem.CarSignalStubTest
     FILES "${T}/fixtures/carsignal" "${ROOT}/profiles/common/components/carsignal/src")
 check(com.qinggan.audiopolicy.AudioPolicyStubServiceTest
-    FILES "${T}/fixtures/audiopolicy-stub" "${A9}/components/audiopolicy/src/compile-only"
-        "${A9}/components/audiopolicy/src/com/qinggan/audiopolicy/AudioPolicyStubService.java")
+    FILES "${T}/fixtures/audiopolicy-stub" "${COMMON09}/components/audiopolicy/src/compile-only"
+        "${COMMON09}/components/audiopolicy/src/com/qinggan/audiopolicy/AudioPolicyStubService.java")
 # The qg.power_manager stub of each Free profile with its OEM interface declarations.
-foreach(POWER "${A9}/components/oem-services" "${F611}/components/oem-power" "${F731}/components/oem-power")
+foreach(POWER "${COMMON09}/components/oem-services" "${F611}/components/oem-power" "${F731}/components/oem-power")
     check(com.voyemu.oem.PowerManagerStubTest
         FILES "${T}/fixtures/oem-power" "${ROOT}/profiles/common/components/oem-power/src"
             "${POWER}/src/com/voyemu/oem/PowerManagerStub.java"

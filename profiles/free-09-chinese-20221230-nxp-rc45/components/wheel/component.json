@@ -16,13 +16,13 @@
     ]
   },
   "sourceFiles": {
-    "src/com/voyemu/oem/KeyManagerStub.java": "voyemu/profiles/free-09-chinese-20260106-6.0.3/components/oem-services/src/com/voyemu/oem/KeyManagerStub.java",
-    "src/com/voyemu/oem/BootReceiver.java": "voyemu/profiles/free-09-chinese-20260106-6.0.3/components/oem-services/src/com/voyemu/oem/BootReceiver.java",
-    "src/com/voyemu/input/AudioControl.java": "voyemu/profiles/free-09-chinese-20260106-6.0.3/components/oem-services/src/com/voyemu/input/AudioControl.java",
-    "src/com/voyemu/input/WheelControlProvider.java": "voyemu/profiles/free-09-chinese-20260106-6.0.3/components/oem-services/src/com/voyemu/input/WheelControlProvider.java",
-    "src/com/voyemu/input/WheelInputSession.java": "voyemu/profiles/free-09-chinese-20260106-6.0.3/components/oem-services/src/com/voyemu/input/WheelInputSession.java",
-    "src/com/voyemu/input/WheelControl.java": "voyemu/profiles/free-09-chinese-20260106-6.0.3/components/oem-services/src/com/voyemu/input/WheelControl.java",
-    "src/com/voyemu/input/KeyEventRouter.java": "voyemu/profiles/free-09-chinese-20260106-6.0.3/components/oem-services/src/com/voyemu/input/KeyEventRouter.java"
+    "src/com/voyemu/oem/KeyManagerStub.java": "voyemu/profiles/common-qinggan-09/components/oem-services/src/com/voyemu/oem/KeyManagerStub.java",
+    "src/com/voyemu/oem/BootReceiver.java": "voyemu/profiles/common-qinggan-09/components/oem-services/src/com/voyemu/oem/BootReceiver.java",
+    "src/com/voyemu/input/AudioControl.java": "voyemu/profiles/common-qinggan-09/components/oem-services/src/com/voyemu/input/AudioControl.java",
+    "src/com/voyemu/input/WheelControlProvider.java": "voyemu/profiles/common-qinggan-09/components/oem-services/src/com/voyemu/input/WheelControlProvider.java",
+    "src/com/voyemu/input/WheelInputSession.java": "voyemu/profiles/common-qinggan-09/components/oem-services/src/com/voyemu/input/WheelInputSession.java",
+    "src/com/voyemu/input/WheelControl.java": "voyemu/profiles/common-qinggan-09/components/oem-services/src/com/voyemu/input/WheelControl.java",
+    "src/com/voyemu/input/KeyEventRouter.java": "voyemu/profiles/common-qinggan-09/components/oem-services/src/com/voyemu/input/KeyEventRouter.java"
   },
   "sourceEdits": "source.edits.json"
 }

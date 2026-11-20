@@ -332,14 +332,14 @@ public final class BluetoothPeerComponentTest {
         var sourceFiles = Json.obj(wrongSource, "sourceFiles");
         sourceFiles.put(
                 "src/Ivt8BTAdapter.java",
-                "voyemu/profiles/free-09-chinese-20260106-6.0.3/components/bluetooth/src/Ivt8BTAdapter.java");
+                "voyemu/profiles/foreign/components/bluetooth/src/Ivt8BTAdapter.java");
         wrongSource.put("sourceFiles", sourceFiles);
         Files.writeString(component.resolve("component.json"), Json.write(wrongSource) + "\n");
 
         try {
             artifacts(root, recipe, job.resolve("reject-cross-profile-source"), storage, data)
                     .resolve("component:bluetooth");
-            throw new AssertionError("611 accepted 731/A9 peer source");
+            throw new AssertionError("foreign profile peer source accepted");
         } catch (Failure expected) {
             check(expected.code.equals("QINGGAN11_PHONE_PEER_ABI"), expected.code);
             negatives++;

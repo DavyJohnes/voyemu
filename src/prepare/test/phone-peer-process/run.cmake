@@ -11,7 +11,7 @@ else()
 endif()
 set(PLATFORM "${ROOT}/.local/toolchains/java-sdk/platforms/android-34/android.jar")
 set(FIXTURE "${ROOT}/src/prepare/test/fixtures/phone-peer-process")
-set(COMPONENT "${ROOT}/profiles/free-09-chinese-20260106-6.0.3/components/bluetooth/src")
+set(COMPONENT "${ROOT}/profiles/common/components/bluetooth/src")
 set(TESTS "${ROOT}/src/prepare/test/java/com/voyemu/prepare")
 foreach(required IN ITEMS "${JAVA}" "${JAVAC}" "${PLATFORM}"
         "${COMPONENT}/Ivt8BTAdapter.java" "${FIXTURE}/fixture/PhonePeerProcessProbe.java"

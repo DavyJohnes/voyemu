@@ -466,7 +466,7 @@ final class Artifacts {
     private Path api30ViewObservationComponent(
             Map<String, Object> definition, Path dir, int minimum) throws Exception {
         Failure.require(
-                Api30ViewObservation.supports(profile.referenceProfile()) && api == 30,
+                api == 30,
                 "API30_VIEW_OBSERVATION_CONTRACT",
                 "Exact registered Android30 observation component required",
                 3);

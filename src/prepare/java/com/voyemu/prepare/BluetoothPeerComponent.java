@@ -15,8 +15,8 @@ import java.util.TreeSet;
 
 /** Free A11 phone-owned adapter; owner declarations are compile dependencies only. */
 final class BluetoothPeerComponent {
-    static final String PREFIX = "Lcom/qinggan/bluetooth/",
-            PROFILE = "free-11-chinese-20260731-7.3.1";
+    static final String PREFIX = "Lcom/qinggan/bluetooth/";
+    static final String SHARED = "voyemu/profiles/common/components/bluetooth/src/";
 
     static void check(boolean value, String message) {
         Failure.require(value, "QINGGAN11_PHONE_PEER_ABI", message, 3);
@@ -173,31 +173,22 @@ final class BluetoothPeerComponent {
         return out;
     }
 
-    // Free A11 6.11.1 pins its own adapter and subscription; other profiles reuse the shared 6.0.3
-    // sources.
+    // Each peer source is the shared one or one of a component of the selected profile itself, as
+    // Free 6.11.1 declares its own adapter and subscription.
     private static void checkSources(
             ProfileRegistry.Profile profile, Map<String, Object> files, Set<String> own) {
-        if ("free-11-chinese-20250710-6.11.1".equals(profile.referenceProfile())) {
-            String local =
-                    "voyemu/profiles/free-11-chinese-20250710-6.11.1/components/bluetooth-611/src/";
-            String shared =
-                    "voyemu/profiles/free-09-chinese-20260106-6.0.3/components/bluetooth/src/";
-            var expected =
-                    Map.of(
-                            "src/Ivt8BTAdapter.java", local + "Ivt8BTAdapter.java",
-                            "src/SyntheticPhonePeer.java", shared + "SyntheticPhonePeer.java",
-                            "src/PeerConfiguration.java", shared + "PeerConfiguration.java",
-                            "src/PeerSubscription.java", local + "PeerSubscription.java");
-            check(files.equals(expected), "exact Free A11 6.11.1 peer sources required");
-        } else {
-            for (String file : own) {
-                check(
-                        String.valueOf(files.get("src/" + file))
-                                .equals(
-                                        "voyemu/profiles/free-09-chinese-20260106-6.0.3/components/bluetooth/src/"
-                                                + file),
-                        "shared existing peer source required");
-            }
+        for (String file : own) {
+            String value = String.valueOf(files.get("src/" + file));
+            check(
+                    value.equals(SHARED + file)
+                            || value.matches(
+                                    java.util.regex.Pattern.quote(
+                                                    "voyemu/profiles/"
+                                                            + profile.id()
+                                                            + "/components/")
+                                            + "[a-z0-9][a-z0-9-]*/src/"
+                                            + java.util.regex.Pattern.quote(file)),
+                    "shared or own peer source required");
         }
     }
 
@@ -216,11 +207,7 @@ final class BluetoothPeerComponent {
         Path qgapi = inputs.qgapi(), phone = inputs.phone(), platform = inputs.platform();
 
         check(
-                (PROFILE.equals(profile.referenceProfile())
-                                || "free-11-chinese-20250710-6.11.1"
-                                        .equals(profile.referenceProfile()))
-                        && api == 30
-                        && name.equals("bluetooth"),
+                api == 30 && name.equals("bluetooth"),
                 "registered Free A11 API30 Bluetooth component required");
         check(
                 definition

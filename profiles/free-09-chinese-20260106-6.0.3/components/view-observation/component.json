@@ -1,5 +1,8 @@
 {
   "type": "jar",
   "minSdk": 28,
-  "output": "view-observation.jar"
+  "output": "view-observation.jar",
+  "sourceFiles": {
+    "src/com/voyemu/api/ViewDumpBridge.java": "voyemu/profiles/common/components/view-observation/src/com/voyemu/api/ViewDumpBridge.java"
+  }
 }

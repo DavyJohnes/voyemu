@@ -24,19 +24,18 @@ public final class OriginalNaviFrameworkCompositionTest {
                 bridge = Path.of(args[2]),
                 actual = Path.of(args[3]),
                 output = Path.of(args[4]);
-        var profile =
-                new ProfileRegistry(root, Api30ViewObservation.PROFILE)
-                        .get(Api30ViewObservation.PROFILE);
+        String id = TestProfiles.declaring(root, "original-navi-egl");
+        var profile = new ProfileRegistry(root, id).get(id);
         var component =
                 Json.object(
                         Json.parse(
                                 Files.readString(
                                         root.resolve(
                                                 "profiles/"
-                                                        + Api30ViewObservation.PROFILE
+                                                        + id
                                                         + "/components/view-observation/component.json"))));
         Api30ViewObservation.source(profile, component);
-        Api30ViewObservation.build(Api30ViewObservation.PROFILE, 30, original, bridge, output);
+        Api30ViewObservation.build(id, 30, original, bridge, output);
         require(
                 FilesSupport.hash(output).equals(FilesSupport.hash(actual)),
                 "Rebuilt framework differs from actual production output");
@@ -52,20 +51,11 @@ public final class OriginalNaviFrameworkCompositionTest {
             }
         }
 
-        var egl =
-                OriginalNaviEglGuard.apply(
-                        Api30ViewObservation.PROFILE, 30, after.get("classes4.dex"));
+        var egl = OriginalNaviEglGuard.apply(id, 30, after.get("classes4.dex"));
         require(
-                Arrays.equals(
-                        egl,
-                        OriginalNaviEglGuard.apply(
-                                Api30ViewObservation.PROFILE, 30, before.get("classes4.dex"))),
+                Arrays.equals(egl, OriginalNaviEglGuard.apply(id, 30, before.get("classes4.dex"))),
                 "Bridge composition changed the EGL transform output");
-        Path recipe =
-                root.resolve(
-                        "profiles/"
-                                + Api30ViewObservation.PROFILE
-                                + "/patches/original-navi-egl.json");
+        Path recipe = root.resolve("profiles/" + id + "/patches/original-navi-egl.json");
         Map<String, Object> metadata =
                 new LinkedHashMap<>(Json.object(Json.parse(Files.readString(recipe))));
         metadata.put("sourceSha256", FilesSupport.hash(recipe));
