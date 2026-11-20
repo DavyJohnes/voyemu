@@ -21,7 +21,12 @@ import java.util.TreeMap;
 
 /** Exercises the actual ordinary component resolver and own source resource pipeline. */
 public final class PhonePeerTest {
-    static final String ID = BluetoothPeerComponent.PROFILE, PREFIX = BluetoothPeerComponent.PREFIX;
+    static final String PREFIX = BluetoothPeerComponent.PREFIX;
+
+    /**
+     * The ID of the profile whose metadata the test reads; the directory name of PROFILE_METADATA.
+     */
+    private static String id;
 
     static void check(boolean value, String message) {
         if (!value) {
@@ -35,7 +40,7 @@ public final class PhonePeerTest {
 
     static ProfileRegistry.Profile profile(Path root, Map<String, Object> data) {
         return new ProfileRegistry.Profile(
-                ID, "isolated-production-component", data, "voyemu/profiles/" + ID + "/", root);
+                id, "isolated-production-component", data, "voyemu/profiles/" + id + "/", root);
     }
 
     static Artifacts artifacts(
@@ -141,7 +146,7 @@ public final class PhonePeerTest {
 
         org.jf.dexlib2.writer.pool.DexPool.writeTo(
                 dex.toString(), new ImmutableDexFile(Opcodes.forApi(30), altered.values()));
-        Path fixture = storage.originals(ID).resolve("BluetoothPhone.apk");
+        Path fixture = storage.originals(id).resolve("BluetoothPhone.apk");
         NativeCore.zip(fixture, Map.of("classes.dex", Files.readAllBytes(dex)), false);
         var negative = copy(data);
         var originals = Json.obj(negative, "original");
@@ -169,6 +174,7 @@ public final class PhonePeerTest {
                 work = Path.of(args[1]).toRealPath(),
                 phone = Path.of(args[2]).toRealPath(),
                 metadata = Path.of(args[3]).toRealPath();
+        id = metadata.getFileName().toString();
         check(work.startsWith(root.resolve(".local/build/jobs")), "isolated test work required");
         Path job = work.resolve("peer-tests");
         check(!Files.exists(job), "fresh peer fixture required");
@@ -178,7 +184,7 @@ public final class PhonePeerTest {
                 phone, Json.str(Json.obj(Json.obj(data, "original"), "BluetoothPhone"), "sha256"));
         var qg = Json.obj(Json.obj(data, "original"), "QGAPI");
         Path actualQG =
-                root.resolve(".local/profiles/" + ID + "/originals/" + Json.str(qg, "file"));
+                root.resolve(".local/profiles/" + id + "/originals/" + Json.str(qg, "file"));
         NativeCore.pinned(actualQG, Json.str(qg, "sha256"));
         Path recipe = job.resolve("recipe"), component = recipe.resolve("components/bluetooth");
         Storage.directory(component);
@@ -216,7 +222,7 @@ public final class PhonePeerTest {
                         job.resolve("state"),
                         job.resolve("run"),
                         job.resolve("logs"));
-        Path originals = storage.originals(ID);
+        Path originals = storage.originals(id);
         Storage.directory(originals.resolve("framework"));
         Files.copy(
                 actualQG,

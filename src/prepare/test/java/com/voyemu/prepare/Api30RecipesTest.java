@@ -7,7 +7,6 @@ import java.util.Map;
 
 public final class Api30RecipesTest {
     static final String APK = "a".repeat(64), ENTRY = "lib/armeabi-v7a/optional.so";
-    static final String PROFILE = "free-11-chinese-20260731-7.3.1";
     static final byte[] BYTES = {1, 2, 3};
 
     static final class Target implements Recipes.Target {
@@ -29,7 +28,7 @@ public final class Api30RecipesTest {
                 notificationValidations,
                 systemPolicyValidations;
         String original = APK;
-        String profile = PROFILE;
+        String profile = TestProfiles.SYNTHETIC;
         Map<String, byte[]> entries =
                 new HashMap<>(
                         Map.of(

@@ -14,15 +14,15 @@ import java.util.TreeSet;
 
 /** Actual producer output contract, not a synthetic readiness receipt. */
 public final class Api30PreparedApkTest {
-    static final String PROFILE = "free-11-chinese-20260731-7.3.1";
-
     public static void main(String[] args) throws Exception {
         if (args.length != 2) {
             throw new IllegalArgumentException("ROOT OWNED_ARTIFACT_WORK");
         }
 
         Path root = Path.of(args[0]).toRealPath(), work = Path.of(args[1]).toRealPath();
-        var profile = new ProfileRegistry(root, PROFILE).get(PROFILE);
+        // The qinggan11 profile that declares the original Navi graph.
+        String id = TestProfiles.declaring(root, "original-navi-egl");
+        var profile = new ProfileRegistry(root, id).get(id);
         var expectedApks =
                 Set.of(
                         "Launcher",
