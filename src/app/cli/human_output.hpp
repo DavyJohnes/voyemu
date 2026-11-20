@@ -1,6 +1,7 @@
 #pragma once
 #include "cli_messages.hpp"
 #include "model.hpp"
+#include <filesystem>
 #include <sstream>
 #include <stdexcept>
 #include <string_view>
@@ -9,11 +10,30 @@ inline std::string human_cli_error(std::string_view message) {
     return "Voyemu: " + std::string(message) + "\n";
 }
 
-// Errors outside the CLI catalog keep their English "CODE: message".
-inline std::string human_cli_error(const std::exception &error, cli::Language language) {
+// A catalog error in language. With the log file of the command, its path follows; an error
+// outside the catalog shows only its CODE, INTERNAL_ERROR without one, and leaves its English text
+// to the log. Without a log file an error outside the catalog keeps its English "CODE: message".
+inline std::string human_cli_error(const std::exception &error, cli::Language language,
+                                   const std::filesystem::path &log = {}) {
     const auto *localized = dynamic_cast<const cli::LocalizedError *>(&error);
 
-    return human_cli_error(localized ? localized->render(language) : std::string(error.what()));
+    if (log.empty()) {
+        return human_cli_error(localized ? localized->render(language) : std::string(error.what()));
+    }
+
+    if (localized) {
+        return human_cli_error(localized->render(language)) +
+               cli::message(language, "error.log", {{"path", log.string()}}) + "\n";
+    }
+
+    std::string code(message_code(error.what()));
+
+    if (code.empty()) {
+        code = "INTERNAL_ERROR";
+    }
+
+    return human_cli_error(code + ": " +
+                           cli::message(language, "error.unexpected", {{"log", log.string()}}));
 }
 
 // Pads to a terminal column width: CJK ideographs and fullwidth forms take two columns.

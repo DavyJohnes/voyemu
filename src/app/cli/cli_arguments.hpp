@@ -300,7 +300,8 @@ inline Arguments parse(int argc, char **argv, const std::filesystem::path &execu
         }
     }
 
-    if (result.verbose && result.command != "start") {
+    if (result.verbose && !preparation && result.command != "start" &&
+        result.command != "restart") {
         throw LocalizedError("CLI_ARGUMENT", "error.verbose_scope");
     }
 

@@ -256,6 +256,28 @@ void errors() {
     check(human_cli_error(std::runtime_error("PIN_PATH: retained input missing"),
                           Language::chinese) == "Voyemu: PIN_PATH: retained input missing\n",
           "uncatalogued errors keep English");
+    // With the log file of the command, a catalog error names it, and an uncatalogued error shows
+    // only its code and points to the log, which keeps its English text.
+    const std::filesystem::path log = "/root/.local/build/logs/build-20261120-101512.log";
+    check(human_cli_error(error, Language::russian, log) ==
+                  "Voyemu: CLI_ARGUMENT: неизвестный параметр --x\nЖурнал: " + log.string() + "\n",
+          "a catalog error names the log");
+    check(human_cli_error(std::runtime_error("PIN_PATH: retained input missing"), Language::english,
+                          log) ==
+                  "Voyemu: PIN_PATH: the operation failed.\nDetails are in the log: " +
+                          log.string() +
+                          ". If the error persists, attach the log to a problem report.\n",
+          "an uncatalogued error keeps its code and names the log");
+    check(human_cli_error(std::runtime_error("filesystem error: cannot create directories"),
+                          Language::russian, log) ==
+                  "Voyemu: INTERNAL_ERROR: операция не выполнена.\nПодробности в журнале: " +
+                          log.string() +
+                          ". Если ошибка повторится, приложите журнал к сообщению о проблеме.\n",
+          "an error without a code shows INTERNAL_ERROR");
+    check(human_cli_error(cli::LocalizedError("INTERRUPTED", "error.interrupted"),
+                          Language::chinese,
+                          log) == "Voyemu: INTERRUPTED: 命令已中断。\n日志：" + log.string() + "\n",
+          "an interruption names the log");
     check(parse_error({"strat"}, Language::chinese) ==
                   "Voyemu: CLI_COMMAND: 未知命令“strat”；请运行 voyemu help\n",
           "unknown command renders in Chinese");

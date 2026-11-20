@@ -1,9 +1,14 @@
 #include "logging.hpp"
+#include "process.hpp"
 #include <cassert>
+#include <chrono>
 #include <exception>
+#include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <regex>
 #include <sstream>
+#include <vector>
 
 int main() try {
     using namespace voyemu;
@@ -35,10 +40,15 @@ int main() try {
     }
 
     assert(failed);
+    // An ordinary command shows no record on its console; --verbose shows them as text.
     std::ostringstream captured;
     auto *prior = std::cerr.rdbuf(captured.rdbuf());
     human_console(true);
+    write(Level::info, "fetch", "hidden");
+    write(Level::error, "fetch", "hidden");
+    verbose(true);
     write(Level::info, "fetch", "inputs verified", {{"files", 2}});
+    verbose(false);
     human_console(false);
     write(Level::info, "fixture", "retained JSON");
     std::cerr.rdbuf(prior);
@@ -50,6 +60,7 @@ int main() try {
     std::ostringstream console;
     prior = std::cerr.rdbuf(console.rdbuf());
     human_console(true);
+    verbose(true);
     console_line("12.0 MiB", true);
     console_line("9 MiB", true);
     console_line("Done", false);
@@ -58,9 +69,67 @@ int main() try {
     console_line("2 MiB", true);
     console_line({}, false);
     console_line({}, false);
+    verbose(false);
     human_console(false);
     std::cerr.rdbuf(prior);
     assert(console.str() == "12.0 MiB\r9 MiB   \rDone \n1 MiB\nfetch: inputs verified\n2 MiB\n");
+    // The log file of a command keeps every record as JSON Lines, debug included, while the
+    // console shows none; the newest 20 log files stay.
+    const auto directory = std::filesystem::temp_directory_path() /
+                           ("voyemu-logging-" + random_token());
+    struct Cleanup {
+        std::filesystem::path path;
+
+        ~Cleanup() {
+            std::error_code ignored;
+
+            std::filesystem::remove_all(path, ignored);
+        }
+    } cleanup{directory};
+    ensure_private_directory(directory);
+    const auto past = std::filesystem::file_time_type::clock::now() - std::chrono::hours(1);
+
+    for (int i = 0; i < 25; ++i) {
+        const auto old = directory / ("fetch-old-" + std::to_string(100 + i) + ".log");
+        std::ofstream(old) << "{}\n";
+        std::filesystem::last_write_time(old, past + std::chrono::seconds(i));
+    }
+
+    std::ofstream(directory / "notes.txt") << "kept\n";
+    std::ostringstream quiet;
+    prior = std::cerr.rdbuf(quiet.rdbuf());
+    human_console(true);
+    const auto file = open_file(directory, "build");
+    write(Level::info, "qnx", "checkpoint.selected", {{"mode", "cold"}});
+    write(Level::debug, "qnx", "guest.marker");
+    write(Level::error, "build", "build output retained");
+    human_console(false);
+    std::cerr.rdbuf(prior);
+    assert(quiet.str().empty());
+    assert(file.parent_path() == directory &&
+           std::regex_match(file.filename().string(), std::regex(R"(build-\d{8}-\d{6}\.log)")));
+    std::ifstream lines(file);
+    std::vector<Json> records;
+
+    for (std::string line; std::getline(lines, line);) {
+        records.push_back(Json::parse(line));
+    }
+
+    assert(records.size() == 3 && records[0].at("message") == "checkpoint.selected" &&
+           records[0].at("fields").at("mode") == "cold" && records[1].at("level") == "debug" &&
+           records[2].at("level") == "error");
+    std::size_t logs = 0;
+
+    for (const auto &entry : std::filesystem::directory_iterator(directory)) {
+        if (entry.path().extension() == ".log") {
+            ++logs;
+            const auto name = entry.path().filename().string();
+            // The new file and the 19 newest old ones stay: fetch-old-106 .. fetch-old-124.
+            assert(entry.path() == file || name >= "fetch-old-106.log");
+        }
+    }
+
+    assert(logs == 20 && std::filesystem::exists(directory / "notes.txt"));
     std::cout << "native canonical DEBUG/INFO/ERROR JSONL record guards passed\n";
 } catch (const std::exception &error) {
     std::cerr << error.what() << '\n';

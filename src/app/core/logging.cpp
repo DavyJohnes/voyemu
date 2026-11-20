@@ -5,20 +5,75 @@
 #include <chrono>
 #include <cstdlib>
 #include <ctime>
+#include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <mutex>
 #include <sstream>
+#include <vector>
 namespace voyemu::logging {
 namespace {
-std::atomic<bool> human_output = false;
+std::atomic<bool> human_output = false, verbose_output = false;
 std::mutex console;
 // The code points of the live line on the console, 0 without one.
 std::size_t live_width = 0;
+// The log file of open_file(), guarded by console.
+std::ofstream journal;
+constexpr std::size_t kept_files = 20;
 } // namespace
 
 void human_console(bool enabled) {
     human_output = enabled;
+}
+
+void verbose(bool enabled) {
+    verbose_output = enabled;
+}
+
+std::filesystem::path open_file(const std::filesystem::path &directory, std::string_view command) {
+    ensure_private_directory(directory);
+    auto time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+    std::tm local{};
+#ifdef _WIN32
+    localtime_s(&local, &time);
+#else
+    localtime_r(&time, &local);
+#endif
+    std::ostringstream name;
+    name << command << '-' << std::put_time(&local, "%Y%m%d-%H%M%S") << ".log";
+    const auto path = directory / name.str();
+    {
+        std::lock_guard lock(console);
+
+        journal.close();
+        journal.clear();
+        journal.open(path, std::ios::app | std::ios::binary);
+    }
+    std::vector<std::pair<std::filesystem::file_time_type, std::filesystem::path>> files;
+
+    for (const auto &entry : std::filesystem::directory_iterator(directory)) {
+        if (entry.is_regular_file() && !entry.is_symlink() && entry.path().extension() == ".log") {
+            files.emplace_back(entry.last_write_time(), entry.path());
+        }
+    }
+
+    // Newest first; the file just opened is the newest even within one timestamp tick.
+    std::sort(files.begin(), files.end(), [&](const auto &left, const auto &right) {
+        if ((left.second == path) != (right.second == path)) {
+            return left.second == path;
+        }
+
+        return left.first != right.first ? left.first > right.first : left.second > right.second;
+    });
+
+    // A file that another process still holds open stays until a later command removes it.
+    for (std::size_t i = kept_files; i < files.size(); ++i) {
+        std::error_code ignored;
+
+        std::filesystem::remove(files[i].second, ignored);
+    }
+
+    return path;
 }
 
 void console_line(std::string_view text, bool live) {
@@ -89,14 +144,36 @@ Json record(Level level, std::string_view component, std::string_view message, J
 
 void write(Level level, std::string_view component, std::string_view message, Json fields) {
     const char *threshold = std::getenv("VOYEMU_LOG_LEVEL");
+    const bool debug = threshold && (std::string_view(threshold) == "debug" ||
+                                     std::string_view(threshold) == "DEBUG");
+    // An ordinary command shows records only with --verbose; the log file keeps every record.
+    const bool shown = (level != Level::debug || debug) && (!human_output || verbose_output);
+    std::lock_guard lock(console);
 
-    if (level == Level::debug && (!threshold || (std::string_view(threshold) != "debug" &&
-                                                 std::string_view(threshold) != "DEBUG"))) {
+    if (!shown && !journal.is_open()) {
         return;
     }
 
-    std::lock_guard lock(console);
-    const auto entry = record(level, component, message, std::move(fields));
+    Json entry;
+
+    try {
+        entry = record(level, component, message, std::move(fields));
+    } catch (const std::exception &) {
+        // A record that only the log file would keep never fails the operation that writes it.
+        if (!shown) {
+            return;
+        }
+
+        throw;
+    }
+
+    if (journal.is_open()) {
+        journal << entry.dump(-1, ' ', false, Json::error_handler_t::replace) << '\n' << std::flush;
+    }
+
+    if (!shown) {
+        return;
+    }
 
     if (human_output) {
         if (live_width) {

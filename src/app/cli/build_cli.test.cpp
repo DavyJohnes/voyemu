@@ -3,6 +3,7 @@
 #include <chrono>
 #include <fstream>
 #include <iostream>
+#include <regex>
 #include <thread>
 #ifndef _WIN32
 #include <csignal>
@@ -38,6 +39,26 @@ int main(int argc, char **argv) {
         const auto installed = root / "voyemu";
 #endif
         std::filesystem::copy_file(std::filesystem::canonical(argv[1]), installed);
+        // A failed command names its log file in the installation, which keeps the English text
+        // of the error as JSON Lines.
+        const auto named_log = [&](const std::string &output) {
+            std::smatch match;
+            require(std::regex_search(
+                            output, match,
+                            std::regex(R"((?:Log|Details are in the log): ([^\n]+?\.log))")),
+                    "failed command named no log: " + output);
+            const std::filesystem::path log = match[1].str();
+            require(log.parent_path() == root / ".local/build/logs" &&
+                            std::filesystem::is_regular_file(log),
+                    "named log is not a file of .local/build/logs: " + log.string());
+            std::ifstream stream(log);
+
+            return std::string(std::istreambuf_iterator<char>(stream), {});
+        };
+        // Log records look like "component: message"; the console of a command shows none.
+        const auto shows_records = [](const std::string &output) {
+            return std::regex_search(output, std::regex(R"((^|\n)[a-z][a-z_]*: )"));
+        };
         const auto run_unknown = [&](const char *command) {
             ProcessSpec spec;
             spec.executable = installed;
@@ -100,10 +121,13 @@ int main(int argc, char **argv) {
             const std::string output(std::istreambuf_iterator<char>(log), {});
             require(!fetch.alive() && fetch.exit_code() == 130 &&
                             stopped < std::chrono::seconds(3) &&
-                            output.find("Voyemu: INTERRUPTED: the command was interrupted.\n") !=
+                            output.find(
+                                    "Voyemu: INTERRUPTED: the command was interrupted.\nLog: ") !=
                                     std::string::npos,
                     "Ctrl+C did not stop fetch promptly with code 130: " +
                             std::to_string(fetch.exit_code()) + " " + output);
+            require(named_log(output).find("\"command.started\"") != std::string::npos,
+                    "interrupted fetch log lacks its start record");
             std::filesystem::remove(archive);
         }
 #endif
@@ -148,11 +172,28 @@ int main(int argc, char **argv) {
                         "public API30 build did not reach genuine preparation: " + result.output);
 
                 // Observer preparation first needs the Java runtime, which offline is not cached.
+                // The console shows the code and the log; the log keeps the English text.
                 if (android_only) {
                     require(result.output.starts_with(
-                                    "Voyemu: DOWNLOAD_OFFLINE: pinned cache file missing"),
+                                    "Voyemu: DOWNLOAD_OFFLINE: the operation failed.\n"
+                                    "Details are in the log: ") &&
+                                    named_log(result.output)
+                                                    .find("DOWNLOAD_OFFLINE: pinned cache file missing") !=
+                                            std::string::npos,
                             "Android-only build did not reach observer preparation with absent fixture toolchain sources: " +
                                     result.output);
+                    require(!shows_records(result.output),
+                            "build printed log records without --verbose: " + result.output);
+                    // --verbose prints the records of the log on the console as well.
+                    arguments.emplace_back("--verbose");
+                    const auto verbose = run(arguments);
+                    require(verbose.exit_code == result.exit_code &&
+                                    verbose.output.find("cli: command.started; command=build") !=
+                                            std::string::npos &&
+                                    verbose.output.find(
+                                            "cli: DOWNLOAD_OFFLINE: pinned cache file missing") !=
+                                            std::string::npos,
+                            "build --verbose did not print its log records: " + verbose.output);
                 }
 
                 require(sha256_file(file) == pin &&
@@ -160,6 +201,25 @@ int main(int argc, char **argv) {
                                 std::filesystem::is_directory(root / ".local/machines") &&
                                 std::filesystem::is_empty(root / ".local/machines"),
                         "failed offline preparation changed status, published a machine or started a session");
+            }
+        }
+
+        // JSON automation keeps its single JSON reply and writes no command log.
+        {
+            ProcessSpec spec;
+            spec.executable = installed;
+            spec.arguments = {"test", "--request", (root / "missing-request.json").string()};
+            spec.directory = root;
+            const auto reply = execute(spec, 15000);
+            const auto parsed = Json::parse(reply.output, nullptr, false);
+            require(!reply.timed_out && reply.exit_code == 4 && parsed.is_object() &&
+                            parsed.at("ok") == false,
+                    "test did not keep its JSON reply: " + reply.output);
+
+            for (const auto &entry :
+                 std::filesystem::directory_iterator(root / ".local/build/logs")) {
+                require(!entry.path().filename().string().starts_with("test-"),
+                        "test wrote a command log");
             }
         }
 

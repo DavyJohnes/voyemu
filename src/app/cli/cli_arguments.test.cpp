@@ -86,6 +86,11 @@ int main(int argc, char **argv) try {
     assert(parse({"start", machine.string(), "--verbose"}).verbose);
     reject({"start", machine.string(), "--verbose", "--verbose"}, "CLI_ARGUMENT:");
     reject({"status", machine.string(), "--verbose"}, "CLI_ARGUMENT:");
+    reject({"stop", machine.string(), "--verbose"}, "CLI_ARGUMENT:");
+    assert(parse({"restart", machine.string(), "--verbose"}).verbose);
+    assert(parse({"deps", "--verbose"}).verbose);
+    assert(parse({"fetch", profile, "--verbose"}).verbose);
+    assert(parse({"build", profile, "--verbose"}).verbose);
     const auto selected = parse({"start", variant.string(), "--cluster=on", "--multimedia=off"});
     assert(selected.machine.name == "variant" && selected.cluster && !selected.multimedia);
     const auto media = parse({"restart", machine.string(), "--cluster=off", "--multimedia=on"});

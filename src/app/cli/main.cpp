@@ -46,12 +46,15 @@ int main(int argc, char **argv) {
                 return std::getenv(name);
             },
             voyemu::os::user_interface_language);
+    // The log file of an ordinary deps, fetch, build, start or restart, named on failure.
+    std::filesystem::path log_file;
     try {
         auto args = voyemu::cli::parse(argc, argv, voyemu::os::executable_path());
         using voyemu::Json;
 
         if (!args.private_start && args.command != "test" && args.command != "_supervise") {
             voyemu::logging::human_console(true);
+            voyemu::logging::verbose(args.verbose);
             voyemu::progress::console(language, voyemu::os::error_terminal());
         }
 
@@ -99,6 +102,13 @@ int main(int argc, char **argv) {
         if (args.command == "deps" || args.command == "fetch" || args.command == "build" ||
             args.command == "start" || args.command == "restart") {
             voyemu::ensure_local_roots(args.root);
+
+            if (!args.private_start) {
+                log_file = voyemu::logging::open_file(args.root / ".local/build/logs",
+                                                      args.command);
+                voyemu::logging::write(voyemu::logging::Level::info, "cli", "command.started",
+                                       {{"command", args.command}, {"version", voyemu::version()}});
+            }
         }
 
         if (args.command == "fetch") {
@@ -147,6 +157,12 @@ int main(int argc, char **argv) {
 
         throw voyemu::cli::LocalizedError("CLI_COMMAND", "error.unknown_command_generic");
     } catch (const std::exception &error) {
+        if (!log_file.empty()) {
+            // The log keeps the English text that the console replaces by the log path.
+            voyemu::logging::write(voyemu::logging::Level::error, "cli",
+                                   std::string(error.what()).substr(0, 4096));
+        }
+
         if (argc > 1 && std::string_view(argv[1]) == "test") {
             std::string message = error.what(), code(voyemu::message_code(message));
 
@@ -176,11 +192,12 @@ int main(int argc, char **argv) {
             // Ctrl+C ends a command with the shell code of SIGINT, whichever step it stopped.
             voyemu::progress::separate();
             std::cerr << voyemu::human_cli_error(
-                    voyemu::cli::LocalizedError("INTERRUPTED", "error.interrupted"), language);
+                    voyemu::cli::LocalizedError("INTERRUPTED", "error.interrupted"), language,
+                    log_file);
 
             return 130;
         } else {
-            std::cerr << voyemu::human_cli_error(error, language);
+            std::cerr << voyemu::human_cli_error(error, language, log_file);
         }
 
         return 4;
