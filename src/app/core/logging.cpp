@@ -17,8 +17,14 @@ std::atomic<bool> human_output = false, verbose_output = false;
 std::mutex console;
 // The code points of the live line on the console, 0 without one.
 std::size_t live_width = 0;
+
 // The log file of open_file(), guarded by console.
-std::ofstream journal;
+std::ofstream &journal() {
+    static std::ofstream file;
+
+    return file;
+}
+
 constexpr std::size_t kept_files = 20;
 } // namespace
 
@@ -45,9 +51,9 @@ std::filesystem::path open_file(const std::filesystem::path &directory, std::str
     {
         std::lock_guard lock(console);
 
-        journal.close();
-        journal.clear();
-        journal.open(path, std::ios::app | std::ios::binary);
+        journal().close();
+        journal().clear();
+        journal().open(path, std::ios::app | std::ios::binary);
     }
     std::vector<std::pair<std::filesystem::file_time_type, std::filesystem::path>> files;
 
@@ -150,7 +156,7 @@ void write(Level level, std::string_view component, std::string_view message, Js
     const bool shown = (level != Level::debug || debug) && (!human_output || verbose_output);
     std::lock_guard lock(console);
 
-    if (!shown && !journal.is_open()) {
+    if (!shown && !journal().is_open()) {
         return;
     }
 
@@ -167,8 +173,9 @@ void write(Level level, std::string_view component, std::string_view message, Js
         throw;
     }
 
-    if (journal.is_open()) {
-        journal << entry.dump(-1, ' ', false, Json::error_handler_t::replace) << '\n' << std::flush;
+    if (journal().is_open()) {
+        journal() << entry.dump(-1, ' ', false, Json::error_handler_t::replace) << '\n'
+                  << std::flush;
     }
 
     if (!shown) {
