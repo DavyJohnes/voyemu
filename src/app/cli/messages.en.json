@@ -53,6 +53,8 @@
     "error.serial_scope": "--serial requires fetch --source=adb",
     "error.source_requires_fetch": "--source requires fetch",
     "error.source_value": "--source requires adb or an archive path",
+    "error.start_failed": "the session exited during start ({cause}).\nSession log: {log}",
+    "error.start_timeout": "the session did not answer within 90 s.\nSession log: {log}",
     "error.subsystem_scope": "subsystem selection requires start, restart or build",
     "error.unexpected": "the operation failed.\nDetails are in the log: {log}. If the error persists, attach the log to a problem report.",
     "error.unknown_command": "unknown command '{command}'; run voyemu help",

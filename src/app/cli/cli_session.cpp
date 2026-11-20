@@ -1001,7 +1001,7 @@ int start_command(Arguments &args, const Emit &emit) {
                     break;
                 }
 
-                throw std::runtime_error(voyemu::supervisor_exit_message(log));
+                throw voyemu::supervisor_exit_error(log, child.exit_code());
             }
 
             if (std::filesystem::exists(record)) {
@@ -1047,7 +1047,9 @@ int start_command(Arguments &args, const Emit &emit) {
         }
 
         if (!leased) {
-            throw VoyemuError("SUPERVISOR_TIMEOUT", "native session did not become reachable");
+            throw LocalizedError(
+                    "SUPERVISOR_TIMEOUT", "error.start_timeout",
+                    {{"log", std::filesystem::absolute(session / "supervisor.log").string()}});
         }
 
         voyemu::bind_machine_configuration(args.root, args.profile, args.machine, args.machine_path,

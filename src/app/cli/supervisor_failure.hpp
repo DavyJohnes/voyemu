@@ -1,4 +1,5 @@
 #pragma once
+#include "cli_messages.hpp"
 #include "model.hpp"
 #include <fstream>
 namespace voyemu {
@@ -58,10 +59,14 @@ inline std::string supervisor_log_code(const std::filesystem::path &log) {
     return code;
 }
 
-inline std::string supervisor_exit_message(const std::filesystem::path &log) {
+// The failure of a start whose supervisor exited: the structured code of its log, or its exit
+// status without one, and the path of the log.
+inline cli::LocalizedError supervisor_exit_error(const std::filesystem::path &log, int status) {
     const auto code = supervisor_log_code(log);
 
-    return "SUPERVISOR_EXITED: " + (code.empty() ? std::string{} : code + "; ") +
-           "supervisor log: " + std::filesystem::absolute(log).string();
+    return {"SUPERVISOR_EXITED",
+            "error.start_failed",
+            {{"cause", code.empty() ? "exit " + std::to_string(status) : code},
+             {"log", std::filesystem::absolute(log).string()}}};
 }
 } // namespace voyemu

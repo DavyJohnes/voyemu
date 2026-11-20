@@ -53,6 +53,8 @@
     "error.serial_scope": "--serial требует fetch --source=adb",
     "error.source_requires_fetch": "--source допустим только для fetch",
     "error.source_value": "--source принимает adb или путь к архиву",
+    "error.start_failed": "сеанс завершился при запуске ({cause}).\nЛог сеанса: {log}",
+    "error.start_timeout": "сеанс не ответил за 90 с.\nЛог сеанса: {log}",
     "error.subsystem_scope": "выбор подсистем допустим только для start, restart и build",
     "error.unexpected": "операция не выполнена.\nПодробности в логе: {log}. Если ошибка повторится, приложите лог к сообщению о проблеме.",
     "error.unknown_command": "неизвестная команда «{command}»; запустите voyemu help",

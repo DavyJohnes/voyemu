@@ -2,7 +2,10 @@
 #include "cli_arguments.hpp"
 #include "help.hpp"
 #include "human_output.hpp"
+#include "process.hpp"
+#include "supervisor_failure.hpp"
 #include <algorithm>
+#include <fstream>
 #include <iostream>
 #include <set>
 using namespace voyemu;
@@ -278,6 +281,25 @@ void errors() {
                           Language::chinese,
                           log) == "Voyemu: INTERRUPTED: 命令已中断。\n日志：" + log.string() + "\n",
           "an interruption names the log");
+    // A start whose supervisor exited names the cause from its log, or its exit status, and the
+    // session log.
+    const auto directory = std::filesystem::temp_directory_path() /
+                           ("voyemu-start-failed-" + random_token());
+    ensure_private_directory(directory);
+    const auto supervisor = directory / "supervisor.log";
+    std::ofstream(supervisor)
+            << "{\"ok\":false,\"error\":\"LAUNCH_PIN: immutable input mismatch\"}\n";
+    const auto exited = supervisor_exit_error(supervisor, 4);
+    check(exited.code() == "SUPERVISOR_EXITED" &&
+                  exited.render(Language::russian) ==
+                          "SUPERVISOR_EXITED: сеанс завершился при запуске (LAUNCH_PIN).\nЛог сеанса: " +
+                                  supervisor.string(),
+          "an exited start names its cause and session log");
+    check(supervisor_exit_error(directory / "absent.log", 3).render(Language::english) ==
+                  "SUPERVISOR_EXITED: the session exited during start (exit 3).\nSession log: " +
+                          (directory / "absent.log").string(),
+          "an exited start without a logged code names its exit status");
+    std::filesystem::remove_all(directory);
     check(parse_error({"strat"}, Language::chinese) ==
                   "Voyemu: CLI_COMMAND: 未知命令“strat”；请运行 voyemu help\n",
           "unknown command renders in Chinese");
