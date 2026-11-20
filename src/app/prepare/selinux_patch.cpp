@@ -267,7 +267,8 @@ std::string apply_can_simulator_context_patch(std::string_view profile, unsigned
 std::string apply_qinggan11_can_simulator_context_patch(std::string_view profile, unsigned api,
                                                         std::string_view input) {
     if ((profile != "free-11-chinese-20260731-7.3.1" &&
-         profile != "free-11-chinese-20250710-6.11.1") ||
+         profile != "free-11-chinese-20250710-6.11.1" &&
+         profile != "free-11-russian-20260318-rc1") ||
         api != 30 ||
         sha256_bytes(input) != "cf0a4db0a9962781c83e6d1430c23276ebd406c404a54ab2226a1dfa4ac2844c") {
         throw VoyemuError("SELINUX_PATCH_MISMATCH", "exact API30 platform file contexts required");
@@ -299,7 +300,8 @@ std::string apply_qinggan11_can_simulator_context_patch(std::string_view profile
 std::string apply_qinggan11_can_early_context_patch(std::string_view profile, unsigned api,
                                                     std::string_view input) {
     if ((profile != "free-11-chinese-20260731-7.3.1" &&
-         profile != "free-11-chinese-20250710-6.11.1") ||
+         profile != "free-11-chinese-20250710-6.11.1" &&
+         profile != "free-11-russian-20260318-rc1") ||
         api != 30 ||
         sha256_bytes(input) != "7fc4c203185a6036dafacc401472a152111b9d313702f28befb1327b5dab1f5e") {
         throw VoyemuError("SELINUX_PATCH_MISMATCH",
@@ -333,7 +335,8 @@ std::string apply_qinggan11_can_early_context_patch(std::string_view profile, un
 std::string apply_qinggan11_can_simulator_policy_patch(std::string_view profile, unsigned api,
                                                        std::string_view input) {
     if ((profile != "free-11-chinese-20260731-7.3.1" &&
-         profile != "free-11-chinese-20250710-6.11.1") ||
+         profile != "free-11-chinese-20250710-6.11.1" &&
+         profile != "free-11-russian-20260318-rc1") ||
         api != 30 ||
         sha256_bytes(input) != "5aa168a2fbb99353449d52a1d05c6baf5a900b4244de381e66173de7ef2028f9") {
         throw VoyemuError("SELINUX_PATCH_MISMATCH",
@@ -359,13 +362,15 @@ std::string apply_qinggan11_can_simulator_policy_patch(std::string_view profile,
 std::string apply_qinggan11_can_early_policy_patch(std::string_view profile, unsigned api,
                                                    std::string_view input) {
     if ((profile != "free-11-chinese-20260731-7.3.1" &&
-         profile != "free-11-chinese-20250710-6.11.1") ||
+         profile != "free-11-chinese-20250710-6.11.1" &&
+         profile != "free-11-russian-20260318-rc1") ||
         api != 30 ||
         sha256_bytes(input) != "da0a10c128b5c52c67e52795090755fd97fc5d02999c26d150bd9afa27d6fdb1") {
         throw VoyemuError("SELINUX_PATCH_MISMATCH",
                           "exact patched API30 simulator policy required");
     }
 
+    const bool original_navi_profile = profile == "free-11-chinese-20260731-7.3.1";
     auto output =
             std::string(input) +
             R"QINGGAN11ECIL(; candidate early input domain: compile and runtime validation required
@@ -431,10 +436,20 @@ std::string apply_qinggan11_can_early_policy_patch(std::string_view profile, uns
 (allowx system_app can_device (ioctl chr_file (0x0001)))
 (allow installd can_early_data_file (dir (getattr search open read)))
 (allow installd can_early_data_file (file (getattr)))
+(allow su adbd (unix_stream_socket (accept)))
+(allow su can_simulator_device (chr_file (getattr)))
+(allow su can_simulator_socket (sock_file (getattr)))
+(allow su can_simulator_observe_socket (sock_file (getattr)))
 )QINGGAN11ECIL";
 
+    if (original_navi_profile) {
+        output += "(allow su mac_perms_file (file (getattr open read)))\n";
+    }
+
     if (sha256_bytes(output) !=
-        "123f8180bca7499a8b837f5c4cd5b97e11ca216fa4a370179d1dc7624f9dd7b1") {
+        (original_navi_profile
+                 ? "e8f3b8cb54b3ec09280cf5c630f495b3202f1c9994e796c5a1cf707a5dcd6cf6"
+                 : "50e7563396d73b053a36a9022d31807121731ecc0ce51b695df65ec7d6838db6")) {
         throw VoyemuError("SELINUX_PATCH_MISMATCH", "API30 early policy output differs");
     }
 
@@ -444,7 +459,8 @@ std::string apply_qinggan11_can_early_policy_patch(std::string_view profile, uns
 std::string apply_qinggan11_can_early_property_patch(std::string_view profile, unsigned api,
                                                      std::string_view input) {
     if ((profile != "free-11-chinese-20260731-7.3.1" &&
-         profile != "free-11-chinese-20250710-6.11.1") ||
+         profile != "free-11-chinese-20250710-6.11.1" &&
+         profile != "free-11-russian-20260318-rc1") ||
         api != 30 ||
         sha256_bytes(input) != "50c13ef43f195b1b94c5e1ed85f3a33578220e6074d9d244414ae73c9837d2db") {
         throw VoyemuError("SELINUX_PATCH_MISMATCH",
@@ -464,16 +480,21 @@ std::string apply_qinggan11_can_early_property_patch(std::string_view profile, u
 }
 
 std::string apply_selinux_context_patch(std::string_view id, unsigned api, std::string_view input,
-                                        bool qinggan11_731) {
+                                        bool qinggan11_731, std::string_view profile) {
     if (api == 30 && id == "selinux-hash-api30") {
-        const std::string_view pin =
-                qinggan11_731
-                        ? (sha256_bytes(input) ==
-                                           "4bf19f6c8144488d129d7f280d66c3ffb0354a95fffcb6c0de6e6a413908efdc"
-                                   ? "4bf19f6c8144488d129d7f280d66c3ffb0354a95fffcb6c0de6e6a413908efdc"
-                                   : std::string_view{"d312218f439e3f970934791cdfa572078b5d78b21a3d5eeddff3f2a1c5b6e364"})
-                        : std::string_view{
-                                  "f1e41e034fbb8e72dbafd180f86188cee6e04facde570982f199160079bfe04f"};
+        auto pin = std::string_view{
+                "f1e41e034fbb8e72dbafd180f86188cee6e04facde570982f199160079bfe04f"};
+
+        if (qinggan11_731) {
+            if (profile == "free-11-chinese-20260731-7.3.1") {
+                pin = "8b7d6819e4429cec7a98a86d31366d6b7fc75ae03033d418b15f84ec1f9161c3";
+            } else if (profile == "free-11-chinese-20250710-6.11.1" ||
+                       profile == "free-11-russian-20260318-rc1") {
+                pin = "38be4a4cdae3f201ae05de187700538cb460ff7958025ac1066208018c388387";
+            } else {
+                pin = "d312218f439e3f970934791cdfa572078b5d78b21a3d5eeddff3f2a1c5b6e364";
+            }
+        }
 
         if (sha256_bytes(input) != pin) {
             throw VoyemuError("SELINUX_PATCH_MISMATCH",

@@ -441,7 +441,7 @@ std::uint64_t android_candidate_reserve_bytes(const Json &profile,
     const auto id = runtime_profile_reference(profile, requested_profile);
 
     if (id != "free-09-chinese-20221230-nxp-rc45" && id != "passion-11-russian-20260403-2.1.4.80" &&
-        id != "free-11-chinese-20260731-7.3.1") {
+        id != "free-11-chinese-20260731-7.3.1" && id != "free-11-russian-20260318-rc1") {
         return 20ULL << 30;
     }
 
@@ -544,7 +544,8 @@ Json export_android_candidate_owned_package(const Json &profile, const Json &art
                                             const Json &installed,
                                             const std::filesystem::path &destination,
                                             std::uint64_t reserve) {
-    if (runtime_profile_reference(profile) != "free-11-chinese-20260731-7.3.1") {
+    if (runtime_profile_reference(profile) != "free-11-chinese-20260731-7.3.1"
+        && runtime_profile_reference(profile) != "free-11-russian-20260318-rc1") {
         return Json::object();
     }
 
@@ -590,7 +591,8 @@ Json export_android_candidate_camera_package(const Json &profile, const Json &ar
                                              const Json &installed,
                                              const std::filesystem::path &destination,
                                              std::uint64_t reserve) {
-    if (runtime_profile_reference(profile) != "free-11-chinese-20260731-7.3.1") {
+    if (runtime_profile_reference(profile) != "free-11-chinese-20260731-7.3.1"
+        && runtime_profile_reference(profile) != "free-11-russian-20260318-rc1") {
         return Json::object();
     }
 
@@ -631,12 +633,23 @@ static Json export_android_candidate_prepared_packages(const Json &profile, cons
                                                        const Json &installed,
                                                        const std::filesystem::path &destination,
                                                        std::uint64_t reserve) {
-    if (runtime_profile_reference(profile) != "free-11-chinese-20260731-7.3.1") {
+    if (runtime_profile_reference(profile) != "free-11-chinese-20260731-7.3.1"
+        && runtime_profile_reference(profile) != "free-11-russian-20260318-rc1") {
         return Json::array();
     }
 
     auto camera = export_android_candidate_camera_package(profile, artifacts, installed,
                                                           destination, reserve);
+    const bool russian = runtime_profile_reference(profile) == "free-11-russian-20260318-rc1";
+
+    if (russian) {
+        // The Russian snapshot has no Dueros Navi; only the Camera is exported.
+        auto packages = Json::array({camera});
+        android_prepared_packages_descriptor(packages, true);
+
+        return packages;
+    }
+
     const auto &artifact = artifacts.at("patched:Navi");
     need(artifact.is_object() && artifact.size() == 3,
          "prepared Navi artifact descriptor required");
@@ -1138,6 +1151,33 @@ Json build_android_candidate(const std::filesystem::path &root,
                     });
         }
 
+        const auto navi_storage = original_navi_storage_set(profile, request.profile,
+                                                            android_candidate_api(profile));
+
+        const auto verify_navi_shell = [&] {
+            need(candidate.shell({"id", "-u"}) == "2000" &&
+                         candidate.shell({"id", "-Z"}) == "u:r:shell:s0",
+                 "original Navi AppOps requires the stock Android shell");
+        };
+
+        if (!navi_storage.empty()) {
+            candidate.phase("original-navi-storage");
+            verify_navi_shell();
+            candidate.wait(
+                    [&] {
+                        const auto service = candidate.shell({"service", "check", "appops"});
+                        need(service == "Service appops: found",
+                             "Android service check: " + service);
+
+                        return true;
+                    },
+                    30000,
+                    "AppOps visibility from Android shell before original Navi storage configuration");
+            candidate.shell(navi_storage);
+            const auto flushed = candidate.shell({"cmd", "appops", "write-settings"});
+            need(flushed == "Current settings written.", "original Navi AppOps flush: " + flushed);
+        }
+
         if (plan.at("system").empty() && !early_data.empty()) {
             candidate.root_adbd();
             install_entries(candidate, early_data, artifacts, aapt2, installed);
@@ -1155,15 +1195,6 @@ Json build_android_candidate(const std::filesystem::path &root,
                 {{"phase", "data-apks-installed"}, {"apks", plan.at("apks").size()}});
         candidate.phase("configure");
         configure(candidate, profile, installed);
-        const auto navi_storage = original_navi_storage_set(profile, request.profile,
-                                                            android_candidate_api(profile));
-
-        if (!navi_storage.empty()) {
-            candidate.phase("original-navi-storage");
-            candidate.shell(navi_storage);
-            candidate.shell({"cmd", "appops", "write-settings"});
-        }
-
         candidate.phase("persist");
         candidate.root_adbd();
         candidate.wait(
@@ -1259,10 +1290,50 @@ Json build_android_candidate(const std::filesystem::path &root,
                 });
         wake_displays(candidate, profile);
         candidate.phase("cold-verification");
-        verify_cold_policy_files(profile, installed, checks, [&](const auto &command) {
-            return candidate.shell(command);
-        });
+        if (!navi_storage.empty()) {
+            verify_navi_shell();
+            const auto storage = candidate.shell(
+                    {"cmd", "appops", "get", "com.baidu.naviauto", "NO_ISOLATED_STORAGE"});
+            need(original_navi_storage_allowed(storage), "original Navi storage appop not allowed");
+            checks.push_back({{"id", "original-navi-storage-appop"},
+                              {"expected", "allow"},
+                              {"actual", storage},
+                              {"passed", true}});
+            verify_cold_original_navi(candidate, checks);
+        }
+
+        if (profile.value("id", std::string{}) == original_navi_profile &&
+            profile.value("components", Json::object()).contains("view-observation")) {
+            candidate.phase("rich-ui-observation");
+            candidate.wait(
+                    [&] {
+                        if (!android_candidate_ui_shell_ready([&](const auto &command) {
+                                return candidate.shell(command);
+                            })) {
+                            return false;
+                        }
+
+                        const auto displays = candidate.shell({"dumpsys", "display"});
+                        const auto windows = candidate.shell({"dumpsys", "window", "windows"});
+
+                        return android_candidate_secondary_display_ready(profile, displays, windows)
+                                .has_value();
+                    },
+                    60000, "stock shell accessibility service and secondary display readiness");
+            checks.push_back(capture_candidate_ui(candidate, profile));
+            candidate.phase("cold-verification");
+        }
+
+        verify_cold_policy_files(
+                profile, installed, checks,
+                [&](const auto &command) {
+                    return candidate.shell(command);
+                },
+                [&] {
+                    candidate.root_adbd();
+                });
         verify_a9_precompiled_policy(candidate, profile);
+
         candidate.root_adbd();
         verification_boot_id = candidate.shell({"cat", "/proc/sys/kernel/random/boot_id"});
         verification_boots = candidate.boots;

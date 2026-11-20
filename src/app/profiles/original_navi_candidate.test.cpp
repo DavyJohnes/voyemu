@@ -270,6 +270,23 @@ int main() {
             check(rejected);
         }
 
+        check(original_navi_process_context("LABEL        PID NAME\n"
+                                            "u:r:platform_app:s0:c512,c768 1862 com.baidu.naviauto",
+                                            "1862") == "u:r:platform_app:s0:c512,c768");
+
+        for (const auto &row :
+             {"- 1862 com.baidu.naviauto", "u:r:priv_app:s0:c512,c768 1862 com.baidu.naviauto",
+              "u:r:platform_app:s0:c512,c768 1862 com.baidu.naviauto:service",
+              "u:r:platform_app:s0:c512,c768 1863 com.baidu.naviauto",
+              "u:r:platform_app:s0:c512,c768 1862 com.baidu.navi",
+              "u:r:platform_app:s0 1862 com.baidu.naviauto\nu:r:platform_app:s0 1862 com.baidu.naviauto"}) {
+            check(original_navi_process_context(row, "1862").empty());
+        }
+
+        check(original_navi_process_context("u:r:platform_app:s0 1862 com.baidu.naviauto",
+                                            "1862 1863")
+                      .empty());
+
         const Json storage_check = {{"id", "original-navi-storage-appop"},
                                     {"expected", "allow"},
                                     {"actual", "NO_ISOLATED_STORAGE: allow; time=+1s"},
@@ -454,7 +471,8 @@ int main() {
                                         .parent_path();
         const auto actual = read_private_json(repository / "profiles" / profile / "profile.json",
                                               1 << 20);
-        check(qinggan11_wheel_capability(actual) == qinggan11_partial_wheel_capability());
+        check(qinggan11_wheel_capability(actual) ==
+              qinggan11_partial_wheel_capability(qinggan11_731_profile_id));
         check(declared_patch_plan(actual).at("patches").size() == actual.at("patches").size());
 
         for (unsigned mode = 0; mode < 8; ++mode) {

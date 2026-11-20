@@ -40,8 +40,19 @@ int main(int argc, char **argv) {
             early.vendor_donor = PinnedFileDependency{vendor, sha256_file(vendor)};
             const auto policy_bytes =
                     prepare_file_patches(std::vector<PinnedFilePatch>{early}).front();
+            check(policy_bytes.find("(allow su adbd (unix_stream_socket (accept)))\n") !=
+                                  std::string::npos &&
+                          policy_bytes.find(
+                                  "(allow su can_simulator_device (chr_file (getattr)))\n") !=
+                                  std::string::npos &&
+                          (policy_bytes.ends_with(
+                                   "(allow su mac_perms_file (file (getattr open read)))\n") !=
+                           older) &&
+                          policy_bytes.find("(typepermissive su)") == std::string::npos,
+                  "rooted adbd may accept on its inherited Unix socket with su still enforcing");
             check(sha256_bytes(policy_bytes) ==
-                                  "123f8180bca7499a8b837f5c4cd5b97e11ca216fa4a370179d1dc7624f9dd7b1" &&
+                                  (older ? "50e7563396d73b053a36a9022d31807121731ecc0ce51b695df65ec7d6838db6"
+                                         : "e8f3b8cb54b3ec09280cf5c630f495b3202f1c9994e796c5a1cf707a5dcd6cf6") &&
                           sha256_file(mapping) ==
                                   "c14ab911584595a94e6783600371fed23cec1d56b8001383584a3192d028eb60",
                   "early policy and unchanged mapping bytes remain exact");
@@ -49,9 +60,11 @@ int main(int argc, char **argv) {
             const std::string mapping_bytes{std::istreambuf_iterator<char>(input), {}};
             const auto combined = sha256_bytes(policy_bytes + mapping_bytes),
                        expected_file = combined + "\n";
-            check(combined == "4bf19f6c8144488d129d7f280d66c3ffb0354a95fffcb6c0de6e6a413908efdc" &&
+            check(combined == (older ? "38be4a4cdae3f201ae05de187700538cb460ff7958025ac1066208018c388387"
+                                     : "8b7d6819e4429cec7a98a86d31366d6b7fc75ae03033d418b15f84ec1f9161c3") &&
                           sha256_bytes(expected_file) ==
-                                  "d323725be43eb7b80539044878d4bdad51cb12e5992014bebf25749d43659e22",
+                                  (older ? "2f158789774a59073cf85bf2c91272416b0da948eea037f9e13586187338f2c9"
+                                         : "7293ab8b5ff6f3890a7f60b158e6bf28c882896c755edf1e996c9231519c37de"),
                   "independent combined digest and hash-file SHA are distinct");
             PinnedFilePatch hashed{
                     std::string(hash_spec.id),
@@ -70,7 +83,7 @@ int main(int argc, char **argv) {
             check(output.size() == 2 && output[1] == expected_file,
                   "registered early graph publishes exact derived hash-file bytes");
 
-            for (unsigned variant = 0; variant < 10; ++variant) {
+            for (unsigned variant = 0; variant < 11; ++variant) {
                 auto bad = nodes;
 
                 switch (variant) {
@@ -104,6 +117,10 @@ int main(int argc, char **argv) {
                 case 9:
                     bad[0].donor.value().sha256 = std::string(64, '0');
                     break;
+                case 10:
+                    bad[1].profile = older ? "free-11-chinese-20260731-7.3.1"
+                                           : "free-11-chinese-20250710-6.11.1";
+                    break;
                 default:
                     break;
                 }
@@ -121,7 +138,7 @@ int main(int argc, char **argv) {
             }
 
             std::cout
-                    << "actual early CIL/mapping bytes unchanged; content digest4bf19f6c and file SHAd323725b plus ten negatives passed\n";
+                    << "early policy, unchanged mapping, exact hash and eleven negative cases passed\n";
 
             return 0;
         }

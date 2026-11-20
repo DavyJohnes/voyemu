@@ -373,6 +373,8 @@ struct Candidate {
                          "-no-window",
                          "-prop",
                          "qemu.voyemu.token=" + token};
+        const auto trace = android_boot_trace_arguments(std::getenv("VOYEMU_ANDROID_BOOT_TRACE"));
+        cmd.arguments.insert(cmd.arguments.end(), trace.begin(), trace.end());
         const auto control = android_candidate_capture_arguments(profile, capture_frames, port);
         cmd.arguments.insert(cmd.arguments.end(), control.begin(), control.end());
 
@@ -472,6 +474,20 @@ struct Candidate {
                 return std::nullopt;
             }
 
+            if (transitioning && !result.timed_out && result.exit_code != 0 &&
+                output == "adb: unable to connect for root: closed") {
+                // The SDK client saw the connection close while adbd restarted; the
+                // lifetime loop below remains the sole authority on the outcome.
+                return std::nullopt;
+            }
+
+            if (transitioning && !result.timed_out && result.exit_code == 1 && args.size() == 1 &&
+                args.front() == "root" && output == "adb: device offline") {
+                // The SDK can report offline after delivering root. Confirm the new
+                // serving adbd with the same boot and nonce, without replaying root.
+                return std::nullopt;
+            }
+
             need(!result.timed_out && result.exit_code == 0,
                  "adb root command failed: " + output.substr(0, 4096));
 
@@ -565,7 +581,9 @@ getprop qemu.voyemu.token
         }
 
         const auto response = command({"root"}, true);
-        need(!response || *response == "restarting adbd as root",
+        // AOSP adbd answers rc=0 either with the transition text or with an empty
+        // reply while it restarts; the ownership loop below is the actual authority.
+        need(!response || response->empty() || *response == "restarting adbd as root",
              "adb root request refused or invalid response");
 
         while (Clock::now() < end) {
@@ -684,6 +702,8 @@ getprop qemu.voyemu.token
         }
     }
 };
+bool android_candidate_ui_shell_ready(
+        const std::function<std::string(const std::vector<std::string> &)> &shell);
 Json capture_candidate_ui(Candidate &c, const Json &profile);
 std::pair<Json, Json> data_install_phases(const Json &entries);
 // Installs the planned entries into the candidate; meter counts the bytes of their files.
@@ -712,13 +732,15 @@ void record_cold_check(Json &checks, const std::string &id, const std::string &a
                        const std::string &expected);
 void verify_cold_policy_files(
         const Json &profile, const std::vector<Installed> &installed, Json &checks,
-        const std::function<std::string(const std::vector<std::string> &)> &shell);
+        const std::function<std::string(const std::vector<std::string> &)> &shell,
+        const std::function<void()> &root_for_navi_mac = {});
 bool cold_policy_verified(const Json &profile, const Installed &item, const Json &checks,
                           const std::string &boot_id);
 void verify_cold_installed_file(
         const Json &profile, const Installed &item, const std::string &target, Json &checks,
         const std::string &boot_id,
         const std::function<std::string(const std::vector<std::string> &)> &shell);
+void verify_cold_original_navi(Candidate &c, Json &checks);
 void verify_cold(Candidate &c, const Json &profile, const std::vector<Installed> &installed,
                  Json &checks);
 Json capture_candidate_frames(Candidate &c, const Json &profile);

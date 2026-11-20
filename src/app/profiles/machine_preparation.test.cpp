@@ -136,6 +136,45 @@ void verify_candidate_profile_artifact_boundary() {
 }
 
 void verify_candidate_rich_ui() {
+    const auto check_shell = [&](bool root, bool wrong_context, bool service_ready) {
+        std::vector<std::vector<std::string>> calls;
+        bool accepted = false, denied = false;
+        try {
+            accepted = machine_preparation_detail::android_candidate_ui_shell_ready(
+                    [&](const std::vector<std::string> &cmd) -> std::string {
+                        calls.push_back(cmd);
+
+                        if (cmd == std::vector<std::string>{"id", "-u"}) {
+                            return root ? "0" : "2000";
+                        }
+
+                        if (cmd == std::vector<std::string>{"id", "-Z"}) {
+                            return wrong_context ? "u:r:su:s0" : "u:r:shell:s0";
+                        }
+
+                        check(cmd == std::vector<std::string>{"service", "check", "accessibility"});
+
+                        return service_ready ? "Service accessibility: found"
+                                             : "Service accessibility: not found";
+                    });
+        } catch (const VoyemuError &) {
+            denied = true;
+        }
+
+        check(denied == (root || wrong_context) &&
+              accepted == (!root && !wrong_context && service_ready));
+        check(calls.size() == (root ? 1 : wrong_context ? 2 : 3));
+        check(calls[0] == std::vector<std::string>{"id", "-u"});
+
+        if (!root) {
+            check(calls[1] == std::vector<std::string>{"id", "-Z"});
+        }
+    };
+    check_shell(false, false, true);
+    check_shell(false, false, false);
+    check_shell(true, false, true);
+    check_shell(false, true, true);
+
     for (unsigned variant = 0; variant < 4; ++variant) {
         unsigned probes = 0, dispatches = 0;
         bool failed = false;
@@ -414,7 +453,7 @@ void verify_offline_policy_pins() {
     const std::string policy = "2879712e7a6a12f262ab346fbe61b7f5b992e652e10d93edf8eb44a6c7b84a77",
                       contexts = "8bd8062c3b8108bdc34573f78d403691e747298a986a3464ace94721b02ad1d7",
                       api30_policy =
-                              "123f8180bca7499a8b837f5c4cd5b97e11ca216fa4a370179d1dc7624f9dd7b1",
+                              "e8f3b8cb54b3ec09280cf5c630f495b3202f1c9994e796c5a1cf707a5dcd6cf6",
                       api30_contexts =
                               "873da6472b242a86d657900bdd90d4fa458dbde615c75ea406c6806f06ce8ecc",
                       api30_properties =
@@ -422,7 +461,8 @@ void verify_offline_policy_pins() {
 
     android_candidate_offline_policy_pin("patched:can-early-policy-a9", policy);
     android_candidate_offline_policy_pin("patched:can-early-file-contexts-a9", contexts);
-    android_candidate_offline_policy_pin("patched:can-early-policy-api30", api30_policy);
+    android_candidate_offline_policy_pin("patched:can-early-policy-api30", api30_policy,
+                                         "free-11-chinese-20260731-7.3.1");
     android_candidate_offline_policy_pin("patched:can-early-file-contexts-api30", api30_contexts);
     android_candidate_offline_policy_pin("patched:can-early-property-contexts-api30",
                                          api30_properties);
@@ -1186,6 +1226,28 @@ static int failure_adb_child(int argc, char **argv) {
                 return 0;
             }
 
+            if (mode == "root-quiet") {
+                std::ofstream(state) << 1;
+                std::cout.flush();
+
+                return 0;
+            }
+
+            if (mode == "root-offline" || mode == "root-offline-nochange" ||
+                mode == "root-offline-wrong-nonce") {
+                std::ofstream(state) << 1;
+                std::cout << "adb: device offline\n";
+
+                return 1;
+            }
+
+            if (mode == "root-closed") {
+                std::ofstream(state) << 1;
+                std::cout << "adb: unable to connect for root: closed\n";
+
+                return 1;
+            }
+
             std::ofstream(state) << 1;
 
             std::cout << "restarting adbd as root\n";
@@ -1240,7 +1302,8 @@ static int failure_adb_child(int argc, char **argv) {
             const auto pid = step >= 3 && mode != "root-start-change" ? "44" : "33";
             const auto start = step >= 3 && mode == "root-start-change" ? "101" : "100";
 
-            const auto nonce = step != 0 && mode == "root-wrong-nonce"
+            const auto nonce = step != 0 && (mode == "root-wrong-nonce" ||
+                                             mode == "root-offline-wrong-nonce")
                                        ? std::string(32, 'c')
                                        : settings.at("nonce").get<std::string>();
 
@@ -1259,7 +1322,7 @@ static int failure_adb_child(int argc, char **argv) {
                       << boot << '\n'
                       << nonce << '\n';
 
-            if (step == 1 && mode != "root-nochange") {
+            if (step == 1 && mode != "root-nochange" && mode != "root-offline-nochange") {
                 std::ofstream(state) << 2;
             }
 
@@ -1499,7 +1562,8 @@ static void root_transition_fixture(const std::filesystem::path &self,
     }
 
     for (const auto *mode :
-         {"root-transition", "root-start-change", "root-already", "root-nochange",
+         {"root-transition", "root-start-change", "root-quiet", "root-closed", "root-offline",
+          "root-offline-nochange", "root-offline-wrong-nonce", "root-already", "root-nochange",
           "root-wrong-nonce", "root-changed-boot", "root-protocol", "root-permission",
           "root-request-denied", "root-request-failed", "root-inconsistent", "root-cancelled",
           "root-owner-lost"}) {
@@ -1511,7 +1575,8 @@ static void root_transition_fixture(const std::filesystem::path &self,
             return std::string_view(mode) == "root-cancelled" &&
                    std::filesystem::exists(stage / "root-requests");
         };
-        const bool nochange = std::string_view(mode) == "root-nochange";
+        const bool nochange = std::string_view(mode) == "root-nochange" ||
+                              std::string_view(mode) == "root-offline-nochange";
 
         candidate.deadline = std::chrono::steady_clock::now() +
                              std::chrono::milliseconds(nochange ? 900 : 10000);
@@ -1535,11 +1600,15 @@ static void root_transition_fixture(const std::filesystem::path &self,
 
         const bool success = std::string_view(mode) == "root-transition" ||
                              std::string_view(mode) == "root-start-change" ||
+                             std::string_view(mode) == "root-quiet" ||
+                             std::string_view(mode) == "root-closed" ||
+                             std::string_view(mode) == "root-offline" ||
                              std::string_view(mode) == "root-already";
         check(success == failure.empty());
 
         if (std::string_view(mode) == "root-transition" ||
-            std::string_view(mode) == "root-start-change") {
+            std::string_view(mode) == "root-start-change" ||
+            std::string_view(mode) == "root-offline") {
             candidate.shell({"configure-barrier"});
         }
 
@@ -1556,6 +1625,14 @@ static void root_transition_fixture(const std::filesystem::path &self,
 
         if (nochange) {
             check(std::chrono::steady_clock::now() - begin < std::chrono::seconds(2));
+        }
+
+        if (std::string_view(mode) == "root-offline-nochange") {
+            check(failure.find("timeout rooted adbd lifetime transition") != std::string::npos);
+        }
+
+        if (std::string_view(mode) == "root-offline-wrong-nonce") {
+            check(failure.find("guest nonce differs") != std::string::npos);
         }
 
         std::cout << mode << ": " << (success ? "passed" : failure) << '\n';
@@ -2575,6 +2652,11 @@ int main(int argc, char **argv) {
             auto foreign = original_profile;
             foreign["id"] = "foreign-profile";
             check(!android_candidate_api30_root_layout(foreign));
+            const auto russian_profile = read_private_json(
+                    source_root / "profiles/free-11-russian-20260318-rc1/profile.json");
+            check(android_candidate_api30_root_layout(russian_profile));
+            check(android_candidate_overlay_scratch_bytes(russian_profile, 512ULL << 20) >=
+                  1280ULL << 20);
             auto bad_labels = original_profile;
             bad_labels["android"]["offline_selinux_labels"] = "other";
             bool bad_label_rejected = false;
@@ -3891,8 +3973,10 @@ int main(int argc, char **argv) {
             check(policies.size() == expected_count);
             Json checks = Json::array();
             std::size_t contents = 0, modes = 0, labels = 0;
+            bool rooted = false;
             machine_preparation_detail::verify_cold_policy_files(
-                    actual, policies, checks, [&](const std::vector<std::string> &command) {
+                    actual, policies, checks,
+                    [&](const std::vector<std::string> &command) {
                         if (command.front() == "cat") {
                             return std::string("sibling-cold");
                         }
@@ -3902,6 +3986,7 @@ int main(int argc, char **argv) {
                                                              return item.target == command.back();
                                                          });
                         check(policy != policies.end());
+                        check(rooted == (policy->artifact == "patched:original-navi-mac"));
 
                         if (command.front() == "sha256sum") {
                             ++contents;
@@ -3921,6 +4006,9 @@ int main(int argc, char **argv) {
                         ++labels;
 
                         return std::string("u:object_r:mac_perms_file:s0 ") + policy->target;
+                    },
+                    [&] {
+                        rooted = true;
                     });
             check(contents == expected_count && modes == expected_count);
             check(labels == (original_navi_requested(actual) ? 1U : 0U));

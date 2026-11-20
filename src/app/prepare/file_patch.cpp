@@ -229,6 +229,7 @@ std::vector<std::string> prepare_file_patches(std::span<const PinnedFilePatch> p
             }
         } else if (free_public || free_property || free_key || free_policy || free_mac) {
             if ((patch.profile != "free-11-chinese-20260731-7.3.1" &&
+                 patch.profile != "free-11-russian-20260318-rc1" &&
                  (free_mac || patch.profile != "free-11-chinese-20250710-6.11.1")) ||
                 patch.api != 30) {
                 throw VoyemuError("FILE_PATCH_PROFILE",
@@ -236,7 +237,8 @@ std::vector<std::string> prepare_file_patches(std::span<const PinnedFilePatch> p
             }
         } else if (qinggan11_can) {
             if ((patch.profile != "free-11-chinese-20260731-7.3.1" &&
-                 patch.profile != "free-11-chinese-20250710-6.11.1") ||
+                 patch.profile != "free-11-chinese-20250710-6.11.1" &&
+                 patch.profile != "free-11-russian-20260318-rc1") ||
                 patch.api != 30) {
                 throw VoyemuError("FILE_PATCH_PROFILE",
                                   "exact Free A11 API30 can-early profile required");
@@ -514,7 +516,8 @@ std::vector<std::string> prepare_file_patches(std::span<const PinnedFilePatch> p
             }
 
             const auto mapping = read_pinned(patch.donor->input, patch.donor->sha256, 1024 * 1024);
-            output = apply_selinux_context_patch(patch.id, patch.api, cil + mapping, free_policy);
+            output = apply_selinux_context_patch(patch.id, patch.api, cil + mapping, free_policy,
+                                                 patch.profile);
         } else if (patch.id == "selinux-hash-a9") {
             if (patch.donor || patch.patched_dependency.empty() ||
                 !valid_pin(patch.dependency_sha256)) {

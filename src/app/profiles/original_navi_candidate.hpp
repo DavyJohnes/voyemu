@@ -191,6 +191,20 @@ inline bool original_navi_storage_allowed(std::string_view reply) {
                             std::regex(R"(NO_ISOLATED_STORAGE: allow(?:;[^\r\n]*)?)"));
 }
 
+inline std::string original_navi_process_context(const std::string &output,
+                                                 const std::string &pid) {
+    if (!std::regex_match(pid, std::regex("[1-9][0-9]{0,9}"))) {
+        return {};
+    }
+
+    const std::regex row(
+            "(?:[ \t]*LABEL[ \t]+PID[ \t]+NAME[ \t]*\r?\n)?[ \t]*(u:r:platform_app:s0(?::[a-zA-Z0-9_,]+)?)[ \t]+" +
+            pid + "[ \t]+com\\.baidu\\.naviauto[ \t]*\r?\n?");
+    std::smatch match;
+
+    return std::regex_match(output, match, row) ? match[1].str() : std::string{};
+}
+
 inline void original_navi_candidate(const Json &definition, std::string_view profile, int api,
                                     const Json &candidate, const Json &artifacts,
                                     const std::string &verified_cert) {

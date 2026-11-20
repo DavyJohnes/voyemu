@@ -175,16 +175,13 @@ void read_cold_artifact_file(
 
 void verify_cold_policy_files(
         const Json &profile, const std::vector<Installed> &installed, Json &checks,
-        const std::function<std::string(const std::vector<std::string> &)> &shell) {
+        const std::function<std::string(const std::vector<std::string> &)> &shell,
+        const std::function<void()> &root_for_navi_mac) {
     const auto boot_id = shell({"cat", "/proc/sys/kernel/random/boot_id"});
 
     need(!boot_id.empty(), "cold policy reader boot identity required");
 
-    for (const auto &item : installed) {
-        if (!cold_policy_file(profile, item)) {
-            continue;
-        }
-
+    const auto verify = [&](const Installed &item) {
         const auto first = checks.size();
         const auto &entries = profile.at("install");
         const auto entry = std::find_if(entries.begin(), entries.end(), [&](const auto &value) {
@@ -206,6 +203,29 @@ void verify_cold_policy_files(
             checks.at(index)["path"] = item.target;
             checks.at(index)["artifact"] = item.artifact;
         }
+    };
+
+    const Installed *navi_mac = nullptr;
+    for (const auto &item : installed) {
+        if (!cold_policy_file(profile, item)) {
+            continue;
+        }
+
+        if (item.artifact == "patched:original-navi-mac") {
+            need(!navi_mac, "duplicate cold Navi MAC artifact");
+            navi_mac = &item;
+        } else {
+            verify(item);
+        }
+    }
+
+    if (navi_mac) {
+        need(static_cast<bool>(root_for_navi_mac),
+             "root proof required to read cold Navi MAC policy");
+        root_for_navi_mac();
+        need(shell({"cat", "/proc/sys/kernel/random/boot_id"}) == boot_id,
+             "cold policy reader boot identity changed");
+        verify(*navi_mac);
     }
 }
 
@@ -264,6 +284,29 @@ void verify_cold_installed_file(
     }
 
     read_cold_artifact_file(profile, item, target, checks, shell);
+}
+
+void verify_cold_original_navi(Candidate &c, Json &checks) {
+    const auto start = c.shell(
+            {"am", "start", "-W", "-n", "com.baidu.naviauto/com.baidu.naviauto.NaviAutoActivity"},
+            60000);
+    need(start.find("Error:") == std::string::npos && start.find("Status: ok") != std::string::npos,
+         "original Navi launch not confirmed");
+    const auto pid = c.shell({"pidof", "com.baidu.naviauto"});
+    need(std::regex_match(pid, std::regex("[1-9][0-9]{0,9}")), "one Navi process PID required");
+
+    // Stock shell is the authorized process-label reader. NAME uses the process argv[0].
+    const auto ps = c.shell({"ps", "-p", pid, "-o", "LABEL,PID,NAME", "-w"});
+    write(c.stage / "cold-navi-process.txt", ps + "\n");
+    const auto context = original_navi_process_context(ps, pid);
+    need(!context.empty(), "actual Navi platform_app process missing");
+    checks.push_back({{"id", "original-navi-security"},
+                      {"passed", true},
+                      {"package", "com.baidu.naviauto"},
+                      {"policy_seinfo", "platform"},
+                      {"policy_seinfo_source", "pinned-mac-policy"},
+                      {"process_context", context},
+                      {"pid", pid}});
 }
 
 void verify_cold(Candidate &c, const Json &profile, const std::vector<Installed> &installed,
@@ -390,36 +433,6 @@ void verify_cold(Candidate &c, const Json &profile, const std::vector<Installed>
                                    });
     }
 
-    if (original_navi_requested(profile)) {
-        const auto storage =
-                c.shell({"cmd", "appops", "get", "com.baidu.naviauto", "NO_ISOLATED_STORAGE"});
-        need(original_navi_storage_allowed(storage), "original Navi storage appop not allowed");
-        checks.push_back({{"id", "original-navi-storage-appop"},
-                          {"expected", "allow"},
-                          {"actual", storage},
-                          {"passed", true}});
-        const auto start = c.shell({"am", "start", "-W", "-n",
-                                    "com.baidu.naviauto/com.baidu.naviauto.NaviAutoActivity"},
-                                   60000);
-        need(start.find("Error:") == std::string::npos &&
-                     start.find("Status: ok") != std::string::npos,
-             "original Navi launch not confirmed");
-        // API30 dumpsys omits seinfo; observe the effective process domain below.
-        const auto pid = c.shell({"pidof", "com.baidu.naviauto"});
-        need(std::regex_match(pid, std::regex("[1-9][0-9]{0,9}")), "one Navi process PID required");
-        const auto ps = c.shell({"ps", "-AZ"});
-        const std::regex proc("(?:^|\\n)(u:r:platform_app:s0(?::[a-zA-Z0-9_,]+)?)\\s+\\S+\\s+" +
-                              pid + "\\s+[^\\n]*\\scom\\.baidu\\.naviauto(?:\\s|$)");
-        std::smatch context;
-        need(std::regex_search(ps, context, proc), "actual Navi platform_app process missing");
-        checks.push_back({{"id", "original-navi-security"},
-                          {"passed", true},
-                          {"package", "com.baidu.naviauto"},
-                          {"policy_seinfo", "platform"},
-                          {"policy_seinfo_source", "pinned-mac-policy"},
-                          {"process_context", context[1].str()},
-                          {"pid", pid}});
-    }
 
     const auto config = profile.value("configure", Json::object());
     const auto settings = config.value("settings", Json::object());
@@ -652,11 +665,6 @@ void verify_cold(Candidate &c, const Json &profile, const std::vector<Installed>
                 30000, "content CLI read-only CAN proof");
     }
 
-    if (profile.value("id", std::string{}) == "free-11-chinese-20260731-7.3.1" &&
-        profile.value("components", Json::object()).contains("view-observation")) {
-        c.phase("rich-ui-observation");
-        checks.push_back(capture_candidate_ui(c, profile));
-    }
 }
 
 Json capture_candidate_frames(Candidate &c, const Json &profile) {
@@ -1111,7 +1119,8 @@ void repair_a11_offline_labels(Candidate &c, const Json &profile, const Json &ar
         const auto descriptor = artifacts.at(artifact);
         const auto expected = descriptor.at("sha256").get<std::string>();
         check_file(descriptor.at("file").get<std::string>(), expected, 4ULL << 20);
-        android_candidate_offline_policy_pin(artifact, expected);
+        android_candidate_offline_policy_pin(artifact, expected,
+                                             profile.at("id").get<std::string>());
         need(declarations == 1, "exact installed API30 offline policy required");
     }
 

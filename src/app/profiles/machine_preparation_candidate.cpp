@@ -497,6 +497,14 @@ bool visible(const std::string &dump, const std::string &component, unsigned dis
     return false;
 }
 
+bool android_candidate_ui_shell_ready(
+        const std::function<std::string(const std::vector<std::string> &)> &shell) {
+    need(shell({"id", "-u"}) == "2000" && shell({"id", "-Z"}) == "u:r:shell:s0",
+         "rich UI observer requires the stock Android shell");
+
+    return shell({"service", "check", "accessibility"}) == "Service accessibility: found";
+}
+
 Json capture_candidate_ui(Candidate &c, const Json &profile) {
     auto definition = cached_profile_ui_observer(c.root);
 
