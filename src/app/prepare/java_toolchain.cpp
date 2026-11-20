@@ -371,9 +371,10 @@ Json verify_helper(const std::filesystem::path &root, const std::filesystem::pat
 }
 
 // Puts one JAR of the pinned Android SDK archive product into the Java SDK of the project unless it
-// is there.
+// is there; a catalog label with its version names the archive on the console instead.
 void install_sdk_jar(const std::filesystem::path &root, const Json &archive,
-                     const std::string &product, const std::string &entry, bool exact_name,
+                     const std::string &product, const std::string &label,
+                     const std::string &version, const std::string &entry, bool exact_name,
                      const std::filesystem::path &target, const std::string &sha256, bool offline,
                      std::uint64_t reserve, const DownloadTransport &transport) {
     if (std::filesystem::exists(std::filesystem::symlink_status(target))) {
@@ -384,7 +385,7 @@ void install_sdk_jar(const std::filesystem::path &root, const Json &archive,
 
     const auto archive_sha = archive.at("sha256").get<std::string>();
     const auto file = download_pinned({archive.at("url").get<std::string>(), archive_sha,
-                                       3ULL << 30, DownloadEncoding::raw, product},
+                                       3ULL << 30, DownloadEncoding::raw, product, label, version},
                                       root / ".local/toolchains/downloads/native", offline, reserve,
                                       transport)
                               .file;
@@ -431,7 +432,7 @@ void install_java_sdk(const std::filesystem::path &root, bool offline, std::uint
     const auto java_sdk = root / ".local/toolchains/java-sdk";
 
     for (const auto &name : {"d8", "apksigner"}) {
-        install_sdk_jar(root, archives.at("buildTools"), "Android SDK Build-Tools 36.1.0",
+        install_sdk_jar(root, archives.at("buildTools"), "Android SDK Build-Tools 36.1.0", {}, {},
                         std::string("lib/") + name + ".jar", false,
                         java_sdk / "build-tools/36.1.0/lib" / (std::string(name) + ".jar"),
                         tools.at("libraries").at(name).at("sha256").get<std::string>(), offline,
@@ -439,7 +440,7 @@ void install_java_sdk(const std::filesystem::path &root, bool offline, std::uint
     }
 
     const auto platform = java_sdk / "platforms/android-34/android.jar";
-    install_sdk_jar(root, archives.at("platform"), "Android SDK Platform 34",
+    install_sdk_jar(root, archives.at("platform"), "Android SDK Platform 34", "java_platform", "34",
                     "android-34/android.jar", true, platform,
                     sdk.at("platformJar").at("sha256").get<std::string>(), offline, reserve,
                     transport);

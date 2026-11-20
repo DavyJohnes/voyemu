@@ -1,6 +1,7 @@
 #include "download.hpp"
 #include "check.hpp"
 #include "disk_space.hpp"
+#include "logging.hpp"
 #include "model.hpp"
 #include "os/https.hpp"
 #include "process.hpp"
@@ -10,6 +11,8 @@
 #include <cerrno>
 #include <chrono>
 #include <cstdio>
+#include <mutex>
+#include <set>
 #include <stdexcept>
 #include <thread>
 #include <vector>
@@ -149,6 +152,17 @@ void https(const DownloadPin &pin, const DownloadSink &sink,
 
     os::https_get(pin.url, headers, sink, length);
 }
+
+// The cache files that this process has already reported as downloaded or verified; a file is
+// still verified on each use, but reported once.
+std::mutex reported_mutex;
+std::set<std::filesystem::path> reported_files;
+
+bool first_report(const std::filesystem::path &file) {
+    std::lock_guard lock(reported_mutex);
+
+    return reported_files.insert(file).second;
+}
 } // namespace
 
 std::string download_name(const DownloadPin &pin) {
@@ -179,7 +193,12 @@ DownloadedBlob download_pinned(const DownloadPin &pin, const std::filesystem::pa
     const auto destination = cache / (pin.sha256 + ".blob");
 
     if (std::filesystem::exists(destination) || std::filesystem::is_symlink(destination)) {
-        progress::report("download_cached", download_names(pin));
+        if (first_report(destination)) {
+            progress::report("download_cached", download_names(pin));
+        } else {
+            logging::write(logging::Level::debug, "download", "cached file verified again",
+                           {{"file", destination.string()}});
+        }
 
         return {destination, verify(destination, pin), true};
     }
@@ -354,6 +373,7 @@ DownloadedBlob download_pinned(const DownloadPin &pin, const std::filesystem::pa
     cleanup.stream = nullptr;
     const auto bytes = verify(temporary, pin);
     meter.finish();
+    first_report(destination);
 #ifdef _WIN32
     if (!MoveFileW(temporary.c_str(), destination.c_str())) {
         throw VoyemuError("DOWNLOAD_PUBLISH", "fresh cache destination required");

@@ -135,6 +135,27 @@ std::uint64_t reported() {
     return lines;
 }
 
+void Steps::begin(bool new_block) {
+    if (new_block) {
+        block();
+    }
+
+    before_ = lines;
+}
+
+void Steps::end(std::string_view name) {
+    const bool cached = lines == before_;
+
+    // A cached step after another cached step continues the compact list without an empty line.
+    if (cached && compact_) {
+        std::lock_guard lock(blocks);
+        pending = false;
+    }
+
+    report(std::string(name) + (cached ? "_cached" : "_installed"));
+    compact_ = cached;
+}
+
 std::string size_text(std::uint64_t bytes, cli::Language language) {
     const bool russian = language == cli::Language::russian;
 

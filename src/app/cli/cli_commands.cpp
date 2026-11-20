@@ -65,17 +65,13 @@ int fetch_command(const Arguments &args, const Emit &emit) {
 }
 
 int deps_command(const Arguments &args, const Emit &emit) {
-    // Each step starts a block of console lines and ends with one line: already installed when the
-    // step reported nothing, installed after its downloads and extractions.
-    const auto step = [](std::string_view name, const auto &work, bool new_block = true) {
-        if (new_block) {
-            progress::block();
-        }
-
-        const auto before = progress::reported();
+    // Each step ends with one line: already installed when the step reported nothing, installed
+    // after its downloads and extractions.
+    progress::Steps steps;
+    const auto step = [&steps](std::string_view name, const auto &work, bool new_block = true) {
+        steps.begin(new_block);
         auto value = work();
-        progress::report(std::string(name) +
-                         (progress::reported() == before ? "_cached" : "_installed"));
+        steps.end(name);
 
         return value;
     };
@@ -161,16 +157,14 @@ int deps_command(const Arguments &args, const Emit &emit) {
 
     // The CI-built guest Java and UI observer that build reads; while that asset cannot be
     // downloaded, build compiles them on a JDK.
-    progress::block();
-    const auto reported = progress::reported();
+    steps.begin();
     const auto guest_java = voyemu::install_android_java(
             args.root, voyemu::embedded_toolchain_manifest().at("androidJava"), args.offline,
             preparation_margin);
 
     // Without the asset install_android_java reported that build compiles the guest Java.
     if (!guest_java.empty()) {
-        progress::report(progress::reported() == reported ? "guest_java_cached"
-                                                          : "guest_java_installed");
+        steps.end("guest_java");
     }
 
     result["android_java"] = guest_java.empty() ? Json{{"status", "unavailable"}}

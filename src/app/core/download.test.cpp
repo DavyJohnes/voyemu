@@ -8,6 +8,8 @@
 #include <fstream>
 #include <iostream>
 #include <limits>
+#include <regex>
+#include <sstream>
 
 int main(int argc, char **argv) try {
     using namespace voyemu;
@@ -171,12 +173,20 @@ int main(int argc, char **argv) try {
         download_pinned(pin, root / "cache", false, 0, transport);
     });
     assert(requests == 1);
-    // A fresh download reports its start and its verified end, a cached file one line.
+    // A fresh download reports its start and its verified end, a cached file one line; a file that
+    // this process has already reported is verified again without a line.
     auto lines = progress::reported();
     download_pinned(pin, root / "reported", false, 0, transport);
     assert(progress::reported() == lines + 2 && requests == 2);
     lines = progress::reported();
     download_pinned(pin, root / "reported", false, 0, transport);
+    assert(progress::reported() == lines && requests == 2);
+    ensure_private_directory(root / "copied");
+    std::filesystem::copy_file(root / "reported" / (pin.sha256 + ".blob"),
+                               root / "copied" / (pin.sha256 + ".blob"));
+    download_pinned(pin, root / "copied", false, 0, transport);
+    assert(progress::reported() == lines + 1);
+    download_pinned(pin, root / "copied", false, 0, transport);
     assert(progress::reported() == lines + 1 && requests == 2);
     // A volume without the reserve fails before the request and names its free space.
     bool spaceless = false;
@@ -189,6 +199,77 @@ int main(int argc, char **argv) try {
                                        " or move Voyemu to another disk.");
     }
     assert(spaceless && requests == 2);
+
+    // The console lines of a fresh deps: each step that downloads is a block, an archive that an
+    // earlier step downloaded is not reported again, and a cached step follows after an empty line.
+    const auto serve = [](const DownloadPin &requested, const DownloadSink &sink) {
+        sink(requested.url.ends_with("/platform") ? "xyz" : "abc");
+    };
+    DownloadPin emulator = pin,
+                platform{"https://example.invalid/platform", sha256_bytes("xyz"), 3};
+    emulator.name = "Android Emulator 36.3.10";
+    platform.name = "Android SDK Platform 34";
+    platform.label = "java_platform";
+    platform.version = "34";
+    std::ostringstream console;
+    auto *prior = std::cerr.rdbuf(console.rdbuf());
+    progress::console(cli::Language::english, false);
+    {
+        progress::Steps steps;
+        progress::block();
+        steps.begin(false);
+        download_pinned(emulator, root / "deps", false, 0, serve);
+        progress::report("extract", download_names(emulator));
+        steps.end("sdk");
+        steps.begin();
+        steps.end("qnx_host");
+        steps.begin();
+        download_pinned(emulator, root / "deps", false, 0, serve);
+        download_pinned(platform, root / "deps", false, 0, serve);
+        steps.end("java_tools");
+        steps.begin();
+        steps.end("guest_java");
+        progress::separate();
+    }
+    const auto fresh = console.str();
+    // A repeated deps is a compact list; this process already showed lines, so it starts with an
+    // empty line.
+    console.str({});
+    {
+        progress::Steps steps;
+        progress::block();
+        progress::report("sdk_verify");
+        steps.begin(false);
+        steps.end("sdk");
+
+        for (const auto *name : {"qnx_host", "java_runtime", "java_tools", "guest_java"}) {
+            steps.begin();
+            steps.end(name);
+        }
+
+        progress::separate();
+    }
+    std::cerr.rdbuf(prior);
+    const std::string rate = R"(\(\d+(\.\d)? (B|KiB)/s\), SHA-256 verified\n)";
+    assert(std::regex_match(
+            fresh,
+            std::regex("Downloading Android Emulator 36\\.3\\.10 from example\\.invalid\n"
+                       "Android Emulator 36\\.3\\.10: downloaded 3 B in 0 s " +
+                       rate +
+                       "Extracting Android Emulator 36\\.3\\.10\n"
+                       "Android SDK tools: installed\n\n"
+                       "QNX engine: already installed\n\n"
+                       "Downloading Android platform 34 for the Java tools from example\\.invalid\n"
+                       "Android platform 34 for the Java tools: downloaded 3 B in 0 s " +
+                       rate +
+                       "Java tools of preparation: installed\n\n"
+                       "Guest Java code: already installed\n\n")));
+    assert(console.str() == "\nChecking the installed Android SDK tools\n"
+                            "Android SDK tools: already installed\n"
+                            "QNX engine: already installed\n"
+                            "Java runtime: already installed\n"
+                            "Java tools of preparation: already installed\n"
+                            "Guest Java code: already installed\n\n");
     std::cout << "pinned native download/cache; bounds, pin failure and owned partial cleanup\n";
 } catch (const std::exception &error) {
     std::cerr << error.what() << '\n';

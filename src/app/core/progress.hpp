@@ -22,6 +22,20 @@ void report(std::string_view key, const Arguments &arguments = {});
 void block();
 // Prints the empty line of a new block now, when the console has shown a progress line.
 void separate();
+// The steps of a command such as deps, each ending with one line: <name>_cached when the step
+// reported nothing, otherwise <name>_installed. A step starts a new block, except that consecutive
+// steps that only report themselves as cached form one compact list.
+class Steps {
+public:
+    // Starts a step; new_block false keeps the lines that the caller reported for it before.
+    void begin(bool new_block = true);
+    // Ends the step with its cached or installed line.
+    void end(std::string_view name);
+
+private:
+    bool compact_ = true;
+    std::uint64_t before_ = 0;
+};
 // The number of lines reported so far, by which a caller tells whether a step did any work.
 std::uint64_t reported();
 // A byte count in IEC units with one decimal and no trailing zero: "900 B", "1.5 KiB", "306 MiB";
