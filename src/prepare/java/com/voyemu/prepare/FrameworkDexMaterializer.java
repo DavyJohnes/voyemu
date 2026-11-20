@@ -1,11 +1,22 @@
 package com.voyemu.prepare;
 
+import org.jf.dexlib2.HiddenApiRestriction;
 import org.jf.dexlib2.Opcodes;
 import org.jf.dexlib2.dexbacked.DexBackedDexFile;
 import org.jf.dexlib2.dexbacked.OatFile;
+import org.jf.dexlib2.iface.Annotation;
 import org.jf.dexlib2.iface.ClassDef;
+import org.jf.dexlib2.iface.ExceptionHandler;
+import org.jf.dexlib2.iface.MethodImplementation;
+import org.jf.dexlib2.iface.MethodParameter;
+import org.jf.dexlib2.iface.TryBlock;
+import org.jf.dexlib2.iface.reference.MethodReference;
+import org.jf.dexlib2.iface.reference.Reference;
 import org.jf.dexlib2.immutable.ImmutableClassDef;
 import org.jf.dexlib2.immutable.ImmutableDexFile;
+import org.jf.dexlib2.immutable.ImmutableMethodImplementation;
+import org.jf.dexlib2.immutable.ImmutableTryBlock;
+import org.jf.dexlib2.util.MethodUtil;
 import org.jf.dexlib2.writer.io.MemoryDataStore;
 import org.jf.dexlib2.writer.pool.DexPool;
 
@@ -15,6 +26,7 @@ import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HexFormat;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -101,8 +113,149 @@ final class FrameworkDexMaterializer {
         return new Result(List.copyOf(files), List.copyOf(fingerprints));
     }
 
-    static byte[] serialize(org.jf.dexlib2.iface.DexFile dex) throws Exception {
-        MemoryDataStore store = new MemoryDataStore();
+    /**
+     * Merges adjacent try blocks that share one handler sequence, the same way the dexlib2
+     * writer does on serialization, so the scripts compare definitions the writer produces.
+     */
+    static void normalizeTryBlocks(Map<String, ClassDef> classes) {
+        Map<String, ClassDef> normalized = new LinkedHashMap<>();
+        for (ClassDef source : classes.values()) {
+            List<org.jf.dexlib2.iface.Method> direct = new ArrayList<>();
+            List<org.jf.dexlib2.iface.Method> virtual = new ArrayList<>();
+            boolean classChanged = false;
+            for (org.jf.dexlib2.iface.Method method : source.getMethods()) {
+                MethodImplementation implementation = method.getImplementation();
+                MutableMethod replaced = new MutableMethod(method);
+                boolean changed = false;
+                if (implementation != null) {
+                    List<TryBlock<? extends ExceptionHandler>> blocks =
+                            new ArrayList<>(implementation.getTryBlocks());
+                    for (int i = 0; i + 1 < blocks.size(); ) {
+                        TryBlock<? extends ExceptionHandler> first = blocks.get(i);
+                        TryBlock<? extends ExceptionHandler> second = blocks.get(i + 1);
+                        if (first.getStartCodeAddress() + first.getCodeUnitCount()
+                                        == second.getStartCodeAddress()
+                                && handlers(first).equals(handlers(second))) {
+                            blocks.set(
+                                    i,
+                                    new ImmutableTryBlock(
+                                            first.getStartCodeAddress(),
+                                            first.getCodeUnitCount() + second.getCodeUnitCount(),
+                                            first.getExceptionHandlers()));
+                            blocks.remove(i + 1);
+                            changed = true;
+                        } else {
+                            i++;
+                        }
+                    }
+                    if (changed) {
+                        replaced.setImplementation(
+                                new ImmutableMethodImplementation(
+                                        implementation.getRegisterCount(),
+                                        implementation.getInstructions(),
+                                        blocks,
+                                        implementation.getDebugItems()));
+                        classChanged = true;
+                    }
+                }
+                if (MethodUtil.isDirect(method)) {
+                    direct.add(replaced);
+                } else {
+                    virtual.add(replaced);
+                }
+            }
+            normalized.put(
+                    source.getType(),
+                    classChanged
+                            ? new ImmutableClassDef(
+                                    source.getType(),
+                                    source.getAccessFlags(),
+                                    source.getSuperclass(),
+                                    source.getInterfaces(),
+                                    source.getSourceFile(),
+                                    source.getAnnotations(),
+                                    source.getStaticFields(),
+                                    source.getInstanceFields(),
+                                    new ArrayList<>(direct),
+                                    new ArrayList<>(virtual))
+                            : source);
+        }
+        classes.clear();
+        classes.putAll(normalized);
+    }
+
+    private static List<ExceptionHandler> handlers(TryBlock<? extends ExceptionHandler> block) {
+        return new ArrayList<>(block.getExceptionHandlers());
+    }
+
+    /** A method that can have its implementation replaced, e.g. with merged try blocks. */
+    private static final class MutableMethod implements org.jf.dexlib2.iface.Method {
+        private final org.jf.dexlib2.iface.Method method;
+        private MethodImplementation implementation;
+
+        private MutableMethod(org.jf.dexlib2.iface.Method method) {
+            this.method = method;
+            this.implementation = method.getImplementation();
+        }
+
+        private void setImplementation(MethodImplementation implementation) {
+            this.implementation = implementation;
+        }
+
+        public MethodImplementation getImplementation() {
+            return implementation;
+        }
+
+        public String getDefiningClass() {
+            return method.getDefiningClass();
+        }
+
+        public String getName() {
+            return method.getName();
+        }
+
+        public String getReturnType() {
+            return method.getReturnType();
+        }
+
+        public List<? extends CharSequence> getParameterTypes() {
+            return method.getParameterTypes();
+        }
+
+        public List<? extends MethodParameter> getParameters() {
+            return method.getParameters();
+        }
+
+        public int getAccessFlags() {
+            return method.getAccessFlags();
+        }
+
+        public Set<? extends Annotation> getAnnotations() {
+            return method.getAnnotations();
+        }
+
+        public Set<HiddenApiRestriction> getHiddenApiRestrictions() {
+            return method.getHiddenApiRestrictions();
+        }
+
+        public void validateReference() throws Reference.InvalidReferenceException {
+            method.validateReference();
+        }
+
+        public int compareTo(MethodReference other) {
+            return method.compareTo(other);
+        }
+
+        public int hashCode() {
+            return method.hashCode();
+        }
+
+        public boolean equals(Object other) {
+            return this == other;
+        }
+    }
+
+    static byte[] serialize(org.jf.dexlib2.iface.DexFile dex) throws Exception {        MemoryDataStore store = new MemoryDataStore();
 
         try {
             DexPool pool = new DexPool(dex.getOpcodes());

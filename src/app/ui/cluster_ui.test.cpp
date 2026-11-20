@@ -1031,7 +1031,8 @@ void qinggan11_adversarial_wheel_acceptance(const std::filesystem::path &assets,
                       {"wheel_capability", nullptr}};
 
         if (partial) {
-            response["wheel_capability"] = qinggan11_partial_wheel_capability();
+            response["wheel_capability"] =
+                    qinggan11_partial_wheel_capability(qinggan11_731_profile_id);
 
             for (const auto &[id, route] : response.at("wheel_routes").items()) {
                 (void)route;
@@ -1262,7 +1263,7 @@ void qinggan11_adversarial_wheel_acceptance(const std::filesystem::path &assets,
                     window.refresh_state();
 
                     return window.client().state().wheel_capability ==
-                           qinggan11_partial_wheel_capability();
+                           qinggan11_partial_wheel_capability(qinggan11_731_profile_id);
                 },
                 "partial capability reaches the actual A11 native view");
         // Non-face neutral point inside the wheel photos that no enabled face contains (the
@@ -2417,7 +2418,8 @@ void wheel_hover_without_tooltips(const std::filesystem::path &assets) {
                       {"wheel_capability", nullptr}};
 
         if (partial) {
-            response["wheel_capability"] = qinggan11_partial_wheel_capability();
+            response["wheel_capability"] =
+                    qinggan11_partial_wheel_capability(qinggan11_731_profile_id);
             const auto adapter = qinggan11_wheel_adapter();
 
             for (const auto &[id, code] : adapter.at("routes").items()) {
@@ -2854,7 +2856,7 @@ void wheel_hover_without_tooltips(const std::filesystem::path &assets) {
                     window.refresh_state();
 
                     return window.client().state().wheel_capability ==
-                           qinggan11_partial_wheel_capability();
+                           qinggan11_partial_wheel_capability(qinggan11_731_profile_id);
                 },
                 "partial capability reaches actual native view");
 

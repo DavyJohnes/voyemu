@@ -163,9 +163,7 @@ public final class PreparationMain {
         boolean passion = "passion".equals(profile.data().get("platform")),
                 qinggan11 = "qinggan11".equals(profile.data().get("platform"));
         var specs =
-                Api30NativeFiles.forPlatform(
-                        profile.data().get("platform"),
-                        Json.obj(profile.data(), "patches").containsKey("original-navi-mac"));
+                Api30NativeFiles.forProfile(profile);
         int policyIndex = nativePolicyIndex(specs, passion);
         long fileNodes =
                 Json.obj(profile.data(), "patches").values().stream()

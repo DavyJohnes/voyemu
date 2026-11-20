@@ -65,7 +65,7 @@ final class Api30NativeFiles {
                             "can-early-policy-api30",
                             "/system/etc/selinux/plat_sepolicy.cil",
                             "f6d5316e443b6830d5331e6586cc0fc1df2ea8a59853ae3b0870945990145a17",
-                            "123f8180bca7499a8b837f5c4cd5b97e11ca216fa4a370179d1dc7624f9dd7b1"),
+                            "e8f3b8cb54b3ec09280cf5c630f495b3202f1c9994e796c5a1cf707a5dcd6cf6"),
                     new Spec(
                             "can-early-property-contexts-api30",
                             "/system/etc/selinux/plat_property_contexts",
@@ -75,12 +75,23 @@ final class Api30NativeFiles {
                             "selinux-hash-api30",
                             "/system/etc/selinux/plat_sepolicy_and_mapping.sha256",
                             "391829e0167f44415e54ba64692ad410b1398b16263869beb22e427130eae766",
-                            "d323725be43eb7b80539044878d4bdad51cb12e5992014bebf25749d43659e22"));
+                            "7293ab8b5ff6f3890a7f60b158e6bf28c882896c755edf1e996c9231519c37de"));
 
     static final List<Spec> QINGGAN11_SPECS =
             QINGGAN11_ORIGINAL_NAVI_SPECS.stream()
                     .filter(spec -> !spec.id().equals("original-navi-mac"))
                     .toList();
+    static final String QINGGAN11_731 = "free-11-chinese-20260731-7.3.1";
+
+    static final List<Spec> QINGGAN11_611_SPECS =
+            QINGGAN11_SPECS.stream().map(spec -> switch (spec.id()) {
+                case "can-early-policy-api30" -> new Spec(spec.id(), spec.target(), spec.inputPin(),
+                        "50e7563396d73b053a36a9022d31807121731ecc0ce51b695df65ec7d6838db6");
+                case "selinux-hash-api30" -> new Spec(spec.id(), spec.target(), spec.inputPin(),
+                        "2f158789774a59073cf85bf2c91272416b0da948eea037f9e13586187338f2c9");
+                default -> spec;
+            }).toList();
+
     static final List<Spec> PASSION_SPECS =
             List.of(
                     new Spec(
@@ -137,6 +148,17 @@ final class Api30NativeFiles {
         }
 
         return "passion".equals(platform) ? PASSION_SPECS : SPECS;
+    }
+
+    static List<Spec> forProfile(ProfileRegistry.Profile profile) {
+        var platform = profile.data().get("platform");
+        boolean originalNavi = Json.obj(profile.data(), "patches").containsKey("original-navi-mac");
+        if ("qinggan11".equals(platform) && !originalNavi
+                && !QINGGAN11_731.equals(profile.referenceProfile())) {
+            return QINGGAN11_611_SPECS;
+        }
+
+        return forPlatform(platform, originalNavi);
     }
 
     static final String MAPPING = "/system/etc/selinux/mapping/30.0.cil",

@@ -1,0 +1,594 @@
+{
+  "api": 30,
+  "calls": [
+    {
+      "args": [],
+      "operation": "guardHiboardStartup"
+    }
+  ],
+  "constants": {
+    "hiboard_bodies": [
+      {
+        "access": 1,
+        "method": "Lcom/qinggan/app/hiboard/BlindsWindow$3;->onAnimationEnd(Landroid/animation/Animator;)V",
+        "registers": 5,
+        "sites": [
+          [
+            45,
+            "removeView",
+            2,
+            4,
+            0,
+            0,
+            0,
+            0
+          ]
+        ]
+      },
+      {
+        "access": 2,
+        "method": "Lcom/qinggan/app/hiboard/BlindsWindow;->moveWindow(ZI)V",
+        "registers": 8,
+        "sites": [
+          [
+            283,
+            "removeView",
+            2,
+            6,
+            7,
+            0,
+            0,
+            0
+          ]
+        ]
+      },
+      {
+        "access": 2,
+        "method": "Lcom/qinggan/app/hiboard/BlindsWindow;->updatePosition(I)V",
+        "registers": 5,
+        "sites": [
+          [
+            57,
+            "addView",
+            3,
+            4,
+            0,
+            1,
+            0,
+            0
+          ],
+          [
+            67,
+            "updateViewLayout",
+            3,
+            4,
+            0,
+            1,
+            0,
+            0
+          ]
+        ]
+      },
+      {
+        "access": 0,
+        "method": "Lcom/qinggan/app/hiboard/BlindsWindow;->onStartTrackingTouch()V",
+        "registers": 4,
+        "sites": [
+          [
+            31,
+            "addView",
+            3,
+            0,
+            1,
+            2,
+            0,
+            0
+          ]
+        ]
+      },
+      {
+        "access": 1,
+        "method": "Lcom/qinggan/app/hiboard/BlindsWindow;->update()V",
+        "registers": 4,
+        "sites": [
+          [
+            14,
+            "addView",
+            3,
+            0,
+            1,
+            2,
+            0,
+            0
+          ],
+          [
+            24,
+            "updateViewLayout",
+            3,
+            0,
+            1,
+            2,
+            0,
+            0
+          ]
+        ]
+      },
+      {
+        "access": 1,
+        "method": "Lcom/qinggan/app/hiboard/BlindsWindow;->update(Lcom/qinggan/app/hiboard/BlindsWindow$LayoutParams;)V",
+        "registers": 4,
+        "sites": [
+          [
+            12,
+            "addView",
+            3,
+            0,
+            1,
+            3,
+            0,
+            0
+          ],
+          [
+            20,
+            "updateViewLayout",
+            3,
+            0,
+            1,
+            3,
+            0,
+            0
+          ]
+        ]
+      },
+      {
+        "access": 1,
+        "method": "Lcom/qinggan/app/hiboard/system/HiboardBar$10;->run()V",
+        "registers": 3,
+        "sites": [
+          [
+            8,
+            "removeView",
+            2,
+            0,
+            1,
+            0,
+            0,
+            0
+          ],
+          [
+            19,
+            "removeView",
+            2,
+            0,
+            1,
+            0,
+            0,
+            0
+          ]
+        ]
+      },
+      {
+        "access": 1,
+        "method": "Lcom/qinggan/app/hiboard/system/HiboardBar$11;->run()V",
+        "registers": 3,
+        "sites": [
+          [
+            4,
+            "removeView",
+            2,
+            0,
+            1,
+            0,
+            0,
+            0
+          ],
+          [
+            11,
+            "removeView",
+            2,
+            0,
+            1,
+            0,
+            0,
+            0
+          ]
+        ]
+      },
+      {
+        "access": 1,
+        "method": "Lcom/qinggan/app/hiboard/system/HiboardBar$12;->run()V",
+        "registers": 3,
+        "sites": [
+          [
+            44,
+            "removeViewImmediate",
+            2,
+            0,
+            1,
+            0,
+            0,
+            0
+          ]
+        ]
+      },
+      {
+        "access": 1,
+        "method": "Lcom/qinggan/app/hiboard/BaseControlModel$1;->onDimUpdate(IZ)V",
+        "registers": 6,
+        "sites": [
+          [
+            81,
+            "removeView",
+            2,
+            5,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            115,
+            "addView",
+            3,
+            5,
+            0,
+            1,
+            0,
+            0
+          ]
+        ]
+      },
+      {
+        "access": 1,
+        "method": "Lcom/qinggan/app/hiboard/BaseControlModel$2;->onDimUpdate(IZ)V",
+        "registers": 6,
+        "sites": [
+          [
+            59,
+            "removeView",
+            2,
+            5,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            93,
+            "addView",
+            3,
+            5,
+            0,
+            1,
+            0,
+            0
+          ]
+        ]
+      },
+      {
+        "access": 2,
+        "method": "Lcom/qinggan/app/hiboard/BaseControlModel;->removeDimBackground()V",
+        "registers": 3,
+        "sites": [
+          [
+            7,
+            "removeView",
+            2,
+            1,
+            0,
+            0,
+            0,
+            0
+          ]
+        ]
+      },
+      {
+        "access": 2,
+        "method": "Lcom/qinggan/app/hiboard/BaseControlModel;->removeSecondDimBackground()V",
+        "registers": 3,
+        "sites": [
+          [
+            7,
+            "removeView",
+            2,
+            1,
+            0,
+            0,
+            0,
+            0
+          ]
+        ]
+      },
+      {
+        "access": 2,
+        "method": "Lcom/qinggan/app/hiboard/system/HiboardBar;->amendThemeIfNeeded()V",
+        "registers": 22,
+        "sites": [
+          [
+            218,
+            "addView",
+            3,
+            1,
+            4,
+            12,
+            0,
+            0
+          ],
+          [
+            221,
+            "addView",
+            3,
+            1,
+            5,
+            3,
+            0,
+            0
+          ]
+        ]
+      },
+      {
+        "access": 2,
+        "method": "Lcom/qinggan/app/hiboard/system/HiboardBar;->showThemeChangeLoadingLayout()V",
+        "registers": 6,
+        "sites": [
+          [
+            151,
+            "removeViewImmediate",
+            2,
+            0,
+            2,
+            0,
+            0,
+            0
+          ],
+          [
+            158,
+            "addView",
+            3,
+            0,
+            2,
+            3,
+            0,
+            0
+          ]
+        ]
+      },
+      {
+        "access": 1,
+        "method": "Lcom/qinggan/app/hiboard/system/HiboardBar;->setTheme(IILjava/lang/String;)V",
+        "registers": 22,
+        "sites": [
+          [
+            282,
+            "addView",
+            3,
+            8,
+            5,
+            3,
+            0,
+            0
+          ],
+          [
+            287,
+            "addView",
+            3,
+            3,
+            6,
+            7,
+            0,
+            0
+          ]
+        ]
+      },
+      {
+        "access": 1,
+        "method": "Lcom/qinggan/app/hiboard/system/HiboardBar;->show()V",
+        "registers": 4,
+        "sites": [
+          [
+            14,
+            "addView",
+            3,
+            0,
+            1,
+            2,
+            0,
+            0
+          ]
+        ]
+      },
+      {
+        "access": 1,
+        "method": "Lcom/qinggan/app/hiboard/system/SecondHiboardBar;->show()V",
+        "registers": 4,
+        "sites": [
+          [
+            14,
+            "addView",
+            3,
+            0,
+            1,
+            2,
+            0,
+            0
+          ]
+        ]
+      },
+      {
+        "access": 2,
+        "method": "Lcom/qinggan/app/hiboard/vehiclehiboard/main/VehicleHiBoardBarNew;->addWindowView(Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V",
+        "registers": 4,
+        "sites": [
+          [
+            2,
+            "addView",
+            3,
+            0,
+            2,
+            3,
+            0,
+            0
+          ]
+        ]
+      },
+      {
+        "access": 2,
+        "method": "Lcom/qinggan/app/hiboard/vehiclehiboard/main/VehicleHiBoardBarNew;->removeWindowView(Landroid/view/View;)V",
+        "registers": 3,
+        "sites": [
+          [
+            2,
+            "removeView",
+            2,
+            0,
+            2,
+            0,
+            0,
+            0
+          ]
+        ]
+      },
+      {
+        "access": 1,
+        "method": "Lcom/qinggan/app/hiboard/vehiclehiboard/main/VehicleHiBoardBarNew;->doScreenLift(I)V",
+        "registers": 7,
+        "sites": [
+          [
+            135,
+            "updateViewLayout",
+            3,
+            2,
+            3,
+            4,
+            0,
+            0
+          ]
+        ]
+      },
+      {
+        "access": 1,
+        "method": "Lcom/qinggan/app/hiboard/vehiclehiboard/main/VehicleHiBoardBarNew;->show()V",
+        "registers": 4,
+        "sites": [
+          [
+            14,
+            "addView",
+            3,
+            0,
+            1,
+            2,
+            0,
+            0
+          ]
+        ]
+      },
+      {
+        "access": 2,
+        "method": "Lcom/qinggan/app/hiboard/vehiclehiboard/main/VehicleHiBoardBarNewOTA;->addWindowView(Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V",
+        "registers": 4,
+        "sites": [
+          [
+            2,
+            "addView",
+            3,
+            0,
+            2,
+            3,
+            0,
+            0
+          ]
+        ]
+      },
+      {
+        "access": 2,
+        "method": "Lcom/qinggan/app/hiboard/vehiclehiboard/main/VehicleHiBoardBarNewOTA;->removeWindowView(Landroid/view/View;)V",
+        "registers": 3,
+        "sites": [
+          [
+            2,
+            "removeView",
+            2,
+            0,
+            2,
+            0,
+            0,
+            0
+          ]
+        ]
+      },
+      {
+        "access": 1,
+        "method": "Lcom/qinggan/app/hiboard/vehiclehiboard/main/VehicleHiBoardBarNewOTA;->doScreenLift(I)V",
+        "registers": 7,
+        "sites": [
+          [
+            142,
+            "updateViewLayout",
+            3,
+            2,
+            3,
+            4,
+            0,
+            0
+          ]
+        ]
+      },
+      {
+        "access": 1,
+        "method": "Lcom/qinggan/app/hiboard/vehiclehiboard/main/VehicleHiBoardBarNewOTA;->show()V",
+        "registers": 4,
+        "sites": [
+          [
+            14,
+            "addView",
+            3,
+            0,
+            1,
+            2,
+            0,
+            0
+          ]
+        ]
+      },
+      {
+        "access": 1,
+        "method": "Lcom/qinggan/app/hiboard/vehiclehiboard/second/SecondVehicleHiboardBar;->doScreenLift(I)V",
+        "registers": 5,
+        "sites": [
+          [
+            153,
+            "updateViewLayout",
+            3,
+            4,
+            0,
+            1,
+            0,
+            0
+          ]
+        ]
+      },
+      {
+        "access": 1,
+        "method": "Lcom/qinggan/app/hiboard/vehiclehiboard/second/SecondVehicleHiboardBar;->show()V",
+        "registers": 4,
+        "sites": [
+          [
+            14,
+            "addView",
+            3,
+            0,
+            1,
+            2,
+            0,
+            0
+          ]
+        ]
+      }
+    ],
+    "hiboard_jumbo": false,
+    "original_sha256_allowlist": [
+      "256098df48c93da096e7247998c14e838f95074f81d8667059348cc4498e2811"
+    ]
+  },
+  "schema": 1
+}

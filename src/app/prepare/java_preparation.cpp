@@ -358,7 +358,8 @@ Json java_preparation_native_files(const std::filesystem::path &root,
     }
 
     need(((request.profile == "free-11-chinese-20260731-7.3.1" ||
-           request.profile == "free-11-chinese-20250710-6.11.1")
+           request.profile == "free-11-chinese-20250710-6.11.1" ||
+           request.profile == "free-11-russian-20260318-rc1")
                   ? native_nodes == recipes.size()
                   : (native_nodes == 0 || (!passion && native_nodes == 1) ||
                      native_nodes == recipes.size())) &&

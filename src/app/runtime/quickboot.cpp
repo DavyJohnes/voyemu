@@ -95,7 +95,7 @@ Json stamp(const std::filesystem::path &path, std::uintmax_t expected_links = 1)
 bool android_presave_required(const Json &specification) {
     const auto capability = specification.value("wheel_capability", Json());
 
-    return capability == qinggan11_partial_wheel_capability() ||
+    return capability == qinggan11_partial_wheel_capability_matches(capability) ||
            capability == passion_wheel_partial_capability();
 }
 

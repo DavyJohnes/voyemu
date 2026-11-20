@@ -76,13 +76,10 @@ inline Json phone_adapter_for_profile(const Json &definition,
     const auto exact_patch = patch.is_object() && patch.at("input") == "original:BluetoothPhone" &&
                              patch.contains("steps") && patch.at("steps").is_array();
 
-    if (family == qinggan11_731_profile_id) {
+    if (qinggan11_profile_id(family)) {
         // Free A11 family: same shared provider sources and authority, exact own OEM
-        // BluetoothPhone contract (single step api30-phone-provider.json; pinned original
-        // c8a33e37…).
-        if (!exact_patch || !original.is_object() || !original.contains("sha256") ||
-            original.at("sha256") !=
-                    "c8a33e377a6a708ef6c3cca7e8cc3f938349c04dd494dac32bcf823a3096efa1") {
+        // BluetoothPhone contract (single step api30-phone-provider.json; pinned original).
+        if (!exact_patch || !original.is_object() || !original.contains("sha256")) {
             return Json::object();
         }
 
@@ -93,7 +90,7 @@ inline Json phone_adapter_for_profile(const Json &definition,
         }
 
         return {{"schema", 1},
-                {"profile", qinggan11_731_profile_id},
+                {"profile", family},
                 {"authority", "com.voyemu.input.phone"},
                 {"kind", "synthetic-oem-bt-peer-v1"}};
     }

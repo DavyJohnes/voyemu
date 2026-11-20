@@ -5,6 +5,9 @@ import java.util.List;
 import java.util.Map;
 
 public final class NativeFilesTest {
+    private static final String FREE_611 = "free-11-chinese-20250710-6.11.1";
+    private static final String FREE_RC1 = "free-11-russian-20260318-rc1";
+
     private static void require(boolean value, String message) {
         if (!value) {
             throw new AssertionError(message);
@@ -12,18 +15,27 @@ public final class NativeFilesTest {
     }
 
     public static void main(String[] args) throws Exception {
-        var graph611 = Api30NativeFiles.forPlatform("qinggan11", false);
+        var graph611 = Api30NativeFiles.forProfile(new ProfileRegistry.Profile(
+                FREE_611, FREE_611, Map.of("platform", "qinggan11", "patches", Map.of()), ""));
+        var graph731WithoutNavi = Api30NativeFiles.forPlatform("qinggan11", false);
         var graph731 = Api30NativeFiles.forPlatform("qinggan11", true);
 
         require(
                 graph611.size() == 8 && graph731.size() == 9,
                 "Exact Free native graph sizes required");
         require(
-                graph611.equals(
+                graph731WithoutNavi.equals(
                         graph731.stream()
                                 .filter(spec -> !spec.id().equals("original-navi-mac"))
                                 .toList()),
                 "qinggan11 exact non-Navi graph differs");
+        require(graph731WithoutNavi.stream().filter(spec -> !graph611.contains(spec))
+                        .map(Api30NativeFiles.Spec::id).toList()
+                        .equals(List.of("can-early-policy-api30", "selinux-hash-api30")),
+                "Only the policy pin and sidecar may differ");
+        require(Api30NativeFiles.forProfile(new ProfileRegistry.Profile(
+                FREE_RC1, FREE_RC1, Map.of("platform", "qinggan11", "patches", Map.of()), ""))
+                .equals(graph611), "RC1 must select the common graph");
         require(
                 graph611.stream().noneMatch(spec -> spec.id().equals("original-navi-mac")),
                 "qinggan11 without original Navi must not select Navi MAC");

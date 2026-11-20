@@ -610,7 +610,8 @@ static void wheel_release_admission_tests(const std::filesystem::path &base) {
 
         if (op == "status") {
             auto reply = session.handle(command);
-            reply["wheel_capability"] = qinggan11_partial_wheel_capability();
+            reply["wheel_capability"] =
+                    qinggan11_partial_wheel_capability(qinggan11_731_profile_id);
 
             return reply;
         }
@@ -1669,8 +1670,9 @@ int main(int argc, char **argv) try {
                                        int timeout) -> Json {
             if (operation.at("op") == "status") {
                 auto reply = transport.control(endpoint, operation, timeout);
-                reply["wheel_capability"] = partial ? qinggan11_partial_wheel_capability()
-                                                    : Json(nullptr);
+                reply["wheel_capability"] =
+                        partial ? qinggan11_partial_wheel_capability(qinggan11_731_profile_id)
+                                : Json(nullptr);
 
                 return reply;
             }

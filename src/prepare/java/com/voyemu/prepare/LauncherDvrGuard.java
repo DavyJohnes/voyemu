@@ -160,7 +160,11 @@ final class LauncherDvrGuard {
                             && raw != null
                             && Arrays.equals(raw, original(apk)));
             byte[] power = LauncherPowerGuard.apply(constants, api, apk, raw, "classes2.dex");
-            validate(constants, api, abi, apk, AqyProviderGuard.apply(constants, api, apk, power));
+            if (AqyProviderGuard.present(power)) {
+                power = AqyProviderGuard.apply(constants, api, apk, power);
+            }
+
+            validate(constants, api, abi, apk, power);
         }
 
         static Method adapt(Method m) {

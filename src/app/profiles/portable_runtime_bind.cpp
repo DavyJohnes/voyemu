@@ -22,13 +22,13 @@ Json audio_diagnostic_activation(const std::filesystem::path &record) {
     need(value.is_object(), "audio diagnostic activation object required");
     const auto profile = value.value("profile", std::string{});
     need(value.value("schema", 0) == 1 && value.value("route", std::string{}) == "wav" &&
-                 (profile == passion_profile_id || profile == qinggan11_731_profile_id ||
+                 (profile == passion_profile_id || qinggan11_profile_id(profile) ||
                   profile == "free-11-chinese-20250710-6.11.1" || profile == nxp_profile_id ||
                   embedded_profile_declares(profile, ProfilePlatform::qinggan09,
                                             ProfileBoard::sa8155)),
          "audio diagnostic activation must be the exact wav route for an owned run");
 
-    if (profile == qinggan11_731_profile_id || profile == "free-11-chinese-20250710-6.11.1" ||
+    if (qinggan11_profile_id(profile) || profile == "free-11-chinese-20250710-6.11.1" ||
         profile == nxp_profile_id ||
         embedded_profile_declares(profile, ProfilePlatform::qinggan09, ProfileBoard::sa8155)) {
         const auto nonce = value.value("nonce", std::string{});
@@ -113,7 +113,7 @@ std::filesystem::path bind_machine_configuration(const std::filesystem::path &ro
 
     Json prepared_observer = Json::object();
 
-    if (multimedia && (manifest.contains("ui_observer") || family == qinggan11_731_profile_id)) {
+    if (multimedia && (manifest.contains("ui_observer") || qinggan11_profile_id(family))) {
         const auto descriptor = portable_observer_descriptor(seed, manifest);
         const auto pin = descriptor.at("sha256").get<std::string>();
         const auto dex = root / ".local/toolchains/portable-ui-observer" / pin / "classes.dex";
@@ -227,7 +227,7 @@ std::filesystem::path bind_machine_configuration(const std::filesystem::path &ro
     Json desired_package = Json::object();
 
     if (manifest.at("android").contains("owned_package")) {
-        need(family == qinggan11_731_profile_id && manifest.at("android").at("api") == 30,
+        need(qinggan11_profile_id(family) && manifest.at("android").at("api") == 30,
              "exact owned provider machine required");
         desired_package = manifest.at("android").at("owned_package");
         android_owned_package_descriptor(desired_package, true);
@@ -241,7 +241,7 @@ std::filesystem::path bind_machine_configuration(const std::filesystem::path &ro
     Json desired_camera = Json::object();
 
     if (manifest.at("android").contains("camera_package")) {
-        need(family == qinggan11_731_profile_id && manifest.at("android").at("api") == 30,
+        need(qinggan11_profile_id(family) && manifest.at("android").at("api") == 30,
              "exact Camera machine required");
         desired_camera = manifest.at("android").at("camera_package");
         android_camera_package_descriptor(desired_camera, true);
@@ -255,7 +255,7 @@ std::filesystem::path bind_machine_configuration(const std::filesystem::path &ro
     Json desired_prepared = Json::array();
 
     if (manifest.at("android").contains("prepared_packages")) {
-        need(family == qinggan11_731_profile_id && manifest.at("android").at("api") == 30,
+        need(qinggan11_profile_id(family) && manifest.at("android").at("api") == 30,
              "exact Free A11 prepared list required");
         desired_prepared = manifest.at("android").at("prepared_packages");
         android_prepared_packages_descriptor(desired_prepared, true);
@@ -444,7 +444,7 @@ std::filesystem::path bind_machine_configuration(const std::filesystem::path &ro
             }
         }
 
-        if (family != qinggan11_731_profile_id && family != passion_profile_id &&
+        if (!qinggan11_profile_id(family) && family != passion_profile_id &&
             (family != nxp_profile_id ||
              retained_definition.value("components", Json::object()).contains("wheel"))) {
             Json routes = Json::object();
@@ -591,7 +591,7 @@ std::filesystem::path bind_machine_configuration(const std::filesystem::path &ro
             passion_wheel_validate(launch);
         }
 
-        if (family == qinggan11_731_profile_id) {
+        if (qinggan11_profile_id(family)) {
             need(launch.contains("wheel_capability"), "Free cached wheel capability missing");
             (void)qinggan11_wheel_unsupported(launch);
             const auto capability = qinggan11_wheel_capability(definition);

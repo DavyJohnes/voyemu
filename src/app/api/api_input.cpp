@@ -22,8 +22,8 @@ Json Api::dispatch_input(const std::string &op, const Json &request, Clock::time
             hold <= 200) {
             const auto current = control(request, {{"op", "status"}});
 
-            if (current.value("wheel_capability", Json(nullptr)) ==
-                qinggan11_partial_wheel_capability()) {
+            if (qinggan11_partial_wheel_capability_matches(
+                        current.value("wheel_capability", Json(nullptr)))) {
                 auto paired = control(
                         request,
                         {{"op", "wheel_pair"}, {"id", id}, {"owner", owner}, {"hold_ms", hold}},

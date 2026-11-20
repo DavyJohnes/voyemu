@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "api": 30,
+  "constants": {
+    "original_sha256_allowlist": [
+      "78f117009633c3c118ff912e0aae568ae0ffb0132d23831351dbc82d74c64335"
+    ]
+  },
+  "calls": [
+    {
+      "operation": "guardGalleryArm64",
+      "args": []
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "api": 30,
+  "calls": [
+    {
+      "args": [],
+      "operation": "guardMusicPage"
+    }
+  ],
+  "constants": {
+    "music_page_boundary": false,
+    "original_sha256_allowlist": [
+      "2c8ca80a983460a0cfd739ad763c078bd2fda6f3b8e54cdd79f36d802865a3a7"
+    ]
+  },
+  "schema": 1
+}

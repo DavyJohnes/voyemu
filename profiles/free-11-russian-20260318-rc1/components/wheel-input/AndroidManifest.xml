@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.voyemu.input.wheel" android:sharedUserId="android.uid.system">
+    <uses-sdk android:minSdkVersion="30" android:targetSdkVersion="30" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <application android:label="VoyemuFreeWheelInput" android:allowBackup="false">
+        <provider android:name="com.voyemu.input.FreeKeyInputProvider" android:authorities="com.voyemu.input.wheel" android:exported="true" android:permission="android.permission.DUMP" android:grantUriPermissions="false" />
+    </application>
+</manifest>

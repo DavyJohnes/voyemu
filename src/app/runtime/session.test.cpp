@@ -2970,7 +2970,7 @@ static void android_avd_config_guards() {
                  "com.qinggan.app.launcher/com.qinggan.app.launcher.activity.MainActivity"}};
         prepared["vehicle_adapter"] = {{"authority", "com.voyemu.output.vehicle"}};
         prepared["wheel_adapter"] = qinggan11_wheel_adapter();
-        prepared["wheel_capability"] = qinggan11_partial_wheel_capability();
+        prepared["wheel_capability"] = qinggan11_partial_wheel_capability(qinggan11_731_profile_id);
         prepared["gpuMode"] = "invalid-before-child";
         bool before_child = false;
         try {

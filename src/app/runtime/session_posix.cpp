@@ -196,9 +196,10 @@ void Session::advance_android(bool guest_possible, std::chrono::steady_clock::ti
                     const auto port = android_spec_.at("port").get<unsigned>();
                     const bool retained =
                             same_release &&
-                            (android_spec_.contains("wheel_capability")
-                                     ? android_spec_.at("wheel_capability")
-                                     : Json(nullptr)) == qinggan11_partial_wheel_capability() &&
+                            qinggan11_partial_wheel_capability_matches(
+                                    android_spec_.contains("wheel_capability")
+                                            ? android_spec_.at("wheel_capability")
+                                            : Json(nullptr)) &&
                             android_powered_ && proof_generation == android_generation_ &&
                             proof_pid == android_.pid() && android_.alive() &&
                             android_.owns_tcp_listener(port) &&

@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "api": 30,
+  "calls": [
+    {
+      "operation": "guardNetwork",
+      "args": []
+    }
+  ],
+  "constants": {
+    "original_sha256_allowlist": [
+      "34775ed28aad30b908e80ef33b5f7fff68f26eebef3260f54fa7e4ca0886f8bd"
+    ]
+  }
+}

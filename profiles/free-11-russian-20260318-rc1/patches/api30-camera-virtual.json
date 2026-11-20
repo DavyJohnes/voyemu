@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "api": 30,
+  "constants": {
+    "original_sha256_allowlist": [
+      "7aa5f2a3ba7978867812dbad66b8fe5daf224b72c5db1482e52048bd1fb63f18"
+    ]
+  },
+  "calls": [
+    {
+      "operation": "guardCameraVirtual",
+      "args": []
+    }
+  ],
+  "helper": "api30-camera-virtual/src/com/voyemu/camera/BackCameraProbe.java"
+}

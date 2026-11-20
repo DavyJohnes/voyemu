@@ -1,0 +1,16 @@
+{
+  "api": 30,
+  "calls": [
+    {
+      "args": [],
+      "operation": "guardUsbPlayer"
+    }
+  ],
+  "constants": {
+    "original_sha256_allowlist": [
+      "abb1dfa176eed67b985a39a5298f35ab522c61e66adba8eba5f5aaaa6b75115d"
+    ],
+    "usb_player_dex": "classes2.dex"
+  },
+  "schema": 1
+}

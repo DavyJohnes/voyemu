@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "api": 30,
+  "native": true,
+  "input_sha256": "f6d5316e443b6830d5331e6586cc0fc1df2ea8a59853ae3b0870945990145a17",
+  "output_sha256": "b07971ed43c0ccfb97e69af4b251f58a0e021cb93c1e68d3ccbfc664845bb55d",
+  "description": "Exact pinned API30 native cockpit service policy; preserves original input bytes and contains only Voyemu additions."
+}

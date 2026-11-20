@@ -679,7 +679,7 @@ void Session::deliver_android_event(const WheelEvent &event, bool retained_ident
     if (event.phase != "down" &&
         (!android_spec_.contains("wheel_capability") ||
          (!passion_presentation(android_spec_) &&
-          android_spec_.at("wheel_capability") != qinggan11_partial_wheel_capability()) ||
+          !qinggan11_partial_wheel_capability_matches(android_spec_.at("wheel_capability"))) ||
          receipt.value("submission_confirmed", false))) {
         android_possible_pressed_.erase(event.id);
     }
@@ -1047,8 +1047,9 @@ void Session::poll_oem_settings() {
     };
     std::optional<ThemeState> current;
     const bool qinggan11_611 = qinggan11_cluster_presentation(android_spec_);
-    const bool qinggan11_731 = !qinggan11_611 &&
-                               qinggan11_presentation(qinggan11_731_profile_id, android_spec_);
+    const bool qinggan11_731 =
+            !qinggan11_611 && qinggan11_presentation(
+                    android_spec_.value("reference_profile", std::string{}), android_spec_);
 
     if (qinggan11_611 || qinggan11_731) {
         current = read_qinggan11_cluster_theme([&](const std::vector<std::string> &args) {

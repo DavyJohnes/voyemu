@@ -1,0 +1,17 @@
+{
+  "api": 30,
+  "calls": [
+    {
+      "args": [],
+      "operation": "guardSettingsVoiceClone"
+    }
+  ],
+  "constants": {
+    "original_sha256_allowlist": [
+      "3910f3f194802ad5f4660b812869e4627364c04e1aa6e49396c411db492e62af"
+    ],
+    "settings_voice_clone_boundary": false,
+    "sound_balance": true
+  },
+  "schema": 1
+}

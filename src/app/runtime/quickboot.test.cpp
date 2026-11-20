@@ -612,7 +612,7 @@ int main() try {
            sha256_file(machine / "userdata-qemu.img") == installed &&
            sha256_file(machine / "userdata-qemu.img.qcow2") == installed_overlay);
     auto free_spec = spec;
-    free_spec["wheel_capability"] = qinggan11_partial_wheel_capability();
+    free_spec["wheel_capability"] = qinggan11_partial_wheel_capability(qinggan11_731_profile_id);
     const auto free_key = android_quickboot_key(free_spec);
     assert(free_key.at("presave_protocol") == 1 && !key.contains("presave_protocol"));
     AndroidQuickBoot free_cache(machine, free_key);

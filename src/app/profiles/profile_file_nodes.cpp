@@ -193,7 +193,8 @@ ProfileFileNodes plan_profile_file_nodes(const std::filesystem::path &root,
     if (native_base_api(definition.at("android")) == 30) {
         const bool passion = family == "passion-11-russian-20260403-2.1.4.80",
                    qinggan11 = family == "free-11-chinese-20260731-7.3.1" ||
-                               family == "free-11-chinese-20250710-6.11.1";
+                               family == "free-11-chinese-20250710-6.11.1" ||
+                               family == "free-11-russian-20260318-rc1";
         const auto recipes = api30_file_recipes_for(family, original_navi_requested(definition));
         std::size_t policy_index = passion ? 0U : 1U;
 

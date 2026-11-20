@@ -36,8 +36,27 @@ final class LauncherPowerGuard {
         return entry.equals("classes2.dex");
     }
 
+    private record Variant(String owner, boolean map, int registers, int insertion, int exit) {}
+
+    private static Variant variant(Map<String, Object> constants) {
+        if (!constants.containsKey("launcher_power_owner")) {
+            return new Variant(POWER_OWNER, true, 6, 0xa, 0x19);
+        }
+
+        return new Variant(
+                StepConstants.text(constants, "launcher_power_owner"),
+                StepConstants.flag(constants, "launcher_power_map"),
+                Math.toIntExact(Json.integer(constants, "launcher_power_registers")),
+                Math.toIntExact(Json.integer(constants, "launcher_power_insertion")),
+                Math.toIntExact(Json.integer(constants, "launcher_power_exit")));
+    }
+
     static String owner(String entry) {
-        return wrapper(entry) ? POWER_OWNER : MAP_OWNER;
+        return owner(entry, variant(Map.of()));
+    }
+
+    private static String owner(String entry, Variant variant) {
+        return wrapper(entry) ? variant.owner() : MAP_OWNER;
     }
 
     private static void require(boolean value) {
@@ -54,11 +73,11 @@ final class LauncherPowerGuard {
                 && method.getReturnType().equals("V");
     }
 
-    private static Method method(byte[] dex, String entry) {
+    private static Method method(byte[] dex, String entry, Variant variant) {
         Method selected = null;
 
         for (ClassDef type : new DexBackedDexFile(Opcodes.forApi(30), dex).getClasses()) {
-            if (type.getType().equals(owner(entry))) {
+            if (type.getType().equals(owner(entry, variant))) {
                 for (Method candidate : type.getMethods()) {
                     if (target(candidate, entry)) {
                         require(selected == null);
@@ -72,7 +91,8 @@ final class LauncherPowerGuard {
                 selected != null
                         && selected.getAccessFlags() == (wrapper(entry) ? 65538 : 1)
                         && selected.getImplementation() != null
-                        && selected.getImplementation().getRegisterCount() == 6
+                        && selected.getImplementation().getRegisterCount()
+                                == (wrapper(entry) ? variant.registers() : 6)
                         && selected.getImplementation().getTryBlocks().isEmpty());
 
         return selected;
@@ -82,15 +102,21 @@ final class LauncherPowerGuard {
             Map<String, Object> constants, int api, Path original, byte[] dex, String entry)
             throws Exception {
         require(api == 30 && StepConstants.admits(constants, FilesSupport.hash(original)));
+        Variant variant = variant(constants);
+
+        if (!variant.map() && !wrapper(entry)) {
+            return;
+        }
+
         require(dex != null);
-        Method selected = method(dex, entry);
+        Method selected = method(dex, entry, variant);
 
         if (StepConstants.flag(constants, "launcher_power_boundary")) {
             int address = 0;
             boolean insertion = false, exit = false;
 
             for (var instruction : selected.getImplementation().getInstructions()) {
-                if (address == (wrapper(entry) ? 0xa : 0x1d)) {
+                if (address == (wrapper(entry) ? variant.insertion() : 0x1d)) {
                     require(
                             instruction
                                     instanceof
@@ -125,7 +151,7 @@ final class LauncherPowerGuard {
                     insertion = true;
                 }
 
-                if (address == (wrapper(entry) ? 0x19 : 0x3d)) {
+                if (address == (wrapper(entry) ? variant.exit() : 0x3d)) {
                     require(instruction.getOpcode() == Opcode.RETURN_VOID);
                     exit = true;
                 }
@@ -137,13 +163,13 @@ final class LauncherPowerGuard {
         }
     }
 
-    private static Method guarded(Method method, String entry) {
+    private static Method guarded(Method method, String entry, Variant variant) {
         var body = new MutableMethodImplementation(method.getImplementation());
-        var unsupported = body.newLabelForAddress(wrapper(entry) ? 0x19 : 0x3d);
+        var unsupported = body.newLabelForAddress(wrapper(entry) ? variant.exit() : 0x3d);
         int address = 0, index = -1;
 
         for (int i = 0; i < body.getInstructions().size(); i++) {
-            if (address == (wrapper(entry) ? 0xa : 0x1d)) {
+            if (address == (wrapper(entry) ? variant.insertion() : 0x1d)) {
                 index = i;
             }
 
@@ -188,13 +214,19 @@ final class LauncherPowerGuard {
             Map<String, Object> constants, int api, Path original, byte[] dex, String entry)
             throws Exception {
         validate(constants, api, original, dex, entry);
+        Variant variant = variant(constants);
+
+        if (!variant.map() && !wrapper(entry)) {
+            return dex;
+        }
+
         var classes = new TreeMap<String, ClassDef>();
 
         for (ClassDef type : new DexBackedDexFile(Opcodes.forApi(30), dex).getClasses()) {
             require(classes.put(type.getType(), type) == null);
         }
 
-        ClassDef selected = classes.get(owner(entry));
+        ClassDef selected = classes.get(owner(entry, variant));
         require(selected != null);
         var virtual = new ArrayList<Method>();
         var direct = new ArrayList<Method>();
@@ -202,7 +234,7 @@ final class LauncherPowerGuard {
 
         for (Method candidate : selected.getVirtualMethods()) {
             if (target(candidate, entry)) {
-                virtual.add(guarded(candidate, entry));
+                virtual.add(guarded(candidate, entry, variant));
                 replaced++;
             } else {
                 virtual.add(candidate);
@@ -211,7 +243,7 @@ final class LauncherPowerGuard {
 
         for (Method candidate : selected.getDirectMethods()) {
             if (target(candidate, entry)) {
-                direct.add(guarded(candidate, entry));
+                direct.add(guarded(candidate, entry, variant));
                 replaced++;
             } else {
                 direct.add(candidate);
@@ -219,8 +251,11 @@ final class LauncherPowerGuard {
         }
 
         require(replaced == 1);
+        // The writer merges adjacent try blocks that share one handler; canonicalize the expected
+        // classes the same way so the verification below compares equivalent definitions.
+        FrameworkDexMaterializer.normalizeTryBlocks(classes);
         classes.put(
-                owner(entry),
+                owner(entry, variant),
                 new ImmutableClassDef(
                         selected.getType(),
                         selected.getAccessFlags(),

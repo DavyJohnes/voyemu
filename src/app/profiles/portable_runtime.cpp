@@ -1601,7 +1601,7 @@ Json portable_android_launch(const std::filesystem::path &root,
         return android;
     }
 
-    if (definition.value("id", std::string{}) == qinggan11_731_profile_id) {
+    if (qinggan11_profile_id(definition.value("id", std::string{}))) {
         android["wheel_capability"] = qinggan11_wheel_capability(definition);
 
         if (android.at("wheel_capability").at("supported") == true) {
@@ -1839,7 +1839,7 @@ static Json inspect_portable_runtime_impl(const std::filesystem::path &root,
     }
 
     if (manifest.at("android").contains("owned_package")) {
-        need(family == qinggan11_731_profile_id && api == 30,
+        need(qinggan11_profile_id(family) && api == 30,
              "owned package requires exact Free A11 profile");
         const auto &package = manifest.at("android").at("owned_package");
         android_owned_package_descriptor(package, true);
@@ -1850,7 +1850,7 @@ static Json inspect_portable_runtime_impl(const std::filesystem::path &root,
     }
 
     if (manifest.at("android").contains("camera_package")) {
-        need(family == qinggan11_731_profile_id && api == 30,
+        need(qinggan11_profile_id(family) && api == 30,
              "Camera package requires exact Free A11 profile");
         const auto &package = manifest.at("android").at("camera_package");
         android_camera_package_descriptor(package, true);
@@ -1861,7 +1861,7 @@ static Json inspect_portable_runtime_impl(const std::filesystem::path &root,
     }
 
     if (manifest.at("android").contains("prepared_packages")) {
-        need(family == qinggan11_731_profile_id && api == 30 &&
+        need(qinggan11_profile_id(family) && api == 30 &&
                      !manifest.at("android").contains("camera_package"),
              "exact Free A11 prepared package list required");
         const auto &packages = manifest.at("android").at("prepared_packages");
@@ -1943,7 +1943,7 @@ static Json inspect_portable_runtime_impl(const std::filesystem::path &root,
                                        "radio-selection.png",        "radio-selection-light.png",
                                        "panel-background-light.png", "source-provenance.json"};
 
-        if (family == qinggan11_731_profile_id) {
+        if (qinggan11_profile_id(family)) {
             need(definition.at("wheel").at("assets") == "profiles/common/wheels/free-2024",
                  "Free artwork source family differs");
             const auto bytes = bounded_text(seed / "ui/controls/source-provenance.json");

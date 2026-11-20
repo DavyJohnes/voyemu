@@ -51,7 +51,28 @@ final class ThirdScreenRouting {
         }
     }
 
-    // invoke-virtual {v3, v1, v0} at 0x1c: this, the intent and the options.
+    // invoke-static {v1, v2}: the listener and display 3; the Russian build has no power
+    // listener block, so the call sits at a lower address.
+    static Site touch(int address) {
+        return new Site(
+                "Lcom/qinggan/app/vehicle/Lock3ScreenManager;-><init>()V",
+                0x10002,
+                5,
+                address,
+                Opcode.INVOKE_STATIC,
+                List.of(1, 2),
+                new ImmutableMethodReference(
+                        "Lcom/qinggan/os/ServiceManager;",
+                        "registerIOnTouchListener",
+                        List.of("Landroid/app/IOnTouchListener;", "I"),
+                        "V"),
+                new ImmutableMethodReference(
+                        HELPER,
+                        "registerTouchListener",
+                        List.of("Landroid/app/IOnTouchListener;", "I"),
+                        "V"));
+    }
+
     static final Site START =
             new Site(
                     "Lcom/qinggan/app/thirdscreen/ThirdScreenApplication;->startActivity()V",
@@ -73,28 +94,11 @@ final class ThirdScreenRouting {
                                     "Landroid/content/Intent;",
                                     "Landroid/os/Bundle;"),
                             "V"));
-    // invoke-static {v1, v2} at 0x2c: the listener and display 3.
-    static final Site TOUCH =
-            new Site(
-                    "Lcom/qinggan/app/vehicle/Lock3ScreenManager;-><init>()V",
-                    0x10002,
-                    5,
-                    0x2c,
-                    Opcode.INVOKE_STATIC,
-                    List.of(1, 2),
-                    new ImmutableMethodReference(
-                            "Lcom/qinggan/os/ServiceManager;",
-                            "registerIOnTouchListener",
-                            List.of("Landroid/app/IOnTouchListener;", "I"),
-                            "V"),
-                    new ImmutableMethodReference(
-                            HELPER,
-                            "registerTouchListener",
-                            List.of("Landroid/app/IOnTouchListener;", "I"),
-                            "V"));
-    static final List<Site> SITES = List.of(START, TOUCH);
 
-    /** Profile data: the original APK. */
+    static List<Site> sites(Map<String, Object> constants) {
+        return List.of(START, touch(constants.containsKey("thirdscreen_touch_address")
+                ? Math.toIntExact(Json.integer(constants, "thirdscreen_touch_address")) : 0x2c));
+    }
     private ThirdScreenRouting() {}
 
     private static void require(boolean accepted) {
@@ -188,7 +192,7 @@ final class ThirdScreenRouting {
                         && StepConstants.admits(constants, FilesSupport.hash(original))
                         && dex != null);
 
-        for (Site site : SITES) {
+        for (Site site : sites(constants)) {
             int found = 0;
 
             for (var c : new DexBackedDexFile(Opcodes.forApi(30), dex).getClasses()) {
@@ -204,8 +208,8 @@ final class ThirdScreenRouting {
         }
     }
 
-    private static ClassDef rewriteClass(ClassDef c, boolean forward) {
-        var site = SITES.stream().filter(s -> s.owner().equals(c.getType())).findFirst();
+    private static ClassDef rewriteClass(Map<String, Object> constants, ClassDef c, boolean forward) {
+        var site = sites(constants).stream().filter(s -> s.owner().equals(c.getType())).findFirst();
 
         if (site.isEmpty()) {
             return c;
@@ -244,7 +248,7 @@ final class ThirdScreenRouting {
 
         for (var c : new DexBackedDexFile(Opcodes.forApi(30), dex).getClasses()) {
             require(before.put(c.getType(), c) == null);
-            changed.put(c.getType(), rewriteClass(c, true));
+            changed.put(c.getType(), rewriteClass(constants, c, true));
         }
 
         byte[] out =
@@ -259,7 +263,7 @@ final class ThirdScreenRouting {
         require(read.keySet().equals(before.keySet()));
 
         // Only the owner classes change; each serialized owner restores to the original.
-        for (Site site : SITES) {
+        for (Site site : sites(constants)) {
             String owner = site.owner();
             require(
                     FrameworkDexMaterializer.semantic(changed.get(owner))
@@ -268,7 +272,7 @@ final class ThirdScreenRouting {
                     FrameworkDexMaterializer.semantic(before.get(owner))
                             .equals(
                                     FrameworkDexMaterializer.semantic(
-                                            rewriteClass(read.get(owner), false))));
+                                            rewriteClass(constants, read.get(owner), false))));
         }
 
         return out;

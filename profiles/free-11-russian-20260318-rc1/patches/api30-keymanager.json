@@ -1,0 +1,26 @@
+{
+  "schema": 1,
+  "api": 30,
+  "calls": [
+    {
+      "operation": "guardKeyManager",
+      "args": []
+    },
+    {
+      "operation": "useLibraries",
+      "args": [
+        [
+          "QGAPI",
+          "QGMOD",
+          "QGVehicle",
+          "VoyemuFreeWheel"
+        ]
+      ]
+    }
+  ],
+  "constants": {
+    "original_sha256_allowlist": [
+      "701227c1d5a36c483ed7d9d050049e2a7a5bb72332bb0bbca4687bff5b198116"
+    ]
+  }
+}

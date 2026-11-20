@@ -238,7 +238,8 @@ static void verify_can_model_binding() {
 static void verify_qinggan11_phone_graph(const Json &definition) {
     check(definition.at("components").at("bluetooth") == "components/bluetooth",
           "actual canonical Phone component required");
-    check(qinggan11_wheel_capability(definition) == qinggan11_partial_wheel_capability(),
+    check(qinggan11_wheel_capability(definition) ==
+                  qinggan11_partial_wheel_capability(qinggan11_731_profile_id),
           "actual canonical Phone graph preserves bounded wheel capability");
     auto legacy = definition;
     legacy["components"].erase("bluetooth");
@@ -256,7 +257,8 @@ static void verify_qinggan11_phone_graph(const Json &definition) {
                             {"type", "file"},
                             {"target", "/system/framework/Ivt8BluetoothAdapter.jar"},
                             {"mode", "0644"}});
-    check(qinggan11_wheel_capability(legacy) == qinggan11_partial_wheel_capability(),
+    check(qinggan11_wheel_capability(legacy) ==
+                  qinggan11_partial_wheel_capability(qinggan11_731_profile_id),
           "historical graph with original OEM Bluetooth adapter retains exact wheel capability");
 
     for (unsigned mode = 0; mode < 26; ++mode) {
@@ -397,7 +399,8 @@ static void verify_qinggan11_phone_graph(const Json &definition) {
 
     auto integrity_only = definition;
     integrity_only["original"]["BluetoothPhone"]["sha256"] = std::string(64, 'a');
-    check(qinggan11_wheel_capability(integrity_only) == qinggan11_partial_wheel_capability(),
+    check(qinggan11_wheel_capability(integrity_only) ==
+                  qinggan11_partial_wheel_capability(qinggan11_731_profile_id),
           "Phone startup compatibility does not use APK hash gates");
 }
 
@@ -419,7 +422,8 @@ static void verify_qinggan11_view_graph(const std::filesystem::path &profiles) {
                        {"api30ViewObservation", "profiles/common/components/view-observation/src"},
                        {"guestLibs", Json::array({"/system/framework/framework.jar"})}},
           "actual API30 view bridge component contract remains exact");
-    check(qinggan11_wheel_capability(definition) == qinggan11_partial_wheel_capability(),
+    check(qinggan11_wheel_capability(definition) ==
+                  qinggan11_partial_wheel_capability(qinggan11_731_profile_id),
           "actual Free view bridge preserves exact wheel capability");
     auto legacy = definition;
     legacy["components"].erase("view-observation");
@@ -429,7 +433,8 @@ static void verify_qinggan11_view_graph(const std::filesystem::path &profiles) {
                                    return node.at("artifact") == framework_artifact;
                                }),
                 nodes.end());
-    check(qinggan11_wheel_capability(legacy) == qinggan11_partial_wheel_capability(),
+    check(qinggan11_wheel_capability(legacy) ==
+                  qinggan11_partial_wheel_capability(qinggan11_731_profile_id),
           "legacy six-node Gallery graph remains supported");
 
     for (unsigned mode = 0; mode < 7; ++mode) {
@@ -1635,7 +1640,8 @@ int main(int argc, char **argv) {
                                        }),
                         nodes.end());
             legacy["configure"]["start"].erase(legacy["configure"]["start"].begin());
-            check(qinggan11_wheel_capability(legacy) == qinggan11_partial_wheel_capability(),
+            check(qinggan11_wheel_capability(legacy) ==
+                          qinggan11_partial_wheel_capability(qinggan11_731_profile_id),
                   "historical portable Free without OEM power retains exact wheel routes");
 
             for (int mode = 0; mode < 8; ++mode) {
@@ -1820,7 +1826,8 @@ int main(int argc, char **argv) {
                                               n.at("artifact") == "component:oem-power";
                                    }),
                     legacy["install"].end());
-            check(qinggan11_wheel_capability(legacy) == qinggan11_partial_wheel_capability(),
+            check(qinggan11_wheel_capability(legacy) ==
+                          qinggan11_partial_wheel_capability(qinggan11_731_profile_id),
                   "Legacy five-component Free wheel capability remains byte-identical");
         }
         {

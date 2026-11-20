@@ -7,6 +7,7 @@ Each page describes one published [profile](../how/profiles-machines.md): the fi
 | [free-09-chinese-20260106-6.0.3](free-09-chinese-20260106-6.0.3.md) | 9 | Supported | Supported |
 | [free-11-chinese-20250710-6.11.1](free-11-chinese-20250710-6.11.1.md) | 11 | Supported | Supported |
 | [free-11-chinese-20260731-7.3.1](free-11-chinese-20260731-7.3.1.md) | 11 | Supported | Supported |
+| [free-11-russian-20260318-rc1](free-11-russian-20260318-rc1.md) | 11 | Supported | Supported |
 | [free-09-chinese-20221230-nxp-rc45](free-09-chinese-20221230-nxp-rc45.md) | 9 | Supported | None |
 | [passion-11-russian-20260403-2.1.4.80](passion-11-russian-20260403-2.1.4.80.md) | 11 | Supported | Experimental |
 

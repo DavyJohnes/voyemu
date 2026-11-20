@@ -1,0 +1,21 @@
+{
+  "api": 30,
+  "calls": [
+    {
+      "args": [],
+      "operation": "guardLauncherPower"
+    }
+  ],
+  "constants": {
+    "launcher_power_boundary": true,
+    "launcher_power_exit": 36,
+    "launcher_power_insertion": 10,
+    "launcher_power_map": false,
+    "launcher_power_owner": "Lcom/qinggan/launcher/base/manager/PowerStateManagerWrapper;",
+    "launcher_power_registers": 3,
+    "original_sha256_allowlist": [
+      "94007beb0eed82807d3f20429435f2bbd585d9d52e6125b2a40779fc8cd2683c"
+    ]
+  },
+  "schema": 1
+}

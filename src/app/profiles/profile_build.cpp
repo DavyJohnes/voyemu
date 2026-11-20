@@ -897,7 +897,8 @@ Json build_profile(const std::filesystem::path &root, std::string_view profile,
     root_profile(root, profile);
 
     if (std::filesystem::exists(build_target(root, profile, machine)) &&
-        (profile == "free-11-chinese-20260731-7.3.1" || profile == passion_profile_id) &&
+        (profile == "free-11-chinese-20260731-7.3.1" || profile == "free-11-russian-20260318-rc1" ||
+         profile == passion_profile_id) &&
         !cluster) {
         need(multimedia, "system upgrade requires Android subsystem");
         const auto candidate = build_profile_android(root, profile, machine, offline, jdk,
@@ -959,7 +960,8 @@ Json build_profile(const std::filesystem::path &root, std::string_view profile,
     root_profile(root, profile);
     const auto target = build_target(root, profile, machine);
 
-    if ((std::filesystem::exists(target) && profile != "free-11-chinese-20260731-7.3.1") ||
+    if ((std::filesystem::exists(target) && profile != "free-11-chinese-20260731-7.3.1" &&
+         profile != "free-11-russian-20260318-rc1") ||
         std::filesystem::is_symlink(target)) {
         throw cli::LocalizedError("PROFILE_BUILD", "error.machine_exists",
                                   {{"machine", progress::path_text(target)}});
@@ -1089,7 +1091,7 @@ Json build_profile_android(const std::filesystem::path &root, std::string_view p
 
     if (std::filesystem::is_symlink(target) ||
         (std::filesystem::exists(target) && profile != "free-11-chinese-20260731-7.3.1" &&
-         profile != passion_profile_id)) {
+         profile != passion_profile_id && profile != "free-11-russian-20260318-rc1")) {
         throw cli::LocalizedError("PROFILE_BUILD", "error.machine_exists",
                                   {{"machine", progress::path_text(target)}});
     }
@@ -1195,6 +1197,7 @@ Json build_profile_android(const std::filesystem::path &root, std::string_view p
         if (!embedded_profile_declares(family, ProfilePlatform::qinggan09, ProfileBoard::sa8155) &&
             family != "free-09-chinese-20221230-nxp-rc45" && family != passion_profile_id &&
             family != "free-11-chinese-20260731-7.3.1" &&
+            family != "free-11-russian-20260318-rc1" &&
             family != "free-11-chinese-20250710-6.11.1") {
             return build_android_candidate(root, request, candidate);
         }

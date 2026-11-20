@@ -24,10 +24,14 @@ public final class Api30OriginalNaviNativeSelectionTest {
     }
 
     private static void checkNodeGraph(
-            java.util.List<Api30NativeFiles.Spec> legacy,
+            java.util.List<Api30NativeFiles.Spec> common,
             java.util.List<Api30NativeFiles.Spec> original)
             throws Exception {
-        if (legacy.size() != 9 || original.size() != 9 || !legacy.equals(original)) {
+        if (original.size() != 9
+                || !common.equals(
+                        original.stream()
+                                .filter(spec -> !spec.id().equals("original-navi-mac"))
+                                .toList())) {
             throw new AssertionError("Exact 9-node original Navi graph required");
         }
 
@@ -62,11 +66,11 @@ public final class Api30OriginalNaviNativeSelectionTest {
         if (!hash.id().equals("selinux-hash-api30")
                 || !hash.outputPin()
                         .equals(
-                                "d323725be43eb7b80539044878d4bdad51cb12e5992014bebf25749d43659e22")) {
+                                "7293ab8b5ff6f3890a7f60b158e6bf28c882896c755edf1e996c9231519c37de")) {
             throw new AssertionError("9-node chain hash pin missing");
         }
 
-        var contentDigest = "4bf19f6c8144488d129d7f280d66c3ffb0354a95fffcb6c0de6e6a413908efdc";
+        var contentDigest = "8b7d6819e4429cec7a98a86d31366d6b7fc75ae03033d418b15f84ec1f9161c3";
         var actualFilePin =
                 java.util.HexFormat.of()
                         .formatHex(

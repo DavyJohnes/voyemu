@@ -21,7 +21,8 @@ void validate_accepted_android_profile(const std::filesystem::path &android, con
 }
 
 bool qinggan11_camera_delivery_required(const Json &definition, std::string_view profile) {
-    if (profile != "free-11-chinese-20260731-7.3.1") {
+    if (profile != "free-11-chinese-20260731-7.3.1" &&
+        profile != "free-11-russian-20260318-rc1") {
         return false;
     }
 
@@ -53,7 +54,8 @@ static Json validate_plain_android_system_candidate(const std::filesystem::path 
                                                     const std::string &receipt_pin,
                                                     bool require_package) {
     root_profile(root, profile);
-    need(profile == "free-11-chinese-20260731-7.3.1" || profile == passion_profile_id,
+    need(profile == "free-11-chinese-20260731-7.3.1" || profile == passion_profile_id ||
+             profile == "free-11-russian-20260318-rc1",
          "system-only upgrade requires exact Free A11 7.3.1/Passion producer");
     ordinary(android);
     inside(root / ".local", android);
@@ -207,10 +209,15 @@ static Json validate_plain_android_system_candidate(const std::filesystem::path 
     }
 
     if (candidate.contains("prepared_packages")) {
-        need(profile == "free-11-chinese-20260731-7.3.1" && !candidate.contains("camera_package"),
+        need((profile == "free-11-chinese-20260731-7.3.1" ||
+              profile == "free-11-russian-20260318-rc1") &&
+             !candidate.contains("camera_package"),
              "exact Free A11 prepared list required");
         const auto &packages = candidate.at("prepared_packages");
         android_prepared_packages_descriptor(packages, true);
+
+        const bool russian_list = profile == "free-11-russian-20260318-rc1";
+        need(!russian_list || packages.size() == 1, "Russian snapshot exports only Camera");
 
         for (unsigned i = 0; i < packages.size(); ++i) {
             const auto &package = packages.at(i);
@@ -219,7 +226,8 @@ static Json validate_plain_android_system_candidate(const std::filesystem::path 
                          std::filesystem::file_size(file) ==
                                  package.at("bytes").get<std::uint64_t>(),
                  "candidate prepared APK differs");
-            const std::string artifact = i == 0 ? "patched:Camera" : "patched:Navi";
+            const std::string artifact =
+                    i == 0 ? std::string("patched:Camera") : "patched:Navi";
             unsigned matches = 0;
 
             for (const auto &item : candidate.at("installed")) {
@@ -238,7 +246,8 @@ static Json validate_plain_android_system_candidate(const std::filesystem::path 
     }
 
     if (candidate.contains("camera_package")) {
-        need(profile == "free-11-chinese-20260731-7.3.1",
+        need(profile == "free-11-chinese-20260731-7.3.1" ||
+                     profile == "free-11-russian-20260318-rc1",
              "Camera candidate requires exact Free A11 profile");
         const auto &package = candidate.at("camera_package");
         android_camera_package_descriptor(package, true);
@@ -781,7 +790,8 @@ static Json validate_android_package_upgrade(const std::filesystem::path &root,
                                              const std::filesystem::path &capsule,
                                              const std::string &receipt_pin) {
     root_profile(root, profile);
-    need(profile == "free-11-chinese-20260731-7.3.1",
+    need(profile == "free-11-chinese-20260731-7.3.1" ||
+                 profile == "free-11-russian-20260318-rc1",
          "owned package lineage requires exact Free A11");
     ordinary(capsule);
     inside(root / ".local", capsule);
@@ -895,7 +905,8 @@ Json source_system_media_artifact(const std::filesystem::path &root, std::string
     const auto media_steps = source_definition.value("patches", Json::object())
                                      .value("QGMedia", Json::object())
                                      .value("steps", Json::array());
-    const bool has_media_recipe = profile == "free-11-chinese-20260731-7.3.1" &&
+    const bool has_media_recipe = (profile == "free-11-chinese-20260731-7.3.1" ||
+                                   profile == "free-11-russian-20260318-rc1") &&
                                   std::find(media_steps.begin(), media_steps.end(),
                                             Json("api30-usb-player.json")) != media_steps.end();
 
@@ -986,7 +997,9 @@ Json source_camera_artifact(const std::filesystem::path &root, std::string_view 
         return Json();
     }
 
-    need(profile == "free-11-chinese-20260731-7.3.1" && candidate.at("kind") == "android-candidate",
+    need((profile == "free-11-chinese-20260731-7.3.1" ||
+          profile == "free-11-russian-20260318-rc1") &&
+                 candidate.at("kind") == "android-candidate",
          "Camera artifact requires exact cold Free A11 candidate");
     auto origin = artifact_receipt;
     auto origin_pin = artifact_receipt_pin;

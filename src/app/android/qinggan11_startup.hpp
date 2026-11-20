@@ -21,8 +21,19 @@ inline bool qinggan11_731_qgapi_original(const Json &original) {
     acquired["bytes"] = 1968298u;
     acquired["acquisition"] = {{"image", "system"}, {"path", "/system/framework/QGAPI.jar"}};
 
-    return original.is_object() && original.contains("bytes") &&
-           original.at("bytes").is_number_unsigned() && original == acquired;
+    if (original.is_object() && original.contains("bytes") &&
+        original.at("bytes").is_number_unsigned() && original == acquired) {
+        return true;
+    }
+
+    // Russian snapshot QGAPI: same OEM path, its own pinned bytes.
+    auto russian = legacy;
+    russian["sha256"] =
+            "e46d3e5db0cf932cd3a39654a2f95620f2668ada8fb32b904c1684f936eca510";
+    russian["bytes"] = 1968146u;
+    russian["acquisition"] = {{"image", "system"}, {"path", "/system/framework/QGAPI.jar"}};
+
+    return original == russian;
 }
 
 inline bool qinggan11_731_keymanager_original(const Json &original) {
@@ -43,15 +54,30 @@ inline bool qinggan11_731_keymanager_original(const Json &original) {
             {"image", "system"},
             {"path", "/system/priv-app/KeyManagerService-release/KeyManagerService-release.apk"}};
 
-    return original.is_object() && original.contains("bytes") &&
-           original.at("bytes").is_number_unsigned() && original == acquired;
+    if (original.is_object() && original.contains("bytes") &&
+        original.at("bytes").is_number_unsigned() && original == acquired) {
+        return true;
+    }
+
+    // Russian snapshot KeyManagerService: same OEM path, its own pinned bytes.
+    auto russian = legacy;
+    russian["sha256"] =
+            "701227c1d5a36c483ed7d9d050049e2a7a5bb72332bb0bbca4687bff5b198116";
+    russian["bytes"] = 4898632u;
+    russian["acquisition"] = {
+            {"image", "system"},
+            {"path",
+             "/system/priv-app/KeyManagerService-release/KeyManagerService-release.apk"}};
+
+    return original == russian;
 }
 
 inline Json qinggan11_startup_values(const Json &definition) {
     const auto status = definition.value("status", std::string{});
 
     if (definition.value("schema", 0) != 1 ||
-        definition.value("id", std::string{}) != qinggan11_731_profile_id ||
+        (definition.value("id", std::string{}) != qinggan11_731_profile_id &&
+         definition.value("id", std::string{}) != "free-11-russian-20260318-rc1") ||
         (status != "incomplete" && status != "ready") ||
         definition.value("android", Json::object()).value("package", std::string{}) !=
                 "system-images;android-30;default;arm64-v8a" ||
@@ -72,8 +98,14 @@ inline Json qinggan11_startup_values(const Json &definition) {
     return values;
 }
 
+inline constexpr std::string_view qinggan11_ru_profile = "free-11-russian-20260318-rc1";
+
+inline bool qinggan11_profile_id(std::string_view profile) {
+    return profile == qinggan11_731_profile_id || profile == qinggan11_ru_profile;
+}
+
 inline bool qinggan11_presentation(std::string_view profile, const Json &android) {
-    return profile == qinggan11_731_profile_id && android.value("api", 0) == 30 &&
+    return qinggan11_profile_id(profile) && android.value("api", 0) == 30 &&
            android.value("home", Json::object()) ==
                    Json{{"package", "com.qinggan.app.launcher"},
                         {"component",
@@ -93,16 +125,31 @@ inline Json qinggan11_wheel_adapter() {
               {"phone", 128}}}};
 }
 
-inline Json qinggan11_partial_wheel_capability() {
+inline Json qinggan11_partial_wheel_capability(std::string_view profile) {
     return {{"schema", 1},
-            {"profile", qinggan11_731_profile_id},
+            {"profile", profile},
             {"status", "partial"},
             {"supported", true},
             {"authority", "com.voyemu.input.wheel"},
             {"routes", qinggan11_wheel_adapter().at("routes")}};
 }
 
+// Any Free A11 family capability with its own profile field is accepted at runtime.
+inline bool qinggan11_partial_wheel_capability_matches(const Json &capability) {
+    if (!capability.is_object() || capability.value("status", std::string{}) != "partial" ||
+        !capability.value("supported", false) ||
+        !qinggan11_profile_id(capability.value("profile", std::string{}))) {
+        return false;
+    }
+
+    auto reference = qinggan11_partial_wheel_capability(
+            capability.value("profile", std::string{}));
+
+    return capability == reference;
+}
+
 inline Json qinggan11_wheel_capability(const Json &definition) {
+    const std::string profile_id = definition.value("id", std::string{});
     (void)qinggan11_startup_values(definition);
     const bool original_navi = original_navi_requested(definition);
     const Json components = {{"canbus", "components/canbus"},
@@ -434,11 +481,11 @@ inline Json qinggan11_wheel_capability(const Json &definition) {
     }
 
     if (installed && definition.at("patches").at("KeyManagerService").at("steps").size() == 2) {
-        return qinggan11_partial_wheel_capability();
+        return qinggan11_partial_wheel_capability(profile_id);
     }
 
     return {{"schema", 1},
-            {"profile", qinggan11_731_profile_id},
+            {"profile", profile_id},
             {"status", "unsupported"},
             {"supported", false},
             {"reason", installed ? "oem_delivery_unverified" : "provider_not_installed"},
@@ -450,9 +497,13 @@ inline bool qinggan11_wheel_unsupported(const Json &android) {
         return false;
     }
 
+    const std::string capability_profile =
+            android.at("wheel_capability").value("profile", std::string{});
+
     if (android.at("wheel_capability").value("status", std::string{}) == "partial") {
-        if (!qinggan11_presentation(qinggan11_731_profile_id, android) ||
-            android.at("wheel_capability") != qinggan11_partial_wheel_capability() ||
+        if (!qinggan11_presentation(capability_profile, android) ||
+            android.at("wheel_capability") !=
+                    qinggan11_partial_wheel_capability(capability_profile) ||
             android.value("wheel_adapter", Json{}) != qinggan11_wheel_adapter() ||
             android.value("vehicle_adapter", Json{}) !=
                     Json{{"authority", "com.voyemu.output.vehicle"}}) {
@@ -470,13 +521,13 @@ inline bool qinggan11_wheel_unsupported(const Json &android) {
     }
 
     const Json expected = {{"schema", 1},
-                           {"profile", qinggan11_731_profile_id},
+                           {"profile", capability_profile},
                            {"status", "unsupported"},
                            {"supported", false},
                            {"reason", reason},
                            {"authority", "com.voyemu.input.wheel"}};
 
-    if (!qinggan11_presentation(qinggan11_731_profile_id, android) ||
+    if (!qinggan11_presentation(capability_profile, android) ||
         android.at("wheel_capability") != expected || android.contains("wheel_adapter") ||
         android.value("vehicle_adapter", Json{}) !=
                 Json{{"authority", "com.voyemu.output.vehicle"}}) {

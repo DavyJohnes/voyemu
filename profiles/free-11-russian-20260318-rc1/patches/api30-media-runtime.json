@@ -1,0 +1,147 @@
+{
+  "schema": 1,
+  "api": 30,
+  "constants": {
+    "original_sha256_allowlist": [
+      "abb1dfa176eed67b985a39a5298f35ab522c61e66adba8eba5f5aaaa6b75115d"
+    ]
+  },
+  "calls": [
+    {
+      "operation": "useLibraries",
+      "args": [
+        [
+          "QGAPI",
+          "QGMOD",
+          "QGVehicle"
+        ]
+      ]
+    },
+    {
+      "operation": "removePinnedEntry",
+      "args": [
+        "lib/armeabi-v7a/lib2496p2p.so",
+        "6943090c8218e1b6f7d0708a29a73152d4b1fe3e572054730d48cc1981386f58"
+      ]
+    },
+    {
+      "operation": "removePinnedEntry",
+      "args": [
+        "lib/armeabi-v7a/libQPlayer.so",
+        "707e76aa29560b2c5fc3604bf5335c73d62f7d890290c86c8c5cb5af0775fb45"
+      ]
+    },
+    {
+      "operation": "removePinnedEntry",
+      "args": [
+        "lib/armeabi-v7a/libSuperSound3.so",
+        "f43acf5b564c0bd03879e747803fdadd36de0513103caaed6490b825ae103e36"
+      ]
+    },
+    {
+      "operation": "removePinnedEntry",
+      "args": [
+        "lib/armeabi-v7a/libcrypto_1_1.so",
+        "1334f4a1c8e5f915b9f64ccad626d6120381c58d46a58158987c81e08780c6a3"
+      ]
+    },
+    {
+      "operation": "removePinnedEntry",
+      "args": [
+        "lib/armeabi-v7a/libkpk.so",
+        "35ab335e13a9e2a078293a0e8fde3b40161a6392e8fea1756bcee6adfde38fc2"
+      ]
+    },
+    {
+      "operation": "removePinnedEntry",
+      "args": [
+        "lib/armeabi-v7a/libkwbase.so",
+        "2aefb0534e9f13a484fa35df3eef1bc93cecb79cd4750a56a88dfc32e5564c54"
+      ]
+    },
+    {
+      "operation": "removePinnedEntry",
+      "args": [
+        "lib/armeabi-v7a/libkwffmpeg.so",
+        "1894ea5125f35a347b257f37d23698e63dd5fb29a690fb50dfd68ad0399827f8"
+      ]
+    },
+    {
+      "operation": "removePinnedEntry",
+      "args": [
+        "lib/armeabi-v7a/libkwffutil.so",
+        "479a4a8b936cc2c6d2979f7c0840c733202f7ad30e2c7b29ae06cdbf46850de4"
+      ]
+    },
+    {
+      "operation": "removePinnedEntry",
+      "args": [
+        "lib/armeabi-v7a/libkwinfodecode.so",
+        "fd2fa50f3279eb2b0dfbd5e066731d5f43457cd208b237e0ee92df9f51e88f71"
+      ]
+    },
+    {
+      "operation": "removePinnedEntry",
+      "args": [
+        "lib/armeabi-v7a/libkwplayer.so",
+        "f8627e779a1089686280f6964325b14118e85268675ce1feaae235ded15f832d"
+      ]
+    },
+    {
+      "operation": "removePinnedEntry",
+      "args": [
+        "lib/armeabi-v7a/libkwsdl.so",
+        "c08d686ee8d9e20122398863d4e293a1aa3ec9b12d50fd96eb39f2518f970113"
+      ]
+    },
+    {
+      "operation": "removePinnedEntry",
+      "args": [
+        "lib/armeabi-v7a/libmusic3d.so",
+        "60ebbda464206422b1abe9449584e4901ec0943a72d87c11ee54fce6ee491be8"
+      ]
+    },
+    {
+      "operation": "removePinnedEntry",
+      "args": [
+        "lib/armeabi-v7a/libopenal.so",
+        "9185b69272d8f8d9d10b471cc967207c88ff1da35134aa84a1d1b3dca2da9c71"
+      ]
+    },
+    {
+      "operation": "removePinnedEntry",
+      "args": [
+        "lib/armeabi-v7a/libopenalwrapper.so",
+        "35c4a074dacdb158476e27d88e7ee6e4b0d193fc7dd9a281ec1166b2a1c8b4d1"
+      ]
+    },
+    {
+      "operation": "removePinnedEntry",
+      "args": [
+        "lib/armeabi-v7a/libp2p.so",
+        "f0d8c889614fd25dd5351f9867ab865fb0197ed66a8fe7eaa563719d442b0fce"
+      ]
+    },
+    {
+      "operation": "removePinnedEntry",
+      "args": [
+        "lib/armeabi-v7a/libqcOpenSSL.so",
+        "adc7ce12e3cb43648984be7b14e75ef9aa0b5a8d988e3b2780e851ef0f046bed"
+      ]
+    },
+    {
+      "operation": "removePinnedEntry",
+      "args": [
+        "lib/armeabi-v7a/libssl_1_1.so",
+        "648ce968acce7301aef44105d5a1295c1c33f4aef83c2cede665794b8e0f3eed"
+      ]
+    },
+    {
+      "operation": "removePinnedEntry",
+      "args": [
+        "lib/armeabi-v7a/libtmefriendship.so",
+        "b7574f9442ec7d2a525a2707375014bc5ac0acdce5a610746436d0f63be94b91"
+      ]
+    }
+  ]
+}

@@ -328,10 +328,12 @@ Json Session::handle(const Json &operation) {
 
                 const auto hold = operation.at("hold_ms").get<int>();
 
+                const Json pressed_capability = android_spec_.contains("wheel_capability")
+                                                        ? android_spec_.at("wheel_capability")
+                                                        : Json(nullptr);
+
                 if ((button != "volume_up" && button != "volume_down") ||
-                    (android_spec_.contains("wheel_capability")
-                             ? android_spec_.at("wheel_capability")
-                             : Json(nullptr)) != qinggan11_partial_wheel_capability() ||
+                    !qinggan11_partial_wheel_capability_matches(pressed_capability) ||
                     hold < 1 || hold > 200) {
                     throw VoyemuError("WHEEL_PAIR", "verified Free short press required");
                 }

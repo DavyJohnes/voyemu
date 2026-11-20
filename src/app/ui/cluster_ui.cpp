@@ -607,7 +607,7 @@ bool wheel_action_available(const ViewState &state, std::string_view id) {
         return true;
     }
 
-    const bool partial = capability == qinggan11_partial_wheel_capability();
+    const bool partial = capability == qinggan11_partial_wheel_capability_matches(capability);
 
     if (!partial) {
         const auto reason = capability.value("reason", std::string{});

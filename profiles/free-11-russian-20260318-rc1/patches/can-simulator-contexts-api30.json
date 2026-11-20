@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "api": 30,
+  "native": true,
+  "input_sha256": "cf0a4db0a9962781c83e6d1430c23276ebd406c404a54ab2226a1dfa4ac2844c",
+  "output_sha256": "7fc4c203185a6036dafacc401472a152111b9d313702f28befb1327b5dab1f5e",
+  "description": "Exact pinned API30 native CAN simulator file contexts; appends the registered simulator labels on top of the platform file contexts."
+}

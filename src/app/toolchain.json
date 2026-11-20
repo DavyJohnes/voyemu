@@ -256,6 +256,22 @@
             "url": "https://github.com/voyemu/voyemu-deps/releases/download/android-native-fb251cf9/free-11-chinese-20260731-7.3.1-qg-runtime-libqg_runtime.so",
             "sha256": "17ca298e3db09d06303f6a0d392f6bb4c199311a6367dca61ed79caff91cdd9d"
         },
+        "free-11-russian-20260318-rc1/can-model-observer": {
+            "url": "https://github.com/voyemu/voyemu-deps/releases/download/android-native-fb251cf9/free-11-russian-20260318-rc1-can-model-observer-voyemu-can-model-observer",
+            "sha256": "ee12141dd0156b47f32b823d91bc1db36ca5d236ae7b51735f64e8b4bb8326f2"
+        },
+        "free-11-russian-20260318-rc1/can-simulator": {
+            "url": "https://github.com/voyemu/voyemu-deps/releases/download/android-native-fb251cf9/free-11-russian-20260318-rc1-can-simulator-voyemu-can-model",
+            "sha256": "9c99379ac09399d06bffd8a5be1073988704b04919a8c2b0776c1a3dd1eec86c"
+        },
+        "free-11-russian-20260318-rc1/early-inputs": {
+            "url": "https://github.com/voyemu/voyemu-deps/releases/download/android-native-fb251cf9/free-11-russian-20260318-rc1-early-inputs-voyemu-early-inputs",
+            "sha256": "e8a9c96a9697e9a6c82707add9712818cb70c09d0f5e6122b92d52604eb9b879"
+        },
+        "free-11-russian-20260318-rc1/qg-runtime": {
+            "url": "https://github.com/voyemu/voyemu-deps/releases/download/android-native-fb251cf9/free-11-russian-20260318-rc1-qg-runtime-libqg_runtime.so",
+            "sha256": "17ca298e3db09d06303f6a0d392f6bb4c199311a6367dca61ed79caff91cdd9d"
+        },
         "free-11-chinese-20260731-7.3.1/can-simulator": {
             "url": "https://github.com/voyemu/voyemu-deps/releases/download/android-native-fb251cf9/free-11-chinese-20260731-7.3.1-can-simulator-voyemu-can-model",
             "sha256": "9c99379ac09399d06bffd8a5be1073988704b04919a8c2b0776c1a3dd1eec86c"

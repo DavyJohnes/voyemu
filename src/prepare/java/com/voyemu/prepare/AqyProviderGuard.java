@@ -31,6 +31,21 @@ final class AqyProviderGuard {
     static final String OWNER = "Lcom/qinggan/app/aiqiyi/present/MainRankPresent;",
             AUTHORITY = "com.qinggan.app.aiqiyi.data.AQYContentProvider";
 
+    /** True when the Launcher DEX carries the optional OEM video class this patch guards. */
+    static boolean present(byte[] dex) {
+        if (dex == null) {
+            return false;
+        }
+
+        for (ClassDef type : new DexBackedDexFile(Opcodes.forApi(30), dex).getClasses()) {
+            if (type.getType().equals(OWNER)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private static void require(boolean value) {
         Failure.require(
                 value, "AQY_PROVIDER_CONTRACT", "Exact optional AQY provider boundary required", 3);
