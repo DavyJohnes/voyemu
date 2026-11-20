@@ -578,7 +578,8 @@ int supervise(Arguments args, const std::filesystem::path &current_program) {
         }
     });
     try {
-        while (!interrupted && !server_stop && !session.stopped()) {
+        while (!interrupted && !server_stop && !session.stopped() &&
+               !voyemu::supervisor_stop_requested(args.session)) {
             session.tick();
             std::this_thread::sleep_for(std::chrono::milliseconds(30));
         }
@@ -1041,7 +1042,7 @@ int start_command(Arguments &args, const Emit &emit) {
         // Ctrl+C stops the starting supervisor, which stops its guests, instead of reporting a
         // timeout; a supervisor that does not exit in time is killed with its process.
         if (interrupted) {
-            child.terminate(60000);
+            voyemu::stop_starting_supervisor(child, session, std::chrono::seconds(60));
 
             throw VoyemuError("INTERRUPTED", "start interrupted");
         }

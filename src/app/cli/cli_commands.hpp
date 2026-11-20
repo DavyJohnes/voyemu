@@ -45,6 +45,7 @@
 #include "start_host_pins.hpp"
 #include "start_machine_identity.hpp"
 #include "supervisor_failure.hpp"
+#include "supervisor_stop.hpp"
 #include <algorithm>
 #include <charconv>
 #include <csignal>
