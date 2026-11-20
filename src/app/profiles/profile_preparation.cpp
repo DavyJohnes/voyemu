@@ -19,6 +19,7 @@
 #include "profile_catalog.hpp"
 #include "profile_file_nodes.hpp"
 #include "profile_identity.hpp"
+#include "progress.hpp"
 #include "project_files.hpp"
 #include "qnx_link_interface.hpp"
 #include "quickboot.hpp"
@@ -415,6 +416,8 @@ ProfilePreparationArtifacts prepare_profile_artifacts(const std::filesystem::pat
         inputs.guest_java_sha256 = sha256_file(inputs.guest_java);
     }
 
+    bool extracting = false;
+
     for (const auto *image : {"system", "vendor", "system_ext"}) {
         const auto image_name = std::string(image) == "system_ext" ? std::string("system.img")
                                                                    : std::string(image) + ".img";
@@ -453,6 +456,11 @@ ProfilePreparationArtifacts prepare_profile_artifacts(const std::filesystem::pat
                                                       logical_partition);
 
         if (directory.empty()) {
+            if (!extracting) {
+                progress::report("build_extract");
+                extracting = true;
+            }
+
             directory = cache / extraction_key;
             extract_pinned_ext4_files(output.base / image_name, image_pin, selected, directory,
                                       native_profile_android_input_reserve(profile),
@@ -630,6 +638,8 @@ ProfilePreparationArtifacts prepare_profile_artifacts(const std::filesystem::pat
     request.operation = JavaPreparationOperation::build_artifacts;
     request.build = inputs;
     need(hash(source, 512 * 1024) == profile_pin, "profile changed before artifact preparation");
+    progress::report("build_components",
+                     {{"count", std::to_string(profile.at("components").size())}});
     output.result = prepare_java_artifacts(root, tools.runtime, request, output.transport,
                                            java_preparation_timeout_ms(request));
 

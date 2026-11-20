@@ -1,6 +1,7 @@
 #pragma once
 #include "cli_messages.hpp"
 #include "model.hpp"
+#include "progress.hpp"
 #include <filesystem>
 #include <sstream>
 #include <stdexcept>
@@ -218,14 +219,24 @@ inline std::string human_cli_output(std::string_view command, const Json &result
         return out.str();
     }
 
+    // build names the machine and its build time, which its command adds for the console, and
+    // how to start it.
     if (command == "build") {
-        out << text(result.value("profile_ready", false)   ? "output.machine_prepared"
-                    : result.value("android_ready", false) ? "output.multimedia_prepared"
-                                                           : "output.build_incomplete",
-                    {{"machine", label}})
-            << '\n';
+        if (result.value("profile_ready", false) ||
+            (result.value("machine_ready", false) && result.value("android_ready", false))) {
+            const auto time = progress::duration_text(
+                    result.value("build_seconds", std::uint64_t{}), language);
+            out << text(result.value("machine_updated", false) ? "output.machine_updated"
+                                                               : "output.machine_prepared",
+                        {{"time", time}, {"machine", label}})
+                << '\n'
+                << text("output.start_hint", {{"machine", label}}) << '\n';
+        } else {
+            out << text("output.build_incomplete", {{"machine", label}}) << '\n';
+        }
 
-        if (result.contains("runtime")) {
+        // The configuration file matters only to diagnostics.
+        if (verbose && result.contains("runtime")) {
             out << text("output.runtime", {{"path", result.at("runtime").get<std::string>()}})
                 << '\n';
         }

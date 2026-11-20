@@ -201,6 +201,8 @@ int main(int argc, char **argv) {
 
             return 130;
         } else {
+            // An empty line separates the error from the progress before it.
+            voyemu::progress::separate();
             std::cerr << voyemu::human_cli_error(error, language, log_file);
         }
 

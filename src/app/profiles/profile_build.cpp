@@ -262,7 +262,8 @@ void publish(const std::filesystem::path &from, const std::filesystem::path &to)
 
 Json copy_images(const std::filesystem::path &root, const std::filesystem::path &source,
                  const Json &images, const std::filesystem::path &stage, const std::string &group,
-                 const std::set<std::string> &roles, std::uint64_t reserve) {
+                 const std::set<std::string> &roles, std::uint64_t reserve,
+                 progress::Meter *meter) {
     need(images.is_object() && images.size() == roles.size(),
          "exact portable guest roles required");
     Json output = Json::object();
@@ -292,9 +293,23 @@ Json copy_images(const std::filesystem::path &root, const std::filesystem::path 
         copy_portable_image(file, pin, destination, reserve);
         need(hash(destination) == pin && hash(file) == pin, "copied image differs");
         output[it.key()] = it.value();
+
+        if (meter) {
+            meter->advance(it.value().at("bytes").get<std::uint64_t>());
+        }
     }
 
     return output;
+}
+
+std::uint64_t image_bytes(const Json &images) {
+    std::uint64_t bytes = 0;
+
+    for (const auto &image : images) {
+        bytes += image.at("bytes").get<std::uint64_t>();
+    }
+
+    return bytes;
 }
 
 Json export_portable_boot_files(const std::filesystem::path &root, const Json &definition,
@@ -669,6 +684,13 @@ Json release_build_generation(const std::filesystem::path &root, Json publicatio
 
     logging::write(logging::Level::info, "build", "build outputs released",
                    {{"released_bytes", released}, {"retained", retained.size()}});
+
+    if (released) {
+        progress::block();
+        progress::report("build_released",
+                         {{"size", progress::size_text(released, progress::language())}});
+    }
+
     publication["build_outputs"] = {{"released_bytes", released}, {"retained", retained}};
 
     return publication;
@@ -939,6 +961,7 @@ Json build_profile(const std::filesystem::path &root, std::string_view profile,
     need((!std::filesystem::exists(target) || profile == "free-11-chinese-20260731-7.3.1") &&
                  !std::filesystem::is_symlink(target),
          "target machine already exists; never replaced");
+    progress::Phase checking("build_check");
     // Check the configured local host before spending time preparing or booting Android.
     const auto binding_file = qnx_host_bindings_path(root);
     const auto bindings = profile_source_graphics_bindings(
@@ -968,10 +991,13 @@ Json build_profile(const std::filesystem::path &root, std::string_view profile,
          "local QNX executable pins missing");
     install_native_dependencies(root, offline);
     materialize_qnx_originals(root, profile, jdk, offline);
+    checking.done();
     const auto authoring_unchanged = capture_authoring_inputs(root, profile);
     const auto token = random_token(), name = std::string(profile);
     const auto qnx_source = root / ".local/build" / ("qnx-source-" + name + "-" + token);
+    progress::Phase building("build_qnx_images");
     const auto source = prepare_qnx_images(root, profile, qnx_source, offline);
+    building.done();
     authoring_unchanged();
 
     if (cancelled && cancelled()) {
@@ -1065,6 +1091,7 @@ Json build_profile_android(const std::filesystem::path &root, std::string_view p
         (void)inspect_portable_runtime(root, profile, machine);
     }
 
+    progress::Phase phase("build_android");
     (void)prepare_profile_ui_observer(root, jdk);
     auto artifact_lease = artifact_receipt.empty()
                                   ? std::unique_ptr<os::FileLock>()
@@ -1108,6 +1135,7 @@ Json build_profile_android(const std::filesystem::path &root, std::string_view p
                                 hash(artifacts.transport / "profile-artifacts.json", 1 << 20));
     }
 
+    phase.done();
     AndroidCandidateRequest request;
     request.profile = profile;
     request.profile_sha256 = hash(authoring_definition(root, profile), 1 << 20);

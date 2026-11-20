@@ -495,11 +495,16 @@ Json finalize_profile_build(const std::filesystem::path &root, std::string_view 
         }
     } cleanup{stage};
     ensure_private_directory(stage);
+    // The machine assembly shows the bytes of the guest images it copies.
+    progress::block();
+    progress::Meter assembling("build_machine", {{"machine", progress::path_text(final)}});
+    assembling.length(image_bytes(candidate.at("android").at("images")) +
+                      image_bytes(qnx.at("images")));
     copy_portable_image(android / "profile.json", profile_pin, stage / "profile.json", 0);
     const auto android_images = copy_images(
             root, android, candidate.at("android").at("images"), stage, "android",
             {"system.img", "vendor.img", "userdata-qemu.img", "encryptionkey.img", "cache.img"},
-            android_candidate_reserve_bytes(definition, profile));
+            android_candidate_reserve_bytes(definition, profile), &assembling);
     const std::filesystem::path qnx_source =
             reuse_qnx && !reuse_qnx_source.empty()
                     ? reuse_qnx_source
@@ -523,9 +528,9 @@ Json finalize_profile_build(const std::filesystem::path &root, std::string_view 
         need(qnx.value("stopped", false), "stopped Free QNX seed required");
     }
 
-    const auto qnx_images = copy_images(root, qnx_source, qnx.at("images"), stage, "qnx",
-                                        qnx_image_roles(layout),
-                                        android_candidate_reserve_bytes(definition, profile));
+    const auto qnx_images =
+            copy_images(root, qnx_source, qnx.at("images"), stage, "qnx", qnx_image_roles(layout),
+                        android_candidate_reserve_bytes(definition, profile), &assembling);
     Json runtime = {{"schema", 1},
                     {"kind", "portable-guest-runtime"},
                     {"profile", profile},
@@ -586,6 +591,7 @@ Json finalize_profile_build(const std::filesystem::path &root, std::string_view 
     inspect_portable_runtime(root, profile, machine, stage);
     publish(stage, final);
     cleanup.owned = false;
+    assembling.finish("");
     const auto verified = inspect_portable_runtime(root, profile, machine);
     Json provenance = Json::object();
 
@@ -662,11 +668,14 @@ Json finalize_android_profile_build(const std::filesystem::path &root, std::stri
         }
     } cleanup{stage};
     ensure_private_directory(stage);
+    progress::block();
+    progress::Meter assembling("build_machine", {{"machine", progress::path_text(final)}});
+    assembling.length(image_bytes(candidate.at("android").at("images")));
     copy_portable_image(android / "profile.json", profile_pin, stage / "profile.json", 0);
     const auto images = copy_images(
             root, android, candidate.at("android").at("images"), stage, "android",
             {"system.img", "vendor.img", "userdata-qemu.img", "encryptionkey.img", "cache.img"},
-            android_candidate_reserve_bytes(definition, profile));
+            android_candidate_reserve_bytes(definition, profile), &assembling);
     {
         const auto disk_tool = root / ".local/toolchains/native-sdk" / "emulator" /
                                ("qemu-img" + exe());
@@ -727,6 +736,7 @@ Json finalize_android_profile_build(const std::filesystem::path &root, std::stri
          "finalization inputs changed");
     publish(stage, final);
     cleanup.owned = false;
+    assembling.finish("");
 
     return {{"schema", 1},
             {"profile", profile},

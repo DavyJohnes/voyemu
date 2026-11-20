@@ -97,12 +97,32 @@ int main() try {
                                        "free-profile");
     plain(deps);
     assert(deps.find("--jdk") != std::string::npos && deps.find("QNX") == std::string::npos);
-    const auto built = human_cli_output(
-            "build", {{"android_ready", true}, {"runtime", "/machines/car/runtime.json"}},
-            "free-profile");
+    // build names the machine, its build time and how to start it; the configuration file only
+    // with --verbose.
+    const Json ready{{"android_ready", true},
+                     {"machine_ready", true},
+                     {"build_seconds", 845},
+                     {"machine_seed", "machines/car"},
+                     {"runtime", "/machines/car/runtime.json"}};
+    const auto built = human_cli_output("build", ready, "free-profile");
     plain(built);
-    assert(built.find("Multimedia prepared") != std::string::npos &&
-           built.find("QNX engine") == std::string::npos);
+    assert(built == "Machine ready in 14 min 5 s: machines/car\n"
+                    "Start it: voyemu start machines/car\n");
+    assert(human_cli_output("build",
+                            {{"profile_ready", true},
+                             {"build_seconds", 845},
+                             {"machine_seed", "machines/car"}},
+                            "free-profile", {}, false, cli::Language::russian) ==
+           "Машина готова за 14 мин 5 с: machines/car\nЗапуск: voyemu start machines/car\n");
+    auto updated = ready;
+    updated["machine_updated"] = true;
+    updated["build_seconds"] = 180;
+    assert(human_cli_output("build", updated, "free-profile") ==
+           "Machine updated in 3 min: machines/car\nStart it: voyemu start machines/car\n");
+    assert(human_cli_output("build", ready, "free-profile", {}, true)
+                   .ends_with("Runtime: /machines/car/runtime.json\n"));
+    assert(human_cli_output("build", {{"android_ready", true}, {"machine_seed", "machines/car"}},
+                            "free-profile") == "Build incomplete: machines/car\n");
     // deps, check and build name a QNX engine that this host cannot install.
     const Json unavailable = {{"status", "unavailable"},
                               {"reason", "QNX_HOST_ASSET_MISSING: not published yet"}};

@@ -166,16 +166,27 @@ int main(int argc, char **argv) {
                 const auto result = run(arguments);
                 require(!result.timed_out && result.exit_code != 0,
                         "fixture without retained inputs unexpectedly built or timed out");
-                require(result.output.starts_with("Voyemu:") &&
+                // The header names the machine, its subsystems and the space it needs; an empty
+                // line separates the progress from the error. Without a QNX engine for this host
+                // the default build prepares only the multimedia.
+                const auto header =
+                        std::string("Preparing machine machines/") + profile + ": " +
+                        (android_only ? "multimedia only.\nUp to 20 GiB of free space is needed, "
+                                      : "");
+                const auto failure = result.output.find("\n\nVoyemu:");
+                require(result.output.starts_with(header) && failure != std::string::npos &&
                                 result.output.find("CLI_ARGUMENT:") == std::string::npos &&
                                 result.output.find("PROFILE_INCOMPLETE:") == std::string::npos,
                         "public API30 build did not reach genuine preparation: " + result.output);
+                const auto error = result.output.substr(failure + 2);
 
                 // Observer preparation first needs the Java runtime, which offline is not cached.
                 if (android_only) {
-                    require(result.output.starts_with("Voyemu: DOWNLOAD_OFFLINE: ") &&
-                                    result.output.find(
+                    require(error.starts_with("Voyemu: DOWNLOAD_OFFLINE: ") &&
+                                    error.find(
                                             " is not downloaded and --offline forbids downloads.") !=
+                                            std::string::npos &&
+                                    result.output.find("\n\nPreparing Android\n") !=
                                             std::string::npos,
                             "Android-only build did not reach observer preparation with absent fixture toolchain sources: " +
                                     result.output);

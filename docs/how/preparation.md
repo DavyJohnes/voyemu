@@ -44,7 +44,9 @@ On stderr `fetch` names the archive and its size and shows the bytes of the arch
 
 ## build
 
-`build PROFILE [MACHINE_PATH]` prepares a new machine, `machines/PROFILE` by default. It applies [components and recipes](components.md), builds the guest images, boots the guests for verification and writes `runtime.json` last. A failed verification boot of QNX ends the QEMU and graphics processes that `build` started and removes their RAM and image copies. On success it prints the machine and the path of its `runtime.json`.
+`build PROFILE [MACHINE_PATH]` prepares a new machine, `machines/PROFILE` by default. It applies [components and recipes](components.md), builds the guest images, boots the guests for verification and writes `runtime.json` last. A failed verification boot of QNX ends the QEMU and graphics processes that `build` started and removes their RAM and image copies.
+
+On stderr `build` first names the machine, its subsystems and the free space it needs; without hardware acceleration of the cluster, as under TCG on Windows and Linux, one more line warns that the cold boot of the cluster can take hours. Each phase follows in its own block: the check of tools and OEM inputs, the QNX image build, the cold boot of the cluster, the Android preparation with the number of components, the cold boot of Android, the bytes of the system image and of the machine assembly, and the space freed by removing temporary files. Lines that a phase reports, such as downloads and checks, appear indented below it, and a phase ends with the time it took. The summary names the machine and the time of the whole build and ends with the command that starts it, `voyemu start MACHINE_PATH`; with `--verbose` it also names its `runtime.json`.
 
 The QNX guest images take CI-built binaries: `build` downloads them by their pins, checks that the OEM libraries of the profile export everything they import and, for Free 6.0.3, writes the OEM startup script and `sysmgrtool` into the section the front library reserves for them, as data and without a compiler. See [the qnx-guest workflow](../dev/ci.md#the-qnx-guest-workflow).
 

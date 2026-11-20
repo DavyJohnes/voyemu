@@ -703,11 +703,24 @@ std::pair<Json, Json> data_install_phases(const Json &entries) {
 }
 
 void install_entries(Candidate &c, const Json &entries, const Json &artifacts,
-                     const std::filesystem::path &aapt2, std::vector<Installed> &installed) {
+                     const std::filesystem::path &aapt2, std::vector<Installed> &installed,
+                     progress::Meter *meter) {
     for (const auto &entry : entries) {
         const auto &artifact = entry.at("type") == "directory"
                                        ? Json::object()
                                        : artifacts.at(entry.at("artifact").get<std::string>());
+        // The bytes of the entry count once it is installed.
+        std::uint64_t bytes = 0;
+
+        if (artifact.contains("file")) {
+            bytes = std::filesystem::file_size(artifact.at("file").get<std::string>());
+        } else if (artifact.contains("files")) {
+            for (auto it = artifact.at("files").begin(); it != artifact.at("files").end(); ++it) {
+                bytes += std::filesystem::file_size(
+                        std::filesystem::path(artifact.at("directory").get<std::string>()) /
+                        it.key());
+            }
+        }
 
         if (entry.at("type") == "apk") {
             auto item = install_apk(c, entry, artifact, aapt2);
@@ -740,6 +753,10 @@ void install_entries(Candidate &c, const Json &entries, const Json &artifacts,
                         c, entry, folder / it.key(), it.value().at("sha256").get<std::string>(),
                         entry.at("target").get<std::string>() + "/" + it.key()));
             }
+        }
+
+        if (meter) {
+            meter->advance(bytes);
         }
     }
 }

@@ -427,6 +427,7 @@ struct Candidate {
                            raw({"shell", "pm", "path", "android"}).starts_with("package:");
                 },
                 "Android boot", &elapsed);
+        elapsed.done("cold_boot_multimedia_done");
 
         if (!kernel_sha.empty()) {
             check_file(machine / "base/kernel-ranchu", kernel_sha, 64ULL << 20);
@@ -685,8 +686,10 @@ getprop qemu.voyemu.token
 };
 Json capture_candidate_ui(Candidate &c, const Json &profile);
 std::pair<Json, Json> data_install_phases(const Json &entries);
+// Installs the planned entries into the candidate; meter counts the bytes of their files.
 void install_entries(Candidate &c, const Json &entries, const Json &artifacts,
-                     const std::filesystem::path &aapt2, std::vector<Installed> &installed);
+                     const std::filesystem::path &aapt2, std::vector<Installed> &installed,
+                     progress::Meter *meter = nullptr);
 std::string home_component(Candidate &c, const Json &config, bool establish);
 // Guest mode, owner and label of one path in the form of android_candidate_file_metadata.
 std::string guest_file_metadata(Candidate &c, const std::string &path);

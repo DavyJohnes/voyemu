@@ -28,6 +28,7 @@
 #include "profile_identity.hpp"
 #include "profile_preparation.hpp"
 #include "profile_runtime.hpp"
+#include "progress.hpp"
 #include "qinggan09_owned_packages.hpp"
 #include "qnx_acceptance.hpp"
 #include "qnx_host.hpp"
@@ -82,9 +83,13 @@ std::filesystem::path build_target(const std::filesystem::path &root, std::strin
                                    const MachineIdentity &machine);
 std::map<std::string, std::string> host_pins(const std::filesystem::path &sdk);
 void publish(const std::filesystem::path &from, const std::filesystem::path &to);
+// Copies the pinned guest images of group into stage; meter counts their bytes.
 Json copy_images(const std::filesystem::path &root, const std::filesystem::path &source,
                  const Json &images, const std::filesystem::path &stage, const std::string &group,
-                 const std::set<std::string> &roles, std::uint64_t reserve);
+                 const std::set<std::string> &roles, std::uint64_t reserve,
+                 progress::Meter *meter = nullptr);
+// The bytes of the pinned guest images that copy_images copies.
+std::uint64_t image_bytes(const Json &images);
 Json export_portable_boot_files(const std::filesystem::path &root, const Json &definition,
                                 const std::filesystem::path &stage, std::uint64_t reserve);
 std::unique_ptr<os::FileLock> artifact_reader(const std::filesystem::path &root,

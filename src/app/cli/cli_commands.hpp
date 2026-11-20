@@ -40,6 +40,7 @@
 #include "profile_runtime.hpp"
 #include "qnx_host.hpp"
 #include "qnx_interguest_contract.hpp"
+#include "qnx_process_ram.hpp"
 #include "session.hpp"
 #include "start_host_pins.hpp"
 #include "start_machine_identity.hpp"

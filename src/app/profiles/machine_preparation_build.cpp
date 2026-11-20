@@ -955,7 +955,22 @@ Json build_android_candidate(const std::filesystem::path &root,
 
         if (!plan.at("system").empty()) {
             candidate.writable();
-            install_entries(candidate, plan.at("system"), artifacts, aapt2, installed);
+            // The system image grows by the bytes of the system entries.
+            std::optional<progress::Meter> building;
+
+            if (system_payload) {
+                progress::block();
+                building.emplace("build_system", progress::Arguments{});
+                building->length(system_payload);
+            }
+
+            install_entries(candidate, plan.at("system"), artifacts, aapt2, installed,
+                            building ? &*building : nullptr);
+
+            if (building) {
+                building->finish("");
+            }
+
             const auto stale_boot = android_candidate_boot_cache_paths(profile);
 
             if (!stale_boot.empty()) {

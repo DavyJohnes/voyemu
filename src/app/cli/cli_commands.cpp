@@ -54,7 +54,7 @@ int list_command(const Arguments &args, const Emit &emit) {
 namespace {
 // The free space that deps and fetch keep beyond what each download or extraction needs; build
 // keeps the larger reserve of machine preparation.
-constexpr std::uint64_t preparation_margin = 2ULL << 30;
+constexpr std::uint64_t preparation_margin = 2ULL << 30, build_margin = 20ULL << 30;
 } // namespace
 
 int fetch_command(const Arguments &args, const Emit &emit) {
@@ -192,6 +192,32 @@ int build_command(const Arguments &args, const Emit &emit) {
                                      ? std::string{}
                                      : voyemu::qnx_host_unavailable(args.root);
     const bool cluster = args.cluster && unavailable.empty();
+    const auto started = std::chrono::steady_clock::now();
+
+    // An unknown profile fails as in fetch, before any line of the build.
+    if (!std::filesystem::exists(args.root / "profiles" / args.profile / "profile.json")) {
+        (void)voyemu::embedded_profile(args.profile);
+    }
+
+    const auto target = args.root / "machines" / args.machine.name;
+    const auto machine = progress::path_text(target);
+
+    // The header names the machine, its subsystems and the space that preparation keeps free.
+    progress::block();
+    progress::report("build_plan", {{"machine", machine},
+                                    {"scope", message(progress::language(),
+                                                      cluster ? "progress.scope_both"
+                                                              : "progress.scope_android")}});
+    progress::report("build_space",
+                     {{"required", progress::size_text(build_margin, progress::language())},
+                      {"free", progress::size_text(std::filesystem::space(args.root).available,
+                                                   progress::language())}});
+
+    // Without hardware acceleration the cold boot of the cluster takes hours.
+    if (cluster && voyemu::host_qnx_engine != voyemu::QnxEngine::hvf) {
+        progress::report("build_tcg");
+    }
+
     auto result = voyemu::build_profile(
             args.root, args.profile, args.machine, args.offline, args.jdk,
             [] {
@@ -205,6 +231,11 @@ int build_command(const Arguments &args, const Emit &emit) {
                               {"reason", "QNX_HOST_ASSET_MISSING: " + unavailable}};
     }
 
+    // The summary names the machine as the header did, and the time the build took.
+    result["machine_seed"] = machine;
+    result["build_seconds"] = std::chrono::duration_cast<std::chrono::seconds>(
+                                      std::chrono::steady_clock::now() - started)
+                                      .count();
     emit(result);
 
     return (cluster && args.multimedia

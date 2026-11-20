@@ -513,6 +513,7 @@ Json run(const std::filesystem::path &root, const std::string &profile,
 
         need(captured && evidence.at("cold_boot_verified") == true,
              "cold boot did not export an actual Screen frame");
+        elapsed.done("cold_boot_cluster_done");
         session->stop();
         const auto stopped = session->handle({{"op", "status"}});
         evidence["terminal_status"] = {{"qnx", stopped.at("deliveries").at("qnx")},
