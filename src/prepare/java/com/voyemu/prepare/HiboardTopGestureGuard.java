@@ -22,7 +22,7 @@ import java.util.Set;
 import java.util.TreeMap;
 
 /**
- * Inactive Free A11 7.3.1 adapter, applied only after the existing exact clean navigation adapter.
+ * Inactive OEM top-gesture adapter, applied only after the existing exact clean navigation adapter.
  */
 final class HiboardTopGestureGuard {
     static final String PIN = "c6992cdc2a3e23d5aeb6ab77e7a7f6889cfcf5c262c6ed86825e6fcbf601681d";
