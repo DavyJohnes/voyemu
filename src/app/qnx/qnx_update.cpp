@@ -282,7 +282,7 @@ static void decode_patch(const std::filesystem::path &patch, std::string_view pa
          "QNX_UPDATE_TRUNCATED");
     out.close();
     need(bool(out), "QNX_UPDATE_CLOSE");
-    std::filesystem::resize_file(output, image_bytes);
+    os::resize_file(output, image_bytes);
     need(image_sha256.empty() || sha256_file(output) == image_sha256, "QNX_UPDATE_IMAGE_SHA");
     need(std::filesystem::file_size(patch) == patch_size && sha256_file(patch) == patch_sha256 &&
                  sha256_file(library) == library_sha256,
@@ -399,7 +399,7 @@ std::string collect(const std::vector<QnxUpdateSegment> &segments, std::uint64_t
 
     target.close();
     need(bool(target), "QNX_UPDATE_SEGMENT_CLOSE");
-    std::filesystem::resize_file(output, image_bytes);
+    os::resize_file(output, image_bytes);
     const auto result = sha256_file(output);
     need(image_sha256.empty() || result == image_sha256, "QNX_UPDATE_IMAGE_SHA");
     need(image_md5.empty() || md5(output) == image_md5, "QNX_UPDATE_IMAGE_MD5");

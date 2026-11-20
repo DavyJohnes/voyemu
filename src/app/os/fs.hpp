@@ -59,6 +59,10 @@ private:
 bool link_exclusive(const std::filesystem::path &existing, const std::filesystem::path &link);
 // Atomically replaces to with from, durably where the host supports it; false on failure.
 bool replace_file(const std::filesystem::path &from, const std::filesystem::path &to);
+// Sets the size of an existing file to bytes, as std::filesystem::resize_file does, throwing
+// std::filesystem::filesystem_error on failure; growth leaves a sparse zero-filled hole where the
+// filesystem supports one. The libc++ resize_file narrows the size to a 32-bit off_t on Windows.
+void resize_file(const std::filesystem::path &path, std::uint64_t bytes);
 // Whether path is a Windows reparse point; POSIX symlinks are checked through symlink_status.
 bool reparse_point(const std::filesystem::path &path);
 // Whether path belongs to another user than the effective one; false on Windows, whose callers

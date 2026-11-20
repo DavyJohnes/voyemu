@@ -100,12 +100,55 @@ void exclusive_files() {
     }
     std::filesystem::remove_all(directory);
 }
+
+// Sizes past 2 GiB and 4 GiB keep all 64 bits: a 32-bit size fails above 2 GiB and wraps a
+// multiple of 4 GiB to zero. Growth keeps the content and reads back zeros in the hole.
+void resized_files() {
+    const auto path = std::filesystem::temp_directory_path() /
+                      ("voyemu-fs-resize-" +
+                       std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+    {
+        std::ofstream file(path, std::ios::binary);
+        file << 'x';
+    }
+
+    for (const std::uint64_t bytes : {(2ULL << 30) + 1, (4ULL << 30) + 1, 4ULL << 30, 1ULL}) {
+        voyemu::os::resize_file(path, bytes);
+        std::ifstream file(path, std::ios::binary);
+        const char first = static_cast<char>(file.get());
+        file.seekg(static_cast<std::streamoff>(bytes - 1));
+        const int last = file.get();
+
+        if (std::filesystem::file_size(path) != bytes || first != 'x' ||
+            last != (bytes == 1 ? 'x' : 0)) {
+            std::fprintf(stderr, "resize_file(%llu) differs\n",
+                         static_cast<unsigned long long>(bytes));
+            ++failures;
+        }
+    }
+
+    bool rejected = false;
+
+    try {
+        voyemu::os::resize_file(path.string() + "-absent", 1);
+    } catch (const std::filesystem::filesystem_error &) {
+        rejected = true;
+    }
+
+    if (!rejected) {
+        std::fprintf(stderr, "resize_file of an absent file must throw\n");
+        ++failures;
+    }
+
+    std::filesystem::remove(path);
+}
 } // namespace
 
 int main() {
     try {
         locks();
         exclusive_files();
+        resized_files();
     } catch (const std::exception &error) {
         std::fprintf(stderr, "FileLock: %s\n", error.what());
         ++failures;

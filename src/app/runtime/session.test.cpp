@@ -9,6 +9,7 @@
 #endif
 #include "android_adb_route.hpp"
 #include "nxp_presentation.hpp"
+#include "os/fs.hpp"
 #include "passion_display_cache.hpp"
 #include "passion_presentation.hpp"
 #include "passion_wheel.hpp"
@@ -49,7 +50,6 @@
 #define NOMINMAX
 #include <windows.h>
 #include <exception>
-#include <winioctl.h>
 #endif
 using namespace voyemu;
 // Bound of a wait for an event that a passing run sees within milliseconds; loaded hosts get time.
@@ -506,7 +506,7 @@ struct SessionPersistenceFixture {
                 std::ofstream file(ram);
                 file << 'x';
             }
-            std::filesystem::resize_file(ram, passion ? 11713ULL << 20 : 8ULL << 30);
+            os::resize_file(ram, passion ? 11713ULL << 20 : 8ULL << 30);
             const auto worker = root / "graphics-fixture", arguments = root / "graphics-argv";
             {
                 std::ofstream script(worker);
@@ -2232,40 +2232,6 @@ static void cleanup_guards() {
         throw std::runtime_error("test directory unexpectedly exists");
     }
 
-    // libc++ resize_file on Windows truncates the size to a 32-bit off_t, so extents of 2 GiB and
-    // more use the 64-bit file pointer of a sparse file.
-    auto extend = [](const std::filesystem::path &path, std::uint64_t bytes) {
-#ifdef _WIN32
-        auto file = CreateFileW(path.c_str(), GENERIC_WRITE, FILE_SHARE_READ, nullptr,
-                                OPEN_EXISTING, 0, nullptr);
-        DWORD count = 0;
-
-        if (file == INVALID_HANDLE_VALUE ||
-            !DeviceIoControl(file, FSCTL_SET_SPARSE, nullptr, 0, nullptr, 0, &count, nullptr)) {
-            if (file != INVALID_HANDLE_VALUE) {
-                CloseHandle(file);
-            }
-
-            throw std::runtime_error("sparse test file unavailable");
-        }
-
-        LARGE_INTEGER extent{};
-        extent.QuadPart = static_cast<LONGLONG>(bytes);
-        const bool resized = SetFilePointerEx(file, extent, nullptr, FILE_BEGIN) &&
-                             SetEndOfFile(file);
-        CloseHandle(file);
-
-        if (!resized) {
-            throw std::runtime_error("64-bit sparse test extent unavailable");
-        }
-#else
-        std::filesystem::resize_file(path, bytes);
-#endif
-
-        if (std::filesystem::file_size(path) != bytes) {
-            throw std::runtime_error("sparse test extent differs from the requested size");
-        }
-    };
     auto make = [&](bool ram = true) {
         auto id = random_token();
         auto directory = root / ".local/machines/test-profile/sessions" / id;
@@ -2284,7 +2250,11 @@ static void cleanup_guards() {
                 std::ofstream file(path, std::ios::binary);
                 file << "owned-test";
             }
-            extend(path, 8ULL * 1024 * 1024 * 1024);
+            os::resize_file(path, 8ULL * 1024 * 1024 * 1024);
+
+            if (std::filesystem::file_size(path) != 8ULL * 1024 * 1024 * 1024) {
+                throw std::runtime_error("sparse test extent differs from eight GiB");
+            }
         }
 
         return directory;
@@ -2373,13 +2343,13 @@ static void cleanup_guards() {
     auto passion_owner = read_private_json(passion / "session-owner.json");
     passion_owner["ram_geometry"] = "Passion11713MiB";
     write_private_json(passion / "session-owner.json", passion_owner);
-    extend(passion / "qnx-ram.bin", 11713ULL * 1024 * 1024);
+    os::resize_file(passion / "qnx-ram.bin", 11713ULL * 1024 * 1024);
     auto passion_removed = finalize_owned_qnx_session(passion, passion.filename().string(),
                                                       passion / "qnx-ram.bin", terminal);
     assert(passion_removed["ram_removed"] == true &&
            !std::filesystem::exists(passion / "qnx-ram.bin"));
     auto unclaimed_passion = make();
-    extend(unclaimed_passion / "qnx-ram.bin", 11713ULL * 1024 * 1024);
+    os::resize_file(unclaimed_passion / "qnx-ram.bin", 11713ULL * 1024 * 1024);
     rejects([&] {
         finalize_owned_qnx_session(unclaimed_passion, unclaimed_passion.filename().string(),
                                    unclaimed_passion / "qnx-ram.bin", terminal);

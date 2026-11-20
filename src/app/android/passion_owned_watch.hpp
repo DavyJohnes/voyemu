@@ -1,5 +1,6 @@
 #pragma once
 #include "error.hpp"
+#include "os/fs.hpp"
 #include "passion_watch_stream.hpp"
 #include "process.hpp"
 #include <fstream>
@@ -80,7 +81,7 @@ passion_owned_watch(ProcessSpec spec, const std::filesystem::path &private_watch
 
                 if (original_bytes > 65536) {
                     owned->preserve = true;
-                    std::filesystem::resize_file(owned->output, 65536);
+                    os::resize_file(owned->output, 65536);
                 }
 
                 auto bytes = std::filesystem::file_size(owned->output);

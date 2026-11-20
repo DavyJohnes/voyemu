@@ -509,7 +509,7 @@ Json prepare_qnx_images(const std::filesystem::path &root, std::string_view prof
             output / "system", qnx_qinggan09_disk_floor);
     std::filesystem::rename(system, output / "sysla-gpt-ramdisk-v3.img");
     std::filesystem::remove(output / "system");
-    std::filesystem::resize_file(output / "sysla-gpt-ramdisk-v3.img", 1025ULL << 20);
+    os::resize_file(output / "sysla-gpt-ramdisk-v3.img", 1025ULL << 20);
     const Json persistence = {{"schema", 1},
                               {"system_image", "sysla-gpt-ramdisk-v3.img"},
                               {"userdata_image", "userdata-qnx6.img"}};

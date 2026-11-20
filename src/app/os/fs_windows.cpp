@@ -2,6 +2,8 @@
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
+#include <system_error>
+#include <winioctl.h>
 
 namespace voyemu::os {
 std::wstring win32_file_path(const std::filesystem::path &path) {
@@ -113,6 +115,38 @@ bool link_exclusive(const std::filesystem::path &existing, const std::filesystem
 bool replace_file(const std::filesystem::path &from, const std::filesystem::path &to) {
     return ::MoveFileExW(win32_file_path(from).c_str(), win32_file_path(to).c_str(),
                          MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH) != 0;
+}
+
+void resize_file(const std::filesystem::path &path, std::uint64_t bytes) {
+    const auto file = ::CreateFileW(win32_file_path(path).c_str(), GENERIC_WRITE,
+                                    FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr,
+                                    OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+
+    if (file == INVALID_HANDLE_VALUE) {
+        throw std::filesystem::filesystem_error(
+                "resize_file", path,
+                std::error_code(static_cast<int>(::GetLastError()), std::system_category()));
+    }
+
+    LARGE_INTEGER size{};
+    LARGE_INTEGER end{};
+    end.QuadPart = static_cast<LONGLONG>(bytes);
+    DWORD returned = 0;
+
+    // POSIX growth leaves a hole; a filesystem without sparse files allocates the extent instead.
+    if (::GetFileSizeEx(file, &size) && size.QuadPart < end.QuadPart) {
+        ::DeviceIoControl(file, FSCTL_SET_SPARSE, nullptr, 0, nullptr, 0, &returned, nullptr);
+    }
+
+    const bool resized = ::SetFilePointerEx(file, end, nullptr, FILE_BEGIN) && ::SetEndOfFile(file);
+    const auto error = ::GetLastError();
+    ::CloseHandle(file);
+
+    if (!resized) {
+        throw std::filesystem::filesystem_error(
+                "resize_file", path,
+                std::error_code(static_cast<int>(error), std::system_category()));
+    }
 }
 
 bool reparse_point(const std::filesystem::path &path) {

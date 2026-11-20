@@ -84,6 +84,10 @@ bool replace_file(const std::filesystem::path &from, const std::filesystem::path
     return ::rename(from.c_str(), to.c_str()) == 0;
 }
 
+void resize_file(const std::filesystem::path &path, std::uint64_t bytes) {
+    std::filesystem::resize_file(path, bytes);
+}
+
 bool reparse_point(const std::filesystem::path &) {
     return false;
 }
