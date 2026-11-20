@@ -56,7 +56,24 @@ int main() try {
             "free-profile");
     assert(failed.find("graphics_worker_exited") != std::string::npos);
     const Json started{{"ok", true}, {"with_cluster", true}, {"with_multimedia", true}};
-    assert(human_cli_output("start", started, "free-profile").empty());
+    // start names the opening windows of a new session, or says the session already runs; both
+    // show how to stop it.
+    assert(human_cli_output("start", started, "free-profile", "/machines/car") ==
+           "Session started; the multimedia and cluster windows open in a few seconds.\n"
+           "Stop it: voyemu stop /machines/car\n");
+    assert(human_cli_output("start",
+                            {{"ok", true}, {"with_cluster", false}, {"with_multimedia", true}},
+                            "free-profile", "/machines/car") ==
+           "Session started; the multimedia window opens in a few seconds.\n"
+           "Stop it: voyemu stop /machines/car\n");
+    assert(human_cli_output("start",
+                            {{"ok", true}, {"with_cluster", true}, {"with_multimedia", false}},
+                            "free-profile", "/machines/car", false, cli::Language::russian) ==
+           "Сеанс запущен, окно приборки откроется через несколько секунд.\n"
+           "Остановить: voyemu stop /machines/car\n");
+    assert(human_cli_output("start", {{"ok", true}, {"stopped", false}, {"android_pid", 7}},
+                            "free-profile", "/machines/car") ==
+           "Machine is already running: /machines/car\nStop it: voyemu stop /machines/car\n");
     assert(human_cli_output("start", started, "free-profile", "/machines/car", true) ==
            "Session active: /machines/car\nCluster: on\nMultimedia: on\n");
     assert(human_cli_output("start", {{"ok", false}, {"error", "launch failed"}}, "free-profile") ==

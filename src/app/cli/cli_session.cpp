@@ -1038,6 +1038,14 @@ int start_command(Arguments &args, const Emit &emit) {
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
 
+        // Ctrl+C stops the starting supervisor, which stops its guests, instead of reporting a
+        // timeout; a supervisor that does not exit in time is killed with its process.
+        if (interrupted) {
+            child.terminate(60000);
+
+            throw VoyemuError("INTERRUPTED", "start interrupted");
+        }
+
         if (!leased) {
             throw VoyemuError("SUPERVISOR_TIMEOUT", "native session did not become reachable");
         }

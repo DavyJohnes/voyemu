@@ -6,7 +6,7 @@ A session is one run of a machine's guests under a supervisor process. Lifecycle
 
 | Command | Effect | Output on success |
 | --- | --- | --- |
-| `start MACHINE_PATH` | Starts the guests and opens the [window](window.md) | Nothing; with `--verbose` the session and its subsystems |
+| `start MACHINE_PATH` | Starts the guests and opens the [window](window.md) | That the session started, or that the machine is already running, and the `stop` command; with `--verbose` the session and its subsystems |
 | `restart MACHINE_PATH` | Validates the selection, stops the session and starts it again | The session and its subsystems |
 | `status MACHINE_PATH` | Shows the active session | The machine, the session state and the state of each guest |
 | `stop MACHINE_PATH` | Stops the session and its guest processes | `Session stopped:` and the machine |

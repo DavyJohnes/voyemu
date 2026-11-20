@@ -74,7 +74,17 @@ inline std::string human_cli_output(std::string_view command, const Json &result
     }
 
     if (command == "start" && !verbose) {
-        return {};
+        const auto machine = machine_path.empty() ? label : machine_path.string();
+        // A new session reports its subsystems; the status of a running one does not.
+        const bool cluster = result.value("with_cluster", false),
+                   multimedia = result.value("with_multimedia", false);
+        const auto first = !cluster && !multimedia
+                                   ? text("output.already_running", {{"machine", machine}})
+                           : !cluster    ? text("output.session_started_multimedia")
+                           : !multimedia ? text("output.session_started_cluster")
+                                         : text("output.session_started_both");
+
+        return first + "\n" + text("output.stop_hint", {{"machine", machine}}) + "\n";
     }
 
     std::ostringstream out;
