@@ -215,4 +215,12 @@ void try_write(Level level, std::string_view component, std::string_view message
     } catch (...) { /* Ignored: a cleanup path keeps its own outcome without its record. */
     }
 }
+
+void try_write(Level level, std::string_view component, std::string_view message,
+               std::string_view key, const char *value) noexcept {
+    try {
+        write(level, component, message, {{std::string(key), value ? value : ""}});
+    } catch (...) { /* Ignored: a cleanup path keeps its own outcome without its record. */
+    }
+}
 } // namespace voyemu::logging

@@ -75,12 +75,19 @@ int main() try {
     std::cerr.rdbuf(prior);
     assert(console.str() == "12.0 MiB\r9 MiB   \rDone \n1 MiB\nfetch: inputs verified\n2 MiB\n");
     // try_write() records like write() but drops an invalid record instead of throwing.
-    static_assert(std::is_nothrow_invocable_v<decltype(&try_write), Level, std::string_view,
+    using JsonTryWrite = void (*)(Level, std::string_view, std::string_view, Json) noexcept;
+    using FieldTryWrite = void (*)(Level, std::string_view, std::string_view, std::string_view,
+                                   const char *) noexcept;
+    static_assert(std::is_nothrow_invocable_v<JsonTryWrite, Level, std::string_view,
                                               std::string_view, Json>);
+    static_assert(std::is_nothrow_invocable_v<FieldTryWrite, Level, std::string_view,
+                                              std::string_view, std::string_view, const char *>);
+    [[maybe_unused]] const JsonTryWrite json_try_write = &try_write;
+    [[maybe_unused]] const FieldTryWrite field_try_write = &try_write;
     std::ostringstream cleanup_records;
     prior = std::cerr.rdbuf(cleanup_records.rdbuf());
     try_write(Level::error, "", "invalid component");
-    try_write(Level::error, "session", "terminal.stop_failed", {{"error", "stop failed"}});
+    try_write(Level::error, "session", "terminal.stop_failed", "error", "stop failed");
     std::cerr.rdbuf(prior);
     const auto cleanup_record = Json::parse(cleanup_records.str());
     assert(cleanup_record.at("component") == "session" &&

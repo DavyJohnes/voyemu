@@ -30,4 +30,8 @@ void write(Level, std::string_view component, std::string_view message,
 // thrown.
 void try_write(Level, std::string_view component, std::string_view message,
                Json fields = Json::object()) noexcept;
+// try_write() with the one field key=value built inside it, for destructors, where building Json
+// fields at the call site could throw.
+void try_write(Level, std::string_view component, std::string_view message, std::string_view key,
+               const char *value) noexcept;
 } // namespace voyemu::logging
