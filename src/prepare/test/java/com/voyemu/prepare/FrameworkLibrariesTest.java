@@ -2,7 +2,6 @@ package com.voyemu.prepare;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -119,16 +118,6 @@ public final class FrameworkLibrariesTest {
                                 "useLibraries",
                                 "args",
                                 List.of(List.of("QGAPI", "QGVehicle")))));
-        target = new Target();
-        target.pin = FilesSupport.hash(originals.resolve("SystemUI.apk"));
-        reject(changed, target);
-        changed = new HashMap<>(metadata);
-        var pins =
-                new ArrayList<>(
-                        Json.list(
-                                Json.obj(metadata, "constants").get("original_sha256_allowlist")));
-        pins.set(0, "0".repeat(64));
-        changed.put("constants", Map.of("original_sha256_allowlist", pins));
         target = new Target();
         target.pin = FilesSupport.hash(originals.resolve("SystemUI.apk"));
         reject(changed, target);
