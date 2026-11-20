@@ -1062,6 +1062,30 @@ void configure(Candidate &c, const Json &profile, std::vector<Installed> &instal
     }
 }
 
+void start_qinggan11_secondary_service(
+        const std::function<std::string(const std::vector<std::string> &, int)> &shell,
+        const std::function<void(const std::function<bool()> &, int, const std::string &)> &wait) {
+    constexpr int activity_probe_deadline_ms = 30000;
+    constexpr int service_dispatch_deadline_ms = 30000;
+
+    wait(
+            [&] {
+                const auto dump =
+                        shell({"dumpsys", "-t", "3", "activity", "services", "com.voyemu"}, 5000);
+
+                return dump.starts_with("ACTIVITY MANAGER SERVICES (dumpsys activity services)") &&
+                       dump.find("DUMP TIMEOUT") == std::string::npos;
+            },
+            activity_probe_deadline_ms, "ActivityManager service dispatch readiness");
+
+    const auto dispatch =
+            shell({"am", "startservice", "-n", "com.voyemu/com.voyemu.output.SecondScreenService"},
+                  service_dispatch_deadline_ms);
+    need(dispatch.starts_with("Starting service: Intent {") &&
+                 dispatch.find("Error:") == std::string::npos,
+         "secondary screen service dispatch rejected: " + dispatch.substr(0, 1024));
+}
+
 void wake_displays(Candidate &c, const Json &profile) {
     if (android_screens(profile.at("displays")).size() < 2) {
         return;
@@ -1094,7 +1118,19 @@ void wake_displays(Candidate &c, const Json &profile) {
     const auto packages = lines(c.shell({"pm", "list", "packages", "com.voyemu"}));
     need(std::ranges::find(packages, "package:com.voyemu") != packages.end(),
          "bootstrap service missing");
-    c.shell({"am", "startservice", "-n", "com.voyemu/com.voyemu.output.SecondScreenService"});
+
+    if (profile.value("id", std::string{}) == original_navi_profile) {
+        start_qinggan11_secondary_service(
+                [&](const auto &command, int timeout) {
+                    return c.shell(command, timeout);
+                },
+                [&](const auto &ready, int timeout, const auto &message) {
+                    c.wait(ready, timeout, message);
+                });
+    } else {
+        c.shell({"am", "startservice", "-n", "com.voyemu/com.voyemu.output.SecondScreenService"});
+    }
+
     const auto config = profile.value("configure", Json::object());
 
     if (config.contains("home")) {

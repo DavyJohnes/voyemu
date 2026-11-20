@@ -136,6 +136,59 @@ void verify_candidate_profile_artifact_boundary() {
 }
 
 void verify_candidate_rich_ui() {
+    for (unsigned variant = 0; variant < 4; ++variant) {
+        unsigned probes = 0, dispatches = 0;
+        bool failed = false;
+        try {
+            machine_preparation_detail::start_qinggan11_secondary_service(
+                    [&](const std::vector<std::string> &command, int timeout) -> std::string {
+                        if (command.front() == "dumpsys") {
+                            check(command == std::vector<std::string>{"dumpsys", "-t", "3",
+                                                                      "activity", "services",
+                                                                      "com.voyemu"});
+                            check(timeout == 5000 && dispatches == 0);
+                            ++probes;
+
+                            if (variant == 1 || (variant == 0 && probes == 1)) {
+                                return "ACTIVITY MANAGER SERVICES (dumpsys activity services)\n"
+                                       "*** SERVICE 'activity' DUMP TIMEOUT (3s) ***";
+                            }
+
+                            return "ACTIVITY MANAGER SERVICES (dumpsys activity services)\n"
+                                   "  (nothing)";
+                        }
+
+                        ++dispatches;
+                        check(command ==
+                              std::vector<std::string>{
+                                      "am", "startservice", "-n",
+                                      "com.voyemu/com.voyemu.output.SecondScreenService"});
+                        check(timeout == 30000);
+
+                        if (variant == 2) {
+                            throw VoyemuError("MACHINE_PREPARATION", "host command timed out");
+                        }
+
+                        const std::string output =
+                                "Starting service: Intent { cmp=com.voyemu/.output.SecondScreenService }";
+
+                        return variant == 3 ? output + "\nError: rejected" : output;
+                    },
+                    [&](const std::function<bool()> &ready, int timeout, const std::string &) {
+                        check(timeout == 30000 && probes == 0 && dispatches == 0);
+
+                        if (!ready() && !ready()) {
+                            throw VoyemuError("MACHINE_PREPARATION", "readiness timed out");
+                        }
+                    });
+        } catch (const VoyemuError &) {
+            failed = true;
+        }
+
+        check(failed == (variant != 0));
+        check(probes == (variant < 2 ? 2 : 1) && dispatches == (variant == 1 ? 0 : 1));
+    }
+
     const auto request = android_candidate_ui_request(12000);
 
     check(request == Json({{"op", "ui"},
