@@ -283,7 +283,7 @@ void errors() {
           "an interruption names the log");
     // A start whose supervisor exited names the cause from its log, or its exit status, and the
     // session log.
-    const auto directory = std::filesystem::temp_directory_path() /
+    const auto directory = std::filesystem::canonical(std::filesystem::temp_directory_path()) /
                            ("voyemu-start-failed-" + random_token());
     ensure_private_directory(directory);
     const auto supervisor = directory / "supervisor.log";

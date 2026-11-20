@@ -87,7 +87,7 @@ int main() try {
            cleanup_record.at("fields").at("error") == "stop failed");
     // The log file of a command keeps every record as JSON Lines, debug included, while the
     // console shows none; the newest 20 log files stay.
-    const auto directory = std::filesystem::temp_directory_path() /
+    const auto directory = std::filesystem::canonical(std::filesystem::temp_directory_path()) /
                            ("voyemu-logging-" + random_token());
     struct Cleanup {
         std::filesystem::path path;
