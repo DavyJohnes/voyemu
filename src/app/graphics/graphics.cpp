@@ -1519,7 +1519,8 @@ struct Backend::Impl {
             return out;
         }
 
-        const auto scope = qnx_mcu_request_projection(a[1], a[2], a[3]);
+        const auto scope = qnx_mcu_request_projection(a[1], a[2], a[3],
+                                                      options.passion_vehicle_topics);
         const auto scope_adapter =
                 scope.is_object() ? scope.value("hardware_adapter", std::string{}) : std::string{};
         const bool language_off_wire =
@@ -1732,7 +1733,8 @@ struct Backend::Impl {
         }
     }
 
-    std::size_t required_input(const GeneratedSpec &s, const Arguments &a) {
+    std::size_t required_input(const GeneratedSpec &s, const Arguments &a,
+                               std::size_t inline_bytes = 0) {
         std::string_view n = s.name;
 
         if (n == "glBufferData") {
@@ -1879,7 +1881,25 @@ struct Backend::Impl {
                 break;
             }
 
-            need(channels && unit, "Texture format/type copy extent");
+            if (!channels || !unit) {
+                I unpack_buffer = 0;
+                gl->call<void>("glGetIntegerv", U(0x88ef), &unpack_buffer);
+                // OEM's storage request carries an invalid GL format and no source pixels.
+                // Native GL must report INVALID_ENUM without turning it into a transport fault.
+                if (n == "glTexImage2D" && !a[6] && a[7] == 0x1401 && !inline_bytes &&
+                    !a[s.pointer] && !unpack_buffer) {
+                    return 0;
+                }
+                throw VoyemuError(
+                        "GRAPHICS",
+                        "Texture format/type copy extent: target=" + std::to_string(a[0]) +
+                                " level=" + std::to_string(a[1]) + " width=" + std::to_string(w) +
+                                " height=" + std::to_string(h) + " format=" +
+                                std::to_string(format) + " type=" + std::to_string(type) +
+                                " inline_bytes=" + std::to_string(inline_bytes) +
+                                " blob=" + std::to_string(a[s.pointer] != 0) +
+                                " unpack_buffer=" + std::to_string(unpack_buffer != 0));
+            }
             I alignment = 0, row_length = 0, skip_rows = 0, skip_pixels = 0, binding = 0;
             gl->call<void>("glGetIntegerv", U(0xcf5), &alignment);
             gl->call<void>("glGetIntegerv", U(0xcf2), &row_length);
@@ -2048,7 +2068,7 @@ struct Backend::Impl {
             values[s.pointer] = reinterpret_cast<std::uintptr_t>(owned.data());
         } else if (category == "pixels" && !data.empty()) {
             need(!a[s.pointer] && data.size() <= rpc_payload_bytes &&
-                         data.size() == required_input(s, a),
+                         data.size() == required_input(s, a, data.size()),
                  "Inline texture extent");
             owned.assign(data.begin(), data.end());
             values[s.pointer] = reinterpret_cast<std::uintptr_t>(owned.data());
@@ -2056,6 +2076,13 @@ struct Backend::Impl {
             need(data.empty(), "Unexpected payload with blob");
             auto b = blob(a[s.pointer], category == "pixels");
             const auto required = required_input(s, a);
+
+            if (name == "glTexImage2D" && a[3] && a[4] && !a[6] && a[7] == 0x1401 &&
+                !a[s.pointer]) {
+                // The checked no-data request carries an invalid native format. Preserve its
+                // GL error for the guest and do not record successful texture storage.
+                return {generated->invoke(op, values), {}, s.name};
+            }
 
             if (!b) {
                 need(category != "vector" && name != "glBufferSubData" &&
@@ -3524,9 +3551,14 @@ struct Backend::Impl {
         auto length = count_bytes(a[0], unit);
         I size = 0;
         gl->call<void>("glGetBufferParameteriv", U(0x8893), U(0x8764), &size);
-        need(length && size >= 0 && a[2] <= std::uint64_t(size) &&
-                     length <= std::uint64_t(size) - a[2],
-             "Element-buffer draw extent");
+        if (!length || size < 0 || a[2] > std::uint64_t(size) ||
+            length > std::uint64_t(size) - a[2]) {
+            throw VoyemuError("GRAPHICS",
+                              "Element-buffer draw extent: indices=" + std::to_string(a[0]) +
+                                      " type=" + std::to_string(kind) +
+                                      " offset=" + std::to_string(a[2]) +
+                                      " buffer_bytes=" + std::to_string(size));
+        }
         auto pointer = gl->call<V>("glMapBufferRange", U(0x8893), GLintptr(a[2]),
                                    GLsizeiptr(length), U(1));
         need(pointer != nullptr, "Element-buffer map failed");

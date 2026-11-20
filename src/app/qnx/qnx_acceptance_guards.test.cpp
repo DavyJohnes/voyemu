@@ -185,6 +185,17 @@ int main() try {
                                          projection));
     assert(!qnx_qinggan11_post_ack_frame(delivery, owner, owner, 101, 2,
                                          projection_without_feedback));
+
+    const auto passion_projection = qnx_passion_mcu_projection();
+    auto passion = delivery;
+    passion["vehicle"]["fields"] = 3;
+    passion["vehicle"]["mcu_projection"] = passion_projection;
+    assert(qnx_qinggan11_post_ack_frame(passion, owner, owner, 101, 2, passion_projection));
+    assert(!qnx_qinggan11_post_ack_frame(passion, owner, owner, 100, 2, passion_projection));
+    assert(!qnx_qinggan11_post_ack_frame(passion, owner, owner, 101, 3, passion_projection));
+    assert(!qnx_qinggan11_post_ack_frame(delivery, owner, owner, 101, 2, passion_projection));
+    assert(!qnx_qinggan11_post_ack_frame(passion, owner, owner, 101, 2, projection));
+
     std::vector<std::byte> sparse(1920 * 720 * 4);
     assert(!qnx_native_frame_nonblank(sparse, 1920, 720));
     std::fill(sparse.begin(), sparse.end(), std::byte{255});

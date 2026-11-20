@@ -95,6 +95,7 @@ Json run(const std::filesystem::path &root, const std::string &profile,
                                                   profile);
     need(valid_profile_name(family), "valid QNX guest family required");
     const auto layout = qnx_runtime_layout(family, source);
+    const bool passion = layout.adapter == "sa8155-passion-21480";
     const auto qnx_definition = read_private_json(qnx_profile, 128 * 1024);
     need(qnx_definition.at("hardware_adapter") == layout.adapter,
          "source adapter differs from profile");
@@ -103,10 +104,13 @@ Json run(const std::filesystem::path &root, const std::string &profile,
                  original_definitions.size() == layout.originals.size(),
          "exact original firmware roles required");
 
-    if (!layout.projection.is_null()) {
-        need(source.at("guest_build").at("hardware_adapter") == layout.adapter &&
-                     source.at("guest_build").at("mcu_projection") == layout.projection,
-             "Free guest variant differs");
+    if (passion || !layout.projection.is_null()) {
+        const auto &guest_build = source.at("guest_build");
+        need(guest_build.at("hardware_adapter") == layout.adapter &&
+                     (layout.projection.is_null()
+                              ? guest_build.at("mcu_projection").is_null()
+                              : bool(qnx_mcu_delivery_scope(guest_build, layout.projection))),
+             "guest MCU projection differs");
     }
 
     for (const auto &name : layout.originals) {
@@ -117,7 +121,7 @@ Json run(const std::filesystem::path &root, const std::string &profile,
         checked(qnx_originals_directory(root, profile) / name, pin, 4ULL << 30);
     }
 
-    if (qnx_adapter(layout.adapter).platform == QnxGuestPlatform::passion) {
+    if (passion) {
         const auto &extra = source.at("supplemental_original");
         const std::filesystem::path file = extra.at("file").get<std::string>();
         inside(root / ".local", file);
@@ -128,9 +132,6 @@ Json run(const std::filesystem::path &root, const std::string &profile,
                              "53c732c493495256d16ebe39ab0e0a0f2bbdce3b600b45b5e7d770bd02d4f780",
              "exact Passion supplemental driver source required");
         checked(file, extra.at("sha256").get<std::string>(), 4ULL << 30);
-        need(source.at("guest_build").at("hardware_adapter") == layout.adapter &&
-                     source.at("guest_build").at("mcu_projection").is_null(),
-             "Passion guest variant differs");
     }
 
     need(source.at("guest_build").at("modules_digest") == qnx_guest_modules_digest(layout.adapter),
@@ -440,12 +441,13 @@ Json run(const std::filesystem::path &root, const std::string &profile,
                                     output / "cluster-initial.png",
                                     voyemu::output::png_frame(pixels, 1920, 720, true));
                             initial_png_sha = sha256_file(output / "cluster-initial.png");
-                            const Json probe = layout.projection.is_null()
-                                                       ? Json{{"speed", 37}, {"soc", 65}}
-                                                       : Json{{"speed", 42},
-                                                              {"speed10x", 420},
-                                                              {"door_fl", 1},
-                                                              {"soc", 55}};
+                            Json probe = {{"speed", 37}, {"soc", 65}};
+                            if (!layout.projection.is_null() && !passion) {
+                                probe = {{"speed", 42},
+                                         {"speed10x", 420},
+                                         {"door_fl", 1},
+                                         {"soc", 55}};
+                            }
                             const auto patched =
                                     session->handle({{"op", "patch"}, {"values", probe}});
                             need(patched.value("ok", false), "input probe patch failed");

@@ -32,6 +32,7 @@ struct Options {
     std::uint64_t generation = 0, worker_nonce = 0;
     std::uint64_t guest_pid = 0, producer_incarnation = 0;
     std::string session_id;
+    bool passion_vehicle_topics = false;
 };
 inline constexpr int rpc_channel_invalidated_exit_code = 70;
 inline constexpr std::uint32_t owner_liveness_request_opcode = 367,

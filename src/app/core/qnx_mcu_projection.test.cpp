@@ -50,7 +50,39 @@ int main() try {
     auto absent = expected;
     absent.erase("wire_fields");
     assert(!qnx_mcu_delivery_scope(Json{{"mcu_projection", absent}}));
-    std::cout << "A9 full579 and scoped Free462 ACK/status guards passed\n";
+
+    const auto passion = qnx_passion_mcu_projection();
+    assert(qnx_mcu_request_projection(0, 0, 3, true) == passion);
+    for (const auto &args : {std::array<std::uint64_t, 4>{0, 0, 3, 0},
+                             {0, 0, 0, 1},
+                             {650, 736, 462, 1},
+                             {0, 0, 4, 1}}) {
+        bool rejected = false;
+        try {
+            qnx_mcu_request_projection(args[0], args[1], args[2], args[3] != 0);
+        } catch (const VoyemuError &) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    const Json passion_ack{{"mcu_projection", passion}};
+    const auto passion_scope = qnx_mcu_delivery_scope(passion_ack, passion);
+    assert(passion_scope && passion_scope->at("fields") == 3 &&
+           passion_scope->at("full_wire_verified") == false);
+    assert(!qnx_mcu_delivery_scope(passion_ack));
+    assert(!qnx_mcu_delivery_scope(passion_ack, expected));
+    assert(!qnx_mcu_delivery_scope(Json::object(), passion));
+    assert(!qnx_mcu_delivery_scope(Json{{"mcu_projection", expected}}, passion));
+    for (const auto &patch :
+         {Json{{"projected_fields", 3.0}}, Json{{"unsupported_fields", 0}},
+          Json{{"hardware_adapter", "sa8155-qinggan11-731"}}, Json{{"transport", "mcu-wire"}},
+          Json{{"published_fields", nullptr}}}) {
+        auto wrong = passion;
+        wrong.update(patch);
+        assert(!qnx_mcu_delivery_scope(Json{{"mcu_projection", wrong}}, passion));
+        assert(!qnx_mcu_delivery_scope(passion_ack, wrong));
+    }
+    std::cout << "A9 full, Free and profile-bound Passion ACK scope guards passed\n";
 } catch (const std::exception &error) {
     std::cerr << error.what() << '\n';
 
