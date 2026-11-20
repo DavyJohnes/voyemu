@@ -95,16 +95,6 @@ final class ThirdScreenRouting {
     static final List<Site> SITES = List.of(START, TOUCH);
 
     /** Profile data: the original APK. */
-    record Variant(String pin) {}
-
-    static final Map<String, Variant> VARIANTS =
-            Map.of(
-                    "free-11-chinese-20250710-6.11.1",
-                    new Variant("dee46bafb1e174ab38841f5802722a3bcce1e4dae26e5a70840c04885651508f"),
-                    "free-11-chinese-20260731-7.3.1",
-                    new Variant(
-                            "0897ba9e37c3246a81658a9756f148b6dc93285ae724714df4638af015bbaee1"));
-
     private ThirdScreenRouting() {}
 
     private static void require(boolean accepted) {
@@ -113,12 +103,6 @@ final class ThirdScreenRouting {
                 "THIRDSCREEN_ROUTING",
                 "Exact original ThirdScreen rear display start required",
                 3);
-    }
-
-    static List<String> pins(String profile) {
-        var variant = VARIANTS.get(profile);
-
-        return variant == null ? List.of() : List.of(variant.pin());
     }
 
     static List<Integer> arguments(FiveRegisterInstruction r) {
@@ -197,11 +181,11 @@ final class ThirdScreenRouting {
         rewrite(site, m, true);
     }
 
-    static void validate(String profile, int api, Path original, byte[] dex) throws Exception {
+    static void validate(Map<String, Object> constants, int api, Path original, byte[] dex)
+            throws Exception {
         require(
-                VARIANTS.containsKey(profile)
-                        && api == 30
-                        && FilesSupport.hash(original).equals(VARIANTS.get(profile).pin())
+                api == 30
+                        && StepConstants.admits(constants, FilesSupport.hash(original))
                         && dex != null);
 
         for (Site site : SITES) {
@@ -252,8 +236,9 @@ final class ThirdScreenRouting {
                 virtual);
     }
 
-    static byte[] apply(String profile, int api, Path original, byte[] dex) throws Exception {
-        validate(profile, api, original, dex);
+    static byte[] apply(Map<String, Object> constants, int api, Path original, byte[] dex)
+            throws Exception {
+        validate(constants, api, original, dex);
         var before = new TreeMap<String, ClassDef>();
         var changed = new TreeMap<String, ClassDef>();
 

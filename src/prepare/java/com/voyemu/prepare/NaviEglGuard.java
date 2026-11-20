@@ -14,9 +14,7 @@ import java.util.zip.Adler32;
 
 // The emulated GPU has no MSAA4 EGL configs. Keep the OEM renderer and color/depth selection.
 final class NaviEglGuard {
-    static final String NAME = "api30-navi-egl",
-            PIN = NaviVersionGuard.PIN,
-            PROFILE = NaviVersionGuard.PROFILE;
+    static final String NAME = "api30-navi-egl", PIN = NaviVersionGuard.PIN;
     static final List<Integer> CONFIG =
             List.of(0x3024, 4, 0x3023, 4, 0x3022, 4, 0x3040, 4, 0x3032, 1, 0x3031, 4, 0x3038);
 
@@ -64,8 +62,7 @@ final class NaviEglGuard {
     static void validate(String profile, int api, String abi, Path apk, byte[] source)
             throws Exception {
         need(
-                PROFILE.equals(profile)
-                        && api == 30
+                api == 30
                         && abi.equals("arm64-v8a")
                         && FilesSupport.hash(apk).equals(PIN)
                         && source != null);

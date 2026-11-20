@@ -69,11 +69,7 @@ public final class OriginalNaviVinGuard {
 
     static void validateInput(String profile, int api, String abi, Path jar, byte[] raw)
             throws Exception {
-        need(
-                "free-11-chinese-20260731-7.3.1".equals(profile)
-                        && api == 30
-                        && "arm64-v8a".equals(abi),
-                "profile pin");
+        need(api == 30 && "arm64-v8a".equals(abi), "profile pin");
         need(
                 "c178682be164be4872697dbb5accdc6ea28446941b6d681ddb736f2fdb627c07"
                         .equals(hash(Files.readAllBytes(jar))),
@@ -83,11 +79,7 @@ public final class OriginalNaviVinGuard {
 
     static byte[] apply(String profile, int api, String abi, Path jar, byte[] raw)
             throws Exception {
-        need(
-                "free-11-chinese-20260731-7.3.1".equals(profile)
-                        && api == 30
-                        && "arm64-v8a".equals(abi),
-                "profile pin");
+        need(api == 30 && "arm64-v8a".equals(abi), "profile pin");
         need(
                 "c178682be164be4872697dbb5accdc6ea28446941b6d681ddb736f2fdb627c07"
                         .equals(hash(Files.readAllBytes(jar))),

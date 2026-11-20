@@ -14,6 +14,7 @@ import java.nio.ByteOrder;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.zip.Adler32;
 
 /** Return a stable non-null snapshot if disconnect clears the OEM call list concurrently. */
@@ -109,18 +110,13 @@ final class PhoneDisconnectGuard {
                 && referenceInstruction.getReference().toString().equals(reference);
     }
 
-    static byte[] apply(String profile, int api, Path apk, byte[] dex) throws Exception {
+    static byte[] apply(Map<String, Object> constants, int api, Path apk, byte[] dex)
+            throws Exception {
         need(
-                PhoneCallWindowGuard.VARIANTS.containsKey(profile)
-                        && api == 30
-                        && PhoneCallWindowGuard.VARIANTS
-                                .get(profile)
-                                .apkPin()
-                                .equals(FilesSupport.hash(apk))
+                api == 30
+                        && StepConstants.admits(constants, FilesSupport.hash(apk))
                         && dex != null
-                        && PhoneCallWindowGuard.VARIANTS
-                                .get(profile)
-                                .outputPin()
+                        && Json.str(PhoneCallWindowGuard.policy(constants), "preparedDexSha256")
                                 .equals(NativeCore.hash(dex)));
         byte[] out = rewrite(dex);
         ViewDumpPatch.checkedDex(out, NativeCore.hash(out));
@@ -128,10 +124,10 @@ final class PhoneDisconnectGuard {
         return out;
     }
 
-    static void verify(String profile, Path apk, byte[] original, byte[] prepared)
+    static void verify(Map<String, Object> constants, Path apk, byte[] original, byte[] prepared)
             throws Exception {
-        byte[] window = PhoneCallWindowGuard.apply(profile, 30, apk, original);
-        byte[] expected = apply(profile, 30, apk, window);
+        byte[] window = PhoneCallWindowGuard.apply(constants, 30, apk, original);
+        byte[] expected = apply(constants, 30, apk, window);
 
         need(Arrays.equals(expected, prepared));
         byte[] restored = prepared.clone();
@@ -143,6 +139,6 @@ final class PhoneDisconnectGuard {
         }
 
         need(Arrays.equals(restored, window));
-        PhoneCallWindowGuard.verify(profile, original, restored);
+        PhoneCallWindowGuard.verify(constants, original, restored);
     }
 }

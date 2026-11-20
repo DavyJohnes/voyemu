@@ -92,8 +92,8 @@ final class Artifacts {
         }
 
         var spec =
-                Api30NativeFiles.forProfile(
-                                profile.referenceProfile(),
+                Api30NativeFiles.forPlatform(
+                                profile.data().get("platform"),
                                 Json.obj(profile.data(), "patches")
                                         .containsKey("original-navi-mac"))
                         .stream()
@@ -385,8 +385,12 @@ final class Artifacts {
             helpers.add(new GuestJava.Unit(AudioPolicyGuard.helperSource(), api));
         }
 
-        if (PhoneProviderGuard.source(profile) != null) {
-            helpers.add(new GuestJava.Unit(PhoneProviderGuard.source(profile), 30));
+        if (patches.containsKey(PhoneProviderGuard.NAME + ".json")) {
+            var constants =
+                    Json.obj(
+                            Json.object(patches.get(PhoneProviderGuard.NAME + ".json")),
+                            "constants");
+            helpers.add(new GuestJava.Unit(PhoneProviderGuard.source(profile, constants), 30));
         }
 
         return helpers;
@@ -404,7 +408,7 @@ final class Artifacts {
                     "Registered Gallery archive component required",
                     3);
 
-            return GalleryArm64Libraries.build(profile.referenceProfile(), api, abi, source, dir);
+            return GalleryArm64Libraries.build(api, abi, source, dir);
         }
 
         int minimum = Math.toIntExact(Json.integer(definition, "minSdk"));

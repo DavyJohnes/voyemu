@@ -3,7 +3,6 @@ package com.voyemu.prepare;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -11,23 +10,13 @@ import java.util.TreeMap;
 /** Exact official ARM64 additions of the profile; preserves every original OEM entry. */
 final class GalleryArm64Libraries {
     static final String NAME = "api30-gallery-arm64";
-    private static final Map<String, String> PINS =
-            Map.of(
-                    "free-11-chinese-20250710-6.11.1",
-                    "f716384510601971d1dc80a45304aac09e03530e5073c1497255b2cb810aae30",
-                    "free-11-chinese-20260731-7.3.1",
-                    "c30633d39bb4127ac7fcd79300f00f2be608ff6b59cb24ebf855471e967be537");
-
-    static List<String> pins(String profile) {
-        return PINS.containsKey(profile) ? List.of(PINS.get(profile)) : List.of();
-    }
 
     static void need(boolean value) {
         Failure.require(value, "GALLERY_ARM64", "Exact Gallery ARM64 contract required", 3);
     }
 
-    static void context(String profile, int api, String abi) {
-        need(PINS.containsKey(profile) && api == 30 && abi.equals("arm64-v8a"));
+    static void context(int api, String abi) {
+        need(api == 30 && abi.equals("arm64-v8a"));
     }
 
     static boolean validUrl(String value) {
@@ -133,8 +122,8 @@ final class GalleryArm64Libraries {
         return result;
     }
 
-    static Path build(String profile, int api, String abi, Path source, Path dir) throws Exception {
-        context(profile, api, abi);
+    static Path build(int api, String abi, Path source, Path dir) throws Exception {
+        context(api, abi);
         var entries = selected(source);
         Path output = Storage.confined(dir, "gallery-arm64.zip");
         need(!Files.exists(output));
@@ -151,7 +140,7 @@ final class GalleryArm64Libraries {
     }
 
     static Map<String, byte[]> add(
-            String profile,
+            Map<String, Object> constants,
             int api,
             String abi,
             Path original,
@@ -159,7 +148,7 @@ final class GalleryArm64Libraries {
             Path component,
             Path source)
             throws Exception {
-        var entries = entries(profile, api, abi, original, input, component, source);
+        var entries = entries(constants, api, abi, original, input, component, source);
 
         need(same(entries.current(), entries.baseline()));
 
@@ -171,7 +160,7 @@ final class GalleryArm64Libraries {
     }
 
     static Map<String, byte[]> remove(
-            String profile,
+            Map<String, Object> constants,
             int api,
             String abi,
             Path original,
@@ -179,7 +168,7 @@ final class GalleryArm64Libraries {
             Path component,
             Path source)
             throws Exception {
-        var entries = entries(profile, api, abi, original, input, component, source);
+        var entries = entries(constants, api, abi, original, input, component, source);
 
         for (var e : entries.additions().entrySet()) {
             need(Arrays.equals(entries.current().get(e.getKey()), e.getValue()));
@@ -197,7 +186,7 @@ final class GalleryArm64Libraries {
             Map<String, byte[]> current) {}
 
     private static Entries entries(
-            String profile,
+            Map<String, Object> constants,
             int api,
             String abi,
             Path original,
@@ -205,8 +194,8 @@ final class GalleryArm64Libraries {
             Path component,
             Path source)
             throws Exception {
-        context(profile, api, abi);
-        need(PINS.get(profile).equals(FilesSupport.hash(original)));
+        context(api, abi);
+        need(StepConstants.admits(constants, FilesSupport.hash(original)));
         var expected = selected(source);
         var additions = NativeCore.entries(component);
         need(same(expected, additions));

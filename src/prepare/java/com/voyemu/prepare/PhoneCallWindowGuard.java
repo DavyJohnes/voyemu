@@ -16,7 +16,6 @@ import java.nio.ByteOrder;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
 import java.util.zip.Adler32;
 
@@ -25,41 +24,27 @@ import java.util.zip.Adler32;
  * branches.
  */
 final class PhoneCallWindowGuard {
-    record Variant(String apkPin, String dexPin, String outputPin) {}
+    /**
+     * The window policy of the step: the pins of the original and prepared DEX and the retained OEM
+     * behavior.
+     */
+    static Map<String, Object> policy(Map<String, Object> constants) {
+        Map<String, Object> policy = Json.obj(constants, "windowPolicy");
 
-    static final Map<String, Variant> VARIANTS =
-            Map.of(
-                    "free-11-chinese-20250710-6.11.1",
-                    new Variant(
-                            "c3b53187d5161692a338a9504e1fa288dd163896da431bf89b8ad1e8fa56b1f4",
-                            "2cfb78adf260a790f7dce035b5572b13dd7a2885126c9c2b333a862e8908f490",
-                            "e6bca757a16eb512230edc61d8368713e918c9b447e7813971dff6a07bfa31a5"),
-                    "free-11-chinese-20260731-7.3.1",
-                    new Variant(
-                            "c8a33e377a6a708ef6c3cca7e8cc3f938349c04dd494dac32bcf823a3096efa1",
-                            "e9e9710fc23ec92b9c1720c6ffbcf29c0bfdcd45c5bf8fa9a791846bd6d7c15b",
-                            "f05d6bdbfe9b1399b2e4560f26760d3cff3c65f3bae1fbc05ee55a0947ef7496"));
+        need(
+                policy.keySet()
+                                .equals(
+                                        java.util.Set.of(
+                                                "originalDexSha256",
+                                                "preparedDexSha256",
+                                                "automaticWindow",
+                                                "wechatAndManualMinimum"))
+                        && Json.str(policy, "originalDexSha256").matches("[0-9a-f]{64}")
+                        && Json.str(policy, "preparedDexSha256").matches("[0-9a-f]{64}")
+                        && "existing-oem-full-renderer".equals(policy.get("automaticWindow"))
+                        && "preserved".equals(policy.get("wechatAndManualMinimum")));
 
-    static List<String> pins(String profile) {
-        var variant = VARIANTS.get(profile);
-
-        return variant == null ? List.of() : List.of(variant.apkPin());
-    }
-
-    static Map<String, String> policy(String profile) {
-        var variant = VARIANTS.get(profile);
-
-        return variant == null
-                ? Map.of()
-                : Map.of(
-                        "originalDexSha256",
-                        variant.dexPin(),
-                        "preparedDexSha256",
-                        variant.outputPin(),
-                        "automaticWindow",
-                        "existing-oem-full-renderer",
-                        "wechatAndManualMinimum",
-                        "preserved");
+        return policy;
     }
 
     static final String OWNER =
@@ -233,31 +218,32 @@ final class PhoneCallWindowGuard {
         output[operand + 1] = (byte) (reference >>> 8);
     }
 
-    static byte[] apply(String profile, int api, Path original, byte[] dex) throws Exception {
-        need(
-                VARIANTS.containsKey(profile)
-                        && api == 30
-                        && VARIANTS.get(profile).apkPin().equals(FilesSupport.hash(original)));
-        need(dex != null && VARIANTS.get(profile).dexPin().equals(NativeCore.hash(dex)));
+    static byte[] apply(Map<String, Object> constants, int api, Path original, byte[] dex)
+            throws Exception {
+        Map<String, Object> policy = policy(constants);
+
+        need(api == 30 && StepConstants.admits(constants, FilesSupport.hash(original)));
+        need(dex != null && Json.str(policy, "originalDexSha256").equals(NativeCore.hash(dex)));
         byte[] output = rewrite(dex, false);
         need(
-                VARIANTS.get(profile).outputPin().equals(NativeCore.hash(output))
+                Json.str(policy, "preparedDexSha256").equals(NativeCore.hash(output))
                         && Arrays.equals(dex, rewrite(output, true)));
         ViewDumpPatch.checkedDex(output, NativeCore.hash(output));
 
         return output;
     }
 
-    static void validateOriginal(String profile, int api, Path original, byte[] dex)
+    static void validateOriginal(Map<String, Object> constants, int api, Path original, byte[] dex)
             throws Exception {
-        apply(profile, api, original, dex);
+        apply(constants, api, original, dex);
     }
 
-    static void verify(String profile, byte[] original, byte[] prepared) throws Exception {
+    static void verify(Map<String, Object> constants, byte[] original, byte[] prepared)
+            throws Exception {
         need(
-                VARIANTS.containsKey(profile)
-                        && original != null
-                        && VARIANTS.get(profile).dexPin().equals(NativeCore.hash(original))
+                original != null
+                        && Json.str(policy(constants), "originalDexSha256")
+                                .equals(NativeCore.hash(original))
                         && prepared != null);
         need(Arrays.equals(rewrite(original, false), prepared));
         need(Arrays.equals(original, rewrite(prepared, true)));

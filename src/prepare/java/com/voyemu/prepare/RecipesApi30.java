@@ -49,22 +49,13 @@ final class RecipesApi30 {
             String name, Recipes.Target target, List<Object> pins, List<Object> calls) {
         if (name.equals("api30-framework-libraries.json")) {
             require(
-                    target.profile().equals("free-11-chinese-20250710-6.11.1")
-                            && pins.equals(
-                                    List.of(
-                                            "aa50fb67ef3d63038a5a0001edea8d9d46c4342b5905129b036040670f25ae72",
-                                            "a53b1d5e52f25d0bb5fb8e84b743f59ef05114b861b8f30f1ada1cbd86215e7b",
-                                            "0d5e7a4c4556c19aa417cef3ded9bc0824f58e36346109e75ce0197643ce05fd",
-                                            ThirdScreenRouting.VARIANTS
-                                                    .get("free-11-chinese-20250710-6.11.1")
-                                                    .pin()))
-                            && calls.equals(
-                                    List.of(
-                                            Map.of(
-                                                    "operation",
-                                                    "useLibraries",
-                                                    "args",
-                                                    List.of(List.of("QGAPI"))))),
+                    calls.equals(
+                            List.of(
+                                    Map.of(
+                                            "operation",
+                                            "useLibraries",
+                                            "args",
+                                            List.of(List.of("QGAPI"))))),
                     "Exact QGAPI library recipe required");
         }
 
@@ -154,31 +145,20 @@ final class RecipesApi30 {
 
         if (name.equals("api30-hiboard-libraries.json")) {
             require(
-                    pins.equals(HiboardRouting.pins(target.profile()))
-                            && calls.equals(
-                                    List.of(
-                                            Map.of(
-                                                    "operation",
-                                                    "useLibraries",
-                                                    "args",
-                                                    List.of(
-                                                            List.of(
-                                                                    "QGAPI",
-                                                                    "QGMOD",
-                                                                    "QGVehicle"))))),
+                    calls.equals(
+                            List.of(
+                                    Map.of(
+                                            "operation",
+                                            "useLibraries",
+                                            "args",
+                                            List.of(List.of("QGAPI", "QGMOD", "QGVehicle"))))),
                     "Exact OEM Hiboard framework dependencies required");
         }
 
         if (name.equals("api30-hiboard-startup.json")) {
             require(
-                    pins.equals(HiboardStartupGuard.pins(target.profile()))
-                            && calls.equals(
-                                    List.of(
-                                            Map.of(
-                                                    "operation",
-                                                    "guardHiboardStartup",
-                                                    "args",
-                                                    List.of()))),
+                    calls.equals(
+                            List.of(Map.of("operation", "guardHiboardStartup", "args", List.of()))),
                     "Exact Hiboard startup operation required");
         }
 
@@ -327,17 +307,20 @@ final class RecipesApi30 {
             case "guardPhoneProvider" -> {
                 require(
                         name.equals(PhoneProviderGuard.NAME + ".json")
-                                && pins.equals(PhoneProviderGuard.pins(target.profile()))
                                 && args.isEmpty()
-                                && calls.equals(PhoneProviderGuard.calls(target.profile()))
-                                && PhoneCallWindowGuard.policy(target.profile())
-                                        .equals(metadata.get("windowPolicy"))
-                                && metadata.get("helperSources") instanceof List<?>
-                                && Json.list(metadata.get("helperSources"))
+                                && calls.size() == 2
+                                && calls.get(0)
                                         .equals(
-                                                PhoneProviderGuard.sourceInventory(
-                                                        target.profile())),
+                                                Map.of(
+                                                        "operation",
+                                                        "guardPhoneProvider",
+                                                        "args",
+                                                        List.of()))
+                                && "useLibraries"
+                                        .equals(Json.object(calls.get(1)).get("operation")),
                         "Exact Phone provider recipe required");
+                PhoneCallWindowGuard.policy(Json.obj(metadata, "constants"));
+                PhoneProviderGuard.sourceInventory(Json.obj(metadata, "constants"));
                 target.guardPhoneProvider(false);
             }
             case "guardAudioPolicy" -> {
@@ -457,7 +440,6 @@ final class RecipesApi30 {
             case "guardStockStatusBar" -> {
                 require(
                         name.equals(StockStatusBarGuard.NAME + ".json")
-                                && pins.equals(StockStatusBarGuard.pins(target.profile()))
                                 && args.isEmpty()
                                 && calls.size() == 1,
                         "Exact stock status-bar operation required");
@@ -696,7 +678,6 @@ final class RecipesApi30 {
             case "routeSystemUi" -> {
                 require(
                         name.equals(SystemUiRouting.NAME + ".json")
-                                && pins.equals(SystemUiRouting.pins(target.profile()))
                                 && args.isEmpty()
                                 && !routedFreeSystemUi,
                         "Exact two-status-bar routing operation required");
@@ -706,7 +687,6 @@ final class RecipesApi30 {
             case "guardHiboardStartup" -> {
                 require(
                         name.equals("api30-hiboard-startup.json")
-                                && pins.equals(HiboardStartupGuard.pins(target.profile()))
                                 && args.isEmpty()
                                 && calls.size() == 1,
                         "Exact Hiboard startup operation required");
@@ -715,7 +695,6 @@ final class RecipesApi30 {
             case "routeHiboard" -> {
                 require(
                         name.equals(HiboardRouting.NAME + ".json")
-                                && pins.equals(HiboardRouting.pins(target.profile()))
                                 && args.isEmpty()
                                 && !routedFreeHiboard
                                 && calls.size() == 1
@@ -728,7 +707,6 @@ final class RecipesApi30 {
             case "routeRearScreen" -> {
                 require(
                         name.equals(ThirdScreenRouting.NAME + ".json")
-                                && pins.equals(ThirdScreenRouting.pins(target.profile()))
                                 && args.isEmpty()
                                 && !routedRearScreen
                                 && calls.size() == 1
@@ -752,7 +730,6 @@ final class RecipesApi30 {
             case "guardCameraVirtual" -> {
                 require(
                         name.equals(CameraVirtualGuard.NAME + ".json")
-                                && pins.equals(CameraVirtualGuard.pins(target.profile()))
                                 && args.isEmpty()
                                 && calls.size() == 1
                                 && CameraVirtualGuard.HELPER_PATH.equals(metadata.get("helper")),
@@ -1060,7 +1037,6 @@ final class RecipesApi30 {
             case "guardGalleryArm64" -> {
                 require(
                         name.equals(GalleryArm64Libraries.NAME + ".json")
-                                && pins.equals(GalleryArm64Libraries.pins(target.profile()))
                                 && args.isEmpty()
                                 && calls.size() == 1,
                         "Exact Gallery ARM64 operation required");

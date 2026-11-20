@@ -33,7 +33,7 @@ final class OriginalNaviEglGuard {
     }
 
     static byte[] apply(String profile, int api, byte[] b) throws Exception {
-        need("free-11-chinese-20260731-7.3.1".equals(profile) && api == 30 && b != null);
+        need(api == 30 && b != null);
         var dex = new DexBackedDexFile(Opcodes.forApi(30), b);
         Map<String, ClassDef> old = new TreeMap<>(), out = new TreeMap<>();
 

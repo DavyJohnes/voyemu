@@ -76,11 +76,7 @@ public class OriginalNaviVehicleGuard {
 
     static byte[] apply(String profile, int api, String abi, Path jar, byte[] raw)
             throws Exception {
-        need(
-                "free-11-chinese-20260731-7.3.1".equals(profile)
-                        && api == 30
-                        && "arm64-v8a".equals(abi),
-                "profile");
+        need(api == 30 && "arm64-v8a".equals(abi), "profile");
         need(
                 "d95d1b05418660d278fbaf2e6e390f8849d3dd23555a38d8d1965efb85cccede"
                                 .equals(hash(Files.readAllBytes(jar)))

@@ -20,9 +20,7 @@ import java.util.zip.Adler32;
 // The profile is H97C (NVRAM 43=134). Navi's separate UID cannot read system-private NVRAM.
 // Select the same OEM H97C provider as the OEM's explicit H97C-pad branch; retain all controllers.
 final class NaviVehicleGuard {
-    static final String NAME = "api30-navi-vehicle",
-            PIN = NaviVersionGuard.PIN,
-            PROFILE = NaviVersionGuard.PROFILE;
+    static final String NAME = "api30-navi-vehicle", PIN = NaviVersionGuard.PIN;
 
     static void need(boolean value) {
         Failure.require(
@@ -87,8 +85,7 @@ final class NaviVehicleGuard {
     static void validate(String profile, int api, String abi, Path apk, byte[] source)
             throws Exception {
         need(
-                PROFILE.equals(profile)
-                        && api == 30
+                api == 30
                         && abi.equals("arm64-v8a")
                         && FilesSupport.hash(apk).equals(PIN)
                         && source != null);

@@ -24,22 +24,6 @@ import java.util.TreeMap;
 
 /** Only the pinned AOSP status-bar window is collapsed; OEM bars retain their own lifecycle. */
 final class StockStatusBarGuard {
-    record Variant(String pin) {}
-
-    static final Map<String, Variant> VARIANTS =
-            Map.of(
-                    "free-11-chinese-20250710-6.11.1",
-                    new Variant("e66e289a7d5f7bd807a1310b91b83758a2eb8b1400dd882d59ebc57bab49c897"),
-                    "free-11-chinese-20260731-7.3.1",
-                    new Variant(
-                            "e66e289a7d5f7bd807a1310b91b83758a2eb8b1400dd882d59ebc57bab49c897"));
-
-    static List<String> pins(String profile) {
-        var variant = VARIANTS.get(profile);
-
-        return variant == null ? List.of() : List.of(variant.pin());
-    }
-
     static final String NAME = "api30-stock-statusbar";
     static final String OWNER = "Lcom/android/systemui/statusbar/phone/StatusBarWindowController;",
             ROUTER = "Lcom/voyemu/output/StockStatusBarWindow;";
@@ -82,12 +66,12 @@ final class StockStatusBarGuard {
         return out;
     }
 
-    static void validate(String profile, int api, Path original, byte[] dex) throws Exception {
+    static void validate(Map<String, Object> constants, int api, Path original, byte[] dex)
+            throws Exception {
         require(
-                VARIANTS.containsKey(profile)
-                        && api == 30
+                api == 30
                         && original != null
-                        && FilesSupport.hash(original).equals(VARIANTS.get(profile).pin()));
+                        && StepConstants.admits(constants, FilesSupport.hash(original)));
         require(dex != null);
 
         for (var m : methods(dex)) {
@@ -173,8 +157,9 @@ final class StockStatusBarGuard {
                         "V"));
     }
 
-    static byte[] apply(String profile, int api, Path original, byte[] dex) throws Exception {
-        validate(profile, api, original, dex);
+    static byte[] apply(Map<String, Object> constants, int api, Path original, byte[] dex)
+            throws Exception {
+        validate(constants, api, original, dex);
         var classes = new TreeMap<String, ClassDef>();
 
         for (var c : new DexBackedDexFile(Opcodes.forApi(30), dex).getClasses()) {
@@ -222,7 +207,7 @@ final class StockStatusBarGuard {
                 FrameworkDexMaterializer.serialize(
                         new ImmutableDexFile(Opcodes.forApi(30), classes.values()));
         verifyRestorable(dex, output, classes);
-        require(FilesSupport.hash(original).equals(VARIANTS.get(profile).pin()));
+        require(StepConstants.admits(constants, FilesSupport.hash(original)));
 
         return output;
     }

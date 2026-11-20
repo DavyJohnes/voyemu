@@ -67,482 +67,47 @@ final class HiboardRouting {
 
     record Body(String method, int access, int registers, List<Site> sites) {}
 
-    /** Profile data; jumbo marks the input whose serialization widens const-string. */
-    record Variant(String pin, List<Body> bodies, boolean jumbo) {}
+    /**
+     * The routed bodies the step declares for its original: method, access flags, registers and
+     * sites as [address, name, count, c, d, e, f, g].
+     */
+    static List<Body> bodies(Map<String, Object> constants) {
+        List<Body> result = new ArrayList<>();
 
-    static final Map<String, Variant> VARIANTS =
-            Map.of(
-                    "free-11-chinese-20250710-6.11.1",
-                    new Variant(
-                            "648c91cccacae25b6810f93b44bfa2b7aed71cadee44353a964d09658cb8f858",
-                            List.of(
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/BlindsWindow$3;->onAnimationEnd(Landroid/animation/Animator;)V",
-                                            1,
-                                            5,
-                                            List.of(new Site(45, "removeView", 2, 4, 0, 0, 0, 0))),
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/BlindsWindow;->moveWindow(ZI)V",
-                                            2,
-                                            8,
-                                            List.of(new Site(283, "removeView", 2, 6, 7, 0, 0, 0))),
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/BlindsWindow;->updatePosition(I)V",
-                                            2,
-                                            5,
-                                            List.of(
-                                                    new Site(57, "addView", 3, 4, 0, 1, 0, 0),
-                                                    new Site(
-                                                            67,
-                                                            "updateViewLayout",
-                                                            3,
-                                                            4,
-                                                            0,
-                                                            1,
-                                                            0,
-                                                            0))),
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/BlindsWindow;->onStartTrackingTouch()V",
-                                            0,
-                                            4,
-                                            List.of(new Site(31, "addView", 3, 0, 1, 2, 0, 0))),
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/BlindsWindow;->update()V",
-                                            1,
-                                            4,
-                                            List.of(
-                                                    new Site(14, "addView", 3, 0, 1, 2, 0, 0),
-                                                    new Site(
-                                                            24,
-                                                            "updateViewLayout",
-                                                            3,
-                                                            0,
-                                                            1,
-                                                            2,
-                                                            0,
-                                                            0))),
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/BlindsWindow;->update(Lcom/qinggan/app/hiboard/BlindsWindow$LayoutParams;)V",
-                                            1,
-                                            4,
-                                            List.of(
-                                                    new Site(12, "addView", 3, 0, 1, 3, 0, 0),
-                                                    new Site(
-                                                            20,
-                                                            "updateViewLayout",
-                                                            3,
-                                                            0,
-                                                            1,
-                                                            3,
-                                                            0,
-                                                            0))),
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/system/HiboardBar$10;->run()V",
-                                            1,
-                                            3,
-                                            List.of(
-                                                    new Site(8, "removeView", 2, 0, 1, 0, 0, 0),
-                                                    new Site(19, "removeView", 2, 0, 1, 0, 0, 0))),
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/system/HiboardBar$11;->run()V",
-                                            1,
-                                            3,
-                                            List.of(
-                                                    new Site(4, "removeView", 2, 0, 1, 0, 0, 0),
-                                                    new Site(11, "removeView", 2, 0, 1, 0, 0, 0))),
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/system/HiboardBar$12;->run()V",
-                                            1,
-                                            3,
-                                            List.of(
-                                                    new Site(
-                                                            44,
-                                                            "removeViewImmediate",
-                                                            2,
-                                                            0,
-                                                            1,
-                                                            0,
-                                                            0,
-                                                            0))),
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/BaseControlModel$1;->onDimUpdate(IZ)V",
-                                            1,
-                                            6,
-                                            List.of(
-                                                    new Site(81, "removeView", 2, 5, 0, 0, 0, 0),
-                                                    new Site(115, "addView", 3, 5, 0, 1, 0, 0))),
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/BaseControlModel$2;->onDimUpdate(IZ)V",
-                                            1,
-                                            6,
-                                            List.of(
-                                                    new Site(59, "removeView", 2, 5, 0, 0, 0, 0),
-                                                    new Site(93, "addView", 3, 5, 0, 1, 0, 0))),
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/BaseControlModel;->removeDimBackground()V",
-                                            2,
-                                            3,
-                                            List.of(new Site(7, "removeView", 2, 1, 0, 0, 0, 0))),
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/BaseControlModel;->removeSecondDimBackground()V",
-                                            2,
-                                            3,
-                                            List.of(new Site(7, "removeView", 2, 1, 0, 0, 0, 0))),
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/system/HiboardBar;->amendThemeIfNeeded()V",
-                                            2,
-                                            22,
-                                            List.of(
-                                                    new Site(218, "addView", 3, 1, 4, 12, 0, 0),
-                                                    new Site(221, "addView", 3, 1, 5, 3, 0, 0))),
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/system/HiboardBar;->showThemeChangeLoadingLayout()V",
-                                            2,
-                                            6,
-                                            List.of(
-                                                    new Site(
-                                                            151,
-                                                            "removeViewImmediate",
-                                                            2,
-                                                            0,
-                                                            2,
-                                                            0,
-                                                            0,
-                                                            0),
-                                                    new Site(158, "addView", 3, 0, 2, 3, 0, 0))),
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/system/HiboardBar;->setTheme(IILjava/lang/String;)V",
-                                            1,
-                                            22,
-                                            List.of(
-                                                    new Site(282, "addView", 3, 8, 5, 3, 0, 0),
-                                                    new Site(287, "addView", 3, 3, 6, 7, 0, 0))),
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/system/HiboardBar;->show()V",
-                                            1,
-                                            4,
-                                            List.of(new Site(14, "addView", 3, 0, 1, 2, 0, 0))),
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/system/SecondHiboardBar;->show()V",
-                                            1,
-                                            4,
-                                            List.of(new Site(14, "addView", 3, 0, 1, 2, 0, 0))),
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/vehiclehiboard/main/VehicleHiBoardBarNew;->addWindowView(Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V",
-                                            2,
-                                            4,
-                                            List.of(new Site(2, "addView", 3, 0, 2, 3, 0, 0))),
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/vehiclehiboard/main/VehicleHiBoardBarNew;->removeWindowView(Landroid/view/View;)V",
-                                            2,
-                                            3,
-                                            List.of(new Site(2, "removeView", 2, 0, 2, 0, 0, 0))),
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/vehiclehiboard/main/VehicleHiBoardBarNew;->doScreenLift(I)V",
-                                            1,
-                                            7,
-                                            List.of(
-                                                    new Site(
-                                                            135,
-                                                            "updateViewLayout",
-                                                            3,
-                                                            2,
-                                                            3,
-                                                            4,
-                                                            0,
-                                                            0))),
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/vehiclehiboard/main/VehicleHiBoardBarNew;->show()V",
-                                            1,
-                                            4,
-                                            List.of(new Site(14, "addView", 3, 0, 1, 2, 0, 0))),
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/vehiclehiboard/main/VehicleHiBoardBarNewOTA;->addWindowView(Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V",
-                                            2,
-                                            4,
-                                            List.of(new Site(2, "addView", 3, 0, 2, 3, 0, 0))),
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/vehiclehiboard/main/VehicleHiBoardBarNewOTA;->removeWindowView(Landroid/view/View;)V",
-                                            2,
-                                            3,
-                                            List.of(new Site(2, "removeView", 2, 0, 2, 0, 0, 0))),
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/vehiclehiboard/main/VehicleHiBoardBarNewOTA;->doScreenLift(I)V",
-                                            1,
-                                            7,
-                                            List.of(
-                                                    new Site(
-                                                            142,
-                                                            "updateViewLayout",
-                                                            3,
-                                                            2,
-                                                            3,
-                                                            4,
-                                                            0,
-                                                            0))),
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/vehiclehiboard/main/VehicleHiBoardBarNewOTA;->show()V",
-                                            1,
-                                            4,
-                                            List.of(new Site(14, "addView", 3, 0, 1, 2, 0, 0))),
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/vehiclehiboard/second/SecondVehicleHiboardBar;->doScreenLift(I)V",
-                                            1,
-                                            5,
-                                            List.of(
-                                                    new Site(
-                                                            153,
-                                                            "updateViewLayout",
-                                                            3,
-                                                            4,
-                                                            0,
-                                                            1,
-                                                            0,
-                                                            0))),
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/vehiclehiboard/second/SecondVehicleHiboardBar;->show()V",
-                                            1,
-                                            4,
-                                            List.of(new Site(14, "addView", 3, 0, 1, 2, 0, 0)))),
-                            true),
-                    "free-11-chinese-20260731-7.3.1",
-                    new Variant(
-                            "902562587355d9e48d3878773da7955cd5a793c03e5ba6e5b595a317c7ec0f39",
-                            List.of(
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/BlindsWindow$3;->onAnimationEnd(Landroid/animation/Animator;)V",
-                                            1,
-                                            5,
-                                            List.of(new Site(45, "removeView", 2, 4, 0, 0, 0, 0))),
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/BlindsWindow;->moveWindow(ZI)V",
-                                            2,
-                                            8,
-                                            List.of(new Site(283, "removeView", 2, 6, 7, 0, 0, 0))),
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/BlindsWindow;->updatePosition(I)V",
-                                            2,
-                                            5,
-                                            List.of(
-                                                    new Site(57, "addView", 3, 4, 0, 1, 0, 0),
-                                                    new Site(
-                                                            67,
-                                                            "updateViewLayout",
-                                                            3,
-                                                            4,
-                                                            0,
-                                                            1,
-                                                            0,
-                                                            0))),
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/BlindsWindow;->onStartTrackingTouch()V",
-                                            0,
-                                            4,
-                                            List.of(new Site(31, "addView", 3, 0, 1, 2, 0, 0))),
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/BlindsWindow;->update()V",
-                                            1,
-                                            4,
-                                            List.of(
-                                                    new Site(14, "addView", 3, 0, 1, 2, 0, 0),
-                                                    new Site(
-                                                            24,
-                                                            "updateViewLayout",
-                                                            3,
-                                                            0,
-                                                            1,
-                                                            2,
-                                                            0,
-                                                            0))),
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/BlindsWindow;->update(Lcom/qinggan/app/hiboard/BlindsWindow$LayoutParams;)V",
-                                            1,
-                                            4,
-                                            List.of(
-                                                    new Site(12, "addView", 3, 0, 1, 3, 0, 0),
-                                                    new Site(
-                                                            20,
-                                                            "updateViewLayout",
-                                                            3,
-                                                            0,
-                                                            1,
-                                                            3,
-                                                            0,
-                                                            0))),
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/system/HiboardBar$13;->run()V",
-                                            1,
-                                            3,
-                                            List.of(
-                                                    new Site(8, "removeView", 2, 0, 1, 0, 0, 0),
-                                                    new Site(19, "removeView", 2, 0, 1, 0, 0, 0))),
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/system/HiboardBar$14;->run()V",
-                                            1,
-                                            3,
-                                            List.of(
-                                                    new Site(4, "removeView", 2, 0, 1, 0, 0, 0),
-                                                    new Site(11, "removeView", 2, 0, 1, 0, 0, 0))),
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/system/HiboardBar$15;->run()V",
-                                            1,
-                                            3,
-                                            List.of(
-                                                    new Site(
-                                                            44,
-                                                            "removeViewImmediate",
-                                                            2,
-                                                            0,
-                                                            1,
-                                                            0,
-                                                            0,
-                                                            0))),
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/BaseControlModel$1;->onDimUpdate(IZ)V",
-                                            1,
-                                            6,
-                                            List.of(
-                                                    new Site(81, "removeView", 2, 5, 0, 0, 0, 0),
-                                                    new Site(115, "addView", 3, 5, 0, 1, 0, 0))),
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/BaseControlModel$2;->onDimUpdate(IZ)V",
-                                            1,
-                                            6,
-                                            List.of(
-                                                    new Site(59, "removeView", 2, 5, 0, 0, 0, 0),
-                                                    new Site(93, "addView", 3, 5, 0, 1, 0, 0))),
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/BaseControlModel;->removeDimBackground()V",
-                                            2,
-                                            3,
-                                            List.of(new Site(7, "removeView", 2, 1, 0, 0, 0, 0))),
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/BaseControlModel;->removeSecondDimBackground()V",
-                                            2,
-                                            3,
-                                            List.of(new Site(7, "removeView", 2, 1, 0, 0, 0, 0))),
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/system/HiboardBar;->amendThemeIfNeeded()V",
-                                            2,
-                                            22,
-                                            List.of(
-                                                    new Site(218, "addView", 3, 1, 4, 12, 0, 0),
-                                                    new Site(221, "addView", 3, 1, 5, 3, 0, 0))),
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/system/HiboardBar;->showThemeChangeLoadingLayout()V",
-                                            2,
-                                            6,
-                                            List.of(
-                                                    new Site(
-                                                            151,
-                                                            "removeViewImmediate",
-                                                            2,
-                                                            0,
-                                                            2,
-                                                            0,
-                                                            0,
-                                                            0),
-                                                    new Site(158, "addView", 3, 0, 2, 3, 0, 0))),
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/system/HiboardBar;->setTheme(IILjava/lang/String;)V",
-                                            1,
-                                            22,
-                                            List.of(
-                                                    new Site(282, "addView", 3, 8, 5, 3, 0, 0),
-                                                    new Site(287, "addView", 3, 3, 6, 7, 0, 0))),
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/system/HiboardBar;->show()V",
-                                            1,
-                                            4,
-                                            List.of(new Site(14, "addView", 3, 0, 1, 2, 0, 0))),
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/system/SecondHiboardBar;->show()V",
-                                            1,
-                                            4,
-                                            List.of(new Site(14, "addView", 3, 0, 1, 2, 0, 0))),
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/vehiclehiboard/main/VehicleHiBoardBarNew;->addWindowView(Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V",
-                                            2,
-                                            4,
-                                            List.of(new Site(2, "addView", 3, 0, 2, 3, 0, 0))),
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/vehiclehiboard/main/VehicleHiBoardBarNew;->removeWindowView(Landroid/view/View;)V",
-                                            2,
-                                            3,
-                                            List.of(new Site(2, "removeView", 2, 0, 2, 0, 0, 0))),
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/vehiclehiboard/main/VehicleHiBoardBarNew;->doScreenLift(I)V",
-                                            1,
-                                            7,
-                                            List.of(
-                                                    new Site(
-                                                            135,
-                                                            "updateViewLayout",
-                                                            3,
-                                                            2,
-                                                            3,
-                                                            4,
-                                                            0,
-                                                            0))),
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/vehiclehiboard/main/VehicleHiBoardBarNew;->show()V",
-                                            1,
-                                            4,
-                                            List.of(new Site(14, "addView", 3, 0, 1, 2, 0, 0))),
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/vehiclehiboard/main/VehicleHiBoardBarNewOTA;->addWindowView(Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V",
-                                            2,
-                                            4,
-                                            List.of(new Site(2, "addView", 3, 0, 2, 3, 0, 0))),
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/vehiclehiboard/main/VehicleHiBoardBarNewOTA;->removeWindowView(Landroid/view/View;)V",
-                                            2,
-                                            3,
-                                            List.of(new Site(2, "removeView", 2, 0, 2, 0, 0, 0))),
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/vehiclehiboard/main/VehicleHiBoardBarNewOTA;->doScreenLift(I)V",
-                                            1,
-                                            7,
-                                            List.of(
-                                                    new Site(
-                                                            142,
-                                                            "updateViewLayout",
-                                                            3,
-                                                            2,
-                                                            3,
-                                                            4,
-                                                            0,
-                                                            0))),
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/vehiclehiboard/main/VehicleHiBoardBarNewOTA;->show()V",
-                                            1,
-                                            4,
-                                            List.of(new Site(14, "addView", 3, 0, 1, 2, 0, 0))),
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/vehiclehiboard/second/SecondVehicleHiboardBar;->doScreenLift(I)V",
-                                            1,
-                                            5,
-                                            List.of(
-                                                    new Site(
-                                                            153,
-                                                            "updateViewLayout",
-                                                            3,
-                                                            4,
-                                                            0,
-                                                            1,
-                                                            0,
-                                                            0))),
-                                    new Body(
-                                            "Lcom/qinggan/app/hiboard/vehiclehiboard/second/SecondVehicleHiboardBar;->show()V",
-                                            1,
-                                            4,
-                                            List.of(new Site(14, "addView", 3, 0, 1, 2, 0, 0)))),
-                            false));
+        for (Object item : Json.list(constants.get("hiboard_bodies"))) {
+            Map<String, Object> body = Json.object(item);
+            List<Site> sites = new ArrayList<>();
 
-    static List<String> pins(String profile) {
-        var variant = VARIANTS.get(profile);
+            for (Object value : Json.list(body.get("sites"))) {
+                List<Object> site = Json.list(value);
+                require(site.size() == 8 && site.get(1) instanceof String);
+                sites.add(
+                        new Site(
+                                number(site.get(0)),
+                                (String) site.get(1),
+                                number(site.get(2)),
+                                number(site.get(3)),
+                                number(site.get(4)),
+                                number(site.get(5)),
+                                number(site.get(6)),
+                                number(site.get(7))));
+            }
 
-        return variant == null ? List.of() : List.of(variant.pin());
+            result.add(
+                    new Body(
+                            Json.str(body, "method"),
+                            Math.toIntExact(Json.integer(body, "access")),
+                            Math.toIntExact(Json.integer(body, "registers")),
+                            List.copyOf(sites)));
+        }
+
+        return List.copyOf(result);
+    }
+
+    private static int number(Object value) {
+        require(value instanceof Long);
+
+        return Math.toIntExact((Long) value);
     }
 
     static Method normalized(Method method) {
@@ -671,8 +236,8 @@ final class HiboardRouting {
                 3);
     }
 
-    static Body body(String profile, Method m) {
-        for (var b : VARIANTS.get(profile).bodies()) {
+    static Body body(List<Body> bodies, Method m) {
+        for (var b : bodies) {
             if (b.method().equals(m.toString())) {
                 return b;
             }
@@ -692,17 +257,16 @@ final class HiboardRouting {
         rewrite(m, b, true);
     }
 
-    static void validate(String profile, int api, Path original, byte[] dex) throws Exception {
-        require(
-                VARIANTS.containsKey(profile)
-                        && api == 30
-                        && FilesSupport.hash(original).equals(VARIANTS.get(profile).pin()));
+    static void validate(Map<String, Object> constants, int api, Path original, byte[] dex)
+            throws Exception {
+        require(api == 30 && StepConstants.admits(constants, FilesSupport.hash(original)));
+        List<Body> bodies = bodies(constants);
         require(dex != null);
         int found = 0;
 
         for (var c : new DexBackedDexFile(Opcodes.forApi(30), dex).getClasses()) {
             for (var m : c.getMethods()) {
-                var b = body(profile, m);
+                var b = body(bodies, m);
 
                 if (b != null) {
                     validateMethod(m, b);
@@ -711,7 +275,7 @@ final class HiboardRouting {
             }
         }
 
-        require(found == VARIANTS.get(profile).bodies().size());
+        require(found == bodies.size());
     }
 
     static Method rewrite(Method m, Body b, boolean forward) {
@@ -777,17 +341,17 @@ final class HiboardRouting {
                 code);
     }
 
-    private static ClassDef rewriteClass(String profile, ClassDef c, boolean forward) {
+    private static ClassDef rewriteClass(List<Body> bodies, ClassDef c, boolean forward) {
         var direct = new ArrayList<Method>();
         var virtual = new ArrayList<Method>();
 
         for (var m : c.getDirectMethods()) {
-            var b = body(profile, m);
+            var b = body(bodies, m);
             direct.add(b == null ? m : rewrite(m, b, forward));
         }
 
         for (var m : c.getVirtualMethods()) {
-            var b = body(profile, m);
+            var b = body(bodies, m);
             virtual.add(b == null ? m : rewrite(m, b, forward));
         }
 
@@ -804,14 +368,16 @@ final class HiboardRouting {
                 virtual);
     }
 
-    static byte[] apply(String profile, int api, Path original, byte[] dex) throws Exception {
-        validate(profile, api, original, dex);
+    static byte[] apply(Map<String, Object> constants, int api, Path original, byte[] dex)
+            throws Exception {
+        validate(constants, api, original, dex);
+        List<Body> bodies = bodies(constants);
         var before = new TreeMap<String, ClassDef>();
         var changed = new TreeMap<String, ClassDef>();
 
         for (var c : new DexBackedDexFile(Opcodes.forApi(30), dex).getClasses()) {
             require(before.put(c.getType(), c) == null);
-            changed.put(c.getType(), rewriteClass(profile, c, true));
+            changed.put(c.getType(), rewriteClass(bodies, c, true));
         }
 
         byte[] out =
@@ -826,7 +392,7 @@ final class HiboardRouting {
         require(read.keySet().equals(before.keySet()));
 
         for (var e : read.entrySet()) {
-            if (VARIANTS.get(profile).jumbo()) {
+            if (StepConstants.flag(constants, "hiboard_jumbo")) {
                 ClassDef expected = normalized(changed.get(e.getKey())),
                         actual = normalized(e.getValue());
 
@@ -842,7 +408,7 @@ final class HiboardRouting {
                 }
 
                 ClassDef normalizedOriginal = normalized(before.get(e.getKey())),
-                        restored = normalized(rewriteClass(profile, e.getValue(), false));
+                        restored = normalized(rewriteClass(bodies, e.getValue(), false));
 
                 if (!FrameworkDexMaterializer.semantic(normalizedOriginal)
                         .equals(FrameworkDexMaterializer.semantic(restored))) {
@@ -863,11 +429,11 @@ final class HiboardRouting {
                         FrameworkDexMaterializer.semantic(before.get(e.getKey()))
                                 .equals(
                                         FrameworkDexMaterializer.semantic(
-                                                rewriteClass(profile, e.getValue(), false))));
+                                                rewriteClass(bodies, e.getValue(), false))));
             }
         }
 
-        require(FilesSupport.hash(original).equals(VARIANTS.get(profile).pin()));
+        require(StepConstants.admits(constants, FilesSupport.hash(original)));
 
         return out;
     }

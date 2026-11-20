@@ -32,22 +32,6 @@ import java.util.TreeMap;
 
 /** Exact OEM Camera-only adaptation to an actual virtual BACK camera. */
 final class CameraVirtualGuard {
-    record Variant(String pin) {}
-
-    static final Map<String, Variant> VARIANTS =
-            Map.of(
-                    "free-11-chinese-20250710-6.11.1",
-                    new Variant("17e34bdc4d4bdfd8a42cc99feb3bc7165f0c1ad90bc131127b1618e45b672507"),
-                    "free-11-chinese-20260731-7.3.1",
-                    new Variant(
-                            "c680a80c0bfb13911979693c7dc46e8f75df69b361fc6f17a3a94aef28fbaabf"));
-
-    static List<String> pins(String profile) {
-        var variant = VARIANTS.get(profile);
-
-        return variant == null ? List.of() : List.of(variant.pin());
-    }
-
     static final String NAME = "api30-camera-virtual",
             HELPER = "Lcom/voyemu/camera/BackCameraProbe;";
     static final String
@@ -83,13 +67,12 @@ final class CameraVirtualGuard {
         return m.getDefiningClass() + "->" + m.getName();
     }
 
-    static void validate(String profile, int api, String abi, Path apk, byte[] raw)
+    static void validate(Map<String, Object> constants, int api, String abi, Path apk, byte[] raw)
             throws Exception {
         need(
-                VARIANTS.containsKey(profile)
-                        && api == 30
+                api == 30
                         && "arm64-v8a".equals(abi)
-                        && VARIANTS.get(profile).pin().equals(FilesSupport.hash(apk))
+                        && StepConstants.admits(constants, FilesSupport.hash(apk))
                         && raw != null);
         var seen = new HashSet<String>();
 
@@ -377,9 +360,9 @@ final class CameraVirtualGuard {
         b.addInstruction(selector + 1, new BuilderInstruction11x(Opcode.MOVE_RESULT_OBJECT, 2));
     }
 
-    static byte[] apply(String profile, int api, String abi, Path apk, byte[] raw)
+    static byte[] apply(Map<String, Object> constants, int api, String abi, Path apk, byte[] raw)
             throws Exception {
-        validate(profile, api, abi, apk, raw);
+        validate(constants, api, abi, apk, raw);
         var before = classes(raw);
         var output = new TreeMap<String, ClassDef>();
 

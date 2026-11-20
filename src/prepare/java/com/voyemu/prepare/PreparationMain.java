@@ -160,13 +160,11 @@ public final class PreparationMain {
             return Api28CodecNativeFile.outputs(request, profile, sourcePins, android, pinned);
         }
 
-        boolean passion = Api30NativeFiles.PASSION.equals(profile.id()),
-                qinggan11 =
-                        Api30NativeFiles.QINGGAN11_731.equals(profile.id())
-                                || Api30NativeFiles.QINGGAN11_611.equals(profile.id());
+        boolean passion = "passion".equals(profile.data().get("platform")),
+                qinggan11 = "qinggan11".equals(profile.data().get("platform"));
         var specs =
-                Api30NativeFiles.forProfile(
-                        profile.id(),
+                Api30NativeFiles.forPlatform(
+                        profile.data().get("platform"),
                         Json.obj(profile.data(), "patches").containsKey("original-navi-mac"));
         int policyIndex = nativePolicyIndex(specs, passion);
         long fileNodes =

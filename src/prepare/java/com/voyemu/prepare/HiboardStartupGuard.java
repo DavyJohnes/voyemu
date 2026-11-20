@@ -17,24 +17,12 @@ import org.jf.dexlib2.immutable.ImmutableMethod;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.zip.ZipFile;
 
 /** Preserve existing component state until the real OEM light snapshot is available. */
 final class HiboardStartupGuard {
-    static final Map<String, String> PINS =
-            Map.of(
-                    "free-11-chinese-20250710-6.11.1",
-                    "648c91cccacae25b6810f93b44bfa2b7aed71cadee44353a964d09658cb8f858",
-                    "free-11-chinese-20260731-7.3.1",
-                    "902562587355d9e48d3878773da7955cd5a793c03e5ba6e5b595a317c7ec0f39");
-
-    static List<String> pins(String profile) {
-        return PINS.containsKey(profile) ? List.of(PINS.get(profile)) : List.of();
-    }
-
     static final String
             OWNER = "Lcom/qinggan/app/hiboard/vehiclehiboard/main/ComponentSmallOTA1x1View;",
             TARGET = OWNER + "->updateUI(Z)V";
@@ -135,42 +123,36 @@ final class HiboardStartupGuard {
                 code);
     }
 
-    static void validateOriginalChain(String profile, int api, Path original, byte[] clean)
-            throws Exception {
-        HiboardRouting.validate(profile, api, original, clean);
-        byte[] routed = HiboardRouting.apply(profile, api, original, clean);
+    static void validateOriginalChain(
+            Map<String, Object> constants, int api, Path original, byte[] clean) throws Exception {
+        HiboardRouting.validate(constants, api, original, clean);
+        byte[] routed = HiboardRouting.apply(constants, api, original, clean);
         validate(target(classes(routed)));
     }
 
-    static void validateRouted(String profile, int api, Path original, byte[] routed)
+    static void validateRouted(Map<String, Object> constants, int api, Path original, byte[] routed)
             throws Exception {
-        require(
-                PINS.containsKey(profile)
-                        && api == 30
-                        && FilesSupport.hash(original).equals(PINS.get(profile)));
+        require(api == 30 && StepConstants.admits(constants, FilesSupport.hash(original)));
         byte[] clean;
 
         try (var z = new ZipFile(original.toFile())) {
             clean = z.getInputStream(z.getEntry("classes.dex")).readAllBytes();
         }
 
-        require(Arrays.equals(routed, HiboardRouting.apply(profile, api, original, clean)));
+        require(Arrays.equals(routed, HiboardRouting.apply(constants, api, original, clean)));
         validate(target(classes(routed)));
     }
 
-    static byte[] apply(String profile, int api, Path original, byte[] predecessor)
+    static byte[] apply(Map<String, Object> constants, int api, Path original, byte[] predecessor)
             throws Exception {
-        require(
-                PINS.containsKey(profile)
-                        && api == 30
-                        && FilesSupport.hash(original).equals(PINS.get(profile)));
+        require(api == 30 && StepConstants.admits(constants, FilesSupport.hash(original)));
         byte[] clean;
 
         try (var z = new ZipFile(original.toFile())) {
             clean = z.getInputStream(z.getEntry("classes.dex")).readAllBytes();
         }
 
-        byte[] expected = HiboardRouting.apply(profile, api, original, clean);
+        byte[] expected = HiboardRouting.apply(constants, api, original, clean);
         require(Arrays.equals(expected, predecessor));
         var before = classes(predecessor);
         var old = target(before);
@@ -221,7 +203,7 @@ final class HiboardStartupGuard {
                             .equals(FrameworkDexMaterializer.semantic(reread.get(e.getKey()))));
         }
 
-        require(FilesSupport.hash(original).equals(PINS.get(profile)));
+        require(StepConstants.admits(constants, FilesSupport.hash(original)));
 
         return result;
     }

@@ -10,111 +10,84 @@ import java.util.TreeMap;
 final class PhoneProviderGuard {
     static final String NAME = "api30-phone-provider";
     private static final String INPUT = "com/voyemu/input/";
-
-    private record Variant(String apk, String prefix, List<String> libraries) {
-        List<String> sources() {
-            return List.of(prefix + "PhoneControlProvider.java", prefix + "PhonePeerProvider.java");
-        }
-    }
-
-    private static final Map<String, Variant> VARIANTS =
-            Map.of(
-                    "free-11-chinese-20250710-6.11.1",
-                    new Variant(
-                            "c3b53187d5161692a338a9504e1fa288dd163896da431bf89b8ad1e8fa56b1f4",
-                            "profiles/free-11-chinese-20250710-6.11.1/patches/phone-provider/src/com/voyemu/input/",
-                            List.of("QGAPI", "QGMOD")),
-                    "free-11-chinese-20260731-7.3.1",
-                    new Variant(
-                            "c8a33e377a6a708ef6c3cca7e8cc3f938349c04dd494dac32bcf823a3096efa1",
-                            "profiles/free-09-chinese-20260106-6.0.3/patches/phone-provider/src/com/voyemu/input/",
-                            List.of("QGAPI", "QGMOD", "QGVehicle")));
-
-    static List<String> pins(String profile) {
-        var variant = VARIANTS.get(profile);
-
-        return variant == null ? List.of() : List.of(variant.apk());
-    }
-
-    static List<Object> calls(String profile) {
-        var variant = VARIANTS.get(profile);
-
-        return variant == null
-                ? List.of()
-                : List.of(
-                        Map.of("operation", "guardPhoneProvider", "args", List.of()),
-                        Map.of("operation", "useLibraries", "args", List.of(variant.libraries())));
-    }
-
-    static List<Object> sourceInventory(String profile) {
-        var variant = VARIANTS.get(profile);
-
-        return variant == null ? List.of() : List.copyOf(variant.sources());
-    }
+    private static final List<String> FILES =
+            List.of(INPUT + "PhoneControlProvider.java", INPUT + "PhonePeerProvider.java");
 
     private static void need(boolean value, String message) {
         Failure.require(value, "PHONE_PROVIDER_CONTRACT", message, 5);
     }
 
-    static Map<String, byte[]> sources(ProfileRegistry.Profile profile) throws Exception {
-        var variant = VARIANTS.get(profile.referenceProfile());
+    /**
+     * The repository paths of the provider helper sources the step declares: the two providers
+     * under one profiles/ directory.
+     */
+    static List<String> sourceInventory(Map<String, Object> constants) {
+        List<String> paths = StepConstants.texts(constants, "helperSources");
 
-        need(variant != null, "Exact API30 ARM64 profile required");
+        need(
+                paths.size() == FILES.size()
+                        && paths.get(0).endsWith(FILES.get(0))
+                        && paths.get(0).startsWith("profiles/")
+                        && !paths.get(0).contains("..")
+                        && paths.get(1).equals(directory(paths) + FILES.get(1)),
+                "Exact shared Phone provider sources required");
+
+        return paths;
+    }
+
+    // The source root that holds com/voyemu/input/ of the declared helper sources.
+    private static String directory(List<String> paths) {
+        return paths.get(0).substring(0, paths.get(0).length() - FILES.get(0).length());
+    }
+
+    static Map<String, byte[]> sources(
+            ProfileRegistry.Profile profile, Map<String, Object> constants) throws Exception {
         Map<String, byte[]> result = new TreeMap<>();
 
-        for (String path : variant.sources()) {
+        for (String path : sourceInventory(constants)) {
             result.put(path, ProfileRegistry.bytes(profile, "voyemu/" + path));
         }
 
-        verifySources(profile.referenceProfile(), result);
+        verifySources(constants, result);
 
         return result;
     }
 
-    static void verifySources(String profile, Map<String, byte[]> sources) throws Exception {
+    static void verifySources(Map<String, Object> constants, Map<String, byte[]> sources)
+            throws Exception {
         need(
-                VARIANTS.containsKey(profile)
-                        && sources.keySet().equals(Set.copyOf(VARIANTS.get(profile).sources())),
+                sources.keySet().equals(Set.copyOf(sourceInventory(constants))),
                 "Exact shared Phone provider sources required");
     }
 
-    static byte[] manifest(String profile, int api, String abi, Path original, byte[] manifest)
+    static byte[] manifest(
+            Map<String, Object> constants, int api, String abi, Path original, byte[] manifest)
             throws Exception {
+        need(api == 30 && "arm64-v8a".equals(abi), "Exact API30 ARM64 profile required");
+        // Acquisition integrity only; semantic acceptance follows.
         need(
-                VARIANTS.containsKey(profile) && api == 30 && "arm64-v8a".equals(abi),
-                "Exact API30 ARM64 profile required");
-        NativeCore.pinned(
-                original,
-                VARIANTS.get(profile)
-                        .apk()); // Acquisition integrity only; semantic acceptance follows.
+                StepConstants.admits(constants, FilesSupport.hash(original)),
+                "Pinned OEM Phone original required");
         PhoneConsumerContract.verify(PhoneConsumerContract.read(original));
 
         return PhoneManifest.add(manifest);
     }
 
-    /** The repository source directory of the provider helper, or null for other profiles. */
-    static Path source(ProfileRegistry.Profile profile) throws Exception {
-        var variant = VARIANTS.get(profile.referenceProfile());
-
-        if (variant == null) {
-            return null;
-        }
-
+    /** The repository source directory of the provider helper the step declares. */
+    static Path source(ProfileRegistry.Profile profile, Map<String, Object> constants)
+            throws Exception {
         need(profile.sourceRoot() != null, "Repository Phone provider sources required");
 
-        return Storage.confined(
-                profile.sourceRoot(),
-                variant.prefix().substring(0, variant.prefix().length() - INPUT.length()));
+        return Storage.confined(profile.sourceRoot(), directory(sourceInventory(constants)));
     }
 
-    static Path compile(String profile, Path source, Path platform, Path work) throws Exception {
+    static Path compile(Path source, Path platform, Path work) throws Exception {
         need(
-                VARIANTS.containsKey(profile)
-                        && GuestJava.sources(source)
-                                .equals(
-                                        Set.of(
-                                                INPUT + "PhoneControlProvider.java",
-                                                INPUT + "PhonePeerProvider.java")),
+                GuestJava.sources(source)
+                        .equals(
+                                Set.of(
+                                        INPUT + "PhoneControlProvider.java",
+                                        INPUT + "PhonePeerProvider.java")),
                 "Exact shared Phone provider sources required");
         Path dex = GuestJava.dex(new GuestJava.Unit(source, 30), platform, work.resolve("java"));
 

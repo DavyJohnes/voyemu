@@ -23,22 +23,6 @@ import java.util.TreeMap;
 
 // Only the two original OEM status-bar add/remove paths need a display-specific WindowManager.
 final class SystemUiRouting {
-    record Variant(String pin) {}
-
-    static final Map<String, Variant> VARIANTS =
-            Map.of(
-                    "free-11-chinese-20250710-6.11.1",
-                    new Variant("0d5e7a4c4556c19aa417cef3ded9bc0824f58e36346109e75ce0197643ce05fd"),
-                    "free-11-chinese-20260731-7.3.1",
-                    new Variant(
-                            "b676a3a426ba3b59fabb9d98355ff0e0ac7b07d7ad6545ac44d9cbf85f1700c1"));
-
-    static List<String> pins(String profile) {
-        var variant = VARIANTS.get(profile);
-
-        return variant == null ? List.of() : List.of(variant.pin());
-    }
-
     static final String NAME = "api30-systemui-routing";
     static final String OWNER = "Lcom/qinggan/systemui/statusbar/phone/PhoneStatusBar;",
             ROUTER = "Lcom/voyemu/output/StatusBarRouter;";
@@ -73,11 +57,9 @@ final class SystemUiRouting {
         return out;
     }
 
-    static void validate(String profile, int api, Path original, byte[] dex) throws Exception {
-        require(
-                VARIANTS.containsKey(profile)
-                        && api == 30
-                        && FilesSupport.hash(original).equals(VARIANTS.get(profile).pin()));
+    static void validate(Map<String, Object> constants, int api, Path original, byte[] dex)
+            throws Exception {
+        require(api == 30 && StepConstants.admits(constants, FilesSupport.hash(original)));
         require(dex != null);
 
         for (var m : methods(dex)) {
@@ -152,8 +134,9 @@ final class SystemUiRouting {
                 body);
     }
 
-    static byte[] apply(String profile, int api, Path original, byte[] dex) throws Exception {
-        validate(profile, api, original, dex);
+    static byte[] apply(Map<String, Object> constants, int api, Path original, byte[] dex)
+            throws Exception {
+        validate(constants, api, original, dex);
         var classes = new TreeMap<String, ClassDef>();
 
         for (var c : new DexBackedDexFile(Opcodes.forApi(30), dex).getClasses()) {
@@ -210,7 +193,7 @@ final class SystemUiRouting {
                             .equals(FrameworkDexMaterializer.semantic(read.get(entry.getKey()))));
         }
 
-        require(FilesSupport.hash(original).equals(VARIANTS.get(profile).pin()));
+        require(StepConstants.admits(constants, FilesSupport.hash(original)));
 
         return output;
     }

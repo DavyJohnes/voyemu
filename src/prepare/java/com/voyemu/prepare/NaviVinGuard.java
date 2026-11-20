@@ -26,7 +26,6 @@ import java.util.TreeMap;
 /** Propagate genuine OEM VIN only when the existing activation input is empty. */
 final class NaviVinGuard {
     static final String NAME = "api30-navi-vin",
-            PROFILE = NaviVehicleGuard.PROFILE,
             PIN = NaviVehicleGuard.PIN,
             OWNER = "Lcom/baidu/navisdk/integration/controller/carinfo/CarInfoProvider;",
             HELPER = "Lcom/voyemu/navi/GenuineVin;";
@@ -68,8 +67,7 @@ final class NaviVinGuard {
     static void validate(String profile, int api, String abi, Path apk, byte[] raw)
             throws Exception {
         need(
-                PROFILE.equals(profile)
-                        && api == 30
+                api == 30
                         && "arm64-v8a".equals(abi)
                         && PIN.equals(FilesSupport.hash(apk))
                         && raw != null);

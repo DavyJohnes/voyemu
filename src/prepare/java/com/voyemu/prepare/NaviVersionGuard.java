@@ -15,8 +15,7 @@ import java.util.zip.Adler32;
 
 // Android 11 rejects the OEM's optional custom Settings.System version key.
 final class NaviVersionGuard {
-    static final String PROFILE = "free-11-chinese-20260731-7.3.1",
-            NAME = "api30-navi-version",
+    static final String NAME = "api30-navi-version",
             PIN = "dceddff70db38bacb50ebffa46d36da76f70e5596c6184bca51c48c3ed562a05";
     static final String OWNER = "Lcom/baidu/navisdk/integration/FlavorCustomIntegrationManager;";
 
@@ -39,8 +38,7 @@ final class NaviVersionGuard {
     static void validate(String profile, int api, String abi, Path apk, byte[] dex)
             throws Exception {
         require(
-                PROFILE.equals(profile)
-                        && api == 30
+                api == 30
                         && abi.equals("arm64-v8a")
                         && PIN.equals(FilesSupport.hash(apk))
                         && dex != null);

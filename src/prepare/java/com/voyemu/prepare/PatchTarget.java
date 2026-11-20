@@ -44,8 +44,7 @@ final class PatchTarget implements Recipes.Target {
     private final Map<String, Object> constants;
     private final boolean planValidation;
 
-    PatchTarget(
-            Patch patch, Path stepRoot, Map<String, Object> constants, boolean planValidation) {
+    PatchTarget(Patch patch, Path stepRoot, Map<String, Object> constants, boolean planValidation) {
         profile = patch.profile();
         api = patch.api();
         abi = patch.abi();
@@ -217,34 +216,24 @@ final class PatchTarget implements Recipes.Target {
 
     @Override
     public void guardPhoneProvider(boolean apply) throws Exception {
-        Path source = PhoneProviderGuard.source(profile);
+        Path source = PhoneProviderGuard.source(profile, constants);
         byte[] manifest =
                 PhoneProviderGuard.manifest(
-                        profile.referenceProfile(),
-                        api,
-                        abi,
-                        input,
-                        entries.get("AndroidManifest.xml"));
+                        constants, api, abi, input, entries.get("AndroidManifest.xml"));
 
         if (!apply) {
             PhoneCallWindowGuard.validateOriginal(
-                    profile.referenceProfile(), api, input, entries.get("classes.dex"));
+                    constants, api, input, entries.get("classes.dex"));
         }
 
         if (apply) {
             byte[] window =
-                    PhoneCallWindowGuard.apply(
-                            profile.referenceProfile(), api, input, entries.get("classes.dex"));
-            entries.put(
-                    "classes.dex",
-                    PhoneDisconnectGuard.apply(profile.referenceProfile(), api, input, window));
+                    PhoneCallWindowGuard.apply(constants, api, input, entries.get("classes.dex"));
+            entries.put("classes.dex", PhoneDisconnectGuard.apply(constants, api, input, window));
             entries.put("AndroidManifest.xml", manifest);
             Path dex =
                     PhoneProviderGuard.compile(
-                            profile.referenceProfile(),
-                            source,
-                            tools.platform(),
-                            dir.resolve("phone-provider-helper"));
+                            source, tools.platform(), dir.resolve("phone-provider-helper"));
             added.addAll(FilesSupport.tree(dex).values());
         }
     }
@@ -327,15 +316,10 @@ final class PatchTarget implements Recipes.Target {
             entries.put(
                     "classes.dex",
                     CameraVirtualGuard.apply(
-                            profile.referenceProfile(),
-                            api,
-                            abi,
-                            input,
-                            entries.get("classes.dex")));
+                            constants, api, abi, input, entries.get("classes.dex")));
             addDex(CameraVirtualGuard.HELPER_ROOT);
         } else {
-            CameraVirtualGuard.validate(
-                    profile.referenceProfile(), api, abi, input, entries.get("classes.dex"));
+            CameraVirtualGuard.validate(constants, api, abi, input, entries.get("classes.dex"));
         }
     }
 
@@ -633,7 +617,7 @@ final class PatchTarget implements Recipes.Target {
                 3);
         var next =
                 GalleryArm64Libraries.add(
-                        profile.referenceProfile(),
+                        constants,
                         api,
                         abi,
                         input,
@@ -961,12 +945,10 @@ final class PatchTarget implements Recipes.Target {
         if (apply) {
             entries.put(
                     "classes.dex",
-                    StockStatusBarGuard.apply(
-                            profile.referenceProfile(), api, input, entries.get("classes.dex")));
+                    StockStatusBarGuard.apply(constants, api, input, entries.get("classes.dex")));
             addDex("api30-stock-statusbar/src");
         } else {
-            StockStatusBarGuard.validate(
-                    profile.referenceProfile(), api, input, entries.get("classes.dex"));
+            StockStatusBarGuard.validate(constants, api, input, entries.get("classes.dex"));
         }
     }
 
@@ -1336,12 +1318,10 @@ final class PatchTarget implements Recipes.Target {
         if (apply) {
             entries.put(
                     "classes.dex",
-                    SystemUiRouting.apply(
-                            profile.referenceProfile(), api, input, entries.get("classes.dex")));
+                    SystemUiRouting.apply(constants, api, input, entries.get("classes.dex")));
             addDex("systemui-routing/src");
         } else {
-            SystemUiRouting.validate(
-                    profile.referenceProfile(), api, input, entries.get("classes.dex"));
+            SystemUiRouting.validate(constants, api, input, entries.get("classes.dex"));
         }
     }
 
@@ -1350,14 +1330,12 @@ final class PatchTarget implements Recipes.Target {
         if (apply) {
             entries.put(
                     "classes.dex",
-                    HiboardStartupGuard.apply(
-                            profile.referenceProfile(), api, input, entries.get("classes.dex")));
+                    HiboardStartupGuard.apply(constants, api, input, entries.get("classes.dex")));
         } else if (planValidation) {
             HiboardStartupGuard.validateOriginalChain(
-                    profile.referenceProfile(), api, input, entries.get("classes.dex"));
+                    constants, api, input, entries.get("classes.dex"));
         } else {
-            HiboardStartupGuard.validateRouted(
-                    profile.referenceProfile(), api, input, entries.get("classes.dex"));
+            HiboardStartupGuard.validateRouted(constants, api, input, entries.get("classes.dex"));
         }
     }
 
@@ -1374,12 +1352,10 @@ final class PatchTarget implements Recipes.Target {
         if (apply) {
             entries.put(
                     "classes.dex",
-                    HiboardRouting.apply(
-                            profile.referenceProfile(), api, input, entries.get("classes.dex")));
+                    HiboardRouting.apply(constants, api, input, entries.get("classes.dex")));
             addDex("api30-hiboard-routing/src");
         } else {
-            HiboardRouting.validate(
-                    profile.referenceProfile(), api, input, entries.get("classes.dex"));
+            HiboardRouting.validate(constants, api, input, entries.get("classes.dex"));
         }
     }
 
@@ -1405,14 +1381,10 @@ final class PatchTarget implements Recipes.Target {
             entries.put(
                     ThirdScreenRouting.DEX,
                     ThirdScreenRouting.apply(
-                            profile.referenceProfile(),
-                            api,
-                            input,
-                            entries.get(ThirdScreenRouting.DEX)));
+                            constants, api, input, entries.get(ThirdScreenRouting.DEX)));
             addDex("api30-thirdscreen-rear/src");
         } else {
-            ThirdScreenRouting.validate(
-                    profile.referenceProfile(), api, input, entries.get(ThirdScreenRouting.DEX));
+            ThirdScreenRouting.validate(constants, api, input, entries.get(ThirdScreenRouting.DEX));
         }
     }
 

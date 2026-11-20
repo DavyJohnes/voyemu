@@ -3,17 +3,15 @@ package com.voyemu.prepare;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.file.Path;
+import java.util.Map;
 
 /** Exact typed versionCode1 -> 2 so SYSTEM supersedes the previously preserved DATA1 APK. */
 final class SettingsManifest {
-    static final String PROFILE = "free-11-chinese-20260731-7.3.1";
-
-    static void validate(String profile, int api, Path original, byte[] manifest) throws Exception {
+    static void validate(Map<String, Object> constants, int api, Path original, byte[] manifest)
+            throws Exception {
         Failure.require(
-                PROFILE.equals(profile)
-                        && api == 30
-                        && SettingsVoiceCloneGuard.pins(PROFILE)
-                                .contains(FilesSupport.hash(original))
+                api == 30
+                        && StepConstants.admits(constants, FilesSupport.hash(original))
                         && manifest != null
                         && manifest.length == 17408
                         && manifest[9095] == 0x10
@@ -24,17 +22,19 @@ final class SettingsManifest {
                 3);
     }
 
-    static void validateOriginal(String profile, int api, Path original, byte[] manifest)
+    static void validateOriginal(
+            Map<String, Object> constants, int api, Path original, byte[] manifest)
             throws Exception {
         validate(
-                profile,
+                constants,
                 api,
                 original,
                 ManifestLibraries.add(manifest, java.util.List.of("QGAPI", "QGMOD", "QGVehicle")));
     }
 
-    static byte[] apply(String profile, int api, Path original, byte[] manifest) throws Exception {
-        validate(profile, api, original, manifest);
+    static byte[] apply(Map<String, Object> constants, int api, Path original, byte[] manifest)
+            throws Exception {
+        validate(constants, api, original, manifest);
         byte[] out = manifest.clone();
         ByteBuffer.wrap(out).order(ByteOrder.LITTLE_ENDIAN).putInt(9096, 2);
 
