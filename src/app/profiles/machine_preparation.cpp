@@ -657,8 +657,7 @@ void android_candidate_promote_labelled_system(const std::filesystem::path &mach
         android_candidate_require_unused_root_image(file);
     }
 
-    need(std::filesystem::space(machine).available >= reserve,
-         "disk reserve before labelled base promotion");
+    require_disk_space("MACHINE_PREPARATION", machine, 0, reserve);
     // Both paths are in the unpublished owned candidate. A failure after rename
     // aborts that candidate; no running or published machine can observe it.
     std::filesystem::rename(raw, base);

@@ -495,12 +495,21 @@ void prepare_android_candidate_base(const std::filesystem::path &source, const J
                          : std::filesystem::space(destination.parent_path()).available;
     };
 
+    // Short space fails with the disk space error that names the installation root.
+    const auto require_space = [&](std::uint64_t required) {
+        if (const auto free = space(); free < required) {
+            throw disk_space_error("MACHINE_PREPARATION", installation_root_of(destination), free,
+                                   required);
+        }
+    };
+
     for (auto it = files.begin(); it != files.end(); ++it) {
         relative(it.key());
     }
 
-    need(reserve <= std::numeric_limits<std::uint64_t>::max() - (16ULL << 30) && space() >= reserve,
+    need(reserve <= std::numeric_limits<std::uint64_t>::max() - (16ULL << 30),
          "disk reserve before private base copy");
+    require_space(reserve);
     ensure_private_directory(destination.parent_path());
     need(std::filesystem::create_directory(destination), "exclusive candidate directory");
     try {
@@ -519,12 +528,12 @@ void prepare_android_candidate_base(const std::filesystem::path &source, const J
             // itself checks the real disk only when none is injected.
             copy_portable_image(input, expected, target, available ? 0 : reserve);
             check_file(target, expected);
-            need(space() >= reserve, "disk reserve during private base copy");
+            require_space(reserve);
         }
 
-        need(peak_extra <= std::numeric_limits<std::uint64_t>::max() - reserve &&
-                     space() >= checked_add(reserve, peak_extra),
+        need(peak_extra <= std::numeric_limits<std::uint64_t>::max() - reserve,
              "disk reserve for candidate/export after clean base copy");
+        require_space(checked_add(reserve, peak_extra));
     } catch (...) {
         std::filesystem::remove_all(destination);
         throw;

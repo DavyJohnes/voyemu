@@ -753,6 +753,21 @@ void verify_candidate_storage() {
     // Exact measured-peak boundary: one byte below denies, exactly at peak accepts.
     attempt("peak-boundary", before, reserve + peak_extra, true);
     attempt("peak-one-short", before, reserve + peak_extra - 1, false);
+    // Short space names the free and required space and the installation root.
+    {
+        const auto target = directory / "short-space";
+        std::string failure;
+        try {
+            prepare_android_candidate_base(source, files, target, reserve, peak_extra, [&] {
+                return reserve - 1;
+            });
+        } catch (const std::exception &error) {
+            failure = error.what();
+        }
+
+        check(failure.starts_with("MACHINE_PREPARATION: not enough disk space: ") &&
+              !std::filesystem::exists(target));
+    }
     // An injected measurement stands for the disk: a reserve beyond any real disk still publishes
     // when the measurement admits it, so the budget checks below do not depend on this host.
     {

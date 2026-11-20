@@ -11,6 +11,7 @@
 #include "capture_png.hpp"
 #include "check.hpp"
 #include "deps.hpp"
+#include "disk_space.hpp"
 #include "e2fs_helper.hpp"
 #include "error.hpp"
 #include "java_preparation.hpp"
