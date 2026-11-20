@@ -9,7 +9,8 @@
 namespace voyemu::os {
 namespace {
 // libcurl option, information and result numbers of the stable ABI (curl/curl.h).
-constexpr int curl_ok = 0;
+constexpr int curl_ok = 0, curl_resolve_proxy = 5, curl_resolve_host = 6, curl_connect = 7,
+              curl_timeout = 28;
 constexpr long curl_global_default = 3, curl_protocol_https = 2;
 constexpr int option_write_data = 10001, option_url = 10002, option_error_buffer = 10010,
               option_write_function = 20011, option_low_speed_limit = 19,
@@ -181,9 +182,25 @@ void curl_https_get(const Curl &curl, const std::string &url,
 
     if (result != curl_ok || status != 200) {
         const char *reason = detail[0] ? detail : curl.easy_strerror(result);
-        throw VoyemuError("DOWNLOAD_HTTP",
-                          "successful complete HTTPS response required: " +
-                                  std::string(reason ? reason : "unknown curl failure"));
+        const auto message = "successful complete HTTPS response required: " +
+                             std::string(reason ? reason : "unknown curl failure");
+
+        if (status >= 400) {
+            throw HttpsFailure(HttpsFailure::Kind::status, status, message);
+        }
+
+        // Results 5, 6 and 7 resolve no proxy or host or connect to none; 28 times out, before a
+        // response while connecting or after one while the body stalls.
+        if (result == curl_resolve_proxy || result == curl_resolve_host || result == curl_connect ||
+            (result == curl_timeout && status == 0)) {
+            throw HttpsFailure(HttpsFailure::Kind::unreachable, 0, message);
+        }
+
+        if (result == curl_timeout) {
+            throw HttpsFailure(HttpsFailure::Kind::stalled, status, message);
+        }
+
+        throw VoyemuError("DOWNLOAD_HTTP", message);
     }
 }
 

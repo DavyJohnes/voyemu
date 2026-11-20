@@ -53,7 +53,10 @@ void validate(const DownloadPin &pin) {
     }
 }
 
-std::uint64_t verify(const std::filesystem::path &file, const DownloadPin &pin) {
+// A received file that differs from its pin is the console error that names the download; the
+// caller removes it.
+std::uint64_t verify(const std::filesystem::path &file, const DownloadPin &pin,
+                     bool received = false) {
     if (!std::filesystem::is_regular_file(std::filesystem::symlink_status(file)) ||
         std::filesystem::hard_link_count(file) != 1 ||
         std::filesystem::file_size(file) > pin.maximum_bytes) {
@@ -63,6 +66,11 @@ std::uint64_t verify(const std::filesystem::path &file, const DownloadPin &pin) 
     const auto identity = cache_file_identity(file);
 
     if (sha256_file(file) != pin.sha256) {
+        if (received) {
+            throw cli::LocalizedError("DOWNLOAD_SHA", "error.download_sha",
+                                      progress::named(download_names(pin)));
+        }
+
         throw VoyemuError("DOWNLOAD_SHA", "cached or received bytes differ from pin");
     }
 
@@ -164,6 +172,29 @@ bool first_report(const std::filesystem::path &file) {
 
     return reported_files.insert(file).second;
 }
+
+// The console error of a transfer failure: an unreachable host, a stalled transfer or an HTTP
+// status; the code stays DOWNLOAD_HTTP.
+cli::LocalizedError network_error(const os::HttpsFailure &failure, const DownloadPin &pin,
+                                  const std::string &host) {
+    auto arguments = progress::named(download_names(pin));
+
+    arguments["host"] = host;
+
+    if (failure.kind == os::HttpsFailure::Kind::unreachable) {
+        return {"DOWNLOAD_HTTP", "error.network_unreachable", arguments};
+    }
+
+    if (failure.kind == os::HttpsFailure::Kind::stalled) {
+        arguments["seconds"] = "60";
+
+        return {"DOWNLOAD_HTTP", "error.network_stalled", arguments};
+    }
+
+    arguments["status"] = std::to_string(failure.status);
+
+    return {"DOWNLOAD_HTTP", "error.network_http", arguments};
+}
 } // namespace
 
 std::string download_name(const DownloadPin &pin) {
@@ -205,7 +236,8 @@ DownloadedBlob download_pinned(const DownloadPin &pin, const std::filesystem::pa
     }
 
     if (offline) {
-        throw VoyemuError("DOWNLOAD_OFFLINE", "pinned cache file missing");
+        throw cli::LocalizedError("DOWNLOAD_OFFLINE", "error.download_offline",
+                                  progress::named(download_names(pin)));
     }
 
     require_disk_space("DOWNLOAD_SPACE", cache, 0, reserve);
@@ -309,9 +341,13 @@ DownloadedBlob download_pinned(const DownloadPin &pin, const std::filesystem::pa
             }
 
             break;
+        } catch (const os::HttpsFailure &failure) {
+            throw network_error(failure, pin, host);
         } catch (const os::HttpsBusy &busy) {
             if (attempt == 7 || received) {
-                throw;
+                throw cli::LocalizedError(
+                        "DOWNLOAD_HTTP", "error.network_busy",
+                        {{"host", host}, {"status", std::to_string(busy.status)}});
             }
 
             const auto delay = busy.retry_after_seconds >= 0
@@ -379,7 +415,8 @@ DownloadedBlob download_pinned(const DownloadPin &pin, const std::filesystem::pa
     }
 
     cleanup.stream = nullptr;
-    const auto bytes = verify(temporary, pin);
+    const auto bytes = verify(temporary, pin, true);
+
     meter.finish();
     first_report(destination);
 #ifdef _WIN32

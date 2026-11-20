@@ -102,6 +102,13 @@ void https_get(const std::string &url, const std::vector<std::string> &headers,
                             extra.empty() ? 0 : static_cast<DWORD>(extra.size()),
                             WINHTTP_NO_REQUEST_DATA, 0, 0, 0) ||
         !WinHttpReceiveResponse(request.value, nullptr)) {
+        const auto error = GetLastError();
+
+        if (error == ERROR_WINHTTP_NAME_NOT_RESOLVED || error == ERROR_WINHTTP_CANNOT_CONNECT ||
+            error == ERROR_WINHTTP_TIMEOUT) {
+            throw HttpsFailure(HttpsFailure::Kind::unreachable, 0, "HTTPS transfer failed");
+        }
+
         throw VoyemuError("DOWNLOAD_HTTP", "HTTPS transfer failed");
     }
 
@@ -119,6 +126,12 @@ void https_get(const std::string &url, const std::vector<std::string> &headers,
                 WINHTTP_HEADER_NAME_BY_INDEX, &retry_after, &bytes, WINHTTP_NO_HEADER_INDEX);
 
         throw HttpsBusy(status, delay && retry_after ? static_cast<long long>(retry_after) : -1);
+    }
+
+    // A status that cannot be read stays 0 and names no status.
+    if (status != 200 && status) {
+        throw HttpsFailure(HttpsFailure::Kind::status, static_cast<long>(status),
+                           "successful complete response required");
     }
 
     if (status != 200) {
@@ -142,6 +155,11 @@ void https_get(const std::string &url, const std::vector<std::string> &headers,
 
         if (!WinHttpReadData(request.value, buffer.data(), static_cast<DWORD>(buffer.size()),
                              &count)) {
+            if (GetLastError() == ERROR_WINHTTP_TIMEOUT) {
+                throw HttpsFailure(HttpsFailure::Kind::stalled, static_cast<long>(status),
+                                   "response read failed");
+            }
+
             throw VoyemuError("DOWNLOAD_HTTP", "response read failed");
         }
 

@@ -19,6 +19,21 @@ struct HttpsBusy : VoyemuError {
     long status;
     long long retry_after_seconds;
 };
+// The DOWNLOAD_HTTP failure whose cause the console names: the host was not reached, the transfer
+// stalled without a received byte, or the final response had an HTTP status other than 200.
+struct HttpsFailure : VoyemuError {
+    enum class Kind {
+        unreachable,
+        stalled,
+        status
+    };
+
+    HttpsFailure(Kind failure, long status_code, const std::string &message)
+        : VoyemuError("DOWNLOAD_HTTP", message), kind(failure), status(status_code) {}
+
+    Kind kind;
+    long status;
+};
 // One HTTPS GET with the extra request headers that follows at most five HTTPS redirects and passes
 // the body of the final 200 response to sink in order. HTTP 429 and 503 throw HttpsBusy, other
 // failures DOWNLOAD_HTTP, or DOWNLOAD_LIBRARY when the host lacks the system library that does

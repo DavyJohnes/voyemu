@@ -173,6 +173,43 @@ int main(int argc, char **argv) try {
         });
     });
     assert(busy_requests == 1);
+    // A failed download names its cause for the console: no connection, a stalled transfer, an
+    // HTTP status, a pin mismatch or an offline cache miss; each keeps its code.
+    const auto failure = [&](const std::filesystem::path &cache, bool offline,
+                             const DownloadTransport &failing) {
+        try {
+            download_pinned(pin, cache, offline, 0, failing);
+        } catch (const cli::LocalizedError &error) {
+            return error.render(cli::Language::english);
+        }
+
+        return std::string();
+    };
+    const auto failing = [](os::HttpsFailure::Kind kind, long status) -> DownloadTransport {
+        return [kind, status](const DownloadPin &, const DownloadSink &) {
+            throw os::HttpsFailure(kind, status, "fixture");
+        };
+    };
+    assert(failure(root / "network", false, failing(os::HttpsFailure::Kind::unreachable, 0)) ==
+           "DOWNLOAD_HTTP: no connection to example.invalid.\nCheck your internet connection and "
+           "run the command again. Files already downloaded are kept.");
+    assert(failure(root / "network", false, failing(os::HttpsFailure::Kind::stalled, 200)) ==
+           "DOWNLOAD_HTTP: the download of pinned stalled: no data for 60 s.\nCheck your "
+           "connection and run the command again. This download starts over; other files are "
+           "kept.");
+    assert(failure(root / "network", false, failing(os::HttpsFailure::Kind::status, 404)) ==
+           "DOWNLOAD_HTTP: example.invalid answered HTTP 404 for pinned.\nThe file is not "
+           "published or was removed. Update Voyemu; if the error persists, report it.");
+    assert(failure(root / "network", false,
+                   [](const auto &, const auto &sink) {
+                       sink("bad");
+                   }) ==
+           "DOWNLOAD_SHA: the downloaded pinned does not match its pinned SHA-256.\nThe "
+           "file was deleted. Run the command again; if the error persists, report it.");
+    assert(failure(root / "network", true, transport) ==
+           "DOWNLOAD_OFFLINE: pinned is not downloaded and --offline forbids downloads.\nRun the "
+           "command without --offline while online.");
+    assert(std::filesystem::is_empty(root / "network"));
     auto encoded = pin;
     encoded.encoding = DownloadEncoding::base64;
     const auto decoded = download_pinned(encoded, root / "base64", false, 0,

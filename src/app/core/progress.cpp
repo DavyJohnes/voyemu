@@ -118,6 +118,10 @@ void report(std::string_view key, const Arguments &arguments) {
     emit(key, arguments, false);
 }
 
+Arguments named(const Arguments &arguments) {
+    return named(arguments, console_language);
+}
+
 void block() {
     std::lock_guard lock(blocks);
 

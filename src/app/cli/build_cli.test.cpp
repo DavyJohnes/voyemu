@@ -172,13 +172,10 @@ int main(int argc, char **argv) {
                         "public API30 build did not reach genuine preparation: " + result.output);
 
                 // Observer preparation first needs the Java runtime, which offline is not cached.
-                // The console shows the code and the log; the log keeps the English text.
                 if (android_only) {
-                    require(result.output.starts_with(
-                                    "Voyemu: DOWNLOAD_OFFLINE: the operation failed.\n"
-                                    "Details are in the log: ") &&
-                                    named_log(result.output)
-                                                    .find("DOWNLOAD_OFFLINE: pinned cache file missing") !=
+                    require(result.output.starts_with("Voyemu: DOWNLOAD_OFFLINE: ") &&
+                                    result.output.find(
+                                            " is not downloaded and --offline forbids downloads.") !=
                                             std::string::npos,
                             "Android-only build did not reach observer preparation with absent fixture toolchain sources: " +
                                     result.output);

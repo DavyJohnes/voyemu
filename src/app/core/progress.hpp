@@ -18,6 +18,9 @@ cli::Language language();
 // progress.name_of.<label> (genitive, as {name_of}) with its "version"; otherwise {name_of} repeats
 // {name}.
 void report(std::string_view key, const Arguments &arguments = {});
+// The arguments with the catalog names {name} and {name_of} of their "label" in the console
+// language, as report() shows them; an error message names a component with them.
+Arguments named(const Arguments &arguments);
 // The next console line starts a new block after an empty line; a download start does this itself.
 void block();
 // Prints the empty line of a new block now, when the console has shown a progress line.
