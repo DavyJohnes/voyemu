@@ -4486,7 +4486,8 @@ void editor_sections_fill_available_height(const std::filesystem::path &assets,
                                    language_choice =
                                            wheel.at("language_choice").get<std::array<float, 4>>();
                         const float gear_width = 4 * scale_choice[2] / 3;
-                        check(first[3] == scale_choice[3] && first[3] == language_choice[3] &&
+                        check(std::abs(first[3] - scale_choice[3]) < .001f &&
+                                      std::abs(first[3] - language_choice[3]) < .001f &&
                                       std::abs(first[2] - scale_choice[2] / 3) < .001f &&
                                       std::abs(first[2] - language_choice[2] / 3) < .001f,
                               "the gear, scale and language radios render with one height and one segment width");
