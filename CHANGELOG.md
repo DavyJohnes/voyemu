@@ -4,7 +4,7 @@ English | [Русский](CHANGELOG.ru.md) | [README](README.md)
 
 ## 1.0.0-beta2 — 2026-11-18
 
-Windows x64 prerelease. This release includes the Windows archive and fixes for Windows storage checks, Android Quick Boot and native CI. The QNX cluster on Windows still needs a CI-built QNX engine. Until that engine is published, Windows machines run with Android multimedia only. `deps` and the downloads of `fetch` and `build` now report each download with its size, progress, rate and remaining time, each extraction and each step already installed, in the language of the command output; a disk space error names the free and required space, how much to free and the installation root, and `deps` and `fetch` keep 2 GiB free instead of 20 GiB. The known issues from beta1 still apply.
+Windows x64 prerelease. This release includes the Windows archive and fixes for Windows storage checks, Android Quick Boot and native CI. Windows machines now run the QNX cluster: `deps` installs the CI-built QNX engine of Windows from its pinned release asset, as on macOS and Linux. `deps` and the downloads of `fetch` and `build` now report each download with its size, progress, rate and remaining time, each extraction and each step already installed, in the language of the command output; a disk space error names the free and required space, how much to free and the installation root, and `deps` and `fetch` keep 2 GiB free instead of 20 GiB. The known issues from beta1 still apply.
 
 ## 1.0.0-beta1 — 2026-11-18
 
