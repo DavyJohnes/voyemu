@@ -536,10 +536,15 @@ final class PatchTarget implements Recipes.Target {
 
         UsbPlayerGuard.validateSource(source);
 
+        String entry = constants.containsKey("usb_player_dex")
+                ? StepConstants.text(constants, "usb_player_dex") : "classes3.dex";
+        Failure.require(entry.equals("classes2.dex") || entry.equals("classes3.dex"),
+                "PATCH_SOURCE", "Unexpected USB player DEX entry", 3);
+
         if (apply) {
             entries.put(
-                    "classes3.dex",
-                    UsbPlayerGuard.apply(constants, api, abi, input, entries.get("classes3.dex")));
+                    entry,
+                    UsbPlayerGuard.apply(constants, api, abi, input, entries.get(entry)));
             added.add(
                     UsbPlayerGuard.compileHelper(
                             constants,
@@ -551,10 +556,10 @@ final class PatchTarget implements Recipes.Target {
                             dir.resolve("helper-" + added.size())));
         } else if (planValidation) {
             UsbPlayerGuard.validateOriginal(
-                    constants, api, abi, input, entries.get("classes3.dex"));
+                    constants, api, abi, input, entries.get(entry));
         } else {
             UsbPlayerGuard.validatePrepared(
-                    constants, api, abi, input, entries.get("classes3.dex"));
+                    constants, api, abi, input, entries.get(entry));
         }
     }
 
