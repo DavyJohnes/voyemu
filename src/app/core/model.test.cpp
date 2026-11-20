@@ -321,7 +321,7 @@ int main(int argc, char **argv) try {
     (void)argc;
     (void)argv;
 #endif
-    assert(valid_profile_name(default_profile_name));
+    assert(valid_profile_name("vehicle-11-language-20260101-1.2.3"));
     assert(valid_profile_name("android-11-1.0.0") && valid_profile_name("free_2021.13"));
 
     for (const auto &name : std::vector<std::string>{

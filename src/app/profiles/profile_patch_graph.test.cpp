@@ -1,5 +1,6 @@
 #include "profile_patch_graph.hpp"
 #include "process.hpp"
+#include "profile_catalog.hpp"
 #include <algorithm>
 #include <fstream>
 #include <iostream>
@@ -29,7 +30,8 @@ int main(int argc, char **argv) {
                                         .parent_path()
                                         .parent_path()
                                         .parent_path();
-        const std::string profile = default_profile_name;
+        const std::string profile =
+                embedded_profile_names(ProfilePlatform::qinggan09, ProfileBoard::sa8155).at(0);
         const auto graph = plan_profile_patch_graph(repository, profile);
         check(!graph.contains("source_pins") && !graph.contains("profile_sha256"),
               "graph persists authoring source pins");

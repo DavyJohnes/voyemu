@@ -26,6 +26,7 @@
 #include "portable_resources.hpp"
 #include "portable_runtime.hpp"
 #include "process.hpp"
+#include "profile_catalog.hpp"
 #include "profile_identity.hpp"
 #include "profile_runtime.hpp"
 #include "qinggan09_owned_packages.hpp"

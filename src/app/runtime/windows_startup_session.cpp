@@ -3,6 +3,7 @@
 #include "can_observation.hpp"
 #include "error.hpp"
 #include "logging.hpp"
+#include "profile_catalog.hpp"
 #include "qinggan09_canbus_startup.hpp"
 #include "qinggan11_startup.hpp"
 #include "session.hpp"
@@ -1167,8 +1168,9 @@ void Session::advance_windows_android_transaction() {
 
         if (!android_events_.empty()) {
             const bool a9 = android_spec_.value("api", 0) == 28 &&
-                            android_spec_.value("reference_profile", std::string{}) ==
-                                    default_profile_name &&
+                            embedded_profile_declares(
+                                    android_spec_.value("reference_profile", std::string{}),
+                                    ProfilePlatform::qinggan09, ProfileBoard::sa8155) &&
                             android_spec_.contains("qinggan09_owned_packages");
 
             if (a9 &&
@@ -1354,8 +1356,9 @@ void Session::advance_windows_android_transaction() {
                     !transaction.attempted_mutations.contains("wheel-event:" +
                                                               std::to_string(event.sequence))) {
                     const bool a9 = android_spec_.value("api", 0) == 28 &&
-                                    android_spec_.value("reference_profile", std::string{}) ==
-                                            default_profile_name &&
+                                    embedded_profile_declares(
+                                            android_spec_.value("reference_profile", std::string{}),
+                                            ProfilePlatform::qinggan09, ProfileBoard::sa8155) &&
                                     android_spec_.contains("qinggan09_owned_packages");
                     const auto plan = windows_wheel_dispatch(
                             android_events_, WindowsAndroidTransaction::Clock::now());

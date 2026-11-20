@@ -3,6 +3,7 @@
 #include "machine_preparation.hpp"
 #include "os/fs.hpp"
 #include "process.hpp"
+#include "profile_catalog.hpp"
 #include "quickboot.hpp"
 #include <algorithm>
 #include <fstream>
@@ -11,6 +12,14 @@
 #include <set>
 #include <utility>
 using namespace voyemu;
+
+// The bundled Android 9 profile on the 8155 board, read from the catalog.
+static const std::string &qinggan09_profile() {
+    static const auto id =
+            embedded_profile_names(ProfilePlatform::qinggan09, ProfileBoard::sa8155).at(0);
+
+    return id;
+}
 
 static void extraction_cache_checks(const std::filesystem::path &scratch) {
     const auto cache = scratch / "native-android-inputs";
@@ -258,7 +267,7 @@ static void native_executable_reserve_checks(const std::filesystem::path &root) 
         }
     }
 
-    for (const auto *ref : {"free-11-chinese-20260731-7.3.1", default_profile_name}) {
+    for (const auto *ref : {"free-11-chinese-20260731-7.3.1", qinggan09_profile().c_str()}) {
         auto bad = profile;
         bad["capture"] = {{"profile", id}, {"referenceProfile", ref}};
 
@@ -272,14 +281,14 @@ static void native_executable_reserve_checks(const std::filesystem::path &root) 
                  {"revision", "1"},
                  {"sha256", "86844d2edf6ba7c7f11261f6be3fb37788c985cfcf3b8924cfe9f57a1ccbc0a9"}}}};
 
-    if (native_profile_executable_reserve(a9, default_profile_name) != (8ULL << 30)) {
+    if (native_profile_executable_reserve(a9, qinggan09_profile()) != (8ULL << 30)) {
         throw std::runtime_error("Exact A9 executable reserve differs");
     }
 
     const std::string wrapper = "free-09-chinese-20260106-6.0.3-copy";
     auto wrapped = a9;
     wrapped["id"] = wrapper;
-    wrapped["capture"] = {{"profile", wrapper}, {"referenceProfile", default_profile_name}};
+    wrapped["capture"] = {{"profile", wrapper}, {"referenceProfile", qinggan09_profile()}};
 
     if (native_profile_executable_reserve(wrapped, wrapper) != (8ULL << 30)) {
         throw std::runtime_error("Exact A9 local copy reserve differs from A9");
@@ -293,13 +302,13 @@ static void native_executable_reserve_checks(const std::filesystem::path &root) 
 
     a9["android"]["revision"] = "2";
 
-    if (native_profile_executable_reserve(a9, default_profile_name) != (20ULL << 30)) {
+    if (native_profile_executable_reserve(a9, qinggan09_profile()) != (20ULL << 30)) {
         throw std::runtime_error("Altered A9 executable reserve accepted");
     }
 
     for (const auto *other :
          {"free-11-chinese-20260731-7.3.1", "passion-11-russian-20260403-2.1.4.80",
-          default_profile_name, "unknown"}) {
+          qinggan09_profile().c_str(), "unknown"}) {
         if (native_profile_executable_reserve(Json{{"id", other}}, other) != (20ULL << 30)) {
             throw std::runtime_error("Non-611 executable reserve changed");
         }
@@ -438,7 +447,7 @@ int main(int argc, char **argv) {
             throw std::runtime_error("NXP extraction reserve differs");
         }
 
-        for (const auto id : {default_profile_name, "free-11-chinese-20260731-7.3.1",
+        for (const auto id : {qinggan09_profile().c_str(), "free-11-chinese-20260731-7.3.1",
                               "passion-11-russian-20260403-2.1.4.80", "unknown"}) {
             if (native_profile_android_input_reserve(Json{{"id", id}}) != (20ULL << 30)) {
                 throw std::runtime_error("Other extraction reserve changed");
@@ -459,7 +468,7 @@ int main(int argc, char **argv) {
                 throw std::runtime_error("Unpinned NXP extraction base accepted");
             }
         }
-        const auto paths = native_profile_android_inputs(root, default_profile_name);
+        const auto paths = native_profile_android_inputs(root, qinggan09_profile());
         std::set<std::string> unique(paths.begin(), paths.end());
 
         if (paths.size() < 57 || paths.size() != unique.size() ||
@@ -579,7 +588,7 @@ int main(int argc, char **argv) {
         }
         refused = false;
         try {
-            prepare_profile_artifacts("relative", default_profile_name, true);
+            prepare_profile_artifacts("relative", qinggan09_profile(), true);
         } catch (...) {
             refused = true;
         }
@@ -717,7 +726,7 @@ int main(int argc, char **argv) {
         {
             auto invalid = api30;
             invalid["android"] =
-                    read_private_json(root / "profiles" / default_profile_name / "profile.json")
+                    read_private_json(root / "profiles" / qinggan09_profile() / "profile.json")
                             .at("android");
             write_private_json(fixture / "profiles/api30-fixture/profile.json", invalid);
             refused = false;
@@ -1070,7 +1079,7 @@ int main(int argc, char **argv) {
             }
         }
 
-        const auto metadata = profile_patch_metadata(root, default_profile_name);
+        const auto metadata = profile_patch_metadata(root, qinggan09_profile());
 
         if (metadata.size() != 44 || !metadata.contains("systemservice-network.json")) {
             throw std::runtime_error("JSON recipe coverage differs");
@@ -1078,7 +1087,7 @@ int main(int argc, char **argv) {
 
         const auto &qinggan09_usb_recipe = metadata.at("api28-usb-player.json");
         const auto qinggan09_usb_definition = read_private_json(
-                root / "profiles" / default_profile_name / "profile.json", 512 * 1024);
+                root / "profiles" / qinggan09_profile() / "profile.json", 512 * 1024);
 
         if (qinggan09_usb_recipe !=
                     Json{{"schema", 1},
@@ -1087,7 +1096,7 @@ int main(int argc, char **argv) {
                          {"calls", Json::array()},
                          {"sourceSha256", qinggan09_usb_recipe.at("sourceSha256")}} ||
             qinggan09_usb_recipe.at("sourceSha256") !=
-                    sha256_file(root / "profiles" / default_profile_name /
+                    sha256_file(root / "profiles" / qinggan09_profile() /
                                 "patches/api28-usb-player.json") ||
             qinggan09_usb_definition.at("original").at("QGMedia").at("sha256") !=
                     "4bc4c964d939541f6e11f4634df3d07bca06fb5dae3490e7284edf95d4c15e3f" ||
@@ -1114,12 +1123,11 @@ int main(int argc, char **argv) {
 
         const auto &phone_recipe = metadata.at("phone-provider.json");
         const auto phone_definition = read_private_json(
-                root / "profiles" / default_profile_name / "profile.json", 512 * 1024);
+                root / "profiles" / qinggan09_profile() / "profile.json", 512 * 1024);
 
         if (phone_recipe.at("schema") != 1 || phone_recipe.at("api") != 28 ||
-            phone_recipe.at("sourceSha256") !=
-                    sha256_file(root / "profiles" / default_profile_name /
-                                "patches/phone-provider.json") ||
+            phone_recipe.at("sourceSha256") != sha256_file(root / "profiles" / qinggan09_profile() /
+                                                           "patches/phone-provider.json") ||
             phone_recipe.at("calls") != Json::array() ||
             phone_recipe.at("constants") != Json::object() ||
             phone_definition.at("original").at("BluetoothPhone").at("sha256") !=
@@ -1138,7 +1146,7 @@ int main(int argc, char **argv) {
                  {"calls", Json::array()},
                  {"constants", Json::object()},
                  {"schema", 1},
-                 {"sourceSha256", sha256_file(root / "profiles" / default_profile_name /
+                 {"sourceSha256", sha256_file(root / "profiles" / qinggan09_profile() /
                                               "patches/systemui-display-routing.json")}}) {
             throw std::runtime_error(
                     "A9 SystemUI display recipe must retain its exact empty declarative contract");
@@ -1147,7 +1155,7 @@ int main(int argc, char **argv) {
         for (auto it = metadata.begin(); it != metadata.end(); ++it) {
             if (!it.key().ends_with(".json") ||
                 it.value().at("sourceSha256") !=
-                        sha256_file(root / "profiles" / default_profile_name / "patches" /
+                        sha256_file(root / "profiles" / qinggan09_profile() / "patches" /
                                     it.key())) {
                 throw std::runtime_error("recipe metadata not bound to JSON source");
             }

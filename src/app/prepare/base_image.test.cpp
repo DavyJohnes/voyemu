@@ -8,8 +8,9 @@ using namespace voyemu;
 
 int main(int argc, char **argv) {
     try {
-        const auto descriptor =
-                embedded_profile(default_profile_name).at("definition").at("android");
+        const auto qinggan09 =
+                embedded_profile_names(ProfilePlatform::qinggan09, ProfileBoard::sa8155).at(0);
+        const auto descriptor = embedded_profile(qinggan09).at("definition").at("android");
 
         if (native_base_api(descriptor) != 28) {
             throw std::runtime_error("A9 clean base API differs");

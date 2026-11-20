@@ -10,12 +10,13 @@ int main(int argc, char **argv) try {
     assert(argc == 2);
     const auto root = std::filesystem::canonical(argv[1]) / ".local/build/tmp" /
                       ("cli-arguments-" + random_token());
+    // Parsing never reads profiles/, so a synthetic identifier stands for any profile.
+    const std::string profile = "synthetic-profile";
     ensure_private_directory(root / ".local/machines");
-    const auto machine = root / "machines" / default_profile_name;
+    const auto machine = root / "machines" / profile;
     ensure_private_directory(machine);
-    write_private_json(
-            machine / "runtime.json",
-            {{"schema", 1}, {"kind", "portable-guest-runtime"}, {"profile", default_profile_name}});
+    write_private_json(machine / "runtime.json",
+                       {{"schema", 1}, {"kind", "portable-guest-runtime"}, {"profile", profile}});
     const auto variant = root / "machines/variant";
     ensure_private_directory(variant);
     write_private_json(variant / "runtime.json", read_private_json(machine / "runtime.json"));
@@ -53,8 +54,8 @@ int main(int argc, char **argv) try {
         }
 
         const auto result = parse(words);
-        assert(result.command == command && result.profile == default_profile_name &&
-               result.machine.name == default_profile_name && result.machine.selected &&
+        assert(result.command == command && result.profile == profile &&
+               result.machine.name == profile && result.machine.selected &&
                result.machine_path == machine && result.root == root);
         reject({command}, "MACHINE_PATH:");
         reject({command, machine.string(), variant.string()}, "MACHINE_PATH:");
@@ -71,17 +72,16 @@ int main(int argc, char **argv) try {
             {"status", external.lexically_relative(std::filesystem::current_path()).string()});
     assert(relative.machine_path == external &&
            relative.machine.name == external.filename().string());
-    const MachinePathSelection canonical{machine, default_profile_name},
-            other{variant, default_profile_name};
+    const MachinePathSelection canonical{machine, profile}, other{variant, profile};
     assert(machine_selector_matches(root, canonical, "") &&
-           machine_selector_matches(root, canonical, default_profile_name) &&
+           machine_selector_matches(root, canonical, profile) &&
            !machine_selector_matches(root, canonical, "foreign"));
-    const Json canonical_api{{"machine", default_profile_name}, {"machine_seed", machine.string()}};
+    const Json canonical_api{{"machine", profile}, {"machine_seed", machine.string()}};
     assert(machine_session_matches(root, canonical, canonical_api) &&
            machine_session_matches(root, canonical, Json::object()) &&
            !machine_session_matches(root, other, canonical_api) &&
            !machine_session_matches(root, other, Json::object()));
-    assert(!machine_session_matches(root, canonical, Json{{"machine", default_profile_name}}));
+    assert(!machine_session_matches(root, canonical, Json{{"machine", profile}}));
     assert(!parse({"start", machine.string()}).verbose);
     assert(parse({"start", machine.string(), "--verbose"}).verbose);
     reject({"start", machine.string(), "--verbose", "--verbose"}, "CLI_ARGUMENT:");
@@ -111,25 +111,24 @@ int main(int argc, char **argv) try {
     reject({"start", machine.string(), "--network=yes", "--network=no"}, "CLI_ARGUMENT:");
 
     for (const auto *command : {"fetch", "build"}) {
-        const auto result = parse({command, default_profile_name, "--offline"});
-        assert(result.profile == default_profile_name && result.profile_explicit && result.offline);
+        const auto result = parse({command, profile, "--offline"});
+        assert(result.profile == profile && result.profile_explicit && result.offline);
         reject({command}, "PROFILE_NAME:");
-        reject({command, default_profile_name, "machines/nested/second"}, "CLI_ARGUMENT:");
+        reject({command, profile, "machines/nested/second"}, "CLI_ARGUMENT:");
     }
 
     const auto archive = root / "owner update.zip";
     const auto source = "--source=" + archive.string();
-    const auto retained = parse({"fetch", default_profile_name});
+    const auto retained = parse({"fetch", profile});
     assert(retained.update.empty() && retained.serial.empty());
-    const auto local = parse({"fetch", default_profile_name, source, "--offline"});
+    const auto local = parse({"fetch", profile, source, "--offline"});
     assert(local.update == archive && local.serial.empty() && local.offline);
-    const auto device =
-            parse({"fetch", default_profile_name, "--serial", "vehicle-123", "--source=adb"});
+    const auto device = parse({"fetch", profile, "--serial", "vehicle-123", "--source=adb"});
     assert(device.update.empty() && device.serial == "vehicle-123");
     // A relative path starts at the current directory, ~/ at the home directory, and links
     // resolve, so the archive reaches fetch as its real absolute path.
     const auto fetched = [&](const std::string &value) {
-        return parse({"fetch", default_profile_name, "--source=" + value}).update;
+        return parse({"fetch", profile, "--source=" + value}).update;
     };
     const auto saved_directory = std::filesystem::current_path();
     ensure_private_directory(root / "downloads");
@@ -165,7 +164,7 @@ int main(int argc, char **argv) try {
     set_home(root.string());
     assert(fetched("~/owner update.zip") == archive);
     set_home("relative-home");
-    reject({"fetch", default_profile_name, "--source=~/owner update.zip"}, "USER_HOME:");
+    reject({"fetch", profile, "--source=~/owner update.zip"}, "USER_HOME:");
     set_home(previous_home);
     const auto real = root / "real";
     ensure_private_directory(real);
@@ -179,18 +178,17 @@ int main(int argc, char **argv) try {
 #endif
 
     for (const auto &options : std::vector<std::vector<std::string>>{
-                 {"fetch", default_profile_name, "--source=adb"},
-                 {"fetch", default_profile_name, "--source=adb", "--serial", ""},
-                 {"fetch", default_profile_name, "--source="},
-                 {"fetch", default_profile_name, "--source", "adb"},
-                 {"fetch", default_profile_name, "--serial", "vehicle-123"},
-                 {"fetch", default_profile_name, source, "--serial", "vehicle-123"},
-                 {"fetch", default_profile_name, source, "--source=adb", "--serial", "vehicle-123"},
-                 {"fetch", default_profile_name, "--source=adb", "--serial", "vehicle-123",
-                  "--serial", "other"},
-                 {"fetch", default_profile_name, "--update", archive.string()},
-                 {"deps", default_profile_name, source},
-                 {"deps", default_profile_name, "--source=adb", "--serial", "vehicle-123"},
+                 {"fetch", profile, "--source=adb"},
+                 {"fetch", profile, "--source=adb", "--serial", ""},
+                 {"fetch", profile, "--source="},
+                 {"fetch", profile, "--source", "adb"},
+                 {"fetch", profile, "--serial", "vehicle-123"},
+                 {"fetch", profile, source, "--serial", "vehicle-123"},
+                 {"fetch", profile, source, "--source=adb", "--serial", "vehicle-123"},
+                 {"fetch", profile, "--source=adb", "--serial", "vehicle-123", "--serial", "other"},
+                 {"fetch", profile, "--update", archive.string()},
+                 {"deps", profile, source},
+                 {"deps", profile, "--source=adb", "--serial", "vehicle-123"},
          }) {
         reject(options, "CLI_ARGUMENT:");
     }
@@ -198,40 +196,45 @@ int main(int argc, char **argv) try {
     const auto destination = root / "machines/second-build";
 
     for (const auto &path : {std::string("machines/second-build"), destination.string()}) {
-        const auto result =
-                parse({"build", default_profile_name, path, "--cluster=off", "--offline"});
-        assert(result.profile == default_profile_name && result.machine.name == "second-build" &&
+        const auto result = parse({"build", profile, path, "--cluster=off", "--offline"});
+        assert(result.profile == profile && result.machine.name == "second-build" &&
                result.machine_path.empty() && !result.cluster && result.offline);
     }
 
-    const auto unnamed_build = parse({"build", default_profile_name});
-    assert(unnamed_build.machine.name == default_profile_name && !unnamed_build.machine.selected &&
+    const auto unnamed_build = parse({"build", profile});
+    assert(unnamed_build.machine.name == profile && !unnamed_build.machine.selected &&
            unnamed_build.machine.selector().empty());
 
     for (const auto &path : {machine.string(), variant.string(), (root / "outside-new").string(),
                              std::string("machines/nested/new"), std::string("machines/../escape"),
                              std::string("machines/second-build/")}) {
-        reject({"build", default_profile_name, path}, "CLI_ARGUMENT:");
+        reject({"build", profile, path}, "CLI_ARGUMENT:");
     }
 
-    reject({"build", default_profile_name, destination.string(), "machines/third-build"},
-           "CLI_ARGUMENT:");
-    reject({"build", default_profile_name, destination.string(), "--machine", "second-build"},
-           "CLI_ARGUMENT:");
+    reject({"build", profile, destination.string(), "machines/third-build"}, "CLI_ARGUMENT:");
+    reject({"build", profile, destination.string(), "--machine", "second-build"}, "CLI_ARGUMENT:");
     const auto linked_destination = root / "machines/linked-build";
     std::filesystem::create_directory_symlink(external, linked_destination);
-    reject({"build", default_profile_name, linked_destination.string()}, "CLI_ARGUMENT:");
+    reject({"build", profile, linked_destination.string()}, "CLI_ARGUMENT:");
     std::filesystem::remove(linked_destination);
     const auto saved_machines = root / "saved-machines";
     std::filesystem::rename(root / "machines", saved_machines);
     std::filesystem::create_directory_symlink(external, root / "machines");
-    reject({"build", default_profile_name, "machines/second-build"}, "CLI_ARGUMENT:");
+    reject({"build", profile, "machines/second-build"}, "CLI_ARGUMENT:");
     std::filesystem::remove(root / "machines");
     std::filesystem::rename(saved_machines, root / "machines");
     assert(cli_help().find("build PROFILE [MACHINE_PATH]") != std::string_view::npos);
     assert(cli_help().find("build-finalize") == std::string_view::npos);
-    assert(parse({"deps"}).command == "deps");
-    assert(parse({"deps", default_profile_name}).profile == default_profile_name);
+    // No profile is a default: deps without one installs only the tools, and the internal
+    // commands require theirs.
+    const auto tools = parse({"deps"});
+    assert(tools.command == "deps" && tools.profile.empty() && !tools.profile_explicit);
+    assert(parse({"deps", profile}).profile == profile);
+    assert(parse({"help"}).profile.empty() && parse({"list"}).profile.empty());
+    reject({"_start", "--root", root.string(), "--exclusive", "--ownership-id",
+            std::string(32, 'a')},
+           "PROFILE_NAME:");
+    reject({"_supervise", "--root", root.string()}, "PROFILE_NAME:");
     const auto providers =
             parse({"start", machine.string(), "--provider", (root / "provider-a.json").string(),
                    "--provider", (root / "provider-b.json").string()});
@@ -253,54 +256,45 @@ int main(int argc, char **argv) try {
     const auto qnx_build =
             parse({"build", "passion-11-russian-20260403-2.1.4.80", "--multimedia=off"});
     assert(qnx_build.cluster && !qnx_build.multimedia);
-    reject({"build", default_profile_name, "--cluster=off", "--multimedia=off"}, "CLI_ARGUMENT:");
-    reject({"build", default_profile_name, "--background"}, "CLI_ARGUMENT:");
-    reject({"build", default_profile_name, "--seconds", "1"}, "CLI_ARGUMENT:");
+    reject({"build", profile, "--cluster=off", "--multimedia=off"}, "CLI_ARGUMENT:");
+    reject({"build", profile, "--background"}, "CLI_ARGUMENT:");
+    reject({"build", profile, "--seconds", "1"}, "CLI_ARGUMENT:");
     const auto accepted = root / ".local/build/accepted/acceptance.json";
     const std::string accepted_pin(64, 'a');
     const auto reuse = parse({"build", "free-11-chinese-20260731-7.3.1", "--reuse-qnx",
                               accepted.string(), "--reuse-qnx-sha256", accepted_pin});
     assert(reuse.reuse_qnx == accepted && reuse.reuse_qnx_sha256 == accepted_pin && reuse.cluster &&
            reuse.multimedia);
-    reject({"build", default_profile_name, "--reuse-qnx", accepted.string()}, "CLI_ARGUMENT:");
-    reject({"build", default_profile_name, "--reuse-qnx-sha256", accepted_pin}, "CLI_ARGUMENT:");
-    reject({"build", default_profile_name, "--cluster=off", "--reuse-qnx", accepted.string(),
+    reject({"build", profile, "--reuse-qnx", accepted.string()}, "CLI_ARGUMENT:");
+    reject({"build", profile, "--reuse-qnx-sha256", accepted_pin}, "CLI_ARGUMENT:");
+    reject({"build", profile, "--cluster=off", "--reuse-qnx", accepted.string(),
             "--reuse-qnx-sha256", accepted_pin},
            "CLI_ARGUMENT:");
-    reject({"build", default_profile_name, "--reuse-qnx", accepted.string(), "--reuse-qnx-sha256",
-            "wrong"},
+    reject({"build", profile, "--reuse-qnx", accepted.string(), "--reuse-qnx-sha256", "wrong"},
            "CLI_ARGUMENT:");
     const auto source_reuse =
             parse({"build", "free-11-chinese-20260731-7.3.1", "--reuse-qnx", accepted.string(),
                    "--reuse-qnx-sha256", accepted_pin, "--reuse-qnx-source", machine.string()});
     assert(source_reuse.reuse_qnx_source == machine);
-    reject({"build", default_profile_name, "--reuse-qnx-source", machine.string()},
-           "CLI_ARGUMENT:");
-    const auto private_start = parse({"_start", "--root", root.string(), "--profile",
-                                      default_profile_name, "--machine", "variant", "--exclusive",
-                                      "--ownership-id", std::string(32, 'a'), "--with-cluster"});
+    reject({"build", profile, "--reuse-qnx-source", machine.string()}, "CLI_ARGUMENT:");
+    const auto private_start =
+            parse({"_start", "--root", root.string(), "--profile", profile, "--machine", "variant",
+                   "--exclusive", "--ownership-id", std::string(32, 'a'), "--with-cluster"});
     assert(private_start.private_start && private_start.machine.name == "variant" &&
            private_start.machine.selected && private_start.cluster);
     // The default machine and the machine named like the profile reach one canonical name at the
     // CLI boundary; only the selection differs.
     auto private_machine = [&](std::vector<std::string> extra) {
-        std::vector<std::string> words{"_start",
-                                       "--root",
-                                       root.string(),
-                                       "--profile",
-                                       default_profile_name,
-                                       "--exclusive",
-                                       "--ownership-id",
-                                       std::string(32, 'a')};
+        std::vector<std::string> words{
+                "_start", "--root",      root.string(),    "--profile",
+                profile,  "--exclusive", "--ownership-id", std::string(32, 'a')};
         words.insert(words.end(), extra.begin(), extra.end());
 
         return parse(words).machine;
     };
-    const auto unnamed = private_machine({}),
-               named = private_machine({"--machine", default_profile_name});
-    assert(unnamed.name == default_profile_name && !unnamed.selected && unnamed.selector().empty());
-    assert(named.name == unnamed.name && named.selected &&
-           named.selector() == default_profile_name);
+    const auto unnamed = private_machine({}), named = private_machine({"--machine", profile});
+    assert(unnamed.name == profile && !unnamed.selected && unnamed.selector().empty());
+    assert(named.name == unnamed.name && named.selected && named.selector() == profile);
     assert(parse({"status", machine.string()}).machine.name == named.name);
     reject({"start", machine.string(), "--exclusive"}, "CLI_ARGUMENT:");
     reject({"strat"}, "CLI_COMMAND:");

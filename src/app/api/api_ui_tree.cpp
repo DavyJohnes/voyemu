@@ -13,10 +13,13 @@ Json Api::cluster_tree(const Json &request, Clock::time_point deadline) {
     }
 
     const auto name = profile(request);
-    // The pinned A9 and A11 Gauges carry the Kanzi observer; Passion has no Kanzi Gauge.
+    // The Gauges of the Free/Dreamer platform on the 8155 board carry the Kanzi observer; Passion
+    // has no Kanzi Gauge.
     const auto kanzi = [](std::string_view candidate) {
-        return candidate == default_profile_name || candidate == qnx_qinggan11_731_profile ||
-               candidate == qnx_qinggan11_611_profile;
+        return embedded_profile_declares(candidate, ProfilePlatform::qinggan09,
+                                         ProfileBoard::sa8155) ||
+               embedded_profile_declares(candidate, ProfilePlatform::qinggan11,
+                                         ProfileBoard::sa8155);
     };
 
     if (!kanzi(name)) {

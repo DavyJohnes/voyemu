@@ -1,10 +1,20 @@
 #include "profile_file_nodes.hpp"
 #include "init_patch.hpp"
 #include "process.hpp"
+#include "profile_catalog.hpp"
 #include "selinux_patch.hpp"
 #include <fstream>
 #include <iostream>
 using namespace voyemu;
+
+// The bundled Android 9 profile on the 8155 board, read from the catalog.
+static const std::string &qinggan09_profile() {
+    static const auto id =
+            embedded_profile_names(ProfilePlatform::qinggan09, ProfileBoard::sa8155).at(0);
+
+    return id;
+}
+
 namespace {
 void check(bool value, const char *message) {
     if (!value) {
@@ -41,7 +51,7 @@ int main(int argc, char **argv) {
 
         if (argc == 5 && std::string(argv[1]) == "--codec-publish") {
             auto nodes = plan_profile_codec_file_node(std::filesystem::canonical(argv[2]),
-                                                      default_profile_name,
+                                                      qinggan09_profile(),
                                                       std::filesystem::canonical(argv[3]));
             check(nodes.patches.size() == 1 && nodes.patches.front().id == "ccodec-allocation-a9",
                   "codec-only publication must not replace existing Java file nodes");
@@ -105,7 +115,7 @@ int main(int argc, char **argv) {
                                         .parent_path()
                                         .parent_path()
                                         .parent_path();
-        const std::string profile = default_profile_name;
+        const std::string profile = qinggan09_profile();
         const auto directory = root / "profiles" / profile, system = root / "system-extraction",
                    vendor = root / "vendor-extraction";
         ensure_private_directory(directory / "patches");

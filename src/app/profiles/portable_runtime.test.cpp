@@ -40,6 +40,15 @@
 #include <unistd.h>
 #endif
 using namespace voyemu;
+
+// The bundled Android 9 profile on the 8155 board, read from the catalog.
+static const std::string &qinggan09_profile() {
+    static const auto id =
+            embedded_profile_names(ProfilePlatform::qinggan09, ProfileBoard::sa8155).at(0);
+
+    return id;
+}
+
 namespace {
 void check(bool value, const char *text) {
     if (!value) {
@@ -49,7 +58,7 @@ void check(bool value, const char *text) {
 
 // The android object of a registered profile with the clean base pins of its API28 or API30 image.
 Json android_base(unsigned api) {
-    return embedded_profile(api == 30 ? "free-11-chinese-20260731-7.3.1" : default_profile_name)
+    return embedded_profile(api == 30 ? "free-11-chinese-20260731-7.3.1" : qinggan09_profile())
             .at("definition")
             .at("android");
 }
@@ -5633,13 +5642,13 @@ int main(int argc, char **argv) {
                     // assembly never reads ambient state.
                     {
                         const auto qinggan09_definition = read_private_json(
-                                project / "profiles" / default_profile_name / "profile.json");
+                                project / "profiles" / qinggan09_profile() / "profile.json");
                         check(!qinggan09_definition.contains("id"),
                               "canonical A9 fixture unexpectedly has an id");
                         const Json activation_qinggan09 = {
                                 {"schema", 1},
                                 {"route", "wav"},
-                                {"profile", default_profile_name},
+                                {"profile", qinggan09_profile()},
                                 {"nonce", std::string(32, 'c')},
                                 {"directory",
                                  std::filesystem::canonical(activation_directory).string()}};
@@ -5649,7 +5658,7 @@ int main(int argc, char **argv) {
                                 project, PortableRuntimeHostBindings{}, seed30 / "android", clean30,
                                 bound30 / "config-template.ini", "qinggan09-owned-wav",
                                 Json::array(), qinggan09_definition, activated,
-                                default_profile_name);
+                                qinggan09_profile());
                         check(captured.at("diagnostic_audio") == "wav" &&
                                       captured.at("api") == 28 &&
                                       captured.at("audioOutput") == true,
@@ -5658,14 +5667,14 @@ int main(int argc, char **argv) {
                                        project, PortableRuntimeHostBindings{}, seed30 / "android",
                                        clean30, bound30 / "config-template.ini",
                                        "qinggan09-ordinary", Json::array(), qinggan09_definition,
-                                       Json::object(), default_profile_name)
+                                       Json::object(), qinggan09_profile())
                                        .contains("diagnostic_audio"),
                               "ordinary A9 launch acquired WAV route");
 
                         for (int variant = 0; variant < 4; ++variant) {
                             auto selected = qinggan09_definition;
                             auto capability = activated;
-                            std::string verified(default_profile_name);
+                            std::string verified(qinggan09_profile());
 
                             if (variant == 0) {
                                 verified = "foreign-profile";

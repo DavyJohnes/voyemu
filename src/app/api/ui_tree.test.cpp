@@ -12,7 +12,8 @@ int main(int argc, char **argv) try {
     assert(argc == 2);
     const auto root = std::filesystem::path(argv[1]) / ("voyemu-ui-tree-" + random_token());
     const auto id = random_token();
-    const std::string profile = default_profile_name;
+    const std::string profile =
+            embedded_profile_names(ProfilePlatform::qinggan09, ProfileBoard::sa8155).at(0);
     const auto auth = random_token();
     const auto directory = root / ".local/machines" / profile / "sessions" / id;
 

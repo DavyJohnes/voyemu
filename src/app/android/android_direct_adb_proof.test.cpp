@@ -3,6 +3,7 @@
 #include "android_reboot.hpp"
 #include "model.hpp"
 #include "process.hpp"
+#include "profile_catalog.hpp"
 
 #include <array>
 #include <chrono>
@@ -92,9 +93,10 @@ int main(int argc, char **argv) {
                     "SDK executable pin differs");
         }
 
-        const auto firmware =
-                json_file(root / "machines" / voyemu::default_profile_name / "runtime.json")
-                        .at("android");
+        const auto machine = voyemu::embedded_profile_names(voyemu::ProfilePlatform::qinggan09,
+                                                            voyemu::ProfileBoard::sa8155)
+                                     .at(0);
+        const auto firmware = json_file(root / "machines" / machine / "runtime.json").at("android");
         require(firmware.at("api") == 28 && firmware.at("abi") == "arm64-v8a",
                 "expected A9 Android base");
         const auto archive = firmware.at("base_archive_sha256").get<std::string>();

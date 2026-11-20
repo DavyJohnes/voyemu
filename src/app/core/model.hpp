@@ -9,7 +9,6 @@
 
 namespace voyemu {
 using Json = nlohmann::json;
-inline constexpr const char *default_profile_name = "free-09-chinese-20260106-6.0.3";
 bool valid_profile_name(std::string_view name);
 struct Field {
     std::uint32_t index;

@@ -1,4 +1,5 @@
 #include "machine_preparation_internal.hpp"
+#include "profile_catalog.hpp"
 
 // Builds an Android candidate machine from its base image, packages and install plan.
 namespace voyemu {
@@ -361,7 +362,8 @@ std::uint64_t android_candidate_peak_extra_bytes(const Json &profile, std::uint6
                                                  std::uint64_t payload_bytes,
                                                  std::string_view requested_profile) {
     if (!requested_profile.empty() &&
-        runtime_profile_reference(profile, requested_profile) == default_profile_name) {
+        embedded_profile_declares(runtime_profile_reference(profile, requested_profile),
+                                  ProfilePlatform::qinggan09, ProfileBoard::sa8155)) {
         (void)android_candidate_reserve_bytes(profile, requested_profile);
         need(base_bytes > 0 && base_bytes <= 4ULL << 30 && payload_bytes <= 2ULL << 30,
              "bounded A9 base/payload extents required");
@@ -425,7 +427,8 @@ std::uint64_t android_candidate_reserve_bytes(const Json &profile,
     }
 
     if (!requested_profile.empty() &&
-        runtime_profile_reference(profile, requested_profile) == default_profile_name) {
+        embedded_profile_declares(runtime_profile_reference(profile, requested_profile),
+                                  ProfilePlatform::qinggan09, ProfileBoard::sa8155)) {
         need(!profile.contains("id") || profile.at("id") == requested_profile,
              "requested A9 identity differs");
         const auto &android = profile.at("android");

@@ -2,6 +2,7 @@
 #include "cli_arguments.hpp"
 #include "help.hpp"
 #include "human_output.hpp"
+#include <algorithm>
 #include <iostream>
 #include <set>
 using namespace voyemu;
@@ -226,6 +227,18 @@ void help() {
     check(english.find("  build PROFILE [MACHINE_PATH]\n                         Prepare a new "
                        "machine; default: machines/PROFILE\n") != std::string::npos,
           "long syntax moves its description to the next line");
+    const auto names = embedded_profile_names();
+    check(std::any_of(names.begin(), names.end(),
+                      [&](const std::string &name) {
+                          return english.find("  voyemu start machines/" + name + '\n') !=
+                                 std::string::npos;
+                      }) &&
+                  std::any_of(names.begin(), names.end(),
+                              [&](const std::string &name) {
+                                  return english.find("  voyemu build " + name +
+                                                      " --cluster=off\n") != std::string::npos;
+                              }),
+          "help examples name bundled profiles");
     check(cli_help(Language::russian).starts_with("Использование: voyemu COMMAND [OPTIONS]\n"),
           "Russian help heading");
     check(cli_help(Language::chinese).starts_with("用法：voyemu COMMAND [OPTIONS]\n"),

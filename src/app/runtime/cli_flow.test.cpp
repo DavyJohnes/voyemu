@@ -29,6 +29,14 @@
 #endif
 using namespace voyemu;
 
+// The bundled Android 9 profile on the 8155 board, read from the catalog.
+static const std::string &qinggan09_profile() {
+    static const auto id =
+            embedded_profile_names(ProfilePlatform::qinggan09, ProfileBoard::sa8155).at(0);
+
+    return id;
+}
+
 static void require(bool result, const std::string &message) {
     if (!result) {
         throw std::runtime_error(message);
@@ -134,7 +142,7 @@ static ProcessResult fixture_public_cli(const std::filesystem::path &executable,
 static std::unique_ptr<Session> attach_fixture_presentation(const std::filesystem::path &root,
                                                             bool attach_frontend, bool background) {
     const auto launch_directory = native_machine_directory(
-            root, default_profile_name, voyemu::machine_identity(default_profile_name, {}));
+            root, qinggan09_profile(), voyemu::machine_identity(qinggan09_profile(), {}));
     const auto id = random_token();
     auto session = std::make_unique<Session>(launch_directory / "sessions" / id, id);
     auto specification = read_private_json(launch_directory / "android-launch.json");
@@ -300,10 +308,10 @@ int main(int argc, char **argv) try {
 #endif
     std::filesystem::copy_file(cli, installed_cli);
     cli = installed_cli;
-    const auto selected_machine = root / "machines" / default_profile_name;
+    const auto selected_machine = root / "machines" / qinggan09_profile();
     ensure_private_directory(selected_machine);
     Json fixture_manifest = {
-            {"schema", 1}, {"kind", "portable-guest-runtime"}, {"profile", default_profile_name}};
+            {"schema", 1}, {"kind", "portable-guest-runtime"}, {"profile", qinggan09_profile()}};
 
     if (control_latency || cluster_lifecycle) {
         Json qnx = {{"guest_arch", "aarch64"}, {"images", Json::object()}};
@@ -313,12 +321,12 @@ int main(int argc, char **argv) try {
                     {"file", "qnx/" + name}, {"bytes", 1}, {"sha256", std::string(64, '0')}};
         }
 
-        qnx_portable_layout(default_profile_name, qnx);
+        qnx_portable_layout(qinggan09_profile(), qnx);
         auto missing = qnx;
         missing["images"].erase("smem.bin");
         bool rejected = false;
         try {
-            qnx_portable_layout(default_profile_name, missing);
+            qnx_portable_layout(qinggan09_profile(), missing);
         } catch (const std::exception &) {
             rejected = true;
         }
@@ -328,7 +336,7 @@ int main(int argc, char **argv) try {
         foreign["images"]["smem.bin"]["file"] = "qnx/foreign.bin";
         rejected = false;
         try {
-            qnx_portable_layout(default_profile_name, foreign);
+            qnx_portable_layout(qinggan09_profile(), foreign);
         } catch (const std::exception &) {
             rejected = true;
         }
@@ -375,7 +383,7 @@ int main(int argc, char **argv) try {
             }
 
             if (command == "fetch" || command == "build") {
-                args.insert(args.begin() + 1, default_profile_name);
+                args.insert(args.begin() + 1, qinggan09_profile());
             }
 
             for (auto &argument : args) {
@@ -423,9 +431,9 @@ int main(int argc, char **argv) try {
         if (command == "stop") {
             prior = read_private_json(
                     native_current_active_directory(
-                            root, default_profile_name,
-                            voyemu::machine_identity(default_profile_name, std::string_view{})) /
-                    (std::string(default_profile_name) + ".json"));
+                            root, qinggan09_profile(),
+                            voyemu::machine_identity(qinggan09_profile(), std::string_view{})) /
+                    (std::string(qinggan09_profile()) + ".json"));
         }
 
         if (command == "start") {
@@ -444,7 +452,7 @@ int main(int argc, char **argv) try {
 
         if (command == "stop") {
             auto terminal =
-                    read_private_json(root / ".local/machines" / default_profile_name / "sessions" /
+                    read_private_json(root / ".local/machines" / qinggan09_profile() / "sessions" /
                                       prior.at("session_id").get<std::string>() / "runtime.json");
             terminal["ok"] = true;
 
@@ -453,9 +461,9 @@ int main(int argc, char **argv) try {
 
         const auto active = read_private_json(
                 native_current_active_directory(
-                        root, default_profile_name,
-                        voyemu::machine_identity(default_profile_name, std::string_view{})) /
-                (std::string(default_profile_name) + ".json"));
+                        root, qinggan09_profile(),
+                        voyemu::machine_identity(qinggan09_profile(), std::string_view{})) /
+                (std::string(qinggan09_profile()) + ".json"));
 
         return request(active.at("endpoint").get<std::string>(),
                        {{"op", "status"}, {"session_id", active.at("session_id")}}, 1000);
@@ -489,25 +497,24 @@ int main(int argc, char **argv) try {
                     "public check accepted internal root override");
         }
 #endif
-        auto profile = root / "profiles" / default_profile_name;
+        auto profile = root / "profiles" / qinggan09_profile();
         ensure_private_directory(profile);
         ensure_private_directory(root / "profiles/common/wheels/free-2021");
-        write_private_json(
-                profile / "profile.json",
-                {{"schema", 1},
-                 {"initial_state", embedded_profile(default_profile_name)
-                                           .at("definition")
-                                           .value("initial_state", Json::object())},
-                 {"displays",
-                  embedded_profile(default_profile_name).at("definition").at("displays")},
-                 {"wheel", {{"assets", "profiles/common/wheels/free-2021"}}}});
+        write_private_json(profile / "profile.json",
+                           {{"schema", 1},
+                            {"initial_state", embedded_profile(qinggan09_profile())
+                                                      .at("definition")
+                                                      .value("initial_state", Json::object())},
+                            {"displays",
+                             embedded_profile(qinggan09_profile()).at("definition").at("displays")},
+                            {"wheel", {{"assets", "profiles/common/wheels/free-2021"}}}});
         auto help = run({"help"});
         require(help.exit_code == 0 && help.output.find("--cluster=on|off") != std::string::npos &&
                         help.output.find("Run and control") != std::string::npos,
                 "complete grouped help omitted launch options");
         auto bundled_profiles = embedded_profile_names();
         std::set<std::string> expected_profiles(bundled_profiles.begin(), bundled_profiles.end());
-        expected_profiles.insert(default_profile_name);
+        expected_profiles.insert(qinggan09_profile());
         std::string expected_listing = "Profiles\n";
 
         for (const auto &name : expected_profiles) {
@@ -573,13 +580,13 @@ int main(int argc, char **argv) try {
             ensure_private_directory(external);
             write_private_json(external / "runtime.json", {{"schema", 1},
                                                            {"kind", "portable-guest-runtime"},
-                                                           {"profile", default_profile_name}});
+                                                           {"profile", qinggan09_profile()}});
             const auto selection = inspect_machine_path(external);
-            require(selection.profile == default_profile_name && selection.seed == external &&
+            require(selection.profile == qinggan09_profile() && selection.seed == external &&
                             machine_path_name(root, selection) == "arbitrary-seed",
                     "external machine selection lost identity");
-            require(machine_path_name(root, {root / "machines" / default_profile_name,
-                                             default_profile_name}) == default_profile_name,
+            require(machine_path_name(root, {root / "machines" / qinggan09_profile(),
+                                             qinggan09_profile()}) == qinggan09_profile(),
                     "canonical seed must retain its descriptive machine name");
 
             for (const auto &options : std::vector<std::vector<std::string>>{
@@ -657,7 +664,7 @@ int main(int argc, char **argv) try {
             // fetch recreates the empty .local roots but imports nothing.
             require(std::filesystem::is_empty(root / ".local/profiles") &&
                             !std::filesystem::exists(root / ".local/machines" /
-                                                     default_profile_name / "sessions"),
+                                                     qinggan09_profile() / "sessions"),
                     "argument validation changed inputs or started a session");
             std::filesystem::remove_all(root);
             std::cout
@@ -670,13 +677,13 @@ int main(int argc, char **argv) try {
         require(build_parse.exit_code != 0 &&
                         build_parse.output.find("CLI_ARGUMENT") == std::string::npos,
                 "offline build/JDK option rejected before source profile validation");
-        require(!std::filesystem::exists(root / ".local/machines" / default_profile_name /
+        require(!std::filesystem::exists(root / ".local/machines" / qinggan09_profile() /
                                          "sessions"),
                 "invalid source build launched a session");
         auto invalid = run({"check", "--profile", "../outside"});
         require(invalid.exit_code != 0 && invalid.output.find("CLI_ARGUMENT") != std::string::npos,
                 "CLI accepted traversal");
-        auto machine = root / "machines" / default_profile_name;
+        auto machine = root / "machines" / qinggan09_profile();
         ensure_private_directory(machine);
         write_private_json(machine / "machine.json", {{"schema", 1}});
         {
@@ -738,7 +745,7 @@ int main(int argc, char **argv) try {
         require(port <= 5682, "no isolated fixture console port available");
         auto configuration = root / ".local/machines";
         ensure_private_directory(configuration);
-        const auto launch_directory = configuration / default_profile_name;
+        const auto launch_directory = configuration / qinggan09_profile();
         ensure_private_directory(launch_directory);
         const auto write_cluster_fixture = [&](Json specification) {
             // These synthetic QMP-less children never announce a graphics producer.
@@ -802,7 +809,7 @@ int main(int argc, char **argv) try {
         require(!std::filesystem::exists(configuration / "another-car/sessions"),
                 "rejected profile created a session");
 #ifndef _WIN32
-        const auto linked_configuration = configuration / default_profile_name;
+        const auto linked_configuration = configuration / qinggan09_profile();
         std::filesystem::rename(linked_configuration, configuration / "fixture-launch-pending");
         std::filesystem::create_directory_symlink(root, linked_configuration);
         auto status_without_launch = run({"status"});
@@ -910,8 +917,8 @@ int main(int argc, char **argv) try {
             write_private_json(launch_directory / "activation.json",
                                {{"schema", 1},
                                 {"kind", "runtime-configuration"},
-                                {"profile", default_profile_name},
-                                {"machine", default_profile_name},
+                                {"profile", qinggan09_profile()},
+                                {"machine", qinggan09_profile()},
                                 {"seed", selected_machine.string()},
                                 {"manifest_sha256", sha256_file(selected_machine / "runtime.json")},
                                 {"integrity_audited", false}});
@@ -922,7 +929,7 @@ int main(int argc, char **argv) try {
             require(::setenv("VOYEMU_NATIVE_FIXTURE_ROOT", root.c_str(), 1) == 0,
                     "fixture environment unavailable");
             const auto token = random_token();
-            const auto directory = configuration / default_profile_name / "sessions" / token;
+            const auto directory = configuration / qinggan09_profile() / "sessions" / token;
             auto specification = launch;
             specification["env"]["VOYEMU_NATIVE_FIXTURE_ROOT"] = root.string();
             Session session(directory, token);
@@ -1028,7 +1035,7 @@ int main(int argc, char **argv) try {
             write_private_json(selected_machine / "runtime.json",
                                {{"schema", 1},
                                 {"kind", "portable-guest-runtime"},
-                                {"profile", default_profile_name},
+                                {"profile", qinggan09_profile()},
                                 {"scope", "android"},
                                 {"cluster_available", false},
                                 {"android",
@@ -1038,7 +1045,7 @@ int main(int argc, char **argv) try {
                                   {"images", images}}}});
             auto definition = read_private_json(profile / "profile.json");
             // The registered clean base pins with the boot files of this fixture base.
-            auto clean_base = embedded_profile(default_profile_name)
+            auto clean_base = embedded_profile(qinggan09_profile())
                                       .at("definition")
                                       .at("android")
                                       .at("clean_base");
@@ -1081,10 +1088,10 @@ int main(int argc, char **argv) try {
                         "Android-only check did not ignore stale cluster launch: " +
                                 checked.output);
                 const auto pristine_active = native_current_active_directory(
-                        root, default_profile_name,
-                        voyemu::machine_identity(default_profile_name, default_profile_name));
+                        root, qinggan09_profile(),
+                        voyemu::machine_identity(qinggan09_profile(), qinggan09_profile()));
                 const auto pristine_record = pristine_active /
-                                             (std::string(default_profile_name) + ".json");
+                                             (std::string(qinggan09_profile()) + ".json");
                 require(!std::filesystem::exists(pristine_active),
                         "fresh status fixture unexpectedly has active metadata");
                 const auto foreign_path = [](const std::filesystem::path &path) {
@@ -1105,8 +1112,7 @@ int main(int argc, char **argv) try {
                                               {"sha256", std::string(64, '1')}}});
                 write_private_json(android_file, stale);
                 auto wrong = foreign;
-                wrong["seed"] =
-                        foreign_path(root / "unrelated" / "machines" / default_profile_name);
+                wrong["seed"] = foreign_path(root / "unrelated" / "machines" / qinggan09_profile());
                 write_private_json(activation_file, wrong);
                 require(run({"check"}).exit_code != 0,
                         "check accepted another checkout as a host alias");
@@ -1193,8 +1199,8 @@ int main(int argc, char **argv) try {
                         "prepared same-profile machine did not report its independent stopped status: " +
                                 independent_status.output);
                 require(!std::filesystem::exists(native_current_active_directory(
-                                root, default_profile_name,
-                                voyemu::machine_identity(default_profile_name,
+                                root, qinggan09_profile(),
+                                voyemu::machine_identity(qinggan09_profile(),
                                                          "independent-prepared"))),
                         "independent status created active metadata");
 
@@ -1212,8 +1218,8 @@ int main(int argc, char **argv) try {
                 require(run({"status"}).exit_code != 0, "status hid dangling active metadata");
                 std::filesystem::remove(pristine_record);
                 const auto unindexed_session = native_session_directory(
-                        root, default_profile_name,
-                        voyemu::machine_identity(default_profile_name, default_profile_name),
+                        root, qinggan09_profile(),
+                        voyemu::machine_identity(qinggan09_profile(), qinggan09_profile()),
                         random_token());
                 ensure_private_directory(unindexed_session);
                 require(run({"status"}).exit_code != 0,
@@ -1231,13 +1237,13 @@ int main(int argc, char **argv) try {
                 write_private_json(android_file, stale);
                 const auto previous_id = random_token();
                 const auto previous_directory = native_session_directory(
-                        root, default_profile_name,
-                        voyemu::machine_identity(default_profile_name, default_profile_name),
+                        root, qinggan09_profile(),
+                        voyemu::machine_identity(qinggan09_profile(), qinggan09_profile()),
                         previous_id);
                 const auto previous_endpoint = "\\\\.\\pipe\\voyemu-" + previous_id;
                 write_private_json(pristine_record,
                                    {{"schema", 1},
-                                    {"profile", default_profile_name},
+                                    {"profile", qinggan09_profile()},
                                     {"session_id", previous_id},
                                     {"directory", foreign_path(previous_directory)},
                                     {"endpoint", previous_endpoint}});
@@ -1289,7 +1295,7 @@ int main(int argc, char **argv) try {
                 return 0;
             }
 
-            require(!std::filesystem::exists(configuration / default_profile_name /
+            require(!std::filesystem::exists(configuration / qinggan09_profile() /
                                              "activation.json"),
                     "fresh API fixture unexpectedly has a cached activation");
 #endif
@@ -1297,7 +1303,7 @@ int main(int argc, char **argv) try {
 
         if (canonical_api || api_first_bind) {
             try {
-                const auto named = configuration / default_profile_name;
+                const auto named = configuration / qinggan09_profile();
 
                 if (!api_first_bind) {
                     ensure_private_directory(named);
@@ -1307,8 +1313,8 @@ int main(int argc, char **argv) try {
                             named / "activation.json",
                             {{"schema", 1},
                              {"kind", "runtime-configuration"},
-                             {"profile", default_profile_name},
-                             {"machine", default_profile_name},
+                             {"profile", qinggan09_profile()},
+                             {"machine", qinggan09_profile()},
                              {"seed", selected_machine.string()},
                              {"manifest_sha256", sha256_file(selected_machine / "runtime.json")},
                              {"integrity_audited", false}});
@@ -1318,8 +1324,8 @@ int main(int argc, char **argv) try {
                 write_private_json(input, {{"schema", 1},
                                            {"request_id", random_token()},
                                            {"op", "session.start"},
-                                           {"profile", default_profile_name},
-                                           {"machine", default_profile_name},
+                                           {"profile", qinggan09_profile()},
+                                           {"machine", qinggan09_profile()},
                                            {"background", true},
                                            {"with_cluster", false}});
                 const auto started = run({"test", "--request", input.string()});
@@ -1327,7 +1333,7 @@ int main(int argc, char **argv) try {
                 const auto response = Json::parse(started.output);
                 require(response.at("ok") == true, "canonical API start not accepted");
                 const auto observed = json({"status"});
-                require(observed.at("machine") == default_profile_name &&
+                require(observed.at("machine") == qinggan09_profile() &&
                                 observed.at("machine_seed") == selected_machine.string() &&
                                 observed.at("android_pid").get<int>() > 0,
                         "public path did not select the API-owned canonical machine");
@@ -1340,10 +1346,10 @@ int main(int argc, char **argv) try {
                 write_private_json(foreign / "runtime.json",
                                    read_private_json(selected_machine / "runtime.json"));
                 const auto owner_file = native_current_active_directory(
-                                                root, default_profile_name,
-                                                voyemu::machine_identity(default_profile_name,
-                                                                         default_profile_name)) /
-                                        (std::string(default_profile_name) + ".json");
+                                                root, qinggan09_profile(),
+                                                voyemu::machine_identity(qinggan09_profile(),
+                                                                         qinggan09_profile())) /
+                                        (std::string(qinggan09_profile()) + ".json");
                 const auto owner_sha = sha256_file(owner_file);
                 const auto refused = run({"stop", foreign.string()});
                 require(refused.exit_code == 4 &&
@@ -1359,10 +1365,10 @@ int main(int argc, char **argv) try {
                         "foreign scope changed the live canonical SID, PID or owner bytes");
                 require(!std::filesystem::exists(
                                 native_current_active_directory(
-                                        root, default_profile_name,
-                                        voyemu::machine_identity(default_profile_name,
+                                        root, qinggan09_profile(),
+                                        voyemu::machine_identity(qinggan09_profile(),
                                                                  "canonical-other")) /
-                                (std::string(default_profile_name) + ".json")),
+                                (std::string(qinggan09_profile()) + ".json")),
                         "foreign scope acquired a canonical active record");
                 require_disks();
 
@@ -1372,8 +1378,8 @@ int main(int argc, char **argv) try {
                                        {{"schema", 1},
                                         {"request_id", random_token()},
                                         {"op", "session.stop"},
-                                        {"profile", default_profile_name},
-                                        {"machine", default_profile_name},
+                                        {"profile", qinggan09_profile()},
+                                        {"machine", qinggan09_profile()},
                                         {"session", response.at("result").at("session")}});
                     const auto stopped = run({"test", "--request", stop_input.string()}, 90000);
                     require(stopped.exit_code == 0 && Json::parse(stopped.output).at("ok") == true,
@@ -1403,7 +1409,7 @@ int main(int argc, char **argv) try {
 #ifndef _WIN32
         if (runtime_paths) {
             const auto token = random_token();
-            const auto directory = configuration / default_profile_name / "sessions" / token;
+            const auto directory = configuration / qinggan09_profile() / "sessions" / token;
             Session session(directory, token);
             const auto expected = (native_socket_root() / (token + "-qmp.sock")).string();
             session.attach_cluster(
@@ -1511,7 +1517,7 @@ int main(int argc, char **argv) try {
             bool labeled = false;
 
             for (const auto &epoch : std::filesystem::directory_iterator(
-                         configuration / default_profile_name / "sessions")) {
+                         configuration / qinggan09_profile() / "sessions")) {
                 std::ifstream file(epoch.path() / "supervisor.log");
                 std::string log{std::istreambuf_iterator<char>(file), {}};
                 labeled |= log.find("ANDROID_BOOT_TRACE:") != std::string::npos;
@@ -1600,7 +1606,7 @@ int main(int argc, char **argv) try {
                             headless["deliveries"]["frontend"]["background"] == true,
                     "public A9 background CLI omitted its mandatory cockpit or requested foreground");
             [[maybe_unused]] const auto background_session =
-                    configuration / default_profile_name / "sessions" /
+                    configuration / qinggan09_profile() / "sessions" /
                     background_started.at("session_id").get<std::string>();
 #ifdef __APPLE__
             const auto shown_deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
@@ -1639,7 +1645,7 @@ int main(int argc, char **argv) try {
                     "unexpected-exit test has no owned started frontend");
             require(::kill(exited_pid, SIGTERM) == 0,
                     "could not close this fixture's owned frontend");
-            const auto exited_directory = configuration / default_profile_name / "sessions" /
+            const auto exited_directory = configuration / qinggan09_profile() / "sessions" /
                                           exited_start.at("session_id").get<std::string>();
             bool exited_clean = false;
             const auto exited_until = std::chrono::steady_clock::now() + std::chrono::seconds(10);
@@ -1809,11 +1815,11 @@ int main(int argc, char **argv) try {
                 const auto wrong_machine = root / "machines/same-profile-other-machine";
                 ensure_private_directory(wrong_machine);
                 write_private_json(wrong_machine / "runtime.json", metadata);
-                const auto cluster_owner = native_current_active_directory(
-                                                   root, default_profile_name,
-                                                   voyemu::machine_identity(default_profile_name,
-                                                                            std::string_view{})) /
-                                           (std::string(default_profile_name) + ".json");
+                const auto cluster_owner =
+                        native_current_active_directory(
+                                root, qinggan09_profile(),
+                                voyemu::machine_identity(qinggan09_profile(), std::string_view{})) /
+                        (std::string(qinggan09_profile()) + ".json");
                 const auto cluster_owner_sha = sha256_file(cluster_owner);
 
                 for (const auto *command : {"status", "stop"}) {
@@ -2110,8 +2116,8 @@ int main(int argc, char **argv) try {
 
         const auto saved_scenario_path =
                 native_current_active_directory(
-                        root, default_profile_name,
-                        voyemu::machine_identity(default_profile_name, std::string_view{}))
+                        root, qinggan09_profile(),
+                        voyemu::machine_identity(qinggan09_profile(), std::string_view{}))
                         .parent_path() /
                 "state/vehicle-state.json";
         auto fixture_files = [&]() {
@@ -2142,9 +2148,9 @@ int main(int argc, char **argv) try {
                         missing_resume.output);
         const auto launch_lock =
                 native_current_active_directory(
-                        root, default_profile_name,
-                        voyemu::machine_identity(default_profile_name, std::string_view{})) /
-                (std::string(default_profile_name) + ".launch.lock");
+                        root, qinggan09_profile(),
+                        voyemu::machine_identity(qinggan09_profile(), std::string_view{})) /
+                (std::string(qinggan09_profile()) + ".launch.lock");
         require(std::filesystem::symlink_status(launch_lock).type() ==
                                 std::filesystem::file_type::regular &&
                         std::filesystem::file_size(launch_lock) == 0,
@@ -2166,7 +2172,7 @@ int main(int argc, char **argv) try {
         require(after_resume == before_resume,
                 "missing resume changed checkpoint, inputs or allocated session files: " +
                         Json::diff(before_resume, after_resume).dump());
-        require(!std::filesystem::exists(configuration / default_profile_name / "sessions") &&
+        require(!std::filesystem::exists(configuration / qinggan09_profile() / "sessions") &&
                         !std::filesystem::exists(root / "identity.json") && tcp_port_free(port) &&
                         tcp_port_free(port + 1),
                 "missing resume allocated a session, supervisor or SDK guest");
@@ -2271,7 +2277,7 @@ int main(int argc, char **argv) try {
                     "clock correction was replayed");
         }
 
-        auto first_directory = configuration / default_profile_name / "sessions" / first_id;
+        auto first_directory = configuration / qinggan09_profile() / "sessions" / first_id;
 
         if (root_restart) {
 #ifdef _WIN32
@@ -2643,7 +2649,7 @@ int main(int argc, char **argv) try {
             auto public_call = [&](Json input, bool expect_success = true) {
                 input["schema"] = 1;
                 input["request_id"] = random_token();
-                input["profile"] = default_profile_name;
+                input["profile"] = qinggan09_profile();
                 input["session"] = {{"id", first_id}, {"ownership_id", slow_owner}};
                 const auto path = root / ".local/build" / ("slow-api-" + random_token() + ".json");
                 ensure_private_directory(path.parent_path());
@@ -3331,7 +3337,7 @@ int main(int argc, char **argv) try {
                     "public stopped status leaked running or internal terminal labels");
             const auto next = json({"start", "--background"});
             require(next.at("session_id") != first_id, "ordinary start reused the stopped epoch");
-            const auto next_directory = configuration / default_profile_name / "sessions" /
+            const auto next_directory = configuration / qinggan09_profile() / "sessions" /
                                         next.at("session_id").get<std::string>();
             const auto next_owner = read_private_json(next_directory / "session-owner.json");
             const auto next_supervisor = next_owner.at("creator_pid").get<std::int64_t>();
@@ -3429,7 +3435,7 @@ int main(int argc, char **argv) try {
 
         auto sdk_paths = read_private_json(root / "emulator-paths.json", 4096);
         require(sdk_paths["avd_content"] ==
-                        (configuration / default_profile_name / "android").string(),
+                        (configuration / qinggan09_profile() / "android").string(),
                 "SDK content escaped temporary runtime");
         require(sdk_paths["datadir"] == sdk_paths["avd_content"],
                 "SDK writable fallback escaped the machine runtime");
@@ -3438,7 +3444,7 @@ int main(int argc, char **argv) try {
                         std::filesystem::path(sdk_paths["cache"].get<std::string>())
                                         .generic_string()
                                         .find(("/.local/machines/" +
-                                               std::string(default_profile_name) + "/android/")) !=
+                                               std::string(qinggan09_profile()) + "/android/")) !=
                                 std::string::npos,
                 "persistent userdata or runtime cache path differs");
         const auto sdk_environment = read_private_json(root / "emulator-environment.json", 4096);
@@ -3968,7 +3974,7 @@ int main(int argc, char **argv) try {
                 "stop left guest input held before checkpoint");
 
         if (quickboot) {
-            require(read_private_json(root / ".local/machines" / default_profile_name / "android" /
+            require(read_private_json(root / ".local/machines" / qinggan09_profile() / "android" /
                                       "voyemu-quickboot.json")["state"] == "clean",
                     "clean checkpoint not persisted after owned process exit");
         }
@@ -3981,7 +3987,7 @@ int main(int argc, char **argv) try {
             std::filesystem::remove(root / "direct-engine");
             auto rejected = json({"start"});
             auto rejected_id = rejected.at("session_id").get<std::string>();
-            auto rejected_directory = configuration / default_profile_name / "sessions" /
+            auto rejected_directory = configuration / qinggan09_profile() / "sessions" /
                                       rejected_id;
             auto rejection_deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
             bool rejected_nonce = false;
@@ -4030,7 +4036,7 @@ int main(int argc, char **argv) try {
 
             require(terminal && tcp_port_free(port) && tcp_port_free(port + 1),
                     "unowned fixture leaf did not terminate safely");
-            require(read_private_json(root / ".local/machines" / default_profile_name / "android" /
+            require(read_private_json(root / ".local/machines" / qinggan09_profile() / "android" /
                                       "voyemu-quickboot.json")["state"] == "in_use",
                     "unowned restore produced a clean checkpoint");
             std::filesystem::remove_all(root);
@@ -4047,8 +4053,8 @@ int main(int argc, char **argv) try {
                     "state-restore fixture did not capture a distinct driving state");
             auto canonical =
                     native_current_active_directory(
-                            root, default_profile_name,
-                            voyemu::machine_identity(default_profile_name, std::string_view{}))
+                            root, qinggan09_profile(),
+                            voyemu::machine_identity(qinggan09_profile(), std::string_view{}))
                             .parent_path() /
                     "state/vehicle-state.json";
             write_private_json(canonical, initial_state());
@@ -4059,8 +4065,8 @@ int main(int argc, char **argv) try {
         if (latency) {
             auto canonical =
                     native_current_active_directory(
-                            root, default_profile_name,
-                            voyemu::machine_identity(default_profile_name, std::string_view{}))
+                            root, qinggan09_profile(),
+                            voyemu::machine_identity(qinggan09_profile(), std::string_view{}))
                             .parent_path() /
                     "state/vehicle-state.json";
             auto current = read_private_json(first_directory / "vehicle-state.json");
@@ -4266,7 +4272,7 @@ int main(int argc, char **argv) try {
                             readiness_ms),
                     "late or invalid canvas bypassed readiness guard");
             write_private_json(
-                    configuration / default_profile_name / "sessions" / second_id /
+                    configuration / qinggan09_profile() / "sessions" / second_id /
                             "media-window.json",
                     {{"schema", 1},
                      {"source", "own-window-instrumentation"},
@@ -4374,7 +4380,7 @@ int main(int argc, char **argv) try {
                     << "delayed identity/state/display/canvas retries and ready-lost-repair preserve guards and bounded activation\n";
         }
 
-        auto directory = configuration / default_profile_name / "sessions" / second_id;
+        auto directory = configuration / qinggan09_profile() / "sessions" / second_id;
         require_disks();
         auto guest_deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
         bool own_guest_ready = false;
@@ -4404,7 +4410,7 @@ int main(int argc, char **argv) try {
         if (state_restore) {
             const auto expected =
                     select_vehicle_startup(VehicleStartup::fresh,
-                                           embedded_profile(default_profile_name)
+                                           embedded_profile(qinggan09_profile())
                                                    .at("definition")
                                                    .value("initial_state", Json::object()),
                                            nullptr);
@@ -4416,8 +4422,8 @@ int main(int argc, char **argv) try {
                     "restored guest values replaced fresh profile authority or revision did not advance above captured guest state");
             require(read_private_json(root / "full-input.json") == source,
                     "restored guest did not receive current full host input");
-            require(read_private_json(configuration / default_profile_name / "sessions" /
-                                      second_id / "vehicle-state.json") == source,
+            require(read_private_json(configuration / qinggan09_profile() / "sessions" / second_id /
+                                      "vehicle-state.json") == source,
                     "reconciled source revision was not persisted");
         }
 
@@ -4441,7 +4447,7 @@ int main(int argc, char **argv) try {
                                     true &&
                             resumed["deliveries"]["android"]["guest_acknowledged"] == true,
                     "restore lacks fresh bootstrap/full vehicle state");
-            require(read_private_json(root / ".local/machines" / default_profile_name / "android" /
+            require(read_private_json(root / ".local/machines" / qinggan09_profile() / "android" /
                                       "voyemu-quickboot.json")["state"] == "in_use",
                     "restore failed to invalidate checkpoint before guest launch");
             auto current_args = read_private_json(root / "emulator-arguments.json");
@@ -4451,7 +4457,7 @@ int main(int argc, char **argv) try {
         }
 
         require(read_private_json(root / "emulator-paths.json", 4096)["avd_content"] ==
-                        (configuration / default_profile_name / "android").string(),
+                        (configuration / qinggan09_profile() / "android").string(),
                 "restart content escaped temporary runtime");
         const auto restarted_environment = read_private_json(root / "emulator-environment.json",
                                                              4096);
@@ -4517,7 +4523,7 @@ int main(int argc, char **argv) try {
         }
 
         require(removed, "terminal supervisor kept its control endpoint");
-        require(read_private_json(root / ".local/machines" / default_profile_name / "android" /
+        require(read_private_json(root / ".local/machines" / qinggan09_profile() / "android" /
                                   "voyemu-quickboot.json")["state"] == "in_use",
                 "external window exit incorrectly published clean checkpoint");
 
@@ -4590,7 +4596,7 @@ int main(int argc, char **argv) try {
             const auto calls = read_private_json(root / "content-requests.json");
 
             for (const auto &entry : std::filesystem::directory_iterator(
-                         configuration / default_profile_name / "sessions")) {
+                         configuration / qinggan09_profile() / "sessions")) {
                 const auto path = entry.path() / "supervisor.log";
                 std::ifstream file(path, std::ios::binary);
                 std::string contents{std::istreambuf_iterator<char>(file), {}};

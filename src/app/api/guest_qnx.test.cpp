@@ -3,6 +3,7 @@
 #endif
 #include "api.hpp"
 #include "guest_qnx_fake.hpp"
+#include "profile_catalog.hpp"
 #include <cassert>
 #include <exception>
 #include <iostream>
@@ -13,7 +14,9 @@ using namespace voyemu;
 namespace {
 struct Owned {
     std::filesystem::path root;
-    std::string profile = default_profile_name, id = random_token(), owner = random_token();
+    std::string profile =
+            embedded_profile_names(ProfilePlatform::qinggan09, ProfileBoard::sa8155).at(0);
+    std::string id = random_token(), owner = random_token();
 
     explicit Owned(const std::filesystem::path &base)
         : root(base / ("guest-qnx-" + random_token())) {

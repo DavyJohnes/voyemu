@@ -16,6 +16,7 @@
 #include "os/fs.hpp"
 #include "owner_lock.hpp"
 #include "process.hpp"
+#include "profile_catalog.hpp"
 #include "profile_file_nodes.hpp"
 #include "profile_identity.hpp"
 #include "project_files.hpp"
@@ -345,7 +346,8 @@ std::uint64_t native_profile_android_input_reserve(const Json &profile) {
 std::uint64_t native_profile_executable_reserve(const Json &profile, std::string_view name) {
     const auto android = profile.value("android", Json::object());
 
-    if (runtime_profile_reference(profile, name) == default_profile_name &&
+    if (embedded_profile_declares(runtime_profile_reference(profile, name),
+                                  ProfilePlatform::qinggan09, ProfileBoard::sa8155) &&
         android.value("package", std::string{}) == "system-images;android-28;default;arm64-v8a") {
         return android_candidate_reserve_bytes(profile, name);
     }

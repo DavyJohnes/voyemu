@@ -24,11 +24,13 @@ Json audio_diagnostic_activation(const std::filesystem::path &record) {
     need(value.value("schema", 0) == 1 && value.value("route", std::string{}) == "wav" &&
                  (profile == passion_profile_id || profile == qinggan11_731_profile_id ||
                   profile == "free-11-chinese-20250710-6.11.1" || profile == nxp_profile_id ||
-                  profile == default_profile_name),
+                  embedded_profile_declares(profile, ProfilePlatform::qinggan09,
+                                            ProfileBoard::sa8155)),
          "audio diagnostic activation must be the exact wav route for an owned run");
 
     if (profile == qinggan11_731_profile_id || profile == "free-11-chinese-20250710-6.11.1" ||
-        profile == nxp_profile_id || profile == default_profile_name) {
+        profile == nxp_profile_id ||
+        embedded_profile_declares(profile, ProfilePlatform::qinggan09, ProfileBoard::sa8155)) {
         const auto nonce = value.value("nonce", std::string{});
         need(hex_text(nonce, 32), "Owned audio diagnostic requires a one-run nonce");
         need(value.value("directory", std::string{}) == std::filesystem::canonical(record).string(),
@@ -1173,7 +1175,9 @@ std::filesystem::path bind_machine_configuration(const std::filesystem::path &ro
                 host.android_port =
                         definition.value("emulator", Json::object()).value("port", 5574u);
 
-                if (family == default_profile_name && host.android_port == 5562) {
+                if (embedded_profile_declares(family, ProfilePlatform::qinggan09,
+                                              ProfileBoard::sa8155) &&
+                    host.android_port == 5562) {
                     host.android_port = 5574;
                 }
             }

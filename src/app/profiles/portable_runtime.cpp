@@ -1377,11 +1377,11 @@ Json portable_android_launch(const std::filesystem::path &root,
     const bool frontend = !host.frontend.empty();
     [[maybe_unused]] const std::string suffix(os::executable_suffix),
             host_name(os::dependency_host);
-    const auto profile_name = verified_profile.empty()
-                                      ? definition.value("id", std::string(default_profile_name))
-                                      : std::string(verified_profile);
-    const auto identity = machine_identity(profile_name,
-                                           avd.starts_with("voyemu-") ? avd.substr(7) : avd);
+    const auto machine_name = avd.starts_with("voyemu-") ? avd.substr(7) : avd;
+    // Without a verified profile or an id the runtime directory is named by the machine alone.
+    const auto profile_name = verified_profile.empty() ? definition.value("id", machine_name)
+                                                       : std::string(verified_profile);
+    const auto identity = machine_identity(profile_name, machine_name);
     const auto runtime = native_machine_directory(root, profile_name, identity);
     Json android = {
             {"schema", 1},
@@ -1499,9 +1499,11 @@ Json portable_android_launch(const std::filesystem::path &root,
         need(!diagnostic_profile.empty() &&
                      audio_diagnostic.value("profile", std::string{}) == diagnostic_profile,
              "audio diagnostic profile differs from selected definition");
-        need(android.at("api") == 30 || ((diagnostic_profile == nxp_profile_id ||
-                                          diagnostic_profile == default_profile_name) &&
-                                         android.at("api") == 28),
+        need(android.at("api") == 30 ||
+                     ((diagnostic_profile == nxp_profile_id ||
+                       embedded_profile_declares(diagnostic_profile, ProfilePlatform::qinggan09,
+                                                 ProfileBoard::sa8155)) &&
+                      android.at("api") == 28),
              "audio diagnostic requires the selected pinned runtime");
         android["diagnostic_audio"] = "wav";
     }

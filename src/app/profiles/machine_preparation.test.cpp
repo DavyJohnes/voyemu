@@ -5,6 +5,7 @@
 #include "api30_framework_boot.hpp"
 #include "machine_preparation_internal.hpp"
 #include "process.hpp"
+#include "profile_catalog.hpp"
 #include "session.hpp"
 #include <algorithm>
 #include <csignal>
@@ -29,6 +30,15 @@
 #include "profile_build.hpp"
 #include "profile_runtime.hpp"
 using namespace voyemu;
+
+// The bundled Android 9 profile on the 8155 board, read from the catalog.
+static const std::string &qinggan09_profile() {
+    static const auto id =
+            embedded_profile_names(ProfilePlatform::qinggan09, ProfileBoard::sa8155).at(0);
+
+    return id;
+}
+
 namespace {
 void check(bool value, const std::source_location where = std::source_location::current()) {
     if (!value) {
@@ -306,9 +316,9 @@ Json run_owned_candidate(const std::filesystem::path &root, AndroidCandidateRequ
 
 void verify_candidate_peak_formula() {
     // Non-media profiles need no scratch: peak = RAW re-export of base+payload+guest growth.
-    check(android_candidate_peak_extra_bytes(Json{{"id", default_profile_name}}, 0, 0) ==
+    check(android_candidate_peak_extra_bytes(Json{{"id", qinggan09_profile()}}, 0, 0) ==
           2ULL << 30);
-    check(android_candidate_peak_extra_bytes(Json{{"id", default_profile_name}}, 1ULL << 30,
+    check(android_candidate_peak_extra_bytes(Json{{"id", qinggan09_profile()}}, 1ULL << 30,
                                              512ULL << 20) ==
           (2ULL << 30) + (1ULL << 30) + (512ULL << 20));
     // Passion media profile with a 1GiB payload: scratch 1792MiB plus 3GiB export+growth.
@@ -494,15 +504,15 @@ void verify_candidate_storage() {
     const auto source_root =
             std::filesystem::path(__FILE__).parent_path().parent_path().parent_path().parent_path();
     const auto a9 = read_private_json(
-            source_root / "profiles" / default_profile_name / "profile.json", 1 << 20);
+            source_root / "profiles" / qinggan09_profile() / "profile.json", 1 << 20);
     check(!a9.contains("id"));
     const std::uint64_t qinggan09_base = 2810564557ULL, qinggan09_payload = 152342979ULL;
     const auto qinggan09_budget = android_candidate_build_budget(
-            a9, qinggan09_base, qinggan09_payload, default_profile_name);
+            a9, qinggan09_base, qinggan09_payload, qinggan09_profile());
     auto clone = a9;
     clone["id"] = "custom-qinggan09-development";
     clone["capture"] = {{"profile", "custom-qinggan09-development"},
-                        {"referenceProfile", default_profile_name}};
+                        {"referenceProfile", qinggan09_profile()}};
     const auto clone_budget = android_candidate_build_budget(
             clone, qinggan09_base, qinggan09_payload, "custom-qinggan09-development");
     check(clone_budget.reserve_bytes == qinggan09_budget.reserve_bytes &&
@@ -537,7 +547,7 @@ void verify_candidate_storage() {
         bool refused = false;
         try {
             android_candidate_build_budget(bad, mode == 3 ? UINT64_MAX : qinggan09_base,
-                                           qinggan09_payload, default_profile_name);
+                                           qinggan09_payload, qinggan09_profile());
         } catch (...) {
             refused = true;
         }
@@ -561,7 +571,7 @@ void verify_candidate_storage() {
           budget.peak_extra_bytes ==
                   android_candidate_peak_extra_bytes(nxp, 3ULL << 30, 64ULL << 20));
 
-    for (const auto *id : {default_profile_name, "other"}) {
+    for (const auto *id : {qinggan09_profile().c_str(), "other"}) {
         const auto old = android_candidate_build_budget(Json{{"id", id}}, 0, 0);
         check(old.reserve_bytes == 20ULL << 30 && old.peak_extra_bytes == 12ULL << 30);
     }
@@ -681,7 +691,7 @@ void verify_candidate_storage() {
               20ULL << 30);
     }
 
-    for (const auto *reference : {"free-11-chinese-20260731-7.3.1", default_profile_name}) {
+    for (const auto *reference : {"free-11-chinese-20260731-7.3.1", qinggan09_profile().c_str()}) {
         auto cross = qinggan11_611;
         cross["capture"] = {{"profile", "free-11-chinese-20250710-6.11.1"},
                             {"referenceProfile", reference}};
@@ -2094,8 +2104,8 @@ static void qinggan09_home_checkpoint_fixture() {
 static void qinggan09_home_launcher_crash_fixture() {
     const auto root =
             std::filesystem::path(__FILE__).parent_path().parent_path().parent_path().parent_path();
-    const auto profile =
-            read_private_json(root / "profiles" / default_profile_name / "profile.json", 4 << 20);
+    const auto profile = read_private_json(root / "profiles" / qinggan09_profile() / "profile.json",
+                                           4 << 20);
     Json artifacts = Json::object();
 
     for (const auto &entry : profile.at("install")) {
@@ -2848,7 +2858,7 @@ int main(int argc, char **argv) {
             check(denied);
         }
 
-        check(android_candidate_vehicle_observer_policy(Json{{"id", default_profile_name}}) ==
+        check(android_candidate_vehicle_observer_policy(Json{{"id", qinggan09_profile()}}) ==
               Json({{"supported", true}}));
         Json passion = {
                 {"id", "passion-11-russian-20260403-2.1.4.80"},
@@ -2966,7 +2976,7 @@ int main(int argc, char **argv) {
                 passion,
                 "Display 17:\n mPrimaryDisplayDevice=Emulator2D\n real 1280 x 720, state OFF\n",
                 passion_window));
-        check(!android_candidate_secondary_display_ready(Json{{"id", default_profile_name}},
+        check(!android_candidate_secondary_display_ready(Json{{"id", qinggan09_profile()}},
                                                          passion_display, passion_window));
         auto qinggan11_731 = passion;
         qinggan11_731["id"] = "free-11-chinese-20260731-7.3.1";
@@ -3103,7 +3113,7 @@ int main(int argc, char **argv) {
                       qinggan11_731, free_display,
                       actual_drawn_window + crash_window("com.qinggan.app.launcher.other", 19)) ==
               19);
-        check(android_candidate_secondary_display_ready(Json{{"id", default_profile_name}},
+        check(android_candidate_secondary_display_ready(Json{{"id", qinggan09_profile()}},
                                                         free_display, free_window) == 19);
         const auto unsupported = android_candidate_vehicle_observer_policy(passion);
         check(unsupported.at("status") == "unsupported" && unsupported.at("supported") == false &&
@@ -3189,8 +3199,8 @@ int main(int argc, char **argv) {
             reject_checks(passion, Json::array({observed[0]}), "declaration missing");
             reject_checks(passion, Json(), "bounded");
             reject_checks(passion, Json::object(), "bounded");
-            reject_checks(Json{{"id", default_profile_name}}, observed, "vehicle-observer");
-            validate_android_candidate_checks(Json{{"id", default_profile_name}},
+            reject_checks(Json{{"id", qinggan09_profile()}}, observed, "vehicle-observer");
+            validate_android_candidate_checks(Json{{"id", qinggan09_profile()}},
                                               Json::array({observed[0]}));
         }
         auto wrong_api = passion;
@@ -3274,7 +3284,7 @@ int main(int argc, char **argv) {
             unsigned port = 5580;
 
             if (variant == 0) {
-                bad["id"] = default_profile_name;
+                bad["id"] = qinggan09_profile();
             }
 
             if (variant == 1) {
@@ -3539,7 +3549,7 @@ int main(int argc, char **argv) {
         if (argc == 4 && std::string(argv[1]) == "--plan") {
             const auto root = std::filesystem::absolute(argv[2]);
             const auto profile = read_private_json(
-                               root / "profiles" / default_profile_name / "profile.json", 4 << 20),
+                               root / "profiles" / qinggan09_profile() / "profile.json", 4 << 20),
                        artifacts = read_private_json(std::filesystem::absolute(argv[3]), 16 << 20);
             std::cout << android_candidate_install_plan(profile, artifacts.at("artifacts")).dump()
                       << '\n';
@@ -3555,7 +3565,7 @@ int main(int argc, char **argv) {
                                   .parent_path()
                                   .parent_path();
         const auto profile = read_private_json(
-                root / "profiles" / default_profile_name / "profile.json", 4 << 20);
+                root / "profiles" / qinggan09_profile() / "profile.json", 4 << 20);
         Json artifacts = Json::object();
 
         for (const auto &entry : profile.at("install")) {
@@ -5702,7 +5712,7 @@ int main(int argc, char **argv) {
         verify_candidate_storage();
         verify_candidate_cancellation();
         AndroidCandidateRequest request;
-        request.profile = default_profile_name;
+        request.profile = qinggan09_profile();
         request.profile_sha256 = sha256_file(root / "profiles" / request.profile / "profile.json");
         failed = false;
         try {

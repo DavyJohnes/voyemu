@@ -5,6 +5,7 @@
 #include "original_navi_candidate.hpp"
 #include "process.hpp"
 #include "profile_build.hpp"
+#include "profile_catalog.hpp"
 #include "profile_file_nodes.hpp"
 #include "profile_preparation.hpp"
 #include "selinux_patch.hpp"
@@ -16,6 +17,15 @@
 #include <stdexcept>
 #include <thread>
 using namespace voyemu;
+
+// The bundled Android 9 profile on the 8155 board, read from the catalog.
+static const std::string &qinggan09_profile() {
+    static const auto id =
+            embedded_profile_names(ProfilePlatform::qinggan09, ProfileBoard::sa8155).at(0);
+
+    return id;
+}
+
 namespace {
 void check(bool value, const std::source_location where = std::source_location::current()) {
     if (!value) {
@@ -678,7 +688,7 @@ int main(int argc, char **argv) {
             runtime.receipt = runtime.helper.parent_path() / "build-receipt.json";
             runtime.receipt_sha256 = argv[7];
             JavaPreparationRequest request;
-            request.profile = argc == 10 ? argv[9] : default_profile_name;
+            request.profile = argc == 10 ? argv[9] : qinggan09_profile();
             request.profile_sha256 =
                     sha256_file(root / "profiles" / request.profile / "profile.json");
             const auto result = prepare_java_artifacts(root, runtime, request,
@@ -729,7 +739,7 @@ int main(int argc, char **argv) {
                                   .parent_path()
                                   .parent_path();
         JavaPreparationRequest request;
-        request.profile = default_profile_name;
+        request.profile = qinggan09_profile();
         request.profile_sha256 = sha256_file(root / "profiles" / request.profile / "profile.json");
         const auto plan = java_preparation_request(root, request);
         check(plan.size() == 5 && plan.at("schema") == 1 && plan.at("operation") == "plan" &&

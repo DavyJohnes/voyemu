@@ -4,6 +4,7 @@
 #include "full_restart.hpp"
 #include "guest_android_fake.hpp"
 #include "platform_file.hpp"
+#include "profile_catalog.hpp"
 #include "qinggan11_startup.hpp"
 #include "session.hpp"
 #include "session_recovery.hpp"
@@ -33,6 +34,14 @@
 #include <ImageIO/ImageIO.h>
 #endif
 using namespace voyemu;
+
+// The bundled Android 9 profile on the 8155 board, read from the catalog.
+static const std::string &qinggan09_profile() {
+    static const auto id =
+            embedded_profile_names(ProfilePlatform::qinggan09, ProfileBoard::sa8155).at(0);
+
+    return id;
+}
 
 void image_dimensions(const std::filesystem::path &path, std::size_t width, std::size_t height) {
 #ifdef _WIN32
@@ -75,7 +84,7 @@ void owned_recovery_tests(const std::filesystem::path &base, const std::filesyst
     const auto root = base / ("test-owned-recovery-" + random_token());
 
     ensure_private_directory(root);
-    const std::string profile = default_profile_name, id = random_token(),
+    const std::string profile = qinggan09_profile(), id = random_token(),
                       ownership = random_token();
     const auto directory = root / ".local/machines" / profile / "sessions" / id,
                active = root / ".local/machines" / profile / "active" / (profile + ".json"),
@@ -582,7 +591,7 @@ static void wheel_release_admission_tests(const std::filesystem::path &base) {
                            {{"schema", 1}, {"session_id", epoch}, {"ownership_id", owner}});
     };
     select(name, id);
-    const std::string other = default_profile_name, other_id = random_token();
+    const std::string other = qinggan09_profile(), other_id = random_token();
     select(other, other_id);
     auto request = [&](const char *op) {
         return Json{{"schema", 1},
@@ -784,7 +793,7 @@ static void phone_api_contract_tests(const std::filesystem::path &base) {
     const auto root = base / ("test-phone-api-" + random_token());
 
     ensure_private_directory(root);
-    const std::string profile = default_profile_name, id = random_token(), owner = random_token();
+    const std::string profile = qinggan09_profile(), id = random_token(), owner = random_token();
     const auto directory = root / ".local/machines" / profile / "sessions" / id;
     ensure_private_directory(directory);
     write_private_json(root / ".local/machines" / profile / "active" / (profile + ".json"),
@@ -970,7 +979,7 @@ int main(int argc, char **argv) try {
         }
 
         append_start_machine_identity(
-                output, status, machine_identity(default_profile_name, machine), explicit_seed);
+                output, status, machine_identity(qinggan09_profile(), machine), explicit_seed);
         std::cout << output.dump() << '\n';
 
         return 0;
@@ -1051,7 +1060,7 @@ int main(int argc, char **argv) try {
     owned_recovery_tests(base, std::filesystem::canonical(argv[0]));
 #endif
     const auto id = random_token(), owner = random_token();
-    const std::string name = default_profile_name;
+    const std::string name = qinggan09_profile();
     const auto directory = root / ".local/machines" / name / "sessions" / id;
     ensure_private_directory(directory);
     Session session(directory, id);

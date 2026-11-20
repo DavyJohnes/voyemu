@@ -10,7 +10,8 @@
 #include <set>
 namespace voyemu::cli {
 struct Arguments {
-    std::string command = "help", profile = voyemu::default_profile_name;
+    // Empty until a positional profile, a machine path or the internal --profile names one.
+    std::string command = "help", profile;
     std::filesystem::path root, session, request_file, jdk, update, machine_path, build_destination,
             reuse_qnx, reuse_qnx_source;
     std::string ownership_id, serial, refresh_session, reuse_qnx_sha256;
@@ -357,6 +358,11 @@ inline Arguments parse(int argc, char **argv, const std::filesystem::path &execu
         result.profile = selected.profile;
     }
 
+    if (internal && result.profile.empty()) {
+        throw LocalizedError("PROFILE_NAME", "error.profile_required",
+                             {{"command", result.command}});
+    }
+
     if (!result.providers.empty() && result.command != "start") {
         throw LocalizedError("PROVIDER_ARGUMENT", "error.provider_scope");
     }
@@ -411,7 +417,8 @@ inline Arguments parse(int argc, char **argv, const std::filesystem::path &execu
                           "valid machine child name requires start/restart/check/build");
     }
 
-    if (!voyemu::valid_profile_name(result.profile)) {
+    if ((result.profile_explicit || !result.profile.empty()) &&
+        !voyemu::valid_profile_name(result.profile)) {
         throw LocalizedError("PROFILE_NAME", "error.unsafe_profile");
     }
 

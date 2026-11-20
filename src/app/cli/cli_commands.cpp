@@ -66,7 +66,8 @@ int fetch_command(const Arguments &args, const Emit &emit) {
 
 int deps_command(const Arguments &args, const Emit &emit) {
     // An unknown profile fails as in fetch, before any download.
-    if (!std::filesystem::exists(args.root / "profiles" / args.profile / "profile.json")) {
+    if (!args.profile.empty() &&
+        !std::filesystem::exists(args.root / "profiles" / args.profile / "profile.json")) {
         (void)voyemu::embedded_profile(args.profile);
     }
 
@@ -110,7 +111,8 @@ int deps_command(const Arguments &args, const Emit &emit) {
         result["qnx_host"] = {{"status", "unavailable"}, {"reason", error.what()}};
     }
 
-    if (voyemu::portable_runtime_available(args.root, args.profile,
+    if (!args.profile.empty() &&
+        voyemu::portable_runtime_available(args.root, args.profile,
                                            voyemu::machine_identity(args.profile, {}))) {
         result["guest_base"] = step("guest_base", [&] {
             return voyemu::prepare_portable_base(args.root, args.profile, args.offline,

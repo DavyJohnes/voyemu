@@ -849,8 +849,9 @@ int main(int argc, char **argv) {
         check(inputs.size() == 2 && inputs[0].package == "com.example.fixture" &&
                       inputs[1].remote == "/system/framework/one.jar",
               "closed package and per-file tree source plan");
-        check(original_input_plan(embedded_profile(default_profile_name).at("definition")).size() ==
-                      100,
+        const auto qinggan09 =
+                embedded_profile_names(ProfilePlatform::qinggan09, ProfileBoard::sa8155).at(0);
+        check(original_input_plan(embedded_profile(qinggan09).at("definition")).size() == 100,
               "first vehicle declares 100 exact required Android input files");
 
         for (unsigned mode = 0; mode < 6; ++mode) {

@@ -34,6 +34,14 @@
 #endif
 using namespace voyemu;
 
+// The bundled Android 9 profile on the 8155 board, read from the catalog.
+static const std::string &qinggan09_profile() {
+    static const auto id =
+            embedded_profile_names(ProfilePlatform::qinggan09, ProfileBoard::sa8155).at(0);
+
+    return id;
+}
+
 static Json qinggan09_signature_input_identity(const std::filesystem::path &file) {
 #ifdef _WIN32
     const auto handle = CreateFileW(file.c_str(), GENERIC_READ,
@@ -1526,14 +1534,14 @@ static void frontend_binding_checks(const std::filesystem::path &stage) {
             {"splash", splash.string()},
             {"assets", assets.string()},
             {"state",
-             (frontend_root / ".local/machines" / default_profile_name / "state/placement.json")
+             (frontend_root / ".local/machines" / qinggan09_profile() / "state/placement.json")
                      .string()},
             {"discovery_root", (frontend_root / ".local/build/tmp/avd/running").string()},
             {"grpc_port", 45997},
             {"pins", frontend_pins},
             {"capture", false}};
     std::map<std::string, std::string> pins;
-    const auto bound = profile_frontend_bindings(frontend_root, default_profile_name, frontend,
+    const auto bound = profile_frontend_bindings(frontend_root, qinggan09_profile(), frontend,
                                                  pins);
 
     if (bound != frontend || pins.size() != 5) {
@@ -1580,7 +1588,7 @@ static void frontend_binding_checks(const std::filesystem::path &stage) {
     const auto old_pins = pins;
     rejected = false;
     try {
-        profile_frontend_bindings(frontend_root, default_profile_name, foreign, pins);
+        profile_frontend_bindings(frontend_root, qinggan09_profile(), foreign, pins);
     } catch (...) {
         rejected = true;
     }
@@ -1593,7 +1601,7 @@ static void frontend_binding_checks(const std::filesystem::path &stage) {
     missing_exe["pins"].erase(0);
     rejected = false;
     try {
-        profile_frontend_bindings(frontend_root, default_profile_name, missing_exe, pins);
+        profile_frontend_bindings(frontend_root, qinggan09_profile(), missing_exe, pins);
     } catch (...) {
         rejected = true;
     }
@@ -1610,14 +1618,14 @@ static void frontend_binding_checks(const std::filesystem::path &stage) {
             {"original",
              {{"BootAnimation",
                {{"file", "bootanimation.zip"}, {"sha256", sha256_bytes("synthetic animation")}}}}}};
-    const auto originals = built_root / ".local/profiles" / default_profile_name / "originals";
-    const auto profile_file = built_root / "profiles" / default_profile_name / "profile.json";
+    const auto originals = built_root / ".local/profiles" / qinggan09_profile() / "originals";
+    const auto profile_file = built_root / "profiles" / qinggan09_profile() / "profile.json";
     write_private_json(profile_file, definition);
     resource_source_fixture(built_root, definition);
     put(originals / "bootanimation.zip", "tampered animation");
     rejected = false;
     try {
-        export_portable_resources(built_root, definition, default_profile_name,
+        export_portable_resources(built_root, definition, qinggan09_profile(),
                                   stage / "tampered-seed");
     } catch (const std::exception &error) {
         rejected = std::string_view(error.what()).starts_with("PORTABLE_RESOURCES: ");
@@ -1633,15 +1641,15 @@ static void frontend_binding_checks(const std::filesystem::path &stage) {
     std::filesystem::copy_file(profile_file, prepared / "profile.json");
     auto manifest = Json{{"schema", 1},
                          {"kind", "portable-guest-runtime"},
-                         {"profile", default_profile_name},
+                         {"profile", qinggan09_profile()},
                          {"profile_sha256", sha256_file(profile_file)},
                          {"android", Json::object()}};
     write_private_json(prepared / "runtime.json", manifest);
     std::map<std::string, std::string> missing_resources;
     rejected = false;
     try {
-        profile_built_frontend_bindings(built_root, default_profile_name,
-                                        machine_identity(default_profile_name, "frontend-snapshot"),
+        profile_built_frontend_bindings(built_root, qinggan09_profile(),
+                                        machine_identity(qinggan09_profile(), "frontend-snapshot"),
                                         missing_resources);
     } catch (...) {
         rejected = true;
@@ -1651,19 +1659,19 @@ static void frontend_binding_checks(const std::filesystem::path &stage) {
         throw std::runtime_error("prepared frontend silently used shared source assets");
     }
 
-    manifest["resources"] = export_portable_resources(built_root, definition, default_profile_name,
+    manifest["resources"] = export_portable_resources(built_root, definition, qinggan09_profile(),
                                                       prepared);
     write_private_json(prepared / "runtime.json", manifest);
     std::map<std::string, std::string> built_pins;
     const auto built = profile_built_frontend_bindings(
-            built_root, default_profile_name,
-            machine_identity(default_profile_name, "frontend-snapshot"), built_pins);
+            built_root, qinggan09_profile(),
+            machine_identity(qinggan09_profile(), "frontend-snapshot"), built_pins);
     std::filesystem::rename(built_root / "profiles", built_root / "moved-profiles");
     std::filesystem::rename(built_root / "src", built_root / "moved-src");
     std::map<std::string, std::string> prepared_pins;
     const auto prepared_frontend = profile_built_frontend_bindings(
-            built_root, default_profile_name,
-            machine_identity(default_profile_name, "frontend-snapshot"), prepared_pins);
+            built_root, qinggan09_profile(),
+            machine_identity(qinggan09_profile(), "frontend-snapshot"), prepared_pins);
 
     if (prepared_frontend != built || prepared_pins != built_pins) {
         throw std::runtime_error("prepared frontend depends on source profiles/assets");
@@ -1689,7 +1697,7 @@ static void frontend_binding_checks(const std::filesystem::path &stage) {
     std::map<std::string, std::string> stale_pins;
     rejected = false;
     try {
-        profile_frontend_bindings(built_root, default_profile_name, built, stale_pins);
+        profile_frontend_bindings(built_root, qinggan09_profile(), built, stale_pins);
     } catch (...) {
         rejected = true;
     }
@@ -1767,9 +1775,9 @@ static void startup_video_resource_checks(const std::filesystem::path &stage) {
                        {{"image", "ifs2_la.img"}, {"nested", "ifs_video.img"}, {"path", path}}}};
     Json definition = {{"startupVideos", {{"display0", pin}, {"cluster", pin}}}};
 
-    put(root / ".local/profiles" / default_profile_name / "qnx/ifs2_la.img", container);
+    put(root / ".local/profiles" / qinggan09_profile() / "qnx/ifs2_la.img", container);
     write_private_json(
-            root / "profiles" / default_profile_name / "profile-qnx.json",
+            root / "profiles" / qinggan09_profile() / "profile-qnx.json",
             {{"originals",
               {{"ifs2_la.img",
                 {{"file", "ifs2_la.img"},
@@ -1791,7 +1799,7 @@ static void startup_video_resource_checks(const std::filesystem::path &stage) {
         throw std::runtime_error("a machine without the video bound one");
     }
 
-    manifest["resources"] = export_portable_resources(root, definition, default_profile_name, seed);
+    manifest["resources"] = export_portable_resources(root, definition, qinggan09_profile(), seed);
     write_private_json(seed / "runtime.json", manifest);
     const auto cluster = (seed / "ui/startup/cluster.zip").string(),
                display = (seed / "ui/startup/display0-video.zip").string();
@@ -1818,7 +1826,7 @@ static void startup_video_resource_checks(const std::filesystem::path &stage) {
     definition["startupVideos"]["cluster"]["sha256"] = sha256_bytes("another video");
     bool rejected = false;
     try {
-        export_portable_resources(root, definition, default_profile_name, stage / "other-seed");
+        export_portable_resources(root, definition, qinggan09_profile(), stage / "other-seed");
     } catch (const std::exception &error) {
         rejected = std::string_view(error.what()).starts_with("PORTABLE_RESOURCES: ");
     }
@@ -1995,7 +2003,7 @@ static void source_graphics_checks(const std::filesystem::path &stage) {
 
 // The clean base pins that the registered profile of the API28 or API30 image declares.
 static Json clean_base(unsigned api) {
-    return embedded_profile(api == 30 ? "free-11-chinese-20260731-7.3.1" : default_profile_name)
+    return embedded_profile(api == 30 ? "free-11-chinese-20260731-7.3.1" : qinggan09_profile())
             .at("definition")
             .at("android")
             .at("clean_base");
@@ -2475,7 +2483,7 @@ static void runtime_sdk_activation_checks(const std::filesystem::path &stage) {
     const auto root = stage / "runtime-activation-project", sdk = root / ".local/machines-sdk";
 
     ensure_private_directory(sdk);
-    const auto definition = root / "profiles" / default_profile_name / "profile.json";
+    const auto definition = root / "profiles" / qinggan09_profile() / "profile.json";
     const std::string archive = "86844d2edf6ba7c7f11261f6be3fb37788c985cfcf3b8924cfe9f57a1ccbc0a9";
     write_private_json(
             definition,
@@ -2486,7 +2494,7 @@ static void runtime_sdk_activation_checks(const std::filesystem::path &stage) {
                 "https://dl.google.com/android/repository/sys-img/android/arm64-v8a-28_r02.zip"},
                {"sha256", archive},
                {"clean_base", clean_base(28)}}}});
-    const auto seed = root / "machines" / default_profile_name;
+    const auto seed = root / "machines" / qinggan09_profile();
     Json images = Json::object();
 
     for (const auto *name :
@@ -2502,7 +2510,7 @@ static void runtime_sdk_activation_checks(const std::filesystem::path &stage) {
     images["cache.img"] = cache_fixture(seed);
     write_private_json(seed / "runtime.json", {{"schema", 1},
                                                {"kind", "portable-guest-runtime"},
-                                               {"profile", default_profile_name},
+                                               {"profile", qinggan09_profile()},
                                                {"profile_sha256", sha256_file(definition)},
                                                {"android",
                                                 {{"base_archive_sha256", archive},
@@ -2518,8 +2526,8 @@ static void runtime_sdk_activation_checks(const std::filesystem::path &stage) {
                                                         {"components", Json::array()}}}});
     bool denied = false;
     try {
-        activate_built_profile(root, default_profile_name,
-                               machine_identity(default_profile_name, {}), false);
+        activate_built_profile(root, qinggan09_profile(), machine_identity(qinggan09_profile(), {}),
+                               false);
     } catch (const std::exception &error) {
 #ifdef _WIN32
         denied = std::string_view(error.what()).starts_with("DEPS_RUNTIME:");
@@ -2546,8 +2554,8 @@ static void runtime_sdk_activation_checks(const std::filesystem::path &stage) {
     const auto before = cache_file_identity(unverified);
     denied = false;
     try {
-        activate_built_profile(root, default_profile_name,
-                               machine_identity(default_profile_name, {}), false);
+        activate_built_profile(root, qinggan09_profile(), machine_identity(qinggan09_profile(), {}),
+                               false);
     } catch (const std::exception &error) {
         const std::string_view message = error.what();
         denied = message.starts_with("PROFILE_BUILD: runtime SDK pin differs") ||
@@ -3061,7 +3069,7 @@ static void system_upgrade_candidate_checks(const std::filesystem::path &stage) 
     write_private_json(file, receipt);
     bool denied = false;
     try {
-        validate_profile_android_system_candidate(root, default_profile_name, candidate,
+        validate_profile_android_system_candidate(root, qinggan09_profile(), candidate,
                                                   sha256_file(file));
     } catch (...) {
         denied = true;
@@ -3804,8 +3812,8 @@ int main(int argc, char **argv) {
 
         bool rejected = false;
         try {
-            build_profile_android("relative", default_profile_name,
-                                  machine_identity(default_profile_name, {}), true);
+            build_profile_android("relative", qinggan09_profile(),
+                                  machine_identity(qinggan09_profile(), {}), true);
         } catch (...) {
             rejected = true;
         }
@@ -3841,9 +3849,9 @@ int main(int argc, char **argv) {
             }
         } cleanup{stage};
         const auto root = stage / "source-project";
-        ensure_private_directory(root / "profiles" / default_profile_name);
-        std::filesystem::copy_file(source_root / "profiles" / default_profile_name / "profile.json",
-                                   root / "profiles" / default_profile_name / "profile.json");
+        ensure_private_directory(root / "profiles" / qinggan09_profile());
+        std::filesystem::copy_file(source_root / "profiles" / qinggan09_profile() / "profile.json",
+                                   root / "profiles" / qinggan09_profile() / "profile.json");
         const std::string unprepared_id = "free-11-chinese-20260731-7.3.1";
         ensure_private_directory(root / "profiles" / unprepared_id);
         std::filesystem::copy_file(source_root / "profiles" / unprepared_id / "profile.json",
@@ -3854,9 +3862,9 @@ int main(int argc, char **argv) {
                 bool denied = false;
                 try {
                     if (full) {
-                        build_profile(root, default_profile_name, machine, true);
+                        build_profile(root, qinggan09_profile(), machine, true);
                     } else {
-                        build_profile_android(root, default_profile_name, machine, true);
+                        build_profile_android(root, qinggan09_profile(), machine, true);
                     }
                 } catch (const std::exception &error) {
                     denied = std::string_view(error.what()) ==
@@ -3907,10 +3915,10 @@ int main(int argc, char **argv) {
         const auto candidate = root / ".local/android";
         ensure_private_directory(candidate);
         const auto profile_pin =
-                sha256_file(root / "profiles" / default_profile_name / "profile.json");
+                sha256_file(root / "profiles" / qinggan09_profile() / "profile.json");
         write_private_json(candidate / "receipt.json", {{"schema", 1},
                                                         {"kind", "android-candidate"},
-                                                        {"profile", default_profile_name},
+                                                        {"profile", qinggan09_profile()},
                                                         {"profile_sha256", profile_pin},
                                                         {"stopped", true},
                                                         {"cold_boot_verified", true},
@@ -3918,16 +3926,16 @@ int main(int argc, char **argv) {
         const auto acceptance = root / ".local/unaccepted-qnx.json";
         write_private_json(acceptance, {{"schema", 1},
                                         {"kind", "accepted-qnx-portable-seed"},
-                                        {"profile", default_profile_name},
+                                        {"profile", qinggan09_profile()},
                                         {"profile_sha256", profile_pin},
                                         {"source_built", false},
                                         {"cold_boot_verified", false}});
         std::string acceptance_error;
         rejected = false;
         try {
-            finalize_profile_build(root, default_profile_name,
-                                   machine_identity(default_profile_name, {}), candidate,
-                                   acceptance, sha256_file(acceptance));
+            finalize_profile_build(root, qinggan09_profile(),
+                                   machine_identity(qinggan09_profile(), {}), candidate, acceptance,
+                                   sha256_file(acceptance));
         } catch (const std::exception &e) {
             acceptance_error = e.what();
             rejected = acceptance_error.find("accepted source-built QNX") != std::string::npos;
@@ -3939,7 +3947,7 @@ int main(int argc, char **argv) {
 
         const auto isolated = stage / "android-only-project";
         ensure_private_directory(isolated);
-        const auto def = isolated / "profiles" / default_profile_name / "profile.json";
+        const auto def = isolated / "profiles" / qinggan09_profile() / "profile.json";
         write_private_json(
                 def,
                 {{"android",
@@ -4012,7 +4020,7 @@ int main(int argc, char **argv) {
 
         accepted["qinggan09_owned_packages"] = {
                 {"schema", 1},
-                {"profile", default_profile_name},
+                {"profile", qinggan09_profile()},
                 {"api", 28},
                 {"certificate_sha256", std::string(qinggan09_owned_packages_certificate_sha256)},
                 {"receipt_sha256", accepted.at("artifact_result_sha256")},
@@ -4026,14 +4034,14 @@ int main(int argc, char **argv) {
             write_private_json(own_receipt, bad);
             bool failed = false;
             try {
-                finalize_android_profile_build(isolated, default_profile_name,
-                                               machine_identity(default_profile_name, {}),
+                finalize_android_profile_build(isolated, qinggan09_profile(),
+                                               machine_identity(qinggan09_profile(), {}),
                                                own_candidate, pin);
             } catch (...) {
                 failed = true;
             }
 
-            if (!failed || std::filesystem::exists(isolated / "machines" / default_profile_name)) {
+            if (!failed || std::filesystem::exists(isolated / "machines" / qinggan09_profile())) {
                 throw std::runtime_error("invalid Android-only candidate published");
             }
         }; // Insert after refuse_android lambda and before positive finalization,
@@ -4120,15 +4128,15 @@ int main(int argc, char **argv) {
         // formatting.
         std::ofstream(def, std::ios::app) << " \n\n";
         const auto finalized = finalize_android_profile_build(
-                isolated, default_profile_name, machine_identity(default_profile_name, {}),
+                isolated, qinggan09_profile(), machine_identity(qinggan09_profile(), {}),
                 own_candidate, sha256_file(own_receipt));
 
-        if (sha256_file(isolated / "machines" / default_profile_name / "profile.json") !=
+        if (sha256_file(isolated / "machines" / qinggan09_profile() / "profile.json") !=
             accepted.at("profile_sha256").get<std::string>()) {
             throw std::runtime_error("Android finalizer did not preserve exact profile bytes");
         }
 
-        if (!read_private_json(isolated / "machines" / default_profile_name / "runtime.json")
+        if (!read_private_json(isolated / "machines" / qinggan09_profile() / "runtime.json")
                      .at("android")
                      .contains("can_model_receipt")) {
             throw std::runtime_error("accepted profile snapshot lost the cold CAN proof");
@@ -4136,15 +4144,15 @@ int main(int argc, char **argv) {
 
         std::filesystem::rename(def, def.parent_path() / "moved-profile.json");
 
-        if (inspect_portable_runtime(isolated, default_profile_name,
-                                     machine_identity(default_profile_name, {}))
+        if (inspect_portable_runtime(isolated, qinggan09_profile(),
+                                     machine_identity(qinggan09_profile(), {}))
                     .at("profile_sha256") != accepted.at("profile_sha256")) {
             throw std::runtime_error("finalized snapshot depends on source path");
         }
 
         std::filesystem::rename(def.parent_path() / "moved-profile.json", def);
 
-        if (read_private_json(isolated / "machines" / default_profile_name / "runtime.json")
+        if (read_private_json(isolated / "machines" / qinggan09_profile() / "runtime.json")
                     .at("schema") != 1) {
             throw std::runtime_error("new candidate did not publish portable schema 1");
         }
@@ -4156,8 +4164,8 @@ int main(int argc, char **argv) {
 
         rejected = false;
         try {
-            activate_built_profile(isolated, default_profile_name,
-                                   machine_identity(default_profile_name, {}), true);
+            activate_built_profile(isolated, qinggan09_profile(),
+                                   machine_identity(qinggan09_profile(), {}), true);
         } catch (const std::exception &e) {
             rejected = std::string(e.what()).find("cluster unavailable") != std::string::npos;
         }
@@ -4167,18 +4175,18 @@ int main(int argc, char **argv) {
         }
 
         const auto own_manifest =
-                read_private_json(isolated / "machines" / default_profile_name / "runtime.json");
+                read_private_json(isolated / "machines" / qinggan09_profile() / "runtime.json");
 
         if (own_manifest.at("android").at("qinggan09_owned_packages") !=
             accepted.at("qinggan09_owned_packages")) {
             throw std::runtime_error("full build lost portable own2 descriptor");
         }
 
-        const auto canonical = isolated / "machines" / default_profile_name / "runtime.json";
+        const auto canonical = isolated / "machines" / qinggan09_profile() / "runtime.json";
         const auto canonical_pin = sha256_file(canonical);
         const std::string alternate = "qinggan09-portable-second";
         std::vector<std::string> build_words{
-                (isolated / "voyemu").string(), "build", default_profile_name,
+                (isolated / "voyemu").string(), "build", qinggan09_profile(),
                 (isolated / "machines" / alternate).string(), "--cluster=off"};
         std::vector<char *> build_argv;
 
@@ -4189,7 +4197,7 @@ int main(int argc, char **argv) {
         const auto selected = cli::parse(static_cast<int>(build_argv.size()), build_argv.data(),
                                          isolated / "voyemu");
 
-        if (selected.root != isolated || selected.profile != default_profile_name ||
+        if (selected.root != isolated || selected.profile != qinggan09_profile() ||
             selected.machine.name != alternate || !selected.machine.selected || selected.cluster) {
             throw std::runtime_error("public build destination selected another backend machine");
         }
@@ -4202,9 +4210,9 @@ int main(int argc, char **argv) {
         // Compare paths, not spellings: Windows mixes separators in the fixture root.
         if (std::filesystem::path(named.at("runtime").get<std::string>()) != named_runtime ||
             sha256_file(canonical) != canonical_pin ||
-            read_private_json(named_runtime).at("profile") != default_profile_name ||
-            inspect_portable_runtime(isolated, default_profile_name,
-                                     machine_identity(default_profile_name, alternate))
+            read_private_json(named_runtime).at("profile") != qinggan09_profile() ||
+            inspect_portable_runtime(isolated, qinggan09_profile(),
+                                     machine_identity(qinggan09_profile(), alternate))
                             .at("schema") != 1) {
             throw std::runtime_error(
                     "named publication changed source identity/canonical or inspected wrong seed");
@@ -4213,8 +4221,8 @@ int main(int argc, char **argv) {
         for (const auto &target : {alternate, std::string("../escape")}) {
             bool refused = false;
             try {
-                finalize_android_profile_build(isolated, default_profile_name,
-                                               machine_identity(default_profile_name, target),
+                finalize_android_profile_build(isolated, qinggan09_profile(),
+                                               machine_identity(qinggan09_profile(), target),
                                                own_candidate, sha256_file(own_receipt));
             } catch (...) {
                 refused = true;
@@ -4230,11 +4238,11 @@ int main(int argc, char **argv) {
             bool refused = false;
             try {
                 if (full) {
-                    build_profile(isolated, default_profile_name,
-                                  machine_identity(default_profile_name, alternate), true, {}, {});
+                    build_profile(isolated, qinggan09_profile(),
+                                  machine_identity(qinggan09_profile(), alternate), true, {}, {});
                 } else {
-                    build_profile_android(isolated, default_profile_name,
-                                          machine_identity(default_profile_name, alternate), true,
+                    build_profile_android(isolated, qinggan09_profile(),
+                                          machine_identity(qinggan09_profile(), alternate), true,
                                           {}, {});
                 }
             } catch (const std::exception &error) {
@@ -4267,7 +4275,7 @@ int main(int argc, char **argv) {
         const auto qnx_receipt = qnx_source / "acceptance.json";
         write_private_json(qnx_receipt, {{"schema", 1},
                                          {"kind", "accepted-qnx-portable-seed"},
-                                         {"profile", default_profile_name},
+                                         {"profile", qinggan09_profile()},
                                          {"profile_sha256", sha256_file(def)},
                                          {"source_built", true},
                                          {"cold_boot_verified", true},
@@ -4277,7 +4285,7 @@ int main(int argc, char **argv) {
                                          {"cold_boot_evidence", proof_ref}});
         const std::string combined = "qinggan09-portable-combined";
         const auto named_full = finalize_profile_build(
-                isolated, default_profile_name, machine_identity(default_profile_name, combined),
+                isolated, qinggan09_profile(), machine_identity(qinggan09_profile(), combined),
                 own_candidate, qnx_receipt, sha256_file(qnx_receipt));
         const auto combined_runtime = isolated / "machines" / combined / "runtime.json";
 
@@ -4288,9 +4296,9 @@ int main(int argc, char **argv) {
 
         if (named_full.at("runtime") != combined_runtime.string() ||
             sha256_file(canonical) != canonical_pin ||
-            inspect_portable_runtime(isolated, default_profile_name,
-                                     machine_identity(default_profile_name, combined))
-                            .at("profile") != default_profile_name ||
+            inspect_portable_runtime(isolated, qinggan09_profile(),
+                                     machine_identity(qinggan09_profile(), combined))
+                            .at("profile") != qinggan09_profile() ||
             !read_private_json(combined_runtime).contains("qnx")) {
             throw std::runtime_error("full named finalizer did not preserve canonical/profile");
         }
@@ -4306,7 +4314,7 @@ int main(int argc, char **argv) {
         clone_definition["title"] = "Development";
         clone_definition["local"] = true;
         clone_definition["capture"] = {{"profile", clone_id},
-                                       {"referenceProfile", default_profile_name}};
+                                       {"referenceProfile", qinggan09_profile()}};
         const auto clone_profile = isolated / "profiles" / clone_id;
         ensure_private_directory(clone_profile);
         write_private_json(clone_profile / "profile.json", clone_definition);
@@ -4330,7 +4338,7 @@ int main(int argc, char **argv) {
                     can_file,
                     {{"schema", 1},
                      {"kind", "android-candidate"},
-                     {"profile", default_profile_name},
+                     {"profile", qinggan09_profile()},
                      {"profile_sha256", can_manifest.at("profile_sha256")},
                      {"stopped", true},
                      {"prepared_VM", true},
@@ -4354,9 +4362,9 @@ int main(int argc, char **argv) {
                     {"sha256", sha256_file(can_file)}};
             write_private_json(combined_runtime, can_runtime);
 
-            if (inspect_portable_runtime(isolated, default_profile_name,
-                                         machine_identity(default_profile_name, combined))
-                        .at("profile") != default_profile_name) {
+            if (inspect_portable_runtime(isolated, qinggan09_profile(),
+                                         machine_identity(qinggan09_profile(), combined))
+                        .at("profile") != qinggan09_profile()) {
                 throw std::runtime_error("can-model fixture source inspection failed");
             }
         }
@@ -4415,7 +4423,7 @@ int main(int argc, char **argv) {
         // The authoring checkout is absent. Output byte integrity must still reject
         // tampering.
         {
-            const auto output = isolated / "machines" / default_profile_name / "profile.json";
+            const auto output = isolated / "machines" / qinggan09_profile() / "profile.json";
             const auto bytes = read_private_json_bytes(output);
             const auto profile_before = sha256_file(output);
             std::ofstream(output, std::ios::app).put('\n');
@@ -4426,8 +4434,8 @@ int main(int argc, char **argv) {
 
             bool refused = false;
             try {
-                inspect_portable_runtime(isolated, default_profile_name,
-                                         machine_identity(default_profile_name, {}));
+                inspect_portable_runtime(isolated, qinggan09_profile(),
+                                         machine_identity(qinggan09_profile(), {}));
             } catch (...) {
                 refused = true;
             }
@@ -4439,13 +4447,12 @@ int main(int argc, char **argv) {
             }
         }
 
-        for (const auto &machine : {std::string(default_profile_name), alternate, combined}) {
+        for (const auto &machine : {std::string(qinggan09_profile()), alternate, combined}) {
             const auto seed = isolated / "machines" / machine;
             published_resources_check(seed);
             published_boot_check(seed);
-            const auto inspected =
-                    inspect_portable_runtime(isolated, default_profile_name,
-                                             machine_identity(default_profile_name, machine));
+            const auto inspected = inspect_portable_runtime(
+                    isolated, qinggan09_profile(), machine_identity(qinggan09_profile(), machine));
 
             for (const auto &[name, record] : inspected.at("android").at("images").items()) {
                 if (record.at("sha256") != image_records.at(name).at("sha256")) {

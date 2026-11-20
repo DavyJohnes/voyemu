@@ -2,15 +2,17 @@
 #include "../android/qinggan11_startup.hpp"
 #include "error.hpp"
 #include "model.hpp"
+#include "profile_catalog.hpp"
 #include "profile_identity.hpp"
 #include <algorithm>
 #include <set>
 #include <stdexcept>
 
 namespace voyemu {
-inline Json synthetic_phone_adapter() {
+// The synthetic phone of an Android 9 profile on the 8155 board.
+inline Json synthetic_phone_adapter(std::string_view profile) {
     return {{"schema", 1},
-            {"profile", default_profile_name},
+            {"profile", profile},
             {"authority", "com.voyemu.input.phone"},
             {"kind", "synthetic-oem-bt-peer-v1"}};
 }
@@ -127,7 +129,7 @@ inline Json phone_adapter_for_profile(const Json &definition,
                 {"kind", "synthetic-oem-bt-peer-v1"}};
     }
 
-    if (family != default_profile_name) {
+    if (!embedded_profile_declares(family, ProfilePlatform::qinggan09, ProfileBoard::sa8155)) {
         return Json::object();
     }
 
@@ -144,7 +146,7 @@ inline Json phone_adapter_for_profile(const Json &definition,
         return Json::object();
     }
 
-    return synthetic_phone_adapter();
+    return synthetic_phone_adapter(family);
 }
 
 inline bool synthetic_phone_supported(const Json &launch) {
@@ -153,12 +155,17 @@ inline bool synthetic_phone_supported(const Json &launch) {
     }
 
     const auto &adapter = launch.at("phone_adapter");
+    const auto profile = adapter.is_object() && adapter.contains("profile") &&
+                                         adapter.at("profile").is_string()
+                                 ? adapter.at("profile").get<std::string>()
+                                 : std::string{};
 
     return adapter == Json{{"schema", 1},
                            {"profile", "free-09-chinese-20221230-nxp-rc45"},
                            {"authority", "com.voyemu.input.phone"},
                            {"kind", "synthetic-oem-bt-peer-v1"}} ||
-           adapter == synthetic_phone_adapter() ||
+           (embedded_profile_declares(profile, ProfilePlatform::qinggan09, ProfileBoard::sa8155) &&
+            adapter == synthetic_phone_adapter(profile)) ||
            adapter == Json{{"schema", 1},
                            {"profile", qinggan11_731_profile_id},
                            {"authority", "com.voyemu.input.phone"},

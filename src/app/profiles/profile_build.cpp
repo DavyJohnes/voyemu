@@ -1157,8 +1157,9 @@ Json build_profile_android(const std::filesystem::path &root, std::string_view p
     auto receipt = [&] {
         const auto family = runtime_profile_reference(definition, profile);
 
-        if (family != default_profile_name && family != "free-09-chinese-20221230-nxp-rc45" &&
-            family != passion_profile_id && family != "free-11-chinese-20260731-7.3.1" &&
+        if (!embedded_profile_declares(family, ProfilePlatform::qinggan09, ProfileBoard::sa8155) &&
+            family != "free-09-chinese-20221230-nxp-rc45" && family != passion_profile_id &&
+            family != "free-11-chinese-20260731-7.3.1" &&
             family != "free-11-chinese-20250710-6.11.1") {
             return build_android_candidate(root, request, candidate);
         }

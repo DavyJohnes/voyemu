@@ -1,5 +1,6 @@
 #pragma once
 #include "cli_messages.hpp"
+#include "profile_catalog.hpp"
 #include <string>
 #include <string_view>
 namespace voyemu {
@@ -85,17 +86,21 @@ inline std::string cli_help(cli::Language language = cli::Language::english) {
     note("help.machine_path_note", "");
     heading("help.examples");
 
-    for (const auto *example :
-         {"start machines/free-09-chinese-20260106-6.0.3",
-          "start machines/free-09-chinese-20260106-6.0.3 --cluster=off",
-          "start machines/free-09-chinese-20260106-6.0.3 --multimedia=off",
-          "status machines/free-09-chinese-20260106-6.0.3",
-          "build free-11-chinese-20260731-7.3.1 --cluster=off",
-          "build free-11-chinese-20260731-7.3.1 machines/free-7.3.1-new --cluster=off",
-          "fetch free-11-chinese-20260731-7.3.1 --source=update.zip",
-          "fetch free-11-chinese-20250710-6.11.1 --source=adb --serial SERIAL",
-          "test --request request.json"}) {
-        out += std::string("  voyemu ") + example + '\n';
+    // The examples name bundled profiles: an Android 9 one with a cluster and an Android 11 one.
+    const auto machine =
+            embedded_profile_names(ProfilePlatform::qinggan09, ProfileBoard::sa8155).at(0);
+    const auto profile =
+            embedded_profile_names(ProfilePlatform::qinggan11, ProfileBoard::sa8155).at(0);
+
+    for (const auto &example :
+         {"start machines/" + machine, "start machines/" + machine + " --cluster=off",
+          "start machines/" + machine + " --multimedia=off", "status machines/" + machine,
+          "build " + profile + " --cluster=off",
+          "build " + profile + " machines/" + profile + "-new --cluster=off",
+          "fetch " + profile + " --source=update.zip",
+          "fetch " + profile + " --source=adb --serial SERIAL",
+          std::string("test --request request.json")}) {
+        out += "  voyemu " + example + '\n';
     }
 
     out += "  voyemu help            " + text("help.help") + '\n';
