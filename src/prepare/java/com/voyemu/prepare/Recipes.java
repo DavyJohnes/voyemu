@@ -401,6 +401,10 @@ final class Recipes {
             throw new Failure("PATCH_OPERATION_UNSUPPORTED", "OEM top-gesture adapter missing", 5);
         }
 
+        default void guardInterguestStartup(boolean apply) throws Exception {
+            throw new Failure("PATCH_OPERATION_UNSUPPORTED", "Interguest Ethernet startup missing", 5);
+        }
+
         default void guardKeyIngress(boolean apply) throws Exception {
             throw new Failure(
                     "PATCH_OPERATION_UNSUPPORTED", "Authenticated OEM ingress adapter missing", 5);

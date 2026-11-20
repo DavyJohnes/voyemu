@@ -127,8 +127,9 @@ final class RecipesApi30 {
                                             "guardHiboardTopGesture",
                                             "args",
                                             List.of()),
-                                    Map.of("operation", "guardStartupVolume", "args", List.of()))),
-                    "Exact ordered Free A11 7.3.1 clean navigation and OEM top-gesture operations"
+                                    Map.of("operation", "guardStartupVolume", "args", List.of()),
+                                    Map.of("operation", "guardInterguestStartup", "args", List.of()))),
+                    "Exact ordered Free A11 7.3.1 platform operations"
                             + " required");
         }
 
@@ -952,6 +953,14 @@ final class RecipesApi30 {
                 guardedTopGesture = true;
                 target.guardHiboardTopGesture(false);
             }
+            case "guardInterguestStartup" -> {
+                require(
+                        name.equals(SecondaryNavigationGuard.NAME + ".json")
+                                && pins.equals(List.of(HiboardTopGestureGuard.PIN))
+                                && args.isEmpty() && guardedTopGesture,
+                        "Exact interguest startup requires the Free A11 7.3.1 platform chain");
+                target.guardInterguestStartup(false);
+            }
             case "guardStartupVolume" -> {
                 if (name.equals(StartupVolumeGuard.NAME + ".json")) {
                     require(
@@ -1077,6 +1086,7 @@ final class RecipesApi30 {
                         target.guardSecondaryNavigationSuppressed(true);
                 case "guardHiboardTopGesture" -> target.guardHiboardTopGesture(true);
                 case "guardStartupVolume" -> target.guardStartupVolume(true);
+                case "guardInterguestStartup" -> target.guardInterguestStartup(true);
                 case "guardKeyManager" -> target.guardKeyManager(true);
                 case "guardSystemPolicyHardware" -> target.guardSystemPolicyHardware(true);
                 case "guardKeyIngress" -> target.guardKeyIngress(true);

@@ -1400,6 +1400,23 @@ final class PatchTarget implements Recipes.Target {
     }
 
     @Override
+    public void guardInterguestStartup(boolean apply) throws Exception {
+        Path source = Storage.confined(stepRoot, InterguestStartupGuard.NAME + "/src");
+
+        if (apply) {
+            Path dex = GuestJava.dex(new GuestJava.Unit(source, api), tools.platform(),
+                    dir.resolve(InterguestStartupGuard.NAME));
+            entries.put("classes.dex",
+                    InterguestStartupGuard.rewritePrimary(entries.get("classes.dex")));
+            entries.put("classes2.dex", InterguestStartupGuard.addHelper(
+                    entries.get("classes2.dex"), java.nio.file.Files.readAllBytes(dex.resolve("classes.dex"))));
+        } else {
+            InterguestStartupGuard.validate(profile.referenceProfile(), api, input, source,
+                    entries.get("classes.dex"));
+        }
+    }
+
+    @Override
     public void guardKeyManager(boolean apply) throws Exception {
         if (apply) {
             entries.put(
