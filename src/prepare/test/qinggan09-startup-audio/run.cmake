@@ -5,7 +5,7 @@ string(RANDOM LENGTH 16 ALPHABET 0123456789abcdef TOKEN)
 set(WORK "${ROOT}/.local/build/tmp/qinggan09-startup-audio-session-${TOKEN}")
 file(MAKE_DIRECTORY "${WORK}/classes")
 if(NOT DEFINED COMPONENTS)
-    set(COMPONENTS "${ROOT}/profiles/free-09-chinese-20260106-6.0.3/components")
+    set(COMPONENTS "${ROOT}/profiles/common-qinggan-09/components")
 endif()
 file(GLOB_RECURSE DOUBLES "${CMAKE_CURRENT_LIST_DIR}/android/*.java" "${CMAKE_CURRENT_LIST_DIR}/org/*.java")
 execute_process(COMMAND "${JAVAC}" -J-Xmx128m --release 25 -d "${WORK}/classes"
