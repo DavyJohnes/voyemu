@@ -73,6 +73,15 @@ bool embedded_profile_declares(std::string_view id, ProfilePlatform platform, Pr
     return false;
 }
 
+bool record_declares(const Json &record, std::string_view reference, ProfilePlatform platform,
+                     ProfileBoard board) {
+    if (record.is_object() && record.contains("platform")) {
+        return profile_platform(record) == platform && profile_board(record) == board;
+    }
+
+    return embedded_profile_declares(reference, platform, board);
+}
+
 Json declared_patch_plan(const Json &definition) {
     const auto patches = definition.value("patches", Json::object());
 

@@ -544,7 +544,19 @@ int main(int argc, char **argv) {
                                                              ? ProfileBoard::sa8155
                                                              : ProfileBoard::nxp),
                   "catalog selects profiles by their declared platform and board");
+            check(record_declares(Json{{"schema", 1}}, id, platform, board) &&
+                          record_declares(Json::object(), id, platform, board),
+                  "a record without a platform is read through its bundled reference");
         }
+
+        const Json declared = {{"platform", "passion"}, {"board", "8155"}};
+        check(record_declares(declared, "synthetic-local-copy", ProfilePlatform::passion,
+                              ProfileBoard::sa8155) &&
+                      !record_declares(declared, "synthetic-local-copy", ProfilePlatform::qinggan11,
+                                       ProfileBoard::sa8155) &&
+                      !record_declares(Json::object(), "synthetic-local-copy",
+                                       ProfilePlatform::passion, ProfileBoard::sa8155),
+              "a declared platform decides regardless of the reference id");
 
         check(!embedded_profile_declares("synthetic-local-copy", ProfilePlatform::qinggan09,
                                          ProfileBoard::sa8155),
