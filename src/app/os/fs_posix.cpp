@@ -1,13 +1,23 @@
+#include "cli_messages.hpp"
 #include "fs.hpp"
 #include <cerrno>
 #include <fcntl.h>
 #include <stdio.h>
 #include <sys/file.h>
 #include <sys/stat.h>
+#include <system_error>
 #include <unistd.h>
 
 // The file primitives that macOS and Linux share; fs_linux.cpp and fs_macos.cpp hold the renames.
 namespace voyemu::os {
+namespace {
+[[noreturn]] void lock_file_failed(const std::filesystem::path &path, int error) {
+    throw cli::LocalizedError(
+            "LOCK_FILE", "error.lock_file",
+            {{"path", path.string()}, {"cause", std::generic_category().message(error)}});
+}
+} // namespace
+
 ExclusiveFile::ExclusiveFile(const std::filesystem::path &path, bool share_read)
     : handle_(::open(path.c_str(), O_CREAT | O_EXCL | O_WRONLY | O_NOFOLLOW | O_CLOEXEC, 0600)),
       exists_(handle_ < 0 && errno == EEXIST) {
@@ -60,9 +70,18 @@ bool ExclusiveFile::close() {
 
 FileLock::FileLock(const std::filesystem::path &path, bool exclusive)
     : handle_(::open(path.c_str(), O_CREAT | O_RDWR | O_NOFOLLOW | O_CLOEXEC, 0600)) {
-    if (handle_ >= 0 && ::flock(int(handle_), (exclusive ? LOCK_EX : LOCK_SH) | LOCK_NB) != 0) {
+    if (handle_ < 0) {
+        lock_file_failed(path, errno);
+    }
+
+    if (::flock(int(handle_), (exclusive ? LOCK_EX : LOCK_SH) | LOCK_NB) != 0) {
+        const auto error = errno;
         ::close(int(handle_));
         handle_ = -1;
+
+        if (error != EWOULDBLOCK) {
+            lock_file_failed(path, error);
+        }
     }
 }
 

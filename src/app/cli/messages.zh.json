@@ -20,6 +20,7 @@
     "error.jdk_scope": "--jdk 仅适用于 deps/build",
     "error.lang_value": "--lang 只接受 en、ru 或 zh",
     "error.launch_scope": "启动选项仅适用于 start 或 restart",
+    "error.lock_file": "无法使用锁文件 {path}：{cause}。\n请修正该文件的所有者和权限，或在没有 voyemu 命令运行时将其删除。",
     "error.log": "日志：{path}",
     "error.machine_exists": "机器 {machine} 已存在。\n启动它：voyemu start {machine}，或删除其目录后重新运行 build。",
     "error.machine_linked": "拒绝通过链接指定的机器路径",

@@ -1,3 +1,4 @@
+#include "cli_messages.hpp"
 #include "fs.hpp"
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
@@ -6,6 +7,14 @@
 #include <winioctl.h>
 
 namespace voyemu::os {
+namespace {
+[[noreturn]] void lock_file_failed(const std::filesystem::path &path, DWORD error) {
+    throw cli::LocalizedError("LOCK_FILE", "error.lock_file",
+                              {{"path", path.string()},
+                               {"cause", std::system_category().message(static_cast<int>(error))}});
+}
+} // namespace
+
 std::wstring win32_file_path(const std::filesystem::path &path) {
     auto native = path.native();
 
@@ -88,12 +97,25 @@ FileLock::FileLock(const std::filesystem::path &path, bool exclusive)
               FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OPEN_REPARSE_POINT, nullptr))) {
     OVERLAPPED range{};
 
-    if (held() &&
-        !::LockFileEx(reinterpret_cast<HANDLE>(handle_),
+    // A sharing violation is a passing opener of the same file, like a conflicting holder.
+    if (!held()) {
+        if (const auto error = ::GetLastError(); error != ERROR_SHARING_VIOLATION) {
+            lock_file_failed(path, error);
+        }
+
+        return;
+    }
+
+    if (!::LockFileEx(reinterpret_cast<HANDLE>(handle_),
                       (exclusive ? LOCKFILE_EXCLUSIVE_LOCK : 0) | LOCKFILE_FAIL_IMMEDIATELY, 0, 1,
                       0, &range)) {
+        const auto error = ::GetLastError();
         ::CloseHandle(reinterpret_cast<HANDLE>(handle_));
         handle_ = reinterpret_cast<std::intptr_t>(INVALID_HANDLE_VALUE);
+
+        if (error != ERROR_LOCK_VIOLATION) {
+            lock_file_failed(path, error);
+        }
     }
 }
 

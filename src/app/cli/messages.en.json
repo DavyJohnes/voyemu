@@ -20,6 +20,7 @@
     "error.jdk_scope": "--jdk is only valid for deps/build",
     "error.lang_value": "--lang requires en, ru or zh",
     "error.launch_scope": "launch options require start or restart",
+    "error.lock_file": "cannot use the lock file {path}: {cause}.\nFix the owner and permissions of the file or delete it while no voyemu command runs.",
     "error.log": "Log: {path}",
     "error.machine_exists": "machine {machine} already exists.\nStart it: voyemu start {machine}, or delete its directory and run build again.",
     "error.machine_linked": "linked machine path rejected",

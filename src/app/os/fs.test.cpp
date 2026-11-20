@@ -59,7 +59,19 @@ void locks() {
 
     check(voyemu::os::FileLock(file, false).held(),
           "released exclusive holder must admit a reader");
-    check(!voyemu::os::FileLock(file / "absent", false).held(), "unopenable path must not lock");
+    // A lock file that cannot be opened, such as one left by another user, is an error that names
+    // the file, not a running holder.
+    std::string unopenable;
+
+    try {
+        (void)voyemu::os::FileLock(file / "absent", false).held();
+    } catch (const std::exception &error) {
+        unopenable = error.what();
+    }
+
+    check(unopenable.starts_with("LOCK_FILE: ") &&
+                  unopenable.find((file / "absent").string()) != std::string::npos,
+          "unopenable path must throw LOCK_FILE naming it");
     std::filesystem::remove(file);
 }
 

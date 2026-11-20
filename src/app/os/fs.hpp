@@ -42,8 +42,9 @@ private:
     bool exists_ = false;
 };
 // Non-blocking advisory lock on path, created if absent: shared holders exclude an exclusive
-// one. held() is false while another holder conflicts or path cannot be opened. The OS releases
-// the lock when the holder closes it or exits.
+// one. held() is false while another holder conflicts; any other failure to open or lock path,
+// such as a file of another user, throws LOCK_FILE naming path and its cause. The OS releases the
+// lock when the holder closes it or exits.
 class FileLock {
 public:
     FileLock(const std::filesystem::path &path, bool exclusive);

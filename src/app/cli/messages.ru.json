@@ -20,6 +20,7 @@
     "error.jdk_scope": "--jdk допустим только для deps и build",
     "error.lang_value": "--lang принимает en, ru или zh",
     "error.launch_scope": "параметры запуска допустимы только для start и restart",
+    "error.lock_file": "не удаётся использовать файл блокировки {path}: {cause}.\nИсправьте владельца и права доступа файла или удалите его, пока не выполняется ни одна команда voyemu.",
     "error.log": "Лог: {path}",
     "error.machine_exists": "машина {machine} уже существует.\nЗапустите её: voyemu start {machine}, или удалите её каталог и повторите build.",
     "error.machine_linked": "путь к машине через ссылку отклонён",
