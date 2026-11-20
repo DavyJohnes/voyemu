@@ -189,6 +189,25 @@ int main() try {
                              "Среда выполнения Java 25.0.5+8: загружено 18,4 МиБ за 1 с "
                              "(18,4 МиБ/с), SHA-256 совпадает\n\n");
 
+    // A phase without bytes, such as a cold boot, starts a block and shows its elapsed time at
+    // most once a minute.
+    captured.str({});
+    prior = std::cerr.rdbuf(captured.rdbuf());
+    {
+        auto now = std::chrono::steady_clock::time_point{};
+        progress::Elapsed elapsed("cold_boot_cluster", [&] {
+            return now;
+        });
+
+        for (int second = 0; second < 150; ++second) {
+            now += std::chrono::seconds(1);
+            elapsed.tick();
+        }
+    }
+    std::cerr.rdbuf(prior);
+    assert(captured.str() ==
+           "\nПроверка холодного старта приборки\n  прошло 1 мин\n  прошло 2 мин\n");
+
     // A short disk space error in whole GiB: free rounded down, required up, their difference to
     // free; the path is the installation root.
     constexpr std::uint64_t gib = 1ULL << 30;

@@ -1140,7 +1140,6 @@ Json build_profile_android(const std::filesystem::path &root, std::string_view p
     const auto definition = read_private_json(authoring_definition(root, profile), 1 << 20);
 
     if (native_base_api(definition.at("android")) == 30) {
-        request.boot_timeout_ms = 120000;
         request.overall_timeout_ms = 600000;
         request.capture_frames = true;
     }

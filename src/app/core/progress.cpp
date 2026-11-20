@@ -4,6 +4,7 @@
 #include <atomic>
 #include <cstdio>
 #include <mutex>
+#include <utility>
 namespace voyemu::progress {
 namespace {
 std::atomic<bool> console_enabled = false, console_terminal = false;
@@ -131,6 +132,25 @@ void separate() {
     }
 
     pending = false;
+}
+
+Elapsed::Elapsed(std::string kind, Clock clock)
+    : kind_(std::move(kind)), clock_(std::move(clock)), start_(clock_()), shown_(start_) {
+    block();
+    report(kind_);
+}
+
+void Elapsed::tick() {
+    const auto now = clock_();
+
+    if (now - shown_ < std::chrono::minutes(1)) {
+        return;
+    }
+
+    shown_ = now;
+    const auto seconds = std::chrono::duration_cast<std::chrono::seconds>(now - start_).count();
+    report(kind_ + "_status",
+           {{"time", duration_text(static_cast<std::uint64_t>(seconds), language())}});
 }
 
 std::uint64_t reported() {

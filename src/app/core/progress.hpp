@@ -36,6 +36,19 @@ private:
     bool compact_ = true;
     std::uint64_t before_ = 0;
 };
+// The elapsed time of a long phase without a byte count, such as a cold boot: the line <kind> in a
+// new block at the start, then <kind>_status with {time} at most once a minute while tick() runs.
+class Elapsed {
+public:
+    using Clock = std::function<std::chrono::steady_clock::time_point()>;
+    explicit Elapsed(std::string kind, Clock clock = std::chrono::steady_clock::now);
+    void tick();
+
+private:
+    std::string kind_;
+    Clock clock_;
+    std::chrono::steady_clock::time_point start_, shown_;
+};
 // The number of lines reported so far, by which a caller tells whether a step did any work.
 std::uint64_t reported();
 // A byte count in IEC units with one decimal and no trailing zero: "900 B", "1.5 KiB", "306 MiB";

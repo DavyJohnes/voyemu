@@ -11,7 +11,8 @@ struct AndroidCandidateRequest {
     std::filesystem::path artifact_result, clean_base, sdk;
     std::map<std::string, std::string> tool_pins; // Absolute host file -> SHA256.
     unsigned port = 5580;
-    int boot_timeout_ms = 300000, overall_timeout_ms = 1800000;
+    // The candidate steps other than the boots of the emulator, which have no time limit.
+    int overall_timeout_ms = 1800000;
     std::function<bool()> cancelled;
     bool capture_frames = false;
 };

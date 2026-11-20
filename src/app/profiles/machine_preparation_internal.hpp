@@ -29,6 +29,7 @@
 #include "profile_build.hpp"
 #include "profile_identity.hpp"
 #include "profile_runtime.hpp"
+#include "progress.hpp"
 #include "qinggan09_owned_packages.hpp"
 #include "quickboot.hpp"
 #include "screens.hpp"
@@ -98,7 +99,6 @@ struct Candidate {
     std::filesystem::path root, stage, machine, sdk, adb, emulator, qemu_img;
     std::string avd, token, kernel_sha;
     unsigned port;
-    int boot_timeout;
     Clock::time_point deadline;
     ChildProcess process, adb_server;
     AndroidOwnedAdb adb_binding;
@@ -109,10 +109,10 @@ struct Candidate {
 
     Candidate(std::filesystem::path r, std::filesystem::path s, std::filesystem::path sdk_root,
               std::filesystem::path a, std::filesystem::path e, std::filesystem::path q, unsigned p,
-              int timeout, int overall, std::function<bool()> cancel, bool capture = false)
+              int overall, std::function<bool()> cancel, bool capture = false)
         : root(std::move(r)), stage(std::move(s)), machine(stage / "machine"),
           sdk(std::move(sdk_root)), adb(std::move(a)), emulator(std::move(e)),
-          qemu_img(std::move(q)), port(p), boot_timeout(timeout),
+          qemu_img(std::move(q)), port(p),
           deadline(Clock::now() + std::chrono::milliseconds(overall)), cancelled(std::move(cancel)),
           capture_frames(capture) {}
 
@@ -247,6 +247,36 @@ struct Candidate {
         }
 
         throw VoyemuError("MACHINE_PREPARATION", "timeout " + what + ": " + last);
+    }
+
+    // Waits for a boot of the emulator without a time limit: until check passes, the emulator
+    // exits or the build is interrupted. The boot does not count against the deadline of the other
+    // steps.
+    void wait_boot(const std::function<bool()> &check, const std::string &what,
+                   progress::Elapsed *elapsed = nullptr) {
+        const auto left = deadline - Clock::now();
+
+        for (;;) {
+            deadline = Clock::now() + left;
+            need(!cancelled || !cancelled(), "candidate preparation cancelled");
+            need(process.alive(), "owned emulator exited while waiting: " + what);
+
+            if (elapsed) {
+                elapsed->tick();
+            }
+
+            try {
+                if (check()) {
+                    break;
+                }
+            } catch (const std::exception &) {
+                need(process.alive(), "owned emulator exited while waiting: " + what);
+            }
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(250));
+        }
+
+        deadline = Clock::now() + left;
     }
 
     void boot(const Json &profile) {
@@ -387,14 +417,15 @@ struct Candidate {
                                                     {"avd", avd},
                                                     {"token", token},
                                                     {"phase", "booting"}});
-        wait(
+        progress::Elapsed elapsed("cold_boot_multimedia");
+        wait_boot(
                 [&] {
                     identity();
 
                     return raw({"shell", "getprop", "sys.boot_completed"}) == "1" &&
                            raw({"shell", "pm", "path", "android"}).starts_with("package:");
                 },
-                boot_timeout, "Android boot");
+                "Android boot", &elapsed);
 
         if (!kernel_sha.empty()) {
             check_file(machine / "base/kernel-ranchu", kernel_sha, 64ULL << 20);
@@ -570,7 +601,7 @@ getprop qemu.voyemu.token
         const auto previous = shell({"cat", "/proc/sys/kernel/random/boot_id"});
         need(!previous.empty(), "kernel boot identity missing");
         adbd({"reboot"});
-        wait(
+        wait_boot(
                 [&] {
                     identity();
 
@@ -578,7 +609,7 @@ getprop qemu.voyemu.token
                            raw({"shell", "getprop", "sys.boot_completed"}) == "1" &&
                            raw({"shell", "pm", "path", "android"}).starts_with("package:");
                 },
-                boot_timeout, "guest reboot");
+                "guest reboot");
 
         if (!kernel_sha.empty()) {
             check_file(machine / "base/kernel-ranchu", kernel_sha, 64ULL << 20);

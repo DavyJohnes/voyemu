@@ -753,9 +753,7 @@ Json build_android_candidate(const std::filesystem::path &root,
     need(inside(request.sdk, root / ".local") && inside(request.clean_base, root / ".local"),
          "owned SDK/clean base required");
     need(request.port >= 5554 && request.port <= 5682 && request.port % 2 == 0 &&
-                 request.port != 5562 && request.boot_timeout_ms >= 1000 &&
-                 request.boot_timeout_ms <= 600000 &&
-                 request.overall_timeout_ms >= request.boot_timeout_ms &&
+                 request.port != 5562 && request.overall_timeout_ms >= 1000 &&
                  request.overall_timeout_ms <= 3600000,
          "isolated port/bounded deadlines required");
     need(tcp_port_free(request.port) && tcp_port_free(request.port + 1),
@@ -856,8 +854,7 @@ Json build_android_candidate(const std::filesystem::path &root,
 
     Candidate candidate(root, destination, request.sdk, adb,
                         android_sdk_program(request.sdk, !exe.empty()), qemu_img, request.port,
-                        request.boot_timeout_ms, request.overall_timeout_ms, request.cancelled,
-                        request.capture_frames);
+                        request.overall_timeout_ms, request.cancelled, request.capture_frames);
     std::uint64_t base_bytes_total = 0;
 
     for (auto it = clean.at("files").begin(); it != clean.at("files").end(); ++it) {

@@ -3,7 +3,8 @@
 #include <chrono>
 #include <optional>
 namespace voyemu {
-// The measured x86 TCG cold boot reaches ACC after 8646 s; keep a finite 3 h ceiling.
+// The measured x86 TCG cold boot reaches ACC after 8646 s; 10800 s under TCG against 90 s under
+// HVF scales the guest deadlines of a running cluster and bounds its explicit --seconds.
 inline unsigned qnx_source_acceptance_seconds(QnxEngine engine) {
     return engine == QnxEngine::hvf ? 90u : 10800u;
 }

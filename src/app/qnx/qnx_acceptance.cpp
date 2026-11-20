@@ -6,6 +6,7 @@
 #include "ordinary_path.hpp"
 #include "os/fs.hpp"
 #include "process.hpp"
+#include "progress.hpp"
 #include "project_files.hpp"
 #include "qnx6_file.hpp"
 #include "qnx_guest_build.hpp"
@@ -208,7 +209,6 @@ Json run(const std::filesystem::path &root, const std::string &profile,
         throw VoyemuError("QNX_PACKAGE_ACCEPTANCE", "cancelled before launch");
     }
 
-    const auto acceptance_seconds = qnx_source_acceptance_seconds(host_qnx_engine);
     std::vector<std::uint64_t> copy_bytes{std::filesystem::file_size(source_file)};
 
     for (const auto &name : layout.images) {
@@ -351,11 +351,10 @@ Json run(const std::filesystem::path &root, const std::string &profile,
                     {"marker_address", 0x867ff000ULL}};
         }
 
-        need(qnx_cluster_seconds_valid(host_qnx_engine, acceptance_seconds, initial_launch),
-             "verified bounded cluster launch required");
-        session->configure_cluster(initial_launch, acceptance_seconds);
-        session->attach_cluster(initial_launch, acceptance_seconds);
-        evidence["budget_seconds"] = acceptance_seconds;
+        // The cold boot has no time limit: it ends with the first frame, with the exit of the
+        // owned QNX or graphics process, or with Ctrl+C.
+        session->configure_cluster(initial_launch);
+        session->attach_cluster(initial_launch);
         frames::Reader reader(directory / "frame.bgra");
         bool captured = false;
         Json stable_owner;
@@ -363,9 +362,11 @@ Json run(const std::filesystem::path &root, const std::string &profile,
         std::optional<Clock::time_point> bright_since;
         std::uint64_t first_bright_sequence = 0, probe_revision = 0;
         Clock::time_point probe_sent{};
-        const auto deadline = started + std::chrono::seconds(acceptance_seconds);
+        progress::Elapsed elapsed("cold_boot_cluster");
 
-        while (Clock::now() < deadline && !session->stopped()) {
+        while (!session->stopped()) {
+            elapsed.tick();
+
             if (cancelled && cancelled()) {
                 throw VoyemuError("QNX_PACKAGE_ACCEPTANCE", "cancelled during cold boot");
             }
@@ -511,7 +512,7 @@ Json run(const std::filesystem::path &root, const std::string &profile,
         }
 
         need(captured && evidence.at("cold_boot_verified") == true,
-             "bounded cold boot did not export an actual Screen frame");
+             "cold boot did not export an actual Screen frame");
         session->stop();
         const auto stopped = session->handle({{"op", "status"}});
         evidence["terminal_status"] = {{"qnx", stopped.at("deliveries").at("qnx")},

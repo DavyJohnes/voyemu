@@ -1396,12 +1396,29 @@ static void root_transition_fixture(const std::filesystem::path &self,
     check(child.alive() && child.owns_tcp_listener(port) && child.owns_tcp_listener(port + 1) &&
           server.alive() && server.owns_tcp_listener(server_port));
     machine_preparation_detail::Candidate candidate(stage, stage, stage, self, self, self, port,
-                                                    60000, 10000, {});
+                                                    10000, {});
     candidate.avd = "root-transition-fixture";
     candidate.token = random_token();
     candidate.adb_binding = {port, 35580, server_port, random_token()};
     candidate.process = std::move(child);
     candidate.adb_server = std::move(server);
+    // A boot has no time limit and leaves the deadline of the other steps untouched: it outlasts
+    // that deadline while its checks still run bounded commands.
+    {
+        const auto saved = candidate.deadline;
+        candidate.deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(200);
+        const auto booting = std::chrono::steady_clock::now();
+        candidate.wait_boot(
+                [&] {
+                    (void)candidate.remaining(1000);
+
+                    return std::chrono::steady_clock::now() - booting >
+                           std::chrono::milliseconds(800);
+                },
+                "fixture boot");
+        check(candidate.remaining(1000) > 100);
+        candidate.deadline = saved;
+    }
 
     for (const auto *mode :
          {"root-transition", "root-start-change", "root-already", "root-nochange",
