@@ -204,6 +204,29 @@ int main(int argc, char **argv) {
             }
         }
 
+        // Every ordinary command of an installation keeps a log, list included.
+        {
+            ProcessSpec spec;
+            spec.executable = installed;
+            spec.arguments = {"list", "--lang=en"};
+            spec.directory = root;
+            const auto listed = execute(spec, 15000);
+            bool logged = false;
+
+            for (const auto &entry :
+                 std::filesystem::directory_iterator(root / ".local/build/logs")) {
+                if (entry.path().filename().string().starts_with("list-")) {
+                    std::ifstream stream(entry.path());
+                    logged = std::string(std::istreambuf_iterator<char>(stream), {})
+                                     .find("\"command.started\"") != std::string::npos;
+                }
+            }
+
+            require(!listed.timed_out && listed.exit_code == 0 && logged &&
+                            !shows_records(listed.output),
+                    "list kept no log or printed records: " + listed.output);
+        }
+
         // JSON automation keeps its single JSON reply and writes no command log.
         {
             ProcessSpec spec;

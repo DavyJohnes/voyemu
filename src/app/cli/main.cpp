@@ -46,7 +46,7 @@ int main(int argc, char **argv) {
                 return std::getenv(name);
             },
             voyemu::os::user_interface_language);
-    // The log file of an ordinary deps, fetch, build, start or restart, named on failure.
+    // The log file of an ordinary command in its installation, named on failure.
     std::filesystem::path log_file;
     try {
         auto args = voyemu::cli::parse(argc, argv, voyemu::os::executable_path());
@@ -86,6 +86,15 @@ int main(int argc, char **argv) {
             return voyemu::cli::test_command(args);
         }
 
+        // Every ordinary command with an installation keeps a log; check stays read-only and
+        // keeps none, so its records go nowhere and its errors are shown in full.
+        if (!args.private_start && args.command != "_supervise" && args.command != "check" &&
+            !args.root.empty()) {
+            log_file = voyemu::logging::open_file(args.root / ".local/build/logs", args.command);
+            voyemu::logging::write(voyemu::logging::Level::info, "cli", "command.started",
+                                   {{"command", args.command}, {"version", voyemu::version()}});
+        }
+
         if (args.command == "list") {
             return voyemu::cli::list_command(args, emit);
         }
@@ -102,13 +111,6 @@ int main(int argc, char **argv) {
         if (args.command == "deps" || args.command == "fetch" || args.command == "build" ||
             args.command == "start" || args.command == "restart") {
             voyemu::ensure_local_roots(args.root);
-
-            if (!args.private_start) {
-                log_file = voyemu::logging::open_file(args.root / ".local/build/logs",
-                                                      args.command);
-                voyemu::logging::write(voyemu::logging::Level::info, "cli", "command.started",
-                                       {{"command", args.command}, {"version", voyemu::version()}});
-            }
         }
 
         if (args.command == "fetch") {

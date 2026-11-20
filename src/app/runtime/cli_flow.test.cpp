@@ -18,6 +18,7 @@
 #include "supervisor_failure.hpp"
 #include <fstream>
 #include <iostream>
+#include <regex>
 #include <sstream>
 #include <stdexcept>
 #include <thread>
@@ -41,6 +42,22 @@ static void require(bool result, const std::string &message) {
     if (!result) {
         throw std::runtime_error(message);
     }
+}
+
+// A failed ordinary command shows the code of an uncatalogued error and names its log, which keeps
+// the English text: whether output and that log carry "CODE: text".
+static bool logged_error(const std::string &output, const std::string &error) {
+    std::smatch match;
+
+    if (!std::regex_search(output, match,
+                           std::regex(R"((?:Log|Details are in the log): ([^\n]+?\.log))")) ||
+        output.find(error.substr(0, error.find(':') + 1)) == std::string::npos) {
+        return false;
+    }
+
+    std::ifstream stream(match[1].str());
+
+    return std::string(std::istreambuf_iterator<char>(stream), {}).find(error) != std::string::npos;
 }
 
 #ifdef _WIN32
@@ -1158,8 +1175,8 @@ int main(int argc, char **argv) try {
                                    read_private_json(selected_machine / "runtime.json"));
                 const auto unprepared_status = run({"status", header_only.string()});
                 require(unprepared_status.exit_code == 4 &&
-                                unprepared_status.output.find("STATE_EXTENT: invalid file") !=
-                                        std::string::npos,
+                                logged_error(unprepared_status.output,
+                                             "STATE_EXTENT: invalid file"),
                         "header-only machine incorrectly reported pristine stopped: " +
                                 unprepared_status.output);
                 const auto pristine_status = run({"status"});
@@ -1353,8 +1370,7 @@ int main(int argc, char **argv) try {
                 const auto owner_sha = sha256_file(owner_file);
                 const auto refused = run({"stop", foreign.string()});
                 require(refused.exit_code == 4 &&
-                                refused.output.find("STATE_EXTENT: invalid file") !=
-                                        std::string::npos,
+                                logged_error(refused.output, "STATE_EXTENT: invalid file"),
                         "foreign scope did not reject its missing active record: exit=" +
                                 std::to_string(refused.exit_code) + " output=" + refused.output);
                 const auto survived = json({"status"});
@@ -1825,8 +1841,7 @@ int main(int argc, char **argv) try {
                 for (const auto *command : {"status", "stop"}) {
                     const auto denied = run({command, wrong_machine.string()});
                     require(denied.exit_code == 4 &&
-                                    denied.output.find("STATE_EXTENT: invalid file") !=
-                                            std::string::npos,
+                                    logged_error(denied.output, "STATE_EXTENT: invalid file"),
                             "different machine scope did not reject its absent owner: " +
                                     denied.output);
                 }
