@@ -154,6 +154,16 @@ int main() try {
     plain(error);
     assert(error.find("unknown command 'strat'") != std::string::npos &&
            error.find("prototype") == std::string::npos);
+    // Ctrl+C reports an interruption, but not when the starting supervisor survived it.
+    const cli::LocalizedError survived("PROCESS_STOP", "error.start_not_stopped",
+                                       {{"log", "/session/supervisor.log"}});
+    assert(reports_interruption(true, VoyemuError("INTERRUPTED", "start interrupted")) &&
+           reports_interruption(true, VoyemuError("JAVA_HELPER", "helper exited 130")) &&
+           !reports_interruption(false, VoyemuError("INTERRUPTED", "start interrupted")) &&
+           !reports_interruption(true, survived));
+    assert(human_cli_error(survived, cli::Language::english, "/logs/start.log") ==
+           "Voyemu: PROCESS_STOP: the interrupted session did not stop; its supervisor may still "
+           "hold the machine.\nSession log: /session/supervisor.log\nLog: /logs/start.log\n");
     std::cout << "Human CLI summaries, tables and errors remain plain text\n";
 } catch (const std::exception &error) {
     std::cerr << error.what() << '\n';

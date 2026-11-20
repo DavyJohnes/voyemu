@@ -37,6 +37,12 @@ inline std::string human_cli_error(const std::exception &error, cli::Language la
                            cli::message(language, "error.unexpected", {{"log", log.string()}}));
 }
 
+// Ctrl+C ends a command as interrupted unless an owned process survived it: that process may still
+// hold the machine, so its PROCESS_STOP failure is shown instead.
+inline bool reports_interruption(bool interrupted, const std::exception &error) {
+    return interrupted && message_code(error.what()) != "PROCESS_STOP";
+}
+
 // Pads to a terminal column width: CJK ideographs and fullwidth forms take two columns.
 inline std::string pad_columns(std::string_view text, std::size_t width) {
     std::size_t columns = 0;

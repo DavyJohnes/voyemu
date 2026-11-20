@@ -66,6 +66,7 @@
     "error.source_requires_fetch": "--source 仅适用于 fetch",
     "error.source_value": "--source 只接受 adb 或归档路径",
     "error.start_failed": "会话在启动时退出（{cause}）。\n会话日志：{log}",
+    "error.start_not_stopped": "被中断的会话没有停止，其监管进程可能仍占用该机器。\n会话日志：{log}",
     "error.start_timeout": "会话在 90 秒内没有响应。\n会话日志：{log}",
     "error.subsystem_scope": "子系统选择仅适用于 start、restart 或 build",
     "error.unexpected": "操作失败。\n详细信息见日志：{log}。如果错误再次出现，请在问题报告中附上该日志。",

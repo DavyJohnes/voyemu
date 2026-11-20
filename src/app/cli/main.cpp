@@ -192,7 +192,7 @@ int main(int argc, char **argv) {
         if (argc > 1 &&
             (std::string_view(argv[1]) == "_start" || std::string_view(argv[1]) == "_supervise")) {
             std::cerr << voyemu::Json{{"ok", false}, {"error", error.what()}}.dump() << '\n';
-        } else if (voyemu::cli::interrupted) {
+        } else if (voyemu::reports_interruption(voyemu::cli::interrupted, error)) {
             // Ctrl+C ends a command with the shell code of SIGINT, whichever step it stopped.
             voyemu::progress::separate();
             std::cerr << voyemu::human_cli_error(

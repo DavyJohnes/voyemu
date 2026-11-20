@@ -1,5 +1,5 @@
 #pragma once
-#include "error.hpp"
+#include "cli_messages.hpp"
 #include "process.hpp"
 #include <chrono>
 #include <filesystem>
@@ -28,10 +28,16 @@ inline void stop_starting_supervisor(ChildProcess &child, const std::filesystem:
         }
     }
 
-    child.terminate(1000);
+    try {
+        child.terminate(1000);
+    } catch (const VoyemuError &) { /* Ignored: a refused termination leaves the process alive,
+                                       which the check below reports. */
+    }
 
     if (child.alive()) {
-        throw VoyemuError("PROCESS_STOP", "starting supervisor survived termination");
+        throw cli::LocalizedError(
+                "PROCESS_STOP", "error.start_not_stopped",
+                {{"log", std::filesystem::absolute(session / "supervisor.log").string()}});
     }
 }
 } // namespace voyemu
