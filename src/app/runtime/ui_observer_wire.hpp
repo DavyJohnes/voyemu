@@ -1,8 +1,8 @@
 #pragma once
 #include "error.hpp"
+#include "logging.hpp"
 #include "ui_observer_diagnostics.hpp"
 #include <chrono>
-#include <iostream>
 #include <stdexcept>
 #include <thread>
 namespace voyemu {
@@ -33,9 +33,9 @@ Json exchange_ui_observer(const Json &connection, Json message, std::string_view
             const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
                                          std::chrono::steady_clock::now() - started)
                                          .count();
-            std::cerr << observer_wire_timeout(operation, phase, timeout_ms, elapsed,
-                                               response.size(), pid)
-                      << '\n';
+            logging::write(logging::Level::error, "observer", "observer_wire_timeout",
+                           Json::parse(observer_wire_timeout(operation, phase, timeout_ms, elapsed,
+                                                             response.size(), pid)));
         } catch (...) { /* Ignored: diagnostics must preserve the original typed timeout. */
         }
 

@@ -8,6 +8,7 @@
 #include <iostream>
 #include <regex>
 #include <sstream>
+#include <type_traits>
 #include <vector>
 
 int main() try {
@@ -73,6 +74,17 @@ int main() try {
     human_console(false);
     std::cerr.rdbuf(prior);
     assert(console.str() == "12.0 MiB\r9 MiB   \rDone \n1 MiB\nfetch: inputs verified\n2 MiB\n");
+    // try_write() records like write() but drops an invalid record instead of throwing.
+    static_assert(std::is_nothrow_invocable_v<decltype(&try_write), Level, std::string_view,
+                                              std::string_view, Json>);
+    std::ostringstream cleanup_records;
+    prior = std::cerr.rdbuf(cleanup_records.rdbuf());
+    try_write(Level::error, "", "invalid component");
+    try_write(Level::error, "session", "terminal.stop_failed", {{"error", "stop failed"}});
+    std::cerr.rdbuf(prior);
+    const auto cleanup_record = Json::parse(cleanup_records.str());
+    assert(cleanup_record.at("component") == "session" &&
+           cleanup_record.at("fields").at("error") == "stop failed");
     // The log file of a command keeps every record as JSON Lines, debug included, while the
     // console shows none; the newest 20 log files stay.
     const auto directory = std::filesystem::temp_directory_path() /

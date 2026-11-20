@@ -2141,8 +2141,7 @@ int voyemu::window_main(int argc, char **argv) {
             multimedia.reset();
         }
 
-        voyemu::logging::write(voyemu::logging::Level::error, "window", error.what());
-        std::cerr << error.what() << '\n';
+        voyemu::logging::try_write(voyemu::logging::Level::error, "window", error.what());
 
         if (!background_arguments(argc, argv)) {
             SDL_ShowSimpleMessageBox(

@@ -200,4 +200,12 @@ void write(Level level, std::string_view component, std::string_view message, Js
         std::cerr << entry.dump() << '\n';
     }
 }
+
+void try_write(Level level, std::string_view component, std::string_view message,
+               Json fields) noexcept {
+    try {
+        write(level, component, message, std::move(fields));
+    } catch (...) { /* Ignored: a cleanup path keeps its own outcome without its record. */
+    }
+}
 } // namespace voyemu::logging

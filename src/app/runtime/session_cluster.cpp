@@ -605,7 +605,8 @@ void Session::attach_cluster(const Json &input, std::optional<unsigned> seconds,
                 deliveries_["qnx"]["cleanup"] = {{"status", "retained_for_failed_cleanup"},
                                                  {"ram_removed", false},
                                                  {"error", error.what()}};
-                std::cerr << "QNX_CLEANUP_ERROR: " << error.what() << '\n';
+                logging::try_write(logging::Level::error, "qnx", "cleanup.failed",
+                                   {{"error", error.what()}});
             }
         }
 
@@ -1499,7 +1500,8 @@ void Session::close_cluster(bool stopping_all, std::string reason) {
         deliveries_["qnx"]["cleanup"] = {{"status", "retained_for_failed_cleanup"},
                                          {"ram_removed", false},
                                          {"error", error.what()}};
-        std::cerr << "QNX_CLEANUP_ERROR: " << error.what() << '\n';
+        logging::try_write(logging::Level::error, "qnx", "cleanup.failed",
+                           {{"error", error.what()}});
     }
 }
 } // namespace voyemu

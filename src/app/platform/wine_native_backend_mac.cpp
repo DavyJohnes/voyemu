@@ -1,7 +1,7 @@
+#include "../core/logging.hpp"
 #include "../core/model.hpp"
 #include "../core/process.hpp"
 #include <chrono>
-#include <iostream>
 #include <libproc.h>
 #include <stdexcept>
 #include <sys/event.h>
@@ -224,7 +224,9 @@ int main(int argc, char **argv) {
 
         return run(argv[2]);
     } catch (const std::exception &) {
-        std::cerr << "NATIVE_BACKEND_FAILED: private request or owned lifecycle failed\n";
+        // The cause stays private: the request and the owned lifecycle carry launch data.
+        voyemu::logging::try_write(voyemu::logging::Level::error, "native_backend",
+                                   "request.failed");
 
         return 64;
     }

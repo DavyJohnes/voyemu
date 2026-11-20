@@ -106,7 +106,8 @@ Session::~Session() {
     try {
         stop();
     } catch (const std::exception &error) {
-        std::cerr << "SESSION_TERMINAL_ERROR: " << error.what() << '\n';
+        logging::try_write(logging::Level::error, "session", "terminal.stop_failed",
+                           {{"error", error.what()}});
 
         if (qnx_persistent_storage_ && cluster_requested_) {
             if (interguest_link_) {
@@ -122,13 +123,14 @@ Session::~Session() {
     }
 
     if (android_adb_ && !android_adb_->shutdown()) {
-        std::cerr << "SESSION_TERMINAL_ERROR: Android ADB shutdown deadline elapsed\n";
+        logging::try_write(logging::Level::error, "session", "terminal.adb_shutdown_timeout");
     }
 
     try {
         close_qnx_frame_grpc();
     } catch (const std::exception &error) {
-        std::cerr << "SESSION_TERMINAL_ERROR: " << error.what() << '\n';
+        logging::try_write(logging::Level::error, "session", "terminal.frame_grpc_close_failed",
+                           {{"error", error.what()}});
     }
 }
 

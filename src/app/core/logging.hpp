@@ -26,4 +26,8 @@ void console_line(std::string_view text, bool live);
 void console_blank();
 void write(Level, std::string_view component, std::string_view message,
            Json fields = Json::object());
+// write() for destructors and cleanup paths: a record that cannot be written is dropped, never
+// thrown.
+void try_write(Level, std::string_view component, std::string_view message,
+               Json fields = Json::object()) noexcept;
 } // namespace voyemu::logging

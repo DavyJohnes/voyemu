@@ -107,7 +107,9 @@ static void wire_fixture(int mode, bool private_operation) {
         return;
     }
 
-    const auto report = Json::parse(diagnostic.str());
+    const auto record = Json::parse(diagnostic.str());
+    require(record.at("level") == "error" && record.at("message") == "observer_wire_timeout");
+    const auto &report = record.at("fields");
     require(report.at("phase") == "recv" &&
             report.at("op") == (private_operation ? "other" : "ui") &&
             report.at("budget_ms") == budget_ms && report.at("elapsed_ms").get<int>() >= 0 &&
