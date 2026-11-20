@@ -3,6 +3,7 @@
 #include "cli_messages.hpp"
 #include "deps.hpp"
 #include "error.hpp"
+#include "fetch.hpp"
 #include "java_toolchain.hpp"
 #include "os/fs.hpp"
 #include "os/platform.hpp"
@@ -184,9 +185,10 @@ Json materialize_qnx_originals(const std::filesystem::path &root, std::string_vi
             ordinary_qnx(file);
 
             if (!std::filesystem::exists(file)) {
-                throw VoyemuError(
-                        "QNX_ORIGINALS_MISSING",
-                        "run voyemu fetch PROFILE --source=OWNER_ZIP for the pinned Passion owner archive");
+                throw cli::LocalizedError("QNX_ORIGINALS_MISSING", "error.originals_missing",
+                                          {{"profile_name", profile_display_name(root, profile)},
+                                           {"profile", std::string(profile)},
+                                           {"archive", "update.zip"}});
             }
 
             const auto epoch = cache_file_identity(file);
@@ -281,9 +283,10 @@ Json materialize_qnx_originals(const std::filesystem::path &root, std::string_vi
     if (!std::filesystem::is_regular_file(archive) || std::filesystem::is_symlink(archive) ||
         std::filesystem::hard_link_count(archive) != 1 ||
         std::filesystem::file_size(archive) > 16ULL << 30) {
-        throw VoyemuError(
-                "QNX_ORIGINALS_MISSING",
-                "provide the four profile IMG inputs or own update.zip under .local/profiles/PROFILE");
+        throw cli::LocalizedError("QNX_ORIGINALS_MISSING", "error.originals_missing",
+                                  {{"profile_name", profile_display_name(root, profile)},
+                                   {"profile", std::string(profile)},
+                                   {"archive", "update.zip"}});
     }
 
     if (config.contains("update")) {

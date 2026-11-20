@@ -182,7 +182,10 @@ int main(int argc, char **argv) {
         try {
             materialize_qnx_originals(root, "fixture", {}, true);
         } catch (const std::exception &error) {
-            failed = std::string(error.what()).starts_with("QNX_ORIGINALS_MISSING:");
+            // The error names the profile and the fetch that imports its update archive.
+            failed = std::string(error.what()) ==
+                     "QNX_ORIGINALS_MISSING: fixture originals are not imported yet.\nGive the "
+                     "update archive: voyemu fetch fixture --source=PATH/update.zip";
         }
 
         if (!failed) {
