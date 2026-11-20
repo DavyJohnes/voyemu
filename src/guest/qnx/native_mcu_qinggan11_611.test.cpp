@@ -12,10 +12,7 @@ using u64 = unsigned long long;
 using usize = unsigned long;
 static Qinggan11McuField qinggan11_fields[579];
 static unsigned qinggan11_calibration_fixture = 1, qinggan11_calibration_fixture_enabled = 1;
-static unsigned qinggan11_projected_fields =
-                        voyemu::qnx_adapter(voyemu::QnxGuestAdapter::sa8155_qinggan11_611)
-                                .mcu_projected_fields,
-                qinggan11_settings_feedback_enabled = 0;
+static unsigned qinggan11_projected_fields = 0, qinggan11_settings_feedback_enabled = 0;
 #define QGFX_QINGGAN11_LAYOUT_DEFINED 1
 #include "mcu_catalog.inc"
 static u32 normal[579];
@@ -122,6 +119,9 @@ static u64 call(u32 op, const u64 *args, unsigned count, const void *, unsigned)
 int main(int argc, char **argv) {
     try {
         assert(argc == 2);
+        qinggan11_projected_fields =
+                voyemu::qnx_adapter(voyemu::QnxGuestAdapter::sa8155_qinggan11_611)
+                        .mcu_projected_fields;
         const auto root = std::filesystem::canonical(argv[1]);
         const auto source = voyemu::read_private_json(
                 root / "src/guest/qnx/native_mcu_qinggan11_611.json", 256 * 1024);
