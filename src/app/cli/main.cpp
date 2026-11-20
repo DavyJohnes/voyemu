@@ -86,6 +86,12 @@ int main(int argc, char **argv) {
             throw voyemu::cli::LocalizedError("PROJECT_ROOT", "error.project_root");
         }
 
+        // A deleted .local root, such as .local/build, comes back on the next command that writes.
+        if (args.command == "deps" || args.command == "fetch" || args.command == "build" ||
+            args.command == "start" || args.command == "restart") {
+            voyemu::ensure_local_roots(args.root);
+        }
+
         if (args.command == "fetch") {
             return voyemu::cli::fetch_command(args, emit);
         }

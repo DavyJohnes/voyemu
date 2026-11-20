@@ -873,6 +873,17 @@ void ensure_private_directory(const std::filesystem::path &path) {
             throw VoyemuError("STATE_PATH", "cannot create private directory");
         }
     }
+#else
+    auto current = path.root_path();
+
+    for (const auto &component : path.relative_path()) {
+        current /= component;
+
+        if (!std::filesystem::exists(current) && ::mkdir(current.c_str(), 0700) != 0 &&
+            errno != EEXIST) {
+            throw VoyemuError("STATE_PATH", "cannot create private directory");
+        }
+    }
 #endif
     std::filesystem::create_directories(path);
 
@@ -891,6 +902,12 @@ void ensure_private_directory(const std::filesystem::path &path) {
         throw VoyemuError("STATE_OWNER", "cannot set directory permissions");
     }
 #endif
+}
+
+void ensure_local_roots(const std::filesystem::path &root) {
+    for (const auto *name : {"profiles", "toolchains", "build", "machines"}) {
+        ensure_private_directory(root / ".local" / name);
+    }
 }
 
 static std::string read_private_json_text(const std::filesystem::path &path, std::size_t maximum) {

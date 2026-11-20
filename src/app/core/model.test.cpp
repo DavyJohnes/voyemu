@@ -655,6 +655,14 @@ int main(int argc, char **argv) try {
     });
     assert(restored.state() == original);
 #ifndef _WIN32
+    // Missing parents of a private directory are private as well.
+    ensure_private_directory(dir / "missing/parents/leaf");
+
+    for (const auto &created :
+         {dir / "missing", dir / "missing/parents", dir / "missing/parents/leaf"}) {
+        assert(std::filesystem::status(created).permissions() == std::filesystem::perms::owner_all);
+    }
+
     std::filesystem::create_symlink(dir / "state.json", dir / "link.json");
     rejects([&] {
         read_private_json(dir / "link.json");

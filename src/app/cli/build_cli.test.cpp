@@ -104,6 +104,19 @@ int main(int argc, char **argv) {
             }
         }
 
+        // The preparation commands recreate the missing roots of .local as private directories.
+        for (const auto *name : {"profiles", "toolchains", "build", "machines"}) {
+            const auto directory = root / ".local" / name;
+            require(std::filesystem::is_directory(directory) &&
+                            !std::filesystem::is_symlink(directory),
+                    std::string("preparation did not recreate .local/") + name);
+#ifndef _WIN32
+            require(std::filesystem::status(directory).permissions() ==
+                            std::filesystem::perms::owner_all,
+                    std::string(".local/") + name + " is not private");
+#endif
+        }
+
         std::cout
                 << "Public Free/Passion API30 build roles reach genuine offline preparation without false readiness or guests\n";
 

@@ -61,6 +61,8 @@ Json read_private_json(const std::filesystem::path &path, std::size_t maximum = 
 void write_private_json(const std::filesystem::path &path, const Json &value,
                         std::size_t maximum = 128 * 1024);
 void ensure_private_directory(const std::filesystem::path &path);
+// Recreates the missing ones of the four .local roots of an installation as private directories.
+void ensure_local_roots(const std::filesystem::path &root);
 class VehicleModel {
 public:
     explicit VehicleModel(std::filesystem::path path);
