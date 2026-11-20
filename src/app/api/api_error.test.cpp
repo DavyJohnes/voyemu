@@ -15,6 +15,7 @@ int main() try {
             "resize_file", std::filesystem::path("/machines/car/qnx-ram.bin"),
             std::make_error_code(std::errc::permission_denied));
     const auto filesystem_failure = error(denied);
+
     assert(filesystem_failure.at("code") == "FILESYSTEM" &&
            filesystem_failure.at("message") == denied.what() &&
            filesystem_failure.at("message").get<std::string>().find("qnx-ram.bin") !=

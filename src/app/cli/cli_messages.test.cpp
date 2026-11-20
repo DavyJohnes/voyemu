@@ -297,6 +297,7 @@ void errors() {
                               "volume, then repeat the command.\n",
               "a thrown filesystem error names its operation and both paths");
     }
+
     const std::system_error refused(std::make_error_code(std::errc::connection_refused), "connect");
     check(human_cli_error(refused, Language::english, log) ==
                   "Voyemu: SYSTEM: a system operation failed: " + std::string(refused.what()) +
@@ -315,6 +316,7 @@ void errors() {
               "a JSON error shows its parse position without the library prefix: " + rendered +
                       " from " + text);
     }
+
     check(human_cli_error(std::logic_error("vector index out of range."), Language::russian, log) ==
                   "Voyemu: INTERNAL_ERROR: непредвиденный сбой: vector index out of range.\nЕсли "
                   "ошибка повторится, приложите лог к сообщению о проблеме.\nЛог: " +
