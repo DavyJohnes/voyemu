@@ -653,7 +653,8 @@ int main(int argc, char **argv) try {
             require(device.exit_code != 0 &&
                             device.output.find("VEHICLE_CAPTURE_PROFILE") != std::string::npos,
                     "explicit physical serial did not reach capture profile validation");
-            require(!std::filesystem::exists(root / ".local/profiles") &&
+            // fetch recreates the empty .local roots but imports nothing.
+            require(std::filesystem::is_empty(root / ".local/profiles") &&
                             !std::filesystem::exists(root / ".local/machines" /
                                                      default_profile_name / "sessions"),
                     "argument validation changed inputs or started a session");
