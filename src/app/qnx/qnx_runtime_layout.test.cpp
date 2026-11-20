@@ -4,6 +4,7 @@
 #endif
 #include <cassert>
 #include <exception>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 using namespace voyemu;
@@ -21,27 +22,47 @@ template <class F> static void rejects(F f) {
 }
 
 int main() try {
-    constexpr std::string_view passion_profile = "passion-11-russian-20260403-2.1.4.80";
+    // Synthetic profile ids: the hardware adapter of the metadata selects every layout decision.
+    constexpr std::string_view passion_profile = "test-passion",
+                               qinggan09_profile = "test-qinggan09",
+                               qinggan11_profile = "test-qinggan11",
+                               older_profile = "test-qinggan11-older";
     const auto passion = qnx_runtime_layout("sa8155-passion-21480");
 
     assert(passion.memory_mib == 11713 && passion.images.size() == 14 &&
-           passion.loaders.size() == 16 && passion.projection.is_null());
-    const auto profile_path = std::filesystem::path(__FILE__)
-                                      .parent_path()
-                                      .parent_path()
-                                      .parent_path()
-                                      .parent_path() /
-                              "profiles" / passion_profile / "profile-qnx.json";
-    std::ifstream profile_input(profile_path);
-    const auto profile_definition = Json::parse(profile_input);
-    assert(profile_definition.at("status") == "incomplete" &&
-           profile_definition.at("hardware_adapter") == passion.adapter &&
-           profile_definition.at("originals").size() == passion.originals.size());
+           passion.loaders.size() == 16 && passion.projection.is_null() && passion.profile.empty());
+    const auto profiles = std::filesystem::path(__FILE__)
+                                  .parent_path()
+                                  .parent_path()
+                                  .parent_path()
+                                  .parent_path() /
+                          "profiles";
+    unsigned definitions = 0;
 
-    for (const auto &original : passion.originals) {
-        const auto &item = profile_definition.at("originals").at(original);
-        assert(item.at("file") == original && item.at("sha256").get<std::string>().size() == 64);
+    // Every profile-qnx.json of the catalog declares exactly the originals of its adapter layout.
+    for (const auto &entry : std::filesystem::directory_iterator(profiles)) {
+        const auto file = entry.path() / "profile-qnx.json";
+
+        if (!std::filesystem::is_regular_file(file)) {
+            continue;
+        }
+
+        std::ifstream input(file);
+        const auto definition = Json::parse(input);
+        const auto layout =
+                qnx_runtime_layout(definition.at("hardware_adapter").get<std::string>());
+        assert(definition.at("originals").size() == layout.originals.size());
+
+        for (const auto &original : layout.originals) {
+            const auto &item = definition.at("originals").at(original);
+            assert(item.at("file") == original &&
+                   item.at("sha256").get<std::string>().size() == 64);
+        }
+
+        ++definitions;
     }
+
+    assert(definitions > 0);
 
     Json passion_metadata = {{"guest_arch", "aarch64"}, {"images", Json::object()}};
     qnx_runtime_metadata(passion_metadata, passion);
@@ -52,12 +73,19 @@ int main() try {
                 {"file", "qnx/" + image}, {"bytes", 1}, {"sha256", std::string(64, 'a')}};
     }
 
-    assert(qnx_portable_layout(passion_profile, passion_metadata).loaders == passion.loaders);
+    const auto passion_portable = qnx_portable_layout(passion_profile, passion_metadata);
+    assert(passion_portable.loaders == passion.loaders &&
+           passion_portable.profile == passion_profile);
+    assert(qnx_portable_layout(qinggan09_profile, passion_metadata).adapter == passion.adapter);
+    assert(qnx_runtime_layout(passion_profile, Json::object()).adapter == "sa8155-qinggan09");
+    Json passion_launch;
+    qnx_runtime_launch_metadata(passion_launch, passion_portable);
+    assert(passion_launch.at("profile") == std::string(passion_profile) &&
+           passion_launch.at("hardware_adapter") == passion.adapter);
+    auto passion_network = passion_metadata;
+    passion_network["interguest_network"] = qnx_interguest_contract();
     rejects([&] {
-        qnx_portable_layout("free-09-chinese-20260106-6.0.3", passion_metadata);
-    });
-    rejects([&] {
-        qnx_runtime_layout(passion_profile, Json::object());
+        qnx_runtime_layout(passion_profile, passion_network);
     });
 
     for (const auto &image : passion.images) {
@@ -97,7 +125,7 @@ int main() try {
     assert(metadata == old);
     auto network = old;
     network["interguest_network"] = qnx_interguest_contract();
-    const auto connected = qnx_runtime_layout("free-09-chinese-20260106-6.0.3", network);
+    const auto connected = qnx_runtime_layout(qinggan09_profile, network);
     assert(connected.interguest_network == qnx_interguest_contract());
     Json forwarded;
     qnx_runtime_metadata(forwarded, connected);
@@ -108,7 +136,7 @@ int main() try {
                 {"file", "qnx/" + image}, {"bytes", 1}, {"sha256", std::string(64, 'a')}};
     }
 
-    assert(qnx_portable_layout("free-09-chinese-20260106-6.0.3", network).interguest_network ==
+    assert(qnx_portable_layout(qinggan09_profile, network).interguest_network ==
            qnx_interguest_contract());
 
     for (const auto *key :
@@ -116,14 +144,14 @@ int main() try {
         auto bad = network;
         bad["interguest_network"].erase(key);
         rejects([&] {
-            qnx_portable_layout("free-09-chinese-20260106-6.0.3", bad);
+            qnx_portable_layout(qinggan09_profile, bad);
         });
     }
 
     auto redirected = network;
     redirected["interguest_network"]["address"] = "10.0.2.2";
     rejects([&] {
-        qnx_portable_layout("free-09-chinese-20260106-6.0.3", redirected);
+        qnx_portable_layout(qinggan09_profile, redirected);
     });
     auto persisted = network;
     persisted["persistence"] = {{"schema", 1},
@@ -132,17 +160,17 @@ int main() try {
     persisted["images"]["userdata-qnx6.img"] = {{"file", "qnx/userdata-qnx6.img"},
                                                 {"bytes", 33554432},
                                                 {"sha256", std::string(64, 'a')}};
-    const auto persistent_layout = qnx_portable_layout("free-09-chinese-20260106-6.0.3", persisted);
+    const auto persistent_layout = qnx_portable_layout(qinggan09_profile, persisted);
     assert(persistent_layout.images.size() == 9 && !persistent_layout.persistence.is_null());
     auto missing_userdata = persisted;
     missing_userdata["images"].erase("userdata-qnx6.img");
     rejects([&] {
-        qnx_portable_layout("free-09-chinese-20260106-6.0.3", missing_userdata);
+        qnx_portable_layout(qinggan09_profile, missing_userdata);
     });
     auto renamed_userdata = persisted;
     renamed_userdata["persistence"]["userdata_image"] = "other.img";
     rejects([&] {
-        qnx_portable_layout("free-09-chinese-20260106-6.0.3", renamed_userdata);
+        qnx_portable_layout(qinggan09_profile, renamed_userdata);
     });
     Json persistent_metadata;
     qnx_runtime_metadata(persistent_metadata, persistent_layout);
@@ -150,7 +178,7 @@ int main() try {
     auto fractional_network = network;
     fractional_network["interguest_network"]["prefix"] = 24.0;
     rejects([&] {
-        qnx_portable_layout("free-09-chinese-20260106-6.0.3", fractional_network);
+        qnx_portable_layout(qinggan09_profile, fractional_network);
     });
     Json portable611 = {{"guest_arch", "aarch64"}, {"images", Json::object()}};
     const auto layout611 = qnx_runtime_layout("sa8155-qinggan11-611");
@@ -164,75 +192,70 @@ int main() try {
                 {"file", "qnx/" + image}, {"bytes", 1}, {"sha256", std::string(64, 'a')}};
     }
 
-    const auto accepted611 = qnx_portable_layout(qnx_qinggan11_611_profile, portable611);
+    const auto accepted611 = qnx_portable_layout(older_profile, portable611);
     assert(accepted611.images.size() == 10 && accepted611.projection.at("projected_fields") == 56 &&
            accepted611.projection.at("unsupported_fields") == 523);
     auto older611 = portable611;
     older611["mcu_projection"] =
             qnx_qinggan11_611_mcu_projection(qnx_qinggan11_611_previous_projected_fields);
-    assert(qnx_portable_layout(qnx_qinggan11_611_profile, older611)
-                   .projection.at("projected_fields") == 34);
+    assert(qnx_portable_layout(older_profile, older611).projection.at("projected_fields") == 34);
     auto fractional611 = older611;
     fractional611["mcu_projection"]["projected_fields"] = 34.0;
     rejects([&] {
-        qnx_portable_layout(qnx_qinggan11_611_profile, fractional611);
+        qnx_portable_layout(older_profile, fractional611);
     });
     auto previous611 = portable611;
     previous611["mcu_projection"]["projected_fields"] = 33;
     previous611["mcu_projection"]["unsupported_fields"] = 546;
     rejects([&] {
-        qnx_portable_layout(qnx_qinggan11_611_profile, previous611);
+        qnx_portable_layout(older_profile, previous611);
     });
-    assert(qnx_portable_upgrade_source_layout(qnx_qinggan11_611_profile, previous611)
+    assert(qnx_portable_upgrade_source_layout(older_profile, previous611)
                    .projection.at("projected_fields") == 33);
-    rejects([&] {
-        qnx_portable_upgrade_source_layout(qnx_qinggan11_731_profile, previous611);
-    });
+    assert(qnx_portable_upgrade_source_layout(qinggan11_profile, previous611)
+                   .projection.at("projected_fields") == 33);
     auto bad_previous = previous611;
     bad_previous["mcu_projection"]["projected_fields"] = 32;
     rejects([&] {
-        qnx_portable_upgrade_source_layout(qnx_qinggan11_611_profile, bad_previous);
+        qnx_portable_upgrade_source_layout(older_profile, bad_previous);
     });
     bad_previous = previous611;
     bad_previous["mcu_projection"]["projected_fields"] = 19;
     bad_previous["mcu_projection"]["unsupported_fields"] = 560;
     rejects([&] {
-        qnx_portable_upgrade_source_layout(qnx_qinggan11_611_profile, bad_previous);
+        qnx_portable_upgrade_source_layout(older_profile, bad_previous);
     });
     bad_previous = previous611;
     bad_previous["hardware_adapter"] = "sa8155-qinggan11-731";
     rejects([&] {
-        qnx_portable_upgrade_source_layout(qnx_qinggan11_611_profile, bad_previous);
+        qnx_portable_upgrade_source_layout(older_profile, bad_previous);
     });
     bad_previous = previous611;
     bad_previous["mcu_projection"]["unsupported_field_policy"] = "ignore";
     rejects([&] {
-        qnx_portable_upgrade_source_layout(qnx_qinggan11_611_profile, bad_previous);
-    });
-    rejects([&] {
-        qnx_portable_layout(qnx_qinggan11_731_profile, portable611);
+        qnx_portable_upgrade_source_layout(older_profile, bad_previous);
     });
     auto wrong611 = portable611;
     wrong611["mcu_projection"] = qnx_qinggan11_mcu_projection();
     rejects([&] {
-        qnx_portable_layout(qnx_qinggan11_611_profile, wrong611);
+        qnx_portable_layout(older_profile, wrong611);
     });
     wrong611 = portable611;
     wrong611["simulated_initial_native_state"]["hardware_adapter"] = "sa8155-qinggan11-731";
     rejects([&] {
-        qnx_portable_layout(qnx_qinggan11_611_profile, wrong611);
+        qnx_portable_layout(older_profile, wrong611);
     });
     wrong611 = portable611;
     wrong611["mcu_projection"]["settings_feedback_supported"] = true;
     rejects([&] {
-        qnx_portable_layout(qnx_qinggan11_611_profile, wrong611);
+        qnx_portable_layout(older_profile, wrong611);
     });
     auto free = qnx_runtime_layout("sa8155-qinggan11-731");
     qnx_runtime_metadata(metadata, free);
-    const auto actual = qnx_runtime_layout(qnx_qinggan11_731_profile, metadata);
+    const auto actual = qnx_runtime_layout(qinggan11_profile, metadata);
     auto free_network = metadata;
     free_network["interguest_network"] = qnx_interguest_contract();
-    const auto connected_free = qnx_runtime_layout(qnx_qinggan11_731_profile, free_network);
+    const auto connected_free = qnx_runtime_layout(qinggan11_profile, free_network);
     assert(connected_free.interguest_network == qnx_interguest_contract());
     Json free_forwarded;
     qnx_runtime_metadata(free_forwarded, connected_free);
@@ -243,12 +266,12 @@ int main() try {
                 {"file", "qnx/" + image}, {"bytes", 1}, {"sha256", std::string(64, 'a')}};
     }
 
-    assert(qnx_portable_layout(qnx_qinggan11_731_profile, free_network).interguest_network ==
+    assert(qnx_portable_layout(qinggan11_profile, free_network).interguest_network ==
            qnx_interguest_contract());
     auto redirected_free = free_network;
     redirected_free["interguest_network"]["address"] = "10.0.2.2";
     rejects([&] {
-        qnx_portable_layout(qnx_qinggan11_731_profile, redirected_free);
+        qnx_portable_layout(qinggan11_profile, redirected_free);
     });
     assert(actual.originals ==
            std::vector<std::string>({"hyp_la.img", "ifs2_la.img", "system_la.img"}));
@@ -261,10 +284,12 @@ int main() try {
     assert(actual.loaders.at(2).first == actual.loaders.at(3).first &&
            actual.loaders.at(2).second != actual.loaders.at(3).second);
     rejects([&] {
-        qnx_runtime_layout(qnx_qinggan11_731_profile, old);
+        qnx_runtime_layout(qinggan11_profile, old);
     });
+    auto persistent_free = metadata;
+    persistent_free["persistence"] = persisted.at("persistence");
     rejects([&] {
-        qnx_runtime_layout("other-profile", metadata);
+        qnx_runtime_layout(qinggan09_profile, persistent_free);
     });
     rejects([] {
         qnx_runtime_layout("unknown");
@@ -275,14 +300,14 @@ int main() try {
         auto bad = metadata;
         bad["mcu_projection"][key] = 0;
         rejects([&] {
-            qnx_runtime_layout(qnx_qinggan11_731_profile, bad);
+            qnx_runtime_layout(qinggan11_profile, bad);
         });
     }
 
     auto fractional = metadata;
     fractional["mcu_projection"]["projected_fields"] = 462.0;
     rejects([&] {
-        qnx_runtime_layout(qnx_qinggan11_731_profile, fractional);
+        qnx_runtime_layout(qinggan11_profile, fractional);
     });
     const auto legacy_projection = metadata.at("mcu_projection");
 
@@ -290,7 +315,7 @@ int main() try {
         auto native = metadata;
         native["simulated_initial_native_state"] =
                 qnx_qinggan11_simulated_initial_state(Json{{"eps_calibrationFlag", value}});
-        const auto layout = qnx_runtime_layout(qnx_qinggan11_731_profile, native);
+        const auto layout = qnx_runtime_layout(qinggan11_profile, native);
         Json launch;
         qnx_runtime_metadata(launch, layout);
         assert(launch.at("simulated_initial_native_state") ==
@@ -303,26 +328,26 @@ int main() try {
                     {"file", "qnx/" + image}, {"bytes", 1}, {"sha256", std::string(64, 'a')}};
         }
 
-        assert(qnx_portable_layout(qnx_qinggan11_731_profile, portable)
-                       .simulated_initial_native_state == layout.simulated_initial_native_state);
+        assert(qnx_portable_layout(qinggan11_profile, portable).simulated_initial_native_state ==
+               layout.simulated_initial_native_state);
         auto prior = portable;
         prior.erase("simulated_initial_native_state");
-        assert(prior.size() == 4 && qnx_portable_layout(qnx_qinggan11_731_profile, prior)
+        assert(prior.size() == 4 && qnx_portable_layout(qinggan11_profile, prior)
                                             .simulated_initial_native_state.is_null());
         auto extra = portable;
         extra["unknown"] = 1;
         rejects([&] {
-            qnx_portable_layout(qnx_qinggan11_731_profile, extra);
+            qnx_portable_layout(qinggan11_profile, extra);
         });
         auto wrong = native;
         wrong["simulated_initial_native_state"]["fields"]["eps_calibrationFlag"]["width"] = 1;
         rejects([&] {
-            qnx_runtime_layout(qnx_qinggan11_731_profile, wrong);
+            qnx_runtime_layout(qinggan11_profile, wrong);
         });
         wrong = native;
         wrong["simulated_initial_native_state"]["fields"]["eps_calibrationFlag"]["value"] = 4;
         rejects([&] {
-            qnx_runtime_layout(qnx_qinggan11_731_profile, wrong);
+            qnx_runtime_layout(qinggan11_profile, wrong);
         });
         wrong = old;
         wrong["simulated_initial_native_state"] = native.at("simulated_initial_native_state");
@@ -331,10 +356,9 @@ int main() try {
         });
     }
 
-    assert(qnx_runtime_layout(qnx_qinggan11_731_profile, metadata)
+    assert(qnx_runtime_layout(qinggan11_profile, metadata)
                    .simulated_initial_native_state.is_null());
-    std::cout
-            << "A9 unchanged and exact Free A11 7.3.1 three-original/ten-image/two-GPT layout passed; no VM\n";
+    std::cout << "qinggan09, qinggan11 and Passion adapter layouts passed; no VM\n";
 } catch (const std::exception &error) {
     std::cerr << error.what() << '\n';
 

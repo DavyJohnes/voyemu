@@ -956,11 +956,11 @@ static Json publish_machine_qnx_impl(const std::filesystem::path &root, std::str
                                      const std::filesystem::path &source, const Json &replacement,
                                      const std::function<void()> &verify_source, bool persistent,
                                      const std::filesystem::path &explicit_seed = {}) {
-    need((persistent ? profile == "free-09-chinese-20260106-6.0.3"
-                     : (profile == qinggan11_731_profile_id ||
-                        profile == qnx_qinggan11_611_profile)) &&
+    // The replacement adapter decides: persistent storage, or an MCU projection otherwise.
+    const auto requested = qnx_portable_layout(profile, replacement);
+    need((persistent ? !requested.persistence.is_null() : !requested.projection.is_null()) &&
                  machine.valid_for(profile) && sha256_text(expected_manifest_sha),
-         "exact Free A11 QNX upgrade required");
+         "accepted QNX upgrade adapter required");
     ordinary(root);
     const auto seed = seed_directory(root, profile, machine, explicit_seed);
     ordinary(seed);

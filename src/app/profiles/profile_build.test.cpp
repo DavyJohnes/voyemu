@@ -42,6 +42,9 @@ static const std::string &qinggan09_profile() {
     return id;
 }
 
+// The QNX reuse flows still pass through profile build gates keyed by this id.
+static constexpr std::string_view qnx_reuse_profile = "free-11-chinese-20260731-7.3.1";
+
 static Json qinggan09_signature_input_identity(const std::filesystem::path &file) {
 #ifdef _WIN32
     const auto handle = CreateFileW(file.c_str(), GENERIC_READ,
@@ -2571,7 +2574,7 @@ static void runtime_sdk_activation_checks(const std::filesystem::path &stage) {
 
 static void qnx_reuse_checks(const std::filesystem::path &stage) {
     const auto root = stage / "reuse-project";
-    const std::string id(qnx_qinggan11_731_profile);
+    const std::string id(qnx_reuse_profile);
     const auto profile = root / "profiles" / id / "profile.json",
                config = profile.parent_path() / "profile-qnx.json",
                dir = root / ".local/build/accepted", source_file = dir / "source.json",
@@ -3448,8 +3451,8 @@ int main(int argc, char **argv) {
 
         if (argc == 5 && std::string_view(argv[1]) == "--upgrade-qnx") {
             const auto root = std::filesystem::canonical(argv[2]);
-            std::cout << upgrade_profile_qnx(root, qnx_qinggan11_731_profile,
-                                             machine_identity(qnx_qinggan11_731_profile, {}),
+            std::cout << upgrade_profile_qnx(root, qnx_reuse_profile,
+                                             machine_identity(qnx_reuse_profile, {}),
                                              std::filesystem::canonical(argv[3]), argv[4])
                                  .dump()
                       << '\n';
@@ -3527,10 +3530,9 @@ int main(int argc, char **argv) {
 
         if (argc == 3 && std::string_view(argv[1]) == "--bind-qinggan11-731") {
             const auto root = std::filesystem::canonical(argv[2]);
-            std::cout << bind_machine_configuration(root, qnx_qinggan11_731_profile,
-                                                    machine_identity(qnx_qinggan11_731_profile, ""),
-                                                    root / "machines" / qnx_qinggan11_731_profile,
-                                                    root / "voyemu", true, true)
+            std::cout << bind_machine_configuration(
+                                 root, qnx_reuse_profile, machine_identity(qnx_reuse_profile, ""),
+                                 root / "machines" / qnx_reuse_profile, root / "voyemu", true, true)
                       << '\n';
 
             return 0;
@@ -3538,8 +3540,8 @@ int main(int argc, char **argv) {
 
         if (argc == 7 && std::string_view(argv[1]) == "--finalize-reused-qnx") {
             const auto root = std::filesystem::canonical(argv[2]);
-            std::cout << finalize_profile_build(root, qnx_qinggan11_731_profile,
-                                                machine_identity(qnx_qinggan11_731_profile, ""),
+            std::cout << finalize_profile_build(root, qnx_reuse_profile,
+                                                machine_identity(qnx_reuse_profile, ""),
                                                 std::filesystem::canonical(argv[3]),
                                                 std::filesystem::canonical(argv[4]), argv[5], true,
                                                 std::filesystem::canonical(argv[6]))
@@ -3551,7 +3553,7 @@ int main(int argc, char **argv) {
 
         if ((argc == 5 || argc == 6) && std::string_view(argv[1]) == "--verify-qnx-reuse") {
             const auto root = std::filesystem::canonical(argv[2]);
-            std::cout << validate_accepted_qnx_reuse(root, qnx_qinggan11_731_profile,
+            std::cout << validate_accepted_qnx_reuse(root, qnx_reuse_profile,
                                                      std::filesystem::path(argv[3]), argv[4],
                                                      argc == 6 ? std::filesystem::path(argv[5])
                                                                : std::filesystem::path{})

@@ -1943,7 +1943,7 @@ static Json inspect_portable_runtime_impl(const std::filesystem::path &root,
                                        "radio-selection.png",        "radio-selection-light.png",
                                        "panel-background-light.png", "source-provenance.json"};
 
-        if (family == qnx_qinggan11_731_profile) {
+        if (family == qinggan11_731_profile_id) {
             need(definition.at("wheel").at("assets") == "profiles/common/wheels/free-2024",
                  "Free artwork source family differs");
             const auto bytes = bounded_text(seed / "ui/controls/source-provenance.json");
@@ -2037,9 +2037,7 @@ Json inspect_portable_runtime(const std::filesystem::path &root, std::string_vie
 Json inspect_qinggan11_qnx_upgrade_source(const std::filesystem::path &root,
                                           std::string_view profile,
                                           const MachineIdentity &machine) {
-    need(profile == qnx_qinggan11_611_profile,
-         "exact Free A11 6.11.1 scope33 to34 QNX upgrade read required");
-
+    // The upgrade-source layout relaxes only the previous scope of the older qinggan11 adapter.
     return inspect_portable_runtime_impl(root, profile, machine, {}, true);
 }
 } // namespace voyemu

@@ -315,9 +315,13 @@ static Json upgrade_profile_qnx_impl(const std::filesystem::path &root, std::str
                                      const std::string &qnx_pin,
                                      const std::filesystem::path &payload_source,
                                      const std::filesystem::path &explicit_seed = {}) {
+    const bool declared_persistence =
+            read_private_json(root / "profiles" / std::string(profile) / "profile-qnx.json",
+                              128 * 1024)
+                    .contains("persistence");
     const auto verify_qnx = [&] {
         return validate_accepted_qnx_closure(root, profile, qnx_file, qnx_pin, payload_source,
-                                             profile == "free-09-chinese-20260106-6.0.3");
+                                             declared_persistence);
     };
 
     verify_qnx();
@@ -329,7 +333,8 @@ static Json upgrade_profile_qnx_impl(const std::filesystem::path &root, std::str
     const auto target = explicit_seed.empty() ? build_target(root, profile, machine)
                                               : explicit_seed;
     const auto expected = hash(target / "runtime.json", 128 * 1024);
-    const auto previous = profile == qnx_qinggan11_611_profile
+    const bool older_adapter = layout.adapter == "sa8155-qinggan11-611";
+    const auto previous = older_adapter
                                   ? inspect_qinggan11_qnx_upgrade_source(root, profile, machine)
                                   : inspect_portable_runtime(root, profile, machine, explicit_seed);
     need(previous.contains("qnx") &&
@@ -361,10 +366,9 @@ static Json upgrade_profile_qnx_impl(const std::filesystem::path &root, std::str
     result["qnx_acceptance_sha256"] = qnx_pin;
     result["runtime_sha256"] = hash(target / "runtime.json", 128 * 1024);
 
-    if (profile == qnx_qinggan11_611_profile &&
-        previous.at("qnx").at("mcu_projection") != layout.projection) {
+    if (older_adapter && previous.at("qnx").at("mcu_projection") != layout.projection) {
         result["migration_reason"] =
-                "Free A11 6.11.1 scope33 to34: deliver genuine HDC availability";
+                "MCU projection scope33 to34: deliver genuine HDC availability";
     }
 
     return result;

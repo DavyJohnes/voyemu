@@ -309,11 +309,12 @@ int main(int argc, char **argv) {
                                                voyemu::qnx_qinggan11_mcu_projection()));
         const Json metadata = {{"hardware_adapter", "sa8155-qinggan11-611"},
                                {"mcu_projection", projection}};
-        assert(voyemu::qnx_runtime_layout(voyemu::qnx_qinggan11_611_profile, metadata).projection ==
-               projection);
+        assert(voyemu::qnx_runtime_layout("test-profile", metadata).projection == projection);
+        auto foreign = metadata;
+        foreign["hardware_adapter"] = "sa8155-qinggan11-731";
         bool rejected = false;
         try {
-            voyemu::qnx_runtime_layout(voyemu::qnx_qinggan11_731_profile, metadata);
+            voyemu::qnx_runtime_layout("test-profile", foreign);
         } catch (...) {
             rejected = true;
         }
@@ -322,7 +323,7 @@ int main(int argc, char **argv) {
         assert(!projection.at("settings_feedback_supported").get<bool>() &&
                projection.at("unsupported_fields") == 523);
         std::cout
-                << "Free A11 6.11.1 source56, stock controls, range sentinels, scoped RPC and unchanged unsupported bits passed\n";
+                << "Older qinggan11 adapter source56, stock controls, range sentinels, scoped RPC and unchanged unsupported bits passed\n";
 
         return 0;
     } catch (const std::exception &e) {

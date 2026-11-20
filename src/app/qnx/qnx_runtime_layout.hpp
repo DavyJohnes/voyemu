@@ -10,8 +10,6 @@
 #include <vector>
 
 namespace voyemu {
-inline constexpr std::string_view qnx_qinggan11_731_profile = "free-11-chinese-20260731-7.3.1";
-inline constexpr std::string_view qnx_qinggan11_611_profile = "free-11-chinese-20250710-6.11.1";
 struct QnxRuntimeLayout {
     std::string adapter;
     std::vector<std::string> originals, images;
@@ -21,6 +19,8 @@ struct QnxRuntimeLayout {
     Json interguest_network;
     Json persistence;
     unsigned memory_mib = 8192;
+    // The profile whose machine metadata selected this layout; empty for a bare adapter layout.
+    std::string profile{};
 };
 
 inline QnxRuntimeLayout qnx_runtime_layout(std::string_view adapter) {
@@ -90,21 +90,12 @@ inline QnxRuntimeLayout qnx_runtime_layout(std::string_view adapter) {
 }
 
 inline QnxRuntimeLayout qnx_runtime_layout(std::string_view profile, const Json &metadata) {
+    // The hardware adapter of the metadata selects the layout; the profile id selects nothing.
     const auto adapter = metadata.value("hardware_adapter", std::string("sa8155-qinggan09"));
     auto layout = qnx_runtime_layout(adapter);
-
-    if ((adapter == "sa8155-passion-21480") !=
-        (profile == "passion-11-russian-20260403-2.1.4.80")) {
-        throw VoyemuError("QNX_LAYOUT", "Passion profile and adapter differ");
-    }
-
+    layout.profile = profile;
     const bool older = adapter == "sa8155-qinggan11-611",
                free = adapter == "sa8155-qinggan11-731" || older;
-
-    if ((free && profile != (older ? qnx_qinggan11_611_profile : qnx_qinggan11_731_profile)) ||
-        (!free && (profile == qnx_qinggan11_731_profile || profile == qnx_qinggan11_611_profile))) {
-        throw VoyemuError("QNX_LAYOUT", "profile and adapter differ");
-    }
 
     if (older &&
         metadata.value("mcu_projection", Json()) ==
@@ -128,8 +119,8 @@ inline QnxRuntimeLayout qnx_runtime_layout(std::string_view profile, const Json 
                                {"system_image", "sysla-gpt-ramdisk-v3.img"},
                                {"userdata_image", "userdata-qnx6.img"}};
 
-        if (free || profile != "free-09-chinese-20260106-6.0.3" ||
-            metadata.at("persistence") != expected) {
+        // Only the qinggan09 adapter keeps a persistent system image and QNX6 userdata.
+        if (adapter != "sa8155-qinggan09" || metadata.at("persistence") != expected) {
             throw VoyemuError("QNX_LAYOUT", "unsupported persistent storage contract");
         }
 
@@ -138,8 +129,7 @@ inline QnxRuntimeLayout qnx_runtime_layout(std::string_view profile, const Json 
     }
 
     if (metadata.contains("interguest_network")) {
-        if (profile != "free-09-chinese-20260106-6.0.3" && profile != qnx_qinggan11_731_profile &&
-            profile != qnx_qinggan11_611_profile) {
+        if (adapter != "sa8155-qinggan09" && !free) {
             throw VoyemuError("QNX_LAYOUT",
                               "interguest network requires its accepted guest adapter");
         }
@@ -213,13 +203,13 @@ inline QnxRuntimeLayout qnx_portable_layout(std::string_view profile, const Json
     return layout;
 }
 
-// Read only the previous exact Free A11 6.11.1 scope at the stopped QNX-upgrade boundary.
-// Scope 33 stays upgrade-only. Scope 34 is a previously accepted runtime.
+// Read only the previous MCU projection scope of the older qinggan11 adapter at the stopped
+// QNX-upgrade boundary. Scope 33 stays upgrade-only. Scope 34 is a previously accepted runtime.
 inline QnxRuntimeLayout qnx_portable_upgrade_source_layout(std::string_view profile,
                                                            const Json &metadata) {
     const auto previous = qnx_qinggan11_611_mcu_projection(33);
 
-    if (profile != qnx_qinggan11_611_profile ||
+    if (metadata.value("hardware_adapter", std::string{}) != "sa8155-qinggan11-611" ||
         metadata.value("mcu_projection", Json()) != previous) {
         return qnx_portable_layout(profile, metadata);
     }
@@ -262,8 +252,8 @@ inline void qnx_runtime_metadata(Json &target, const QnxRuntimeLayout &layout) {
 inline void qnx_runtime_launch_metadata(Json &target, const QnxRuntimeLayout &layout) {
     qnx_runtime_metadata(target, layout);
 
-    if (layout.adapter == "sa8155-passion-21480") {
-        target["profile"] = "passion-11-russian-20260403-2.1.4.80";
+    if (layout.adapter == "sa8155-passion-21480" && !layout.profile.empty()) {
+        target["profile"] = layout.profile;
     }
 }
 } // namespace voyemu

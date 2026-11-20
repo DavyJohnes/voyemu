@@ -24,7 +24,7 @@ static void rejects(const std::function<void()> &f) {
 }
 
 static Json passion() {
-    return {{"profile", "passion-11-russian-20260403-2.1.4.80"},
+    return {{"profile", "test-passion-profile"},
             {"hardware_adapter", "sa8155-passion-21480-developer"},
             {"interguest_network", qnx_interguest_contract()},
             {"interguest_ram", qnx_passion_interguest_ram_contract()},
@@ -109,7 +109,7 @@ int main() try {
         assert(qnx_owned_ram_bytes(Json{{"ram_geometry", qnx_owned_ram_geometry(ram)}}) ==
                (11713ULL << 20));
 
-        for (const auto *key : {"profile", "hardware_adapter", "ram_backend", "ram", "qemu"}) {
+        for (const auto *key : {"hardware_adapter", "ram_backend", "ram", "qemu"}) {
             auto bad = production;
             bad.erase(key);
             rejects([&] {
@@ -153,8 +153,7 @@ int main() try {
     assert(binding.passion && binding.geometry == InterguestLink::RamGeometry::passion21480 &&
            binding.ram_bytes() == (11713ULL << 20));
 
-    for (const char *key :
-         {"profile", "hardware_adapter", "interguest_ram", "ram_backend", "ram", "qemu"}) {
+    for (const char *key : {"hardware_adapter", "interguest_ram", "ram_backend", "ram", "qemu"}) {
         auto bad = spec;
         bad.erase(key);
         rejects([&] {
@@ -162,12 +161,20 @@ int main() try {
         });
     }
 
-    for (const char *key : {"profile", "hardware_adapter"}) {
+    {
         auto bad = spec;
-        bad[key] = "another";
+        bad["hardware_adapter"] = "another";
         rejects([&] {
             qnx_interguest_binding(bad);
         });
+    }
+    {
+        // The adapter selects the geometry; another or absent profile id changes nothing.
+        auto other = spec;
+        other["profile"] = "another";
+        assert(qnx_interguest_binding(other).passion);
+        other.erase("profile");
+        assert(qnx_interguest_binding(other).passion);
     }
 
     for (const auto *key : {"schema", "backing_bytes", "mailbox_begin", "mailbox_end_exclusive"}) {

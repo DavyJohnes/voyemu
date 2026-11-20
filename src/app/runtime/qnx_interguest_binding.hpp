@@ -13,15 +13,14 @@ struct QnxInterguestBinding {
     }
 };
 
-// Match launch semantics before opening RAM. Never infer geometry from a file's size.
+// Match launch semantics before opening RAM. Never infer geometry from a file's size. The hardware
+// adapter selects the Passion geometry; the profile id selects nothing.
 inline QnxInterguestBinding qnx_passion_ram_binding(const Json &runtime, bool production) {
     const auto adapter = runtime.value("hardware_adapter", std::string{});
-    const auto profile = runtime.value("profile", std::string{});
-    constexpr std::string_view passion_profile = "passion-11-russian-20260403-2.1.4.80",
-                               passion_adapter = "sa8155-passion-21480-developer",
+    constexpr std::string_view passion_adapter = "sa8155-passion-21480-developer",
                                production_adapter = "sa8155-passion-21480";
     const bool requested = adapter == passion_adapter || adapter == production_adapter ||
-                           profile == passion_profile || runtime.contains("interguest_ram");
+                           runtime.contains("interguest_ram");
 
     if (!requested) {
         return {};
@@ -30,11 +29,10 @@ inline QnxInterguestBinding qnx_passion_ram_binding(const Json &runtime, bool pr
     auto need = [](bool valid) {
         if (!valid) {
             throw VoyemuError("INTERGUEST_RAM_CONTRACT",
-                              "exact Passion profile, geometry and launch required");
+                              "exact Passion adapter, geometry and launch required");
         }
     };
-    need(adapter == (production ? production_adapter : passion_adapter) &&
-         profile == passion_profile);
+    need(adapter == (production ? production_adapter : passion_adapter));
 
     if (production) {
         need(!runtime.contains("interguest_ram"));

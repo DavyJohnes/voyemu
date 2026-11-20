@@ -758,10 +758,12 @@ Json validate_accepted_qnx_closure(const std::filesystem::path &root, std::strin
                                    const std::filesystem::path &file, const std::string &expected,
                                    const std::filesystem::path &payload_source, bool persistent) {
     root_profile(root, profile);
-    need(persistent
-                 ? profile == "free-09-chinese-20260106-6.0.3"
-                 : (profile == qnx_qinggan11_731_profile || profile == qnx_qinggan11_611_profile),
-         "QNX closure reuse requires its exact accepted Free profile");
+    const auto qnx_file = root / "profiles" / std::string(profile) / "profile-qnx.json";
+    const auto qnx_definition = read_private_json(qnx_file, 128 * 1024);
+    // A complete profile-qnx.json whose storage contract matches the requested closure.
+    need(qnx_definition.value("status", std::string("ready")) != "incomplete" &&
+                 qnx_definition.contains("persistence") == persistent,
+         "QNX closure reuse requires a complete QNX profile with this storage contract");
     inside(root / ".local", file);
     need(hash(file, 1 << 20) == expected, "accepted QNX receipt pin differs");
     const auto accepted = read_private_json(file, 1 << 20);
@@ -791,8 +793,6 @@ Json validate_accepted_qnx_closure(const std::filesystem::path &root, std::strin
     need(definition.value("initial_state", Json::object()) ==
                  evidence.value("startup_profile_values", Json::object()),
          "QNX effective startup state changed");
-    const auto qnx_file = root / "profiles" / std::string(profile) / "profile-qnx.json";
-    const auto qnx_definition = read_private_json(qnx_file, 128 * 1024);
     const auto layout = qnx_runtime_layout(profile, source);
 
     if (persistent) {
@@ -936,7 +936,7 @@ Json build_profile(const std::filesystem::path &root, std::string_view profile,
 
     root_profile(root, profile);
     const auto target = build_target(root, profile, machine);
-    need((!std::filesystem::exists(target) || profile == qnx_qinggan11_731_profile) &&
+    need((!std::filesystem::exists(target) || profile == "free-11-chinese-20260731-7.3.1") &&
                  !std::filesystem::is_symlink(target),
          "target machine already exists; never replaced");
     // Check the configured local host before spending time preparing or booting Android.
