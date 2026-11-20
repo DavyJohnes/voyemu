@@ -1124,6 +1124,7 @@ int main(int argc, char **argv) try {
         // Original Passion Qt alpha atlas, advertised by the native ANGLE texture capability.
         invoke(178, {0xde1, 0, 0x1906, 10240, 558, 0, 0x1906, 0x1401, 0});
         assert(invoke(20).result == 0);
+
         // Passion's post-self-check storage requests have no payload or unpack buffer.
         for (const auto width : {760U, 1520U}) {
             invoke(178, {0xde1, 0, 0x8058, width, width == 760 ? 720U : 1440U, 0, 0, 0x1401, 0});
@@ -1138,6 +1139,7 @@ int main(int argc, char **argv) try {
             rejected_upload = std::string_view(error.what()).find("inline_bytes=4") !=
                               std::string_view::npos;
         }
+
         assert(rejected_upload);
         const auto unpack_buffer = object_name(139);
         invoke(102, {0x88ec, unpack_buffer});
@@ -1148,11 +1150,13 @@ int main(int argc, char **argv) try {
             rejected_buffer = std::string_view(error.what()).find("unpack_buffer=1") !=
                               std::string_view::npos;
         }
+
         invoke(102, {0x88ec, 0});
         assert(rejected_buffer && invoke(20).result == 0);
 
         const auto index_buffer = object_name(139);
         invoke(102, {0x8893, index_buffer});
+
         for (const auto bytes : {96U, 144U}) {
             invoke(109, {0x8893, bytes, 0, 0x88e4});
             bool rejected_index_range = false;
@@ -1165,8 +1169,10 @@ int main(int argc, char **argv) try {
                         "offset=312 buffer_bytes=" +
                                 std::to_string(bytes);
             }
+
             assert(rejected_index_range && invoke(20).result == 0);
         }
+
         invoke(102, {0x8893, 0});
 
         // A rejected OEM texture must report bounded scalar arguments without copying its pixels.

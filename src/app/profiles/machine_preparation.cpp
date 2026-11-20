@@ -504,13 +504,11 @@ std::optional<unsigned> android_candidate_secondary_provider(const Json &profile
          "API30 display readiness requires a supported source profile");
     const auto russian = id == "free-11-russian-20260318-rc1";
     const auto launcher = passion ? "LY_Launcher" : "Launcher",
-               pin = passion
-                     ? "4032f14c0fc49fd52514737309d2af67c9d4ff9340dd534874f46cbe2e748c00"
+               pin = passion ? "4032f14c0fc49fd52514737309d2af67c9d4ff9340dd534874f46cbe2e748c00"
                      : qinggan11_611
                              ? "48665cf9d6bb50b49b3aa0b1aa73bdb0ac5d9d7071240c46c7f13d07d4114d7e"
-                             : russian
-                                     ? "94007beb0eed82807d3f20429435f2bbd585d9d52e6125b2a40779fc8cd2683c"
-                                     : "b3287150827e7fa51072bcbcba257539101cda8433c5f9d3a95f4ca905abd567";
+                     : russian ? "94007beb0eed82807d3f20429435f2bbd585d9d52e6125b2a40779fc8cd2683c"
+                               : "b3287150827e7fa51072bcbcba257539101cda8433c5f9d3a95f4ca905abd567";
     const auto android = android_screens(profile.at("displays"));
     need(android.size() >= 2 && profile.at("original").at(launcher).at("sha256") == pin,
          "two-display source Launcher contract required");
@@ -680,8 +678,7 @@ bool android_candidate_api30_root_layout(const Json &profile) {
     const auto id = profile.value("id", std::string{});
     const bool older = id == "free-11-chinese-20250710-6.11.1";
 
-    if (!older && id != "free-11-chinese-20260731-7.3.1" &&
-        id != "free-11-russian-20260318-rc1") {
+    if (!older && id != "free-11-chinese-20260731-7.3.1" && id != "free-11-russian-20260318-rc1") {
         return false;
     }
 

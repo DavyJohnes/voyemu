@@ -92,8 +92,7 @@ final class Artifacts {
         }
 
         var spec =
-                Api30NativeFiles.forProfile(profile)
-                        .stream()
+                Api30NativeFiles.forProfile(profile).stream()
                         .filter(value -> reference.equals("patched:" + value.id()))
                         .findFirst();
         Failure.require(

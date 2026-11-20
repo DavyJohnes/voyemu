@@ -333,8 +333,8 @@ Json Session::handle(const Json &operation) {
                                                         : Json(nullptr);
 
                 if ((button != "volume_up" && button != "volume_down") ||
-                    !qinggan11_partial_wheel_capability_matches(pressed_capability) ||
-                    hold < 1 || hold > 200) {
+                    !qinggan11_partial_wheel_capability_matches(pressed_capability) || hold < 1 ||
+                    hold > 200) {
                     throw VoyemuError("WHEEL_PAIR", "verified Free short press required");
                 }
 

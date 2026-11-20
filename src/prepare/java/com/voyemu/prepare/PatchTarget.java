@@ -536,15 +536,19 @@ final class PatchTarget implements Recipes.Target {
 
         UsbPlayerGuard.validateSource(source);
 
-        String entry = constants.containsKey("usb_player_dex")
-                ? StepConstants.text(constants, "usb_player_dex") : "classes3.dex";
-        Failure.require(entry.equals("classes2.dex") || entry.equals("classes3.dex"),
-                "PATCH_SOURCE", "Unexpected USB player DEX entry", 3);
+        String entry =
+                constants.containsKey("usb_player_dex")
+                        ? StepConstants.text(constants, "usb_player_dex")
+                        : "classes3.dex";
+        Failure.require(
+                entry.equals("classes2.dex") || entry.equals("classes3.dex"),
+                "PATCH_SOURCE",
+                "Unexpected USB player DEX entry",
+                3);
 
         if (apply) {
             entries.put(
-                    entry,
-                    UsbPlayerGuard.apply(constants, api, abi, input, entries.get(entry)));
+                    entry, UsbPlayerGuard.apply(constants, api, abi, input, entries.get(entry)));
             added.add(
                     UsbPlayerGuard.compileHelper(
                             constants,
@@ -555,11 +559,9 @@ final class PatchTarget implements Recipes.Target {
                             tools.platform(),
                             dir.resolve("helper-" + added.size())));
         } else if (planValidation) {
-            UsbPlayerGuard.validateOriginal(
-                    constants, api, abi, input, entries.get(entry));
+            UsbPlayerGuard.validateOriginal(constants, api, abi, input, entries.get(entry));
         } else {
-            UsbPlayerGuard.validatePrepared(
-                    constants, api, abi, input, entries.get(entry));
+            UsbPlayerGuard.validatePrepared(constants, api, abi, input, entries.get(entry));
         }
     }
 
@@ -1404,15 +1406,22 @@ final class PatchTarget implements Recipes.Target {
         Path source = Storage.confined(stepRoot, InterguestStartupGuard.NAME + "/src");
 
         if (apply) {
-            Path dex = GuestJava.dex(new GuestJava.Unit(source, api), tools.platform(),
-                    dir.resolve(InterguestStartupGuard.NAME));
-            entries.put("classes.dex",
+            Path dex =
+                    GuestJava.dex(
+                            new GuestJava.Unit(source, api),
+                            tools.platform(),
+                            dir.resolve(InterguestStartupGuard.NAME));
+            entries.put(
+                    "classes.dex",
                     InterguestStartupGuard.rewritePrimary(entries.get("classes.dex")));
-            entries.put("classes2.dex", InterguestStartupGuard.addHelper(
-                    entries.get("classes2.dex"), java.nio.file.Files.readAllBytes(dex.resolve("classes.dex"))));
+            entries.put(
+                    "classes2.dex",
+                    InterguestStartupGuard.addHelper(
+                            entries.get("classes2.dex"),
+                            java.nio.file.Files.readAllBytes(dex.resolve("classes.dex"))));
         } else {
-            InterguestStartupGuard.validate(profile.referenceProfile(), api, input, source,
-                    entries.get("classes.dex"));
+            InterguestStartupGuard.validate(
+                    profile.referenceProfile(), api, input, source, entries.get("classes.dex"));
         }
     }
 

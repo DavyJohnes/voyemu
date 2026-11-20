@@ -21,8 +21,7 @@ void validate_accepted_android_profile(const std::filesystem::path &android, con
 }
 
 bool qinggan11_camera_delivery_required(const Json &definition, std::string_view profile) {
-    if (profile != "free-11-chinese-20260731-7.3.1" &&
-        profile != "free-11-russian-20260318-rc1") {
+    if (profile != "free-11-chinese-20260731-7.3.1" && profile != "free-11-russian-20260318-rc1") {
         return false;
     }
 
@@ -55,7 +54,7 @@ static Json validate_plain_android_system_candidate(const std::filesystem::path 
                                                     bool require_package) {
     root_profile(root, profile);
     need(profile == "free-11-chinese-20260731-7.3.1" || profile == passion_profile_id ||
-             profile == "free-11-russian-20260318-rc1",
+                 profile == "free-11-russian-20260318-rc1",
          "system-only upgrade requires exact Free A11 7.3.1/Passion producer");
     ordinary(android);
     inside(root / ".local", android);
@@ -211,7 +210,7 @@ static Json validate_plain_android_system_candidate(const std::filesystem::path 
     if (candidate.contains("prepared_packages")) {
         need((profile == "free-11-chinese-20260731-7.3.1" ||
               profile == "free-11-russian-20260318-rc1") &&
-             !candidate.contains("camera_package"),
+                     !candidate.contains("camera_package"),
              "exact Free A11 prepared list required");
         const auto &packages = candidate.at("prepared_packages");
         android_prepared_packages_descriptor(packages, true);
@@ -226,8 +225,7 @@ static Json validate_plain_android_system_candidate(const std::filesystem::path 
                          std::filesystem::file_size(file) ==
                                  package.at("bytes").get<std::uint64_t>(),
                  "candidate prepared APK differs");
-            const std::string artifact =
-                    i == 0 ? std::string("patched:Camera") : "patched:Navi";
+            const std::string artifact = i == 0 ? std::string("patched:Camera") : "patched:Navi";
             unsigned matches = 0;
 
             for (const auto &item : candidate.at("installed")) {
@@ -790,8 +788,7 @@ static Json validate_android_package_upgrade(const std::filesystem::path &root,
                                              const std::filesystem::path &capsule,
                                              const std::string &receipt_pin) {
     root_profile(root, profile);
-    need(profile == "free-11-chinese-20260731-7.3.1" ||
-                 profile == "free-11-russian-20260318-rc1",
+    need(profile == "free-11-chinese-20260731-7.3.1" || profile == "free-11-russian-20260318-rc1",
          "owned package lineage requires exact Free A11");
     ordinary(capsule);
     inside(root / ".local", capsule);

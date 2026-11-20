@@ -410,7 +410,8 @@ inline void android_camera_package_descriptor(const Json &value, bool portable) 
 }
 
 inline std::filesystem::path android_camera_package_file(const Json &specification) {
-    if (specification.value("reference_profile", std::string{}) != "free-11-chinese-20260731-7.3.1" &&
+    if (specification.value("reference_profile", std::string{}) !=
+                "free-11-chinese-20260731-7.3.1" &&
         specification.value("reference_profile", std::string{}) != "free-11-russian-20260318-rc1") {
         throw VoyemuError("ANDROID_OWNED_PACKAGE", "exact Free A11 Camera profile required");
     }

@@ -206,6 +206,7 @@ void verify_cold_policy_files(
     };
 
     const Installed *navi_mac = nullptr;
+
     for (const auto &item : installed) {
         if (!cold_policy_file(profile, item)) {
             continue;
@@ -290,6 +291,7 @@ void verify_cold_original_navi(Candidate &c, Json &checks) {
     const auto start = c.shell(
             {"am", "start", "-W", "-n", "com.baidu.naviauto/com.baidu.naviauto.NaviAutoActivity"},
             60000);
+
     need(start.find("Error:") == std::string::npos && start.find("Status: ok") != std::string::npos,
          "original Navi launch not confirmed");
     const auto pid = c.shell({"pidof", "com.baidu.naviauto"});
@@ -432,7 +434,6 @@ void verify_cold(Candidate &c, const Json &profile, const std::vector<Installed>
                                        return c.shell(command);
                                    });
     }
-
 
     const auto config = profile.value("configure", Json::object());
     const auto settings = config.value("settings", Json::object());
@@ -664,7 +665,6 @@ void verify_cold(Candidate &c, const Json &profile, const std::vector<Installed>
                 },
                 30000, "content CLI read-only CAN proof");
     }
-
 }
 
 Json capture_candidate_frames(Candidate &c, const Json &profile) {

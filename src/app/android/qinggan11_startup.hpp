@@ -28,8 +28,7 @@ inline bool qinggan11_731_qgapi_original(const Json &original) {
 
     // Russian snapshot QGAPI: same OEM path, its own pinned bytes.
     auto russian = legacy;
-    russian["sha256"] =
-            "e46d3e5db0cf932cd3a39654a2f95620f2668ada8fb32b904c1684f936eca510";
+    russian["sha256"] = "e46d3e5db0cf932cd3a39654a2f95620f2668ada8fb32b904c1684f936eca510";
     russian["bytes"] = 1968146u;
     russian["acquisition"] = {{"image", "system"}, {"path", "/system/framework/QGAPI.jar"}};
 
@@ -61,13 +60,11 @@ inline bool qinggan11_731_keymanager_original(const Json &original) {
 
     // Russian snapshot KeyManagerService: same OEM path, its own pinned bytes.
     auto russian = legacy;
-    russian["sha256"] =
-            "701227c1d5a36c483ed7d9d050049e2a7a5bb72332bb0bbca4687bff5b198116";
+    russian["sha256"] = "701227c1d5a36c483ed7d9d050049e2a7a5bb72332bb0bbca4687bff5b198116";
     russian["bytes"] = 4898632u;
     russian["acquisition"] = {
             {"image", "system"},
-            {"path",
-             "/system/priv-app/KeyManagerService-release/KeyManagerService-release.apk"}};
+            {"path", "/system/priv-app/KeyManagerService-release/KeyManagerService-release.apk"}};
 
     return original == russian;
 }
@@ -142,14 +139,14 @@ inline bool qinggan11_partial_wheel_capability_matches(const Json &capability) {
         return false;
     }
 
-    auto reference = qinggan11_partial_wheel_capability(
-            capability.value("profile", std::string{}));
+    auto reference = qinggan11_partial_wheel_capability(capability.value("profile", std::string{}));
 
     return capability == reference;
 }
 
 inline Json qinggan11_wheel_capability(const Json &definition) {
     const std::string profile_id = definition.value("id", std::string{});
+
     (void)qinggan11_startup_values(definition);
     const bool original_navi = original_navi_requested(definition);
     const Json components = {{"canbus", "components/canbus"},

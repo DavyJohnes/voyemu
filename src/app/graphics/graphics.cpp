@@ -1884,12 +1884,14 @@ struct Backend::Impl {
             if (!channels || !unit) {
                 I unpack_buffer = 0;
                 gl->call<void>("glGetIntegerv", U(0x88ef), &unpack_buffer);
+
                 // OEM's storage request carries an invalid GL format and no source pixels.
                 // Native GL must report INVALID_ENUM without turning it into a transport fault.
                 if (n == "glTexImage2D" && !a[6] && a[7] == 0x1401 && !inline_bytes &&
                     !a[s.pointer] && !unpack_buffer) {
                     return 0;
                 }
+
                 throw VoyemuError(
                         "GRAPHICS",
                         "Texture format/type copy extent: target=" + std::to_string(a[0]) +
@@ -1900,6 +1902,7 @@ struct Backend::Impl {
                                 " blob=" + std::to_string(a[s.pointer] != 0) +
                                 " unpack_buffer=" + std::to_string(unpack_buffer != 0));
             }
+
             I alignment = 0, row_length = 0, skip_rows = 0, skip_pixels = 0, binding = 0;
             gl->call<void>("glGetIntegerv", U(0xcf5), &alignment);
             gl->call<void>("glGetIntegerv", U(0xcf2), &row_length);
@@ -3551,6 +3554,7 @@ struct Backend::Impl {
         auto length = count_bytes(a[0], unit);
         I size = 0;
         gl->call<void>("glGetBufferParameteriv", U(0x8893), U(0x8764), &size);
+
         if (!length || size < 0 || a[2] > std::uint64_t(size) ||
             length > std::uint64_t(size) - a[2]) {
             throw VoyemuError("GRAPHICS",
@@ -3559,6 +3563,7 @@ struct Backend::Impl {
                                       " offset=" + std::to_string(a[2]) +
                                       " buffer_bytes=" + std::to_string(size));
         }
+
         auto pointer = gl->call<V>("glMapBufferRange", U(0x8893), GLintptr(a[2]),
                                    GLsizeiptr(length), U(1));
         need(pointer != nullptr, "Element-buffer map failed");

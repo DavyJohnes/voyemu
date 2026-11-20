@@ -1,6 +1,7 @@
 package com.android.server;
 
 import android.util.Log;
+
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.InetAddress;
@@ -42,10 +43,12 @@ final class VoyemuInterguestStartup {
             for (int attempt = 1; attempt <= ATTEMPTS; ++attempt) {
                 try {
                     configure(manager);
+
                     return;
                 } catch (ReflectiveOperationException | RuntimeException failure) {
                     if (attempt == ATTEMPTS) {
                         Log.w(TAG, "Isolated Ethernet setup failed", failure);
+
                         return;
                     }
                 }
@@ -54,6 +57,7 @@ final class VoyemuInterguestStartup {
                     Thread.sleep(500);
                 } catch (InterruptedException interrupted) {
                     Thread.currentThread().interrupt();
+
                     return;
                 }
             }
@@ -79,22 +83,28 @@ final class VoyemuInterguestStartup {
             if (name == null || !name.matches("[A-Za-z0-9_.:-]{1,15}")) {
                 throw new IllegalStateException("Invalid Ethernet interface name");
             }
+
             Object candidate = getConfig.invoke(manager, name);
+
             if (candidate != null && MAC.equalsIgnoreCase((String) getMac.invoke(candidate))) {
                 if (selected != null) {
                     throw new IllegalStateException("Ambiguous isolated Ethernet interface");
                 }
+
                 selected = name;
             }
         }
+
         if (selected == null) {
             throw new IllegalStateException("Isolated Ethernet interface absent");
         }
 
         Object current = getConfig.invoke(manager, selected);
+
         if (current == null || !MAC.equalsIgnoreCase((String) getMac.invoke(current))) {
             throw new IllegalStateException("Isolated Ethernet interface changed");
         }
+
         config.getMethod("setLinkAddress", link)
                 .invoke(current, link.getConstructor(String.class).newInstance(ADDRESS));
         config.getMethod("setInterfaceUp").invoke(current);
@@ -102,26 +112,44 @@ final class VoyemuInterguestStartup {
                 .invoke(manager, selected, current);
 
         Class<?> binder = Class.forName("android.os.IBinder");
-        Object endpoint = Class.forName("android.os.ServiceManager")
-                .getMethod("getService", String.class).invoke(null, "netd");
+        Object endpoint =
+                Class.forName("android.os.ServiceManager")
+                        .getMethod("getService", String.class)
+                        .invoke(null, "netd");
+
         if (endpoint == null) {
             throw new IllegalStateException("netd unavailable");
         }
+
         Class<?> netd = Class.forName("android.net.INetd");
-        Object daemon = Class.forName("android.net.INetd$Stub")
-                .getMethod("asInterface", binder).invoke(null, endpoint);
+        Object daemon =
+                Class.forName("android.net.INetd$Stub")
+                        .getMethod("asInterface", binder)
+                        .invoke(null, endpoint);
+
         if (!Boolean.TRUE.equals(netd.getMethod("isAlive").invoke(daemon))) {
             throw new IllegalStateException("netd unavailable");
         }
 
-        fixedRequest(daemon, netd.getMethod("networkCreatePhysical", int.class, int.class),
-                NET_ID, netd.getField("PERMISSION_NONE").getInt(null));
-        fixedRequest(manager, service.getMethod("addInterfaceToNetwork", String.class, int.class),
-                selected, NET_ID);
+        fixedRequest(
+                daemon,
+                netd.getMethod("networkCreatePhysical", int.class, int.class),
+                NET_ID,
+                netd.getField("PERMISSION_NONE").getInt(null));
+        fixedRequest(
+                manager,
+                service.getMethod("addInterfaceToNetwork", String.class, int.class),
+                selected,
+                NET_ID);
 
-        Object connected = route.getConstructor(link, InetAddress.class, String.class)
-                .newInstance(link.getConstructor(String.class).newInstance(SUBNET), null, selected);
-        Method legacyRoute = service.getMethod("addLegacyRouteForNetId", int.class, route, int.class);
+        Object connected =
+                route.getConstructor(link, InetAddress.class, String.class)
+                        .newInstance(
+                                link.getConstructor(String.class).newInstance(SUBNET),
+                                null,
+                                selected);
+        Method legacyRoute =
+                service.getMethod("addLegacyRouteForNetId", int.class, route, int.class);
         fixedRequest(manager, legacyRoute, NET_ID, connected, 0);
         fixedRequest(manager, legacyRoute, NET_ID, connected, 10000);
     }
@@ -132,6 +160,7 @@ final class VoyemuInterguestStartup {
             method.invoke(receiver, arguments);
         } catch (InvocationTargetException wrapped) {
             Throwable failure = wrapped.getCause();
+
             if (failure == null
                     || !failure.getClass().getName().equals("android.os.ServiceSpecificException")
                     || failure.getClass().getField("errorCode").getInt(failure) != 17) {

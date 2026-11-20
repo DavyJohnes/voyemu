@@ -353,8 +353,7 @@ std::string prepare_qnx_passion_11713_runtime(std::string_view source) {
     change("/proc/boot/etc/", "/etc/");
     change("LD_PRELOAD=/bin/qditest\n", "LD_PRELOAD=/bin/qditest\n");
     change("LD_PRELOAD=$qm_snap ", "LD_PRELOAD=$qm_snap ");
-    change("LD_PRELOAD=/etc/dispdump.sh \\\n",
-           "LD_PRELOAD=/etc/dispdump.sh \\\n");
+    change("LD_PRELOAD=/etc/dispdump.sh \\\n", "LD_PRELOAD=/etc/dispdump.sh \\\n");
     // hd0 spans the file system extent 0x27c008000+5242880 sectors with a whole-device automount:
     // the cam partition device does not apply the GPT LBA64 base and fails with E302 on sblk.
     change("automount=hd0:/:qnx6:ro", "automount=hd0:/:qnx6:ro");

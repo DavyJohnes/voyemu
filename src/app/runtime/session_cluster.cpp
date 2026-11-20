@@ -1048,11 +1048,13 @@ void Session::poll_qnx() {
 
         if (binding.passion) {
             const auto projection = cluster_boot_spec_.value("mcu_projection", Json());
+
             if (!projection.is_null()) {
                 if (!qnx_mcu_delivery_scope(Json{{"mcu_projection", projection}},
                                             qnx_passion_mcu_projection())) {
                     throw VoyemuError("QNX_MCU_PROJECTION", "invalid Passion topic scope");
                 }
+
                 spec.arguments.push_back("--passion-vehicle-topics");
             }
         }

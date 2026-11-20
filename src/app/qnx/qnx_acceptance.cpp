@@ -442,12 +442,14 @@ Json run(const std::filesystem::path &root, const std::string &profile,
                                     voyemu::output::png_frame(pixels, 1920, 720, true));
                             initial_png_sha = sha256_file(output / "cluster-initial.png");
                             Json probe = {{"speed", 37}, {"soc", 65}};
+
                             if (!layout.projection.is_null() && !passion) {
                                 probe = {{"speed", 42},
                                          {"speed10x", 420},
                                          {"door_fl", 1},
                                          {"soc", 55}};
                             }
+
                             const auto patched =
                                     session->handle({{"op", "patch"}, {"values", probe}});
                             need(patched.value("ok", false), "input probe patch failed");

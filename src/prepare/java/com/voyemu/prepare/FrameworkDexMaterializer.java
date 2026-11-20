@@ -114,25 +114,30 @@ final class FrameworkDexMaterializer {
     }
 
     /**
-     * Merges adjacent try blocks that share one handler sequence, the same way the dexlib2
-     * writer does on serialization, so the scripts compare definitions the writer produces.
+     * Merges adjacent try blocks that share one handler sequence, the same way the dexlib2 writer
+     * does on serialization, so the scripts compare definitions the writer produces.
      */
     static void normalizeTryBlocks(Map<String, ClassDef> classes) {
         Map<String, ClassDef> normalized = new LinkedHashMap<>();
+
         for (ClassDef source : classes.values()) {
             List<org.jf.dexlib2.iface.Method> direct = new ArrayList<>();
             List<org.jf.dexlib2.iface.Method> virtual = new ArrayList<>();
             boolean classChanged = false;
+
             for (org.jf.dexlib2.iface.Method method : source.getMethods()) {
                 MethodImplementation implementation = method.getImplementation();
                 MutableMethod replaced = new MutableMethod(method);
                 boolean changed = false;
+
                 if (implementation != null) {
                     List<TryBlock<? extends ExceptionHandler>> blocks =
                             new ArrayList<>(implementation.getTryBlocks());
+
                     for (int i = 0; i + 1 < blocks.size(); ) {
                         TryBlock<? extends ExceptionHandler> first = blocks.get(i);
                         TryBlock<? extends ExceptionHandler> second = blocks.get(i + 1);
+
                         if (first.getStartCodeAddress() + first.getCodeUnitCount()
                                         == second.getStartCodeAddress()
                                 && handlers(first).equals(handlers(second))) {
@@ -148,6 +153,7 @@ final class FrameworkDexMaterializer {
                             i++;
                         }
                     }
+
                     if (changed) {
                         replaced.setImplementation(
                                 new ImmutableMethodImplementation(
@@ -158,12 +164,14 @@ final class FrameworkDexMaterializer {
                         classChanged = true;
                     }
                 }
+
                 if (MethodUtil.isDirect(method)) {
                     direct.add(replaced);
                 } else {
                     virtual.add(replaced);
                 }
             }
+
             normalized.put(
                     source.getType(),
                     classChanged
@@ -180,6 +188,7 @@ final class FrameworkDexMaterializer {
                                     new ArrayList<>(virtual))
                             : source);
         }
+
         classes.clear();
         classes.putAll(normalized);
     }
@@ -255,7 +264,8 @@ final class FrameworkDexMaterializer {
         }
     }
 
-    static byte[] serialize(org.jf.dexlib2.iface.DexFile dex) throws Exception {        MemoryDataStore store = new MemoryDataStore();
+    static byte[] serialize(org.jf.dexlib2.iface.DexFile dex) throws Exception {
+        MemoryDataStore store = new MemoryDataStore();
 
         try {
             DexPool pool = new DexPool(dex.getOpcodes());

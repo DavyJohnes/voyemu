@@ -162,8 +162,7 @@ public final class PreparationMain {
 
         boolean passion = "passion".equals(profile.data().get("platform")),
                 qinggan11 = "qinggan11".equals(profile.data().get("platform"));
-        var specs =
-                Api30NativeFiles.forProfile(profile);
+        var specs = Api30NativeFiles.forProfile(profile);
         int policyIndex = nativePolicyIndex(specs, passion);
         long fileNodes =
                 Json.obj(profile.data(), "patches").values().stream()

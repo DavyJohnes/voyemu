@@ -50,10 +50,10 @@ struct Input {
 void snapshot_recipe(const Json &acquisition) {
     const auto &archive = acquisition.at("archive");
     const auto &images = acquisition.at("images");
+
     need(sha256_text(archive.at("sha256").get_ref<const std::string &>()) &&
                  archive.at("bytes").is_number_unsigned() &&
-                 archive.at("file").get_ref<const std::string &>().find('/') ==
-                         std::string::npos,
+                 archive.at("file").get_ref<const std::string &>().find('/') == std::string::npos,
          "snapshot archive pin differs");
     need(!images.empty() && images.contains("system") && images.contains("vendor"),
          "snapshot image recipes required");
@@ -101,7 +101,7 @@ std::vector<Input> snapshot_original_records(const Json &definition) {
 } // namespace
 
 Json import_snapshot_profile_inputs(const std::filesystem::path &root, std::string_view profile,
-                                     const std::filesystem::path &snapshot, std::uint64_t reserve) {
+                                    const std::filesystem::path &snapshot, std::uint64_t reserve) {
     need(valid_profile_name(profile) && root.is_absolute() &&
                  std::filesystem::canonical(root) == root,
          "canonical root and safe profile required");
@@ -110,7 +110,8 @@ Json import_snapshot_profile_inputs(const std::filesystem::path &root, std::stri
     const auto profile_pin = sha256_file(source);
     const auto definition = read_private_json(source, 512 * 1024);
     const auto &acquisition = definition.at("acquisition");
-    need(acquisition.at("format") == "pinned-snapshot-raw-images" && acquisition.at("diff") == false,
+    need(acquisition.at("format") == "pinned-snapshot-raw-images" &&
+                 acquisition.at("diff") == false,
          "snapshot acquisition recipe required");
     snapshot_recipe(acquisition);
     const auto archive_pin = acquisition.at("archive").at("sha256").get<std::string>();
@@ -132,8 +133,7 @@ Json import_snapshot_profile_inputs(const std::filesystem::path &root, std::stri
     }
 
     auto unchanged = [&] {
-        need(sha256_file(source) == profile_pin &&
-             cache_file_identity(snapshot) == archive_epoch,
+        need(sha256_file(source) == profile_pin && cache_file_identity(snapshot) == archive_epoch,
              "acquisition source changed");
     };
     Json result = {{"schema", 1},
@@ -182,10 +182,10 @@ Json import_snapshot_profile_inputs(const std::filesystem::path &root, std::stri
         const auto &image = acquisition.at("images").at(name);
         const auto image_dir = stage / (std::string(name) + "-image");
         ensure_private_directory(image_dir);
-        extract_pinned_zip_members(
-                snapshot, archive_pin,
-                {{image.at("file"), 0, image.at("bytes").get<std::uint64_t>()}},
-                image_dir / image.at("file"), image.at("bytes").get<std::uint64_t>(), reserve);
+        extract_pinned_zip_members(snapshot, archive_pin,
+                                   {{image.at("file"), 0, image.at("bytes").get<std::uint64_t>()}},
+                                   image_dir / image.at("file"),
+                                   image.at("bytes").get<std::uint64_t>(), reserve);
         need(sha256_file(image_dir / image.at("file")) ==
                      image.at("sha256").get_ref<const std::string &>(),
              "snapshot image differs");

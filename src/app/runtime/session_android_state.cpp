@@ -1048,8 +1048,9 @@ void Session::poll_oem_settings() {
     std::optional<ThemeState> current;
     const bool qinggan11_611 = qinggan11_cluster_presentation(android_spec_);
     const bool qinggan11_731 =
-            !qinggan11_611 && qinggan11_presentation(
-                    android_spec_.value("reference_profile", std::string{}), android_spec_);
+            !qinggan11_611 &&
+            qinggan11_presentation(android_spec_.value("reference_profile", std::string{}),
+                                   android_spec_);
 
     if (qinggan11_611 || qinggan11_731) {
         current = read_qinggan11_cluster_theme([&](const std::vector<std::string> &args) {

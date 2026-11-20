@@ -84,13 +84,24 @@ final class Api30NativeFiles {
     static final String QINGGAN11_731 = "free-11-chinese-20260731-7.3.1";
 
     static final List<Spec> QINGGAN11_611_SPECS =
-            QINGGAN11_SPECS.stream().map(spec -> switch (spec.id()) {
-                case "can-early-policy-api30" -> new Spec(spec.id(), spec.target(), spec.inputPin(),
-                        "50e7563396d73b053a36a9022d31807121731ecc0ce51b695df65ec7d6838db6");
-                case "selinux-hash-api30" -> new Spec(spec.id(), spec.target(), spec.inputPin(),
-                        "2f158789774a59073cf85bf2c91272416b0da948eea037f9e13586187338f2c9");
-                default -> spec;
-            }).toList();
+            QINGGAN11_SPECS.stream()
+                    .map(spec ->
+                            switch (spec.id()) {
+                                case "can-early-policy-api30" ->
+                                        new Spec(
+                                                spec.id(),
+                                                spec.target(),
+                                                spec.inputPin(),
+                                                "50e7563396d73b053a36a9022d31807121731ecc0ce51b695df65ec7d6838db6");
+                                case "selinux-hash-api30" ->
+                                        new Spec(
+                                                spec.id(),
+                                                spec.target(),
+                                                spec.inputPin(),
+                                                "2f158789774a59073cf85bf2c91272416b0da948eea037f9e13586187338f2c9");
+                                default -> spec;
+                            })
+                    .toList();
 
     static final List<Spec> PASSION_SPECS =
             List.of(
@@ -153,7 +164,9 @@ final class Api30NativeFiles {
     static List<Spec> forProfile(ProfileRegistry.Profile profile) {
         var platform = profile.data().get("platform");
         boolean originalNavi = Json.obj(profile.data(), "patches").containsKey("original-navi-mac");
-        if ("qinggan11".equals(platform) && !originalNavi
+
+        if ("qinggan11".equals(platform)
+                && !originalNavi
                 && !QINGGAN11_731.equals(profile.referenceProfile())) {
             return QINGGAN11_611_SPECS;
         }

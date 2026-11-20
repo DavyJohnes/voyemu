@@ -59,6 +59,7 @@ inline Json qnx_mcu_request_projection(std::uint64_t packet_bytes, std::uint64_t
         if (packet_bytes || wire_fields || projected_fields != 3) {
             throw VoyemuError("QNX_MCU_PROJECTION", "unsupported Passion topic scope");
         }
+
         return qnx_passion_mcu_projection();
     }
 
@@ -83,6 +84,7 @@ inline std::optional<Json> qnx_mcu_delivery_scope(const Json &ack, const Json &e
     }
 
     const auto projection = ack.find("mcu_projection");
+
     if (projection != ack.end() && projection->is_object() &&
         projection->contains("hardware_adapter") &&
         projection->at("hardware_adapter") == "sa8155-passion-21480") {
@@ -92,9 +94,11 @@ inline std::optional<Json> qnx_mcu_delivery_scope(const Json &ack, const Json &e
                    scope.at("projected_fields").is_number_integer() &&
                    scope.at("unsupported_fields").is_number_integer();
         };
+
         if (!matches_passion(expected) || !matches_passion(*projection)) {
             return std::nullopt;
         }
+
         return Json{{"fields", 3}, {"mcu_projection", passion}, {"full_wire_verified", false}};
     }
 

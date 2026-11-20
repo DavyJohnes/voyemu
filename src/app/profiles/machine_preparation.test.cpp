@@ -170,6 +170,7 @@ void verify_candidate_rich_ui() {
             check(calls[1] == std::vector<std::string>{"id", "-Z"});
         }
     };
+
     check_shell(false, false, true);
     check_shell(false, false, false);
     check_shell(true, false, true);

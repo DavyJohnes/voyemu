@@ -128,9 +128,12 @@ final class RecipesApi30 {
                                             "args",
                                             List.of()),
                                     Map.of("operation", "guardStartupVolume", "args", List.of()),
-                                    Map.of("operation", "guardInterguestStartup", "args", List.of()))),
-                    "Exact ordered Free A11 7.3.1 platform operations"
-                            + " required");
+                                    Map.of(
+                                            "operation",
+                                            "guardInterguestStartup",
+                                            "args",
+                                            List.of()))),
+                    "Exact ordered Free A11 7.3.1 platform operations" + " required");
         }
 
         if (name.equals(PassionSecondaryNavigationGuard.NAME + ".json")) {
@@ -957,7 +960,8 @@ final class RecipesApi30 {
                 require(
                         name.equals(SecondaryNavigationGuard.NAME + ".json")
                                 && pins.equals(List.of(HiboardTopGestureGuard.PIN))
-                                && args.isEmpty() && guardedTopGesture,
+                                && args.isEmpty()
+                                && guardedTopGesture,
                         "Exact interguest startup requires the Free A11 7.3.1 platform chain");
                 target.guardInterguestStartup(false);
             }

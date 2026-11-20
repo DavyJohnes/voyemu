@@ -544,8 +544,8 @@ Json export_android_candidate_owned_package(const Json &profile, const Json &art
                                             const Json &installed,
                                             const std::filesystem::path &destination,
                                             std::uint64_t reserve) {
-    if (runtime_profile_reference(profile) != "free-11-chinese-20260731-7.3.1"
-        && runtime_profile_reference(profile) != "free-11-russian-20260318-rc1") {
+    if (runtime_profile_reference(profile) != "free-11-chinese-20260731-7.3.1" &&
+        runtime_profile_reference(profile) != "free-11-russian-20260318-rc1") {
         return Json::object();
     }
 
@@ -591,8 +591,8 @@ Json export_android_candidate_camera_package(const Json &profile, const Json &ar
                                              const Json &installed,
                                              const std::filesystem::path &destination,
                                              std::uint64_t reserve) {
-    if (runtime_profile_reference(profile) != "free-11-chinese-20260731-7.3.1"
-        && runtime_profile_reference(profile) != "free-11-russian-20260318-rc1") {
+    if (runtime_profile_reference(profile) != "free-11-chinese-20260731-7.3.1" &&
+        runtime_profile_reference(profile) != "free-11-russian-20260318-rc1") {
         return Json::object();
     }
 
@@ -633,8 +633,8 @@ static Json export_android_candidate_prepared_packages(const Json &profile, cons
                                                        const Json &installed,
                                                        const std::filesystem::path &destination,
                                                        std::uint64_t reserve) {
-    if (runtime_profile_reference(profile) != "free-11-chinese-20260731-7.3.1"
-        && runtime_profile_reference(profile) != "free-11-russian-20260318-rc1") {
+    if (runtime_profile_reference(profile) != "free-11-chinese-20260731-7.3.1" &&
+        runtime_profile_reference(profile) != "free-11-russian-20260318-rc1") {
         return Json::array();
     }
 
@@ -1290,6 +1290,7 @@ Json build_android_candidate(const std::filesystem::path &root,
                 });
         wake_displays(candidate, profile);
         candidate.phase("cold-verification");
+
         if (!navi_storage.empty()) {
             verify_navi_shell();
             const auto storage = candidate.shell(

@@ -96,9 +96,15 @@ final class ThirdScreenRouting {
                             "V"));
 
     static List<Site> sites(Map<String, Object> constants) {
-        return List.of(START, touch(constants.containsKey("thirdscreen_touch_address")
-                ? Math.toIntExact(Json.integer(constants, "thirdscreen_touch_address")) : 0x2c));
+        return List.of(
+                START,
+                touch(
+                        constants.containsKey("thirdscreen_touch_address")
+                                ? Math.toIntExact(
+                                        Json.integer(constants, "thirdscreen_touch_address"))
+                                : 0x2c));
     }
+
     private ThirdScreenRouting() {}
 
     private static void require(boolean accepted) {
@@ -208,7 +214,8 @@ final class ThirdScreenRouting {
         }
     }
 
-    private static ClassDef rewriteClass(Map<String, Object> constants, ClassDef c, boolean forward) {
+    private static ClassDef rewriteClass(
+            Map<String, Object> constants, ClassDef c, boolean forward) {
         var site = sites(constants).stream().filter(s -> s.owner().equals(c.getType())).findFirst();
 
         if (site.isEmpty()) {

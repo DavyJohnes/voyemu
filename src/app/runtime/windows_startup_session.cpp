@@ -1533,14 +1533,16 @@ void Session::advance_windows_android_transaction() {
                                         "--projection", "value"})},
                         {"appearance", startup_shell({"getprop", "persist.sys.qg.currenttheme"})},
                         {"theme_first",
-                         qinggan11_presentation(android_spec_.value("reference_profile", std::string{}),
-                                                    android_spec_)
+                         qinggan11_presentation(
+                                 android_spec_.value("reference_profile", std::string{}),
+                                 android_spec_)
                                  ? "true"
                                  : startup_shell({"service", "call", "qg.canbus", "57", "i32", "1",
                                                   "i32", "599", "i32", "818"})},
                         {"theme_second",
-                         qinggan11_presentation(android_spec_.value("reference_profile", std::string{}),
-                                                    android_spec_)
+                         qinggan11_presentation(
+                                 android_spec_.value("reference_profile", std::string{}),
+                                 android_spec_)
                                  ? startup_shell({"service", "call", "qg.cluster.service", "7",
                                                   "i32", "1", "i32", "27", "i32", "28"})
                                  : startup_shell({"service", "call", "qg.canbus", "57", "i32", "1",
@@ -1682,8 +1684,7 @@ void Session::advance_windows_android_transaction() {
                 }
 
                 const bool qinggan11_731 = qinggan11_presentation(
-                        android_spec_.value("reference_profile", std::string{}),
-                        android_spec_);
+                        android_spec_.value("reference_profile", std::string{}), android_spec_);
                 auto value = qinggan11_731 ? qinggan11_cluster_skin_theme(sections[11])
                                            : std::optional<ThemeState>{
                                                      ThemeState{binder_integer(sections[10]),
@@ -2416,7 +2417,7 @@ void Session::advance_windows_android_transaction() {
             }
             case Phase::theme_first: {
                 if (qinggan11_presentation(android_spec_.value("reference_profile", std::string{}),
-                                                    android_spec_)) {
+                                           android_spec_)) {
                     transaction.phase = Phase::theme_second;
                     break;
                 }
@@ -2434,8 +2435,7 @@ void Session::advance_windows_android_transaction() {
             }
             case Phase::theme_second: {
                 const bool qinggan11_731 = qinggan11_presentation(
-                        android_spec_.value("reference_profile", std::string{}),
-                        android_spec_);
+                        android_spec_.value("reference_profile", std::string{}), android_spec_);
                 auto result = qinggan11_731
                                       ? read({"shell", "service", "call", "qg.cluster.service", "7",
                                               "i32", "1", "i32", "27", "i32", "28"})

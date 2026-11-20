@@ -122,9 +122,11 @@ inline QnxRuntimeLayout qnx_runtime_layout(std::string_view profile, const Json 
 
     if (!free && metadata.contains("mcu_projection") && !metadata.at("mcu_projection").is_null()) {
         const auto expected = qnx_passion_mcu_projection();
+
         if (adapter != "sa8155-passion-21480" || !qnx_mcu_delivery_scope(metadata, expected)) {
             throw VoyemuError("QNX_LAYOUT", "unexpected MCU projection");
         }
+
         layout.projection = expected;
     }
 
@@ -183,10 +185,9 @@ inline QnxRuntimeLayout qnx_runtime_layout(std::string_view profile, const Json 
 // Normal start validates configuration metadata only; explicit check audits payload bytes.
 inline QnxRuntimeLayout qnx_portable_layout(std::string_view profile, const Json &metadata) {
     auto layout = qnx_runtime_layout(profile, metadata);
-    const auto base_fields =
-            qnx_adapter(layout.adapter).platform == QnxGuestPlatform::passion
-                    ? (layout.projection.is_null() ? 3U : 4U)
-                    : (layout.projection.is_null() ? 2U : 4U);
+    const auto base_fields = qnx_adapter(layout.adapter).platform == QnxGuestPlatform::passion
+                                     ? (layout.projection.is_null() ? 3U : 4U)
+                                     : (layout.projection.is_null() ? 2U : 4U);
 
     if (metadata.size() != base_fields +
                                    (layout.simulated_initial_native_state.is_null() ? 0U : 1U) +
