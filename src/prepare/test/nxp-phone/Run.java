@@ -253,7 +253,8 @@ class Run {
                         "NxpApkRuntimeCoverageTest",
                         "NxpPhoneComponentTest",
                         "NxpPhoneConnectAnrTest",
-                        "PhoneManifestProvidersTest")) {
+                        "PhoneManifestProvidersTest",
+                        "TestProfiles")) {
             helper.add(source("src/prepare/test/java/com/voyemu/prepare/" + test + ".java"));
         }
 

@@ -27,7 +27,7 @@ include("${CMAKE_CURRENT_LIST_DIR}/../java_source_dependencies.cmake")
 set(POLICY_WORK "${WORK}/policy")
 file(MAKE_DIRECTORY "${POLICY_WORK}/classes")
 execute_process(COMMAND "${JAVAC}" -J-Xmx512m --release 25 -cp "${JAVA_SOURCE_CLASSPATH}"
-    -sourcepath "${ROOT}/src/prepare/java" -d "${POLICY_WORK}/classes"
+    -sourcepath "${ROOT}/src/prepare/java${CP_SEPARATOR}${ROOT}/src/prepare/test/java" -d "${POLICY_WORK}/classes"
     "${ROOT}/src/prepare/java/com/voyemu/prepare/Recipes.java"
     "${ROOT}/src/prepare/java/com/voyemu/prepare/Artifacts.java"
     "${ROOT}/src/prepare/test/java/com/voyemu/prepare/NxpNavigationTemperatureThreadTest.java"

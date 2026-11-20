@@ -66,7 +66,7 @@ if(NOT RESULT EQUAL 0)
 endif()
 message(STATUS "${OUTPUT}")
 execute_process(COMMAND "${JAVAC}" -J-Xmx768m --release 25 -cp "${JAVA_SOURCE_CLASSPATH}"
-    -sourcepath "${ROOT}/src/prepare/java" -d "${WORK}"
+    -sourcepath "${ROOT}/src/prepare/java${CP_SEPARATOR}${ROOT}/src/prepare/test/java" -d "${WORK}"
     "${ROOT}/src/prepare/test/java/com/voyemu/prepare/PassionGeneratedHelperContractTest.java"
     "${ROOT}/src/prepare/test/java/com/voyemu/prepare/SigningIntermediateTest.java"
     "${ROOT}/src/prepare/test/java/com/voyemu/prepare/PassionCarSettingsRecyclerRecipeTest.java"

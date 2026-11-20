@@ -61,7 +61,8 @@ endif()
 check("Android manifest" "${AAPT2}" link -I "${PLATFORM}" --manifest "${PROFILE}/components/phone/AndroidManifest.xml" -o "${WORK}/manifest.apk")
 check("guard compile" ${COMPILE} --release 25 -cp "${JAVA_SOURCE_CLASSPATH}" -sourcepath "${ROOT}/src/prepare/java" -d "${WORK}/guard"
     "${ROOT}/src/prepare/test/java/com/voyemu/prepare/PassionPhoneGuardTest.java"
-    "${ROOT}/src/prepare/test/java/com/voyemu/prepare/PassionPhoneRecipeTest.java")
+    "${ROOT}/src/prepare/test/java/com/voyemu/prepare/PassionPhoneRecipeTest.java"
+    "${ROOT}/src/prepare/test/java/com/voyemu/prepare/TestProfiles.java")
 set(CLASSPATH "${WORK}/guard${CP_SEPARATOR}${JAVA_SOURCE_CLASSPATH}")
 check("recipe and profile" ${RUN} -cp "${CLASSPATH}" com.voyemu.prepare.PassionPhoneRecipeTest "${ROOT}")
 set(OEM "${ROOT}/.local/profiles/passion-11-russian-20260403-2.1.4.80/originals/LY_BtPhone.apk")

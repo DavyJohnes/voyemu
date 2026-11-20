@@ -79,7 +79,8 @@ class Run {
                         "PhoneProviderTest",
                         "PhonePackageTest",
                         "PhonePeerTest",
-                        "PhoneDisconnectGuardTest")) {
+                        "PhoneDisconnectGuardTest",
+                        "TestProfiles")) {
             sources.put(
                     n, overlay.resolve("src/prepare/test/java/com/voyemu/prepare/" + n + ".java"));
         }
