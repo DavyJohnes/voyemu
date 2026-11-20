@@ -5,6 +5,7 @@
 #include "model.hpp"
 #include "os/fs.hpp"
 #include "process.hpp"
+#include "progress.hpp"
 #include "quickboot.hpp"
 #include "zip_layout.hpp"
 #include <algorithm>
@@ -14,6 +15,7 @@
 #include <limits>
 #include <map>
 #include <miniz.h>
+#include <mutex>
 #include <set>
 #include <stdexcept>
 #ifdef __APPLE__
@@ -149,7 +151,7 @@ ZipData scan(const std::filesystem::path &file, const std::string &pin, const st
         throw VoyemuError("ZIP_PIN", "lowercase SHA256 required");
     }
 
-    if (sha256_file(file) != pin) {
+    if (pinned_file_sha256(file) != pin) {
         throw VoyemuError("ZIP_PIN", "archive SHA256 mismatch");
     }
 
@@ -443,7 +445,7 @@ std::vector<ZipEntry> pinned_zip_inventory(const std::filesystem::path &file,
 
     const auto epoch = cache_file_identity(file);
 
-    if (sha256_file(file) != pin) {
+    if (pinned_file_sha256(file) != pin) {
         throw VoyemuError("ZIP_PIN", "archive SHA256 mismatch");
     }
 
@@ -472,7 +474,7 @@ std::vector<ZipEntry> pinned_zip_inventory(const std::filesystem::path &file,
         entries.push_back({item.name, item.bytes, item.directory});
     }
 
-    if (cache_file_identity(file) != epoch || sha256_file(file) != pin) {
+    if (cache_file_identity(file) != epoch || pinned_file_sha256(file) != pin) {
         throw VoyemuError("ZIP_CHANGED", "archive changed during inventory");
     }
 
@@ -517,7 +519,7 @@ std::string read_pinned_zip_entry(const std::filesystem::path &file, const std::
         throw VoyemuError("ZIP_ENTRY", "declared entry missing");
     }
 
-    if (cache_file_identity(file) != epoch || sha256_file(file) != pin) {
+    if (cache_file_identity(file) != epoch || pinned_file_sha256(file) != pin) {
         throw VoyemuError("ZIP_CHANGED", "archive changed during entry read");
     }
 
@@ -570,7 +572,7 @@ void extract_pinned_zip_members(const std::filesystem::path &source, const std::
 
     const auto epoch = cache_file_identity(source);
 
-    if (sha256_file(source) != source_pin) {
+    if (pinned_file_sha256(source) != source_pin) {
         throw VoyemuError("ZIP_PIN", "archive SHA256 mismatch");
     }
 
@@ -661,7 +663,7 @@ void extract_pinned_zip_members(const std::filesystem::path &source, const std::
         throw VoyemuError("ZIP_OUTPUT", "output close failed");
     }
 
-    if (cache_file_identity(source) != epoch || sha256_file(source) != source_pin) {
+    if (cache_file_identity(source) != epoch || pinned_file_sha256(source) != source_pin) {
         throw VoyemuError("ZIP_CHANGED", "archive changed during extraction");
     }
 }
@@ -674,7 +676,7 @@ std::map<std::string, std::string> pinned_zip_link_targets(const std::filesystem
 
     const auto epoch = cache_file_identity(source);
 
-    if (sha256_file(source) != source_pin) {
+    if (pinned_file_sha256(source) != source_pin) {
         throw VoyemuError("ZIP_PIN", "archive SHA256 mismatch");
     }
 
@@ -706,7 +708,7 @@ std::map<std::string, std::string> pinned_zip_link_targets(const std::filesystem
         targets.emplace(member.name, std::move(target));
     }
 
-    if (cache_file_identity(source) != epoch || sha256_file(source) != source_pin) {
+    if (cache_file_identity(source) != epoch || pinned_file_sha256(source) != source_pin) {
         throw VoyemuError("ZIP_CHANGED", "archive changed while reading links");
     }
 
@@ -722,7 +724,7 @@ void extract_pinned_zip_tree(const std::filesystem::path &source, const std::str
 
     const auto epoch = cache_file_identity(source);
 
-    if (sha256_file(source) != source_pin) {
+    if (pinned_file_sha256(source) != source_pin) {
         throw VoyemuError("ZIP_PIN", "archive SHA256 mismatch");
     }
 
@@ -828,7 +830,7 @@ void extract_pinned_zip_tree(const std::filesystem::path &source, const std::str
         }
     }
 
-    if (cache_file_identity(source) != epoch || sha256_file(source) != source_pin) {
+    if (cache_file_identity(source) != epoch || pinned_file_sha256(source) != source_pin) {
         throw VoyemuError("ZIP_CHANGED", "archive changed during extraction");
     }
 }
@@ -1134,7 +1136,7 @@ std::string rewrite_pinned_zip(const std::filesystem::path &source, const std::s
         throw VoyemuError("ZIP_OUTPUT", "close failed");
     }
 
-    if (sha256_file(source) != source_pin) {
+    if (pinned_file_sha256(source) != source_pin) {
         throw VoyemuError("ZIP_PIN", "source changed during rewrite");
     }
 
@@ -1394,7 +1396,7 @@ std::string rewrite_pinned_zip(const std::filesystem::path &source, const std::s
         throw VoyemuError("ZIP_OUTPUT", "close failed");
     }
 
-    if (sha256_file(source) != source_pin) {
+    if (pinned_file_sha256(source) != source_pin) {
         throw VoyemuError("ZIP_PIN", "source changed during rewrite");
     }
 
@@ -1411,5 +1413,58 @@ std::string rewrite_pinned_zip(const std::filesystem::path &source, const std::s
     }
     return digest;
 #endif
+}
+
+namespace {
+// The digests that this process computed, by path, with the file identity they belong to.
+std::mutex verified_mutex;
+std::map<std::string, std::pair<Json, std::string>> verified_files;
+} // namespace
+
+std::string pinned_file_sha256(const std::filesystem::path &file,
+                               const std::function<void(std::uint64_t)> &advance) {
+    Json identity;
+
+    try {
+        identity = cache_file_identity(file);
+    } catch (const std::exception &) {
+        // A file without a stable identity, such as a linked one, is hashed on each use.
+        return sha256_file(file, advance);
+    }
+
+    const auto key = file.lexically_normal().string();
+
+    {
+        std::lock_guard lock(verified_mutex);
+        const auto found = verified_files.find(key);
+
+        if (found != verified_files.end() && found->second.first == identity) {
+            return found->second.second;
+        }
+    }
+
+    std::string digest;
+    const auto bytes = std::filesystem::file_size(file);
+
+    if (!advance && bytes >= (256ULL << 20)) {
+        progress::block();
+        progress::Meter meter("verify", {{"name", file.filename().string()}});
+        meter.length(bytes);
+        digest = sha256_file(file, [&meter](std::uint64_t block) {
+            meter.advance(block);
+        });
+    } else {
+        digest = sha256_file(file, advance);
+    }
+
+    try {
+        if (cache_file_identity(file) == identity) {
+            std::lock_guard lock(verified_mutex);
+            verified_files[key] = {identity, digest};
+        }
+    } catch (const std::exception &) { /* Ignored: a file that changed is not remembered. */
+    }
+
+    return digest;
 }
 } // namespace voyemu

@@ -251,7 +251,7 @@ Json import_android_update_image(const std::filesystem::path &file, std::string_
         space(output, reserve);
     }
 
-    need(cache_file_identity(file) == epoch && sha256_file(file) == archive_sha256,
+    need(cache_file_identity(file) == epoch && pinned_file_sha256(file) == archive_sha256,
          "UPDATE_IMAGE_ARCHIVE_CHANGED");
     std::filesystem::remove(stage);
     const Json receipt = {{"schema", 1},

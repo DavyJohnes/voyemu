@@ -2,12 +2,15 @@
 #include "model.hpp"
 #include "os/platform.hpp"
 #include "process.hpp"
+#include "progress.hpp"
+#include "quickboot.hpp"
 #include "sdk_archive.hpp"
 #include "zip_layout.hpp"
 #include <fstream>
 #include <iostream>
 #include <iterator>
 #include <limits>
+#include <sstream>
 using namespace voyemu;
 
 static void check(bool value, const char *text) {
@@ -526,6 +529,34 @@ int main() {
             check(sha256_file(fixture) == fixture_pin, "portable rewrite never modifies source");
         }
         check(sha256_file(good) == pin, "reader never modifies source archive");
+        // A large pinned input is hashed once while its identity holds: the first use shows its
+        // bytes, a repeated use is silent.
+        {
+            const auto large = directory / "large.bin";
+            std::ofstream(large).close();
+            std::filesystem::resize_file(large, 256ULL << 20);
+            const auto expected = sha256_file(large);
+            std::ostringstream console;
+            auto *prior = std::cerr.rdbuf(console.rdbuf());
+            progress::console(cli::Language::english, false);
+            const auto first = pinned_file_sha256(large);
+            const auto shown = console.str();
+            const auto second = pinned_file_sha256(large);
+            const auto repeated = console.str().size() - shown.size();
+            std::cerr.rdbuf(prior);
+            check(first == expected && second == expected &&
+                          shown.find("Checking large.bin (256 MiB)\n") != std::string::npos,
+                  "a large pinned input shows the bytes of its hash");
+            bool stable = true;
+            try {
+                cache_file_identity(large);
+            } catch (const std::exception &) {
+                stable = false;
+            }
+
+            check(!stable || repeated == 0, "an unchanged large input is hashed again");
+            std::filesystem::remove(large);
+        }
         std::cout << "pinned ZIP inventory and binary read guards passed\n";
 
         return 0;

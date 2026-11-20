@@ -7,6 +7,12 @@
 #include <string>
 #include <vector>
 namespace voyemu {
+// The SHA-256 of a large pinned input such as an owner update archive. A file whose identity, its
+// volume, inode, size and modification and change times, is unchanged since this process hashed it
+// is not hashed again. advance receives the bytes of a hash that runs; without it a hash of at
+// least 256 MiB shows its own console meter.
+std::string pinned_file_sha256(const std::filesystem::path &file,
+                               const std::function<void(std::uint64_t)> &advance = {});
 struct ZipEntry {
     std::string name;
     std::uint64_t bytes;

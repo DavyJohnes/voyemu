@@ -16,6 +16,7 @@
 #include "qnx_originals_directory.hpp"
 #include "quickboot.hpp"
 #include "vehicle_capture.hpp"
+#include "zip_archive.hpp"
 #include <algorithm>
 #include <cctype>
 #include <chrono>
@@ -340,7 +341,7 @@ Json fetch_nxp_update(const std::filesystem::path &root, std::string_view profil
         if (cache_file_identity(profile_file) != profile_epoch ||
             sha256_file(profile_file) != profile_pin ||
             cache_file_identity(archive) != archive_epoch ||
-            sha256_file(archive) != source.at("sha256").get<std::string>()) {
+            pinned_file_sha256(archive) != source.at("sha256").get<std::string>()) {
             throw VoyemuError("FETCH_NXP", "source/profile changed during acquisition");
         }
     };
@@ -585,7 +586,7 @@ Json fetch_update(const std::filesystem::path &root, std::string_view profile,
         if (cache_file_identity(profile_file) != profile_identity ||
             cache_file_identity(qnx_file) != qnx_identity ||
             cache_file_identity(archive) != archive_identity ||
-            sha256_file(archive) != archive_sha) {
+            pinned_file_sha256(archive) != archive_sha) {
             throw VoyemuError("FETCH_UPDATE", "acquisition source changed");
         }
     };
@@ -1435,7 +1436,7 @@ void verify_owner_archive(const std::filesystem::path &root, std::string_view pr
     meter.length(bytes);
     const auto epoch = cache_file_identity(archive);
 
-    if (sha256_file(archive, [&meter](std::uint64_t block) {
+    if (pinned_file_sha256(archive, [&meter](std::uint64_t block) {
             meter.advance(block);
         }) != sha256) {
         throw cli::LocalizedError(mismatch_code, "error.archive_changed",

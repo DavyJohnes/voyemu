@@ -387,7 +387,7 @@ Json import_qnx_update(const std::filesystem::path &file, std::string_view archi
         space(output, reserve);
     }
 
-    need(cache_file_identity(file) == epoch && sha256_file(file) == archive_sha256,
+    need(cache_file_identity(file) == epoch && pinned_file_sha256(file) == archive_sha256,
          "QNX_IMPORT_ARCHIVE_CHANGED");
     std::filesystem::remove(stage);
     const Json receipt = {{"schema", 1},

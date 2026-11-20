@@ -605,7 +605,8 @@ static Json import_selected(const std::filesystem::path &file, const Json &owner
     need(sha256_text(archive_sha) && sha256_text(inner_sha) && archive_bytes > 0 &&
                  archive_bytes <= bound && inner_bytes > 0 && inner_bytes <= bound,
          "exact archive pins/bounds required");
-    need(std::filesystem::file_size(file) == archive_bytes && sha256_file(file) == archive_sha,
+    need(std::filesystem::file_size(file) == archive_bytes &&
+                 pinned_file_sha256(file) == archive_sha,
          "owner archive pin differs");
     const auto bytes = system.at("bytes").get<std::uint64_t>();
     const auto system_sha = system.at("sha256").get<std::string>();
@@ -718,7 +719,7 @@ static Json import_selected(const std::filesystem::path &file, const Json &owner
                          {"sha256", members[index].sha}};
     }
 
-    need(cache_file_identity(file) == source_identity && sha256_file(file) == archive_sha,
+    need(cache_file_identity(file) == source_identity && pinned_file_sha256(file) == archive_sha,
          "owner archive changed");
     std::filesystem::remove_all(stage);
     Json receipt = {{"schema", 1},
@@ -793,8 +794,8 @@ Json import_pinned_zip_image(const std::filesystem::path &file, const Json &sour
 
     need(end == image_bytes, "complete split image coverage required");
     const auto epoch = cache_file_identity(file);
-    need(std::filesystem::file_size(file) == archive_bytes && sha256_file(file) == archive_sha &&
-                 cache_file_identity(file) == epoch,
+    need(std::filesystem::file_size(file) == archive_bytes &&
+                 pinned_file_sha256(file) == archive_sha && cache_file_identity(file) == epoch,
          "split source pin differs");
     need(!cancelled || !cancelled(), "split import cancelled");
     const auto available = std::filesystem::space(output.parent_path()).available;
@@ -824,7 +825,7 @@ Json import_pinned_zip_image(const std::filesystem::path &file, const Json &sour
     extract_pinned_zip_members(file, archive_sha, fragments, target, image_bytes, reserve,
                                cancelled);
     exact({"system.img", image_sha, image_bytes, target});
-    need(cache_file_identity(file) == epoch && sha256_file(file) == archive_sha,
+    need(cache_file_identity(file) == epoch && pinned_file_sha256(file) == archive_sha,
          "split source changed");
     Json receipt = {
             {"schema", 1},
