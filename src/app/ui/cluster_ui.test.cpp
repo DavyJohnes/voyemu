@@ -764,6 +764,22 @@ void panel_inspection_guards(const std::filesystem::path &assets) {
 }
 
 void parameter_layout_guards() {
+    // The gear, scale and language radios are one control: field height and one segment width.
+    for (unsigned scale : {canonical_ui_scale, 50u, 75u, 100u}) {
+        const auto form = parameters_layout(0, 0, 0, scale);
+        const auto column = wheel_column(scale, {}, {}, 130, 30);
+        const auto gear = gear_radio(form, column.choice_cell);
+        check(form.radio_height() == form.input_height() && gear.height == form.input_height() &&
+                      gear.y == form.movement_row(0, 4).y,
+              "radio controls are as high as the fields on their row in every layout mode");
+        check(column.scale_choice.height == gear.height &&
+                      column.language_choice.height == gear.height &&
+                      std::abs(gear.width / 4 - column.choice_cell) < .001f &&
+                      std::abs(column.scale_choice.width / 3 - column.choice_cell) < .001f &&
+                      std::abs(column.language_choice.width / 3 - column.choice_cell) < .001f,
+              "gear, scale and language radios share one height and one segment width");
+    }
+
     const auto reference = view_layout(canonical_ui_scale);
 
     for (unsigned scale : {canonical_ui_scale, 75u, 100u}) {
@@ -791,7 +807,8 @@ void parameter_layout_guards() {
               "body retains a scaled bottom inset");
         check(std::abs(form.movement_row(0, 0).y - form.body.y) < .001f,
               "first movement row uses the shared content origin");
-        const auto gear = gear_radio(form);
+        const auto column = wheel_column(scale, {}, {}, 130, 0);
+        const auto gear = gear_radio(form, column.choice_cell);
         check(std::abs(gear.bottom() - (form.panel.bottom() - 40 * fraction / density)) < .001f &&
                       std::abs(form.movement_row(0, 4).y + form.input_height() / 2 -
                                (gear.y + gear.height / 2)) < .001f,
@@ -800,14 +817,12 @@ void parameter_layout_guards() {
         check(std::abs(form.input_height() * density - 80 * fraction) < .001f &&
                       form.input_height() * density <= 80.001f,
               "AP Hotspot fields scale up to the original80pixel height");
-        check(std::abs(form.radio_height() * density - 70 * fraction) < .001f &&
-                      std::abs(gear.width * density - 4 * 72 * fraction) < .001f &&
-                      std::abs(gear_font_size(scale) * density - 28 * fraction) < .001f,
-              "the gear radio is 70 pixels high with 72 pixel segments and 28 pixel captions at "
-              "100 percent and scales with the screens");
+        check(std::abs(form.radio_height() * density - 80 * fraction) < .001f &&
+                      std::abs(column.choice_font * density - 32 * fraction) < .001f,
+              "radios are 80 pixels high with 32 pixel captions at 100 percent and scale with the "
+              "screens");
         check(form.raw_input_width() == form.movement_value_width(),
               "All fields retain the semantic field width at every scale");
-        const auto column = wheel_column(scale, {}, {}, 130, 0);
 
         for (const auto &button : {column.cluster_power, column.cluster_restart, column.media_power,
                                    column.media_restart}) {
@@ -3410,7 +3425,9 @@ void editor_sections_fill_available_height(const std::filesystem::path &assets,
                         const auto rect = item.at("rect_points").get<std::array<float, 4>>();
 
                         // Wheel column controls are outside the parameter form.
-                        if (kind == "lifecycle" || kind == "choice" || kind == "about") {
+                        if (kind == "lifecycle" || kind == "about" ||
+                            (kind == "choice" &&
+                             item.at("name").get<std::string>().rfind("gear_", 0) != 0)) {
                             continue;
                         }
 
@@ -4461,10 +4478,18 @@ void editor_sections_fill_available_height(const std::filesystem::path &assets,
 
                         const auto first = item("gear_P");
                         const auto choice = item("gear_D");
-                        check(std::abs(choice[1] - layout.movement_row(0, 4).y -
-                                       (layout.input_height() - layout.radio_height()) / 2) < .001f,
+                        check(std::abs(choice[1] - layout.movement_row(0, 4).y) < .001f,
                               "gear selector stays vertically centered in the left column bottom row");
-                        const float gear_width = 4 * layout.gear_cell_width();
+                        const auto wheel = window.inspection().at("wheel_column");
+                        const auto scale_choice =
+                                           wheel.at("scale_choice").get<std::array<float, 4>>(),
+                                   language_choice =
+                                           wheel.at("language_choice").get<std::array<float, 4>>();
+                        const float gear_width = 4 * scale_choice[2] / 3;
+                        check(first[3] == scale_choice[3] && first[3] == language_choice[3] &&
+                                      std::abs(first[2] - scale_choice[2] / 3) < .001f &&
+                                      std::abs(first[2] - language_choice[2] / 3) < .001f,
+                              "the gear, scale and language radios render with one height and one segment width");
                         const float animation_padding =
                                 MusicTabIndicator::animation_padding(gear_width * .75f);
                         check(first[0] == layout.content_column(2, 0).x &&
@@ -4494,13 +4519,13 @@ void editor_sections_fill_available_height(const std::filesystem::path &assets,
 
                         if (layout.compact50()) {
                             const auto &radio = window.inspection().at("radio_reference");
-                            check(std::abs(first[3] * density - 35) < .001f &&
+                            check(std::abs(first[3] * density - 40) < .001f &&
                                           std::abs(radio.at("font_size_points").get<float>() *
                                                            density -
-                                                   14) < .001f &&
+                                                   16) < .001f &&
                                           radio.at("normal_border_points") == 0 &&
                                           radio.at("animation_seconds") == .4,
-                                  "50percent gear is half the 100 percent radio: 35 pixels high with 14 pixel text and 400ms overshoot");
+                                  "50percent gear is half the 100 percent radio: 40 pixels high with 16 pixel text and 400ms overshoot");
                         }
 
                         check(first[1] == choice[1] && first[2] == choice[2] &&

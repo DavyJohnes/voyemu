@@ -98,15 +98,9 @@ struct ParametersLayout {
         return scaled_form() ? 40.f / (1920.f / 1336.f) * form_scale() : 30.f;
     }
 
-    // The OEM capsule: 70 physical pixels at 100 percent, scaled with the design.
+    // The radio capsule is as high as the fields: 80 physical pixels at 100 percent.
     constexpr float radio_height() const {
-        return scaled_form() ? 35.f * scale() : field_height;
-    }
-
-    // A P/R/N/D segment: 72 physical pixels at 100 percent, a little narrower than the scale and
-    // language segments around the wheel.
-    constexpr float gear_cell_width() const {
-        return 36.f * scale();
+        return input_height();
     }
 
     constexpr float input_font_size() const {
@@ -331,22 +325,17 @@ constexpr float physical_density(unsigned scale) {
     return scale == canonical_ui_scale ? 1920.f / canonical_ui_width : 2.f;
 }
 
-// Radio captions: 28 physical pixels at 100 percent, scaled with the design.
+// Radio captions keep the OEM 28:70 proportion to the capsule height: 32 physical pixels at 100
+// percent, scaled with the design.
 constexpr float gear_font_size(unsigned scale) {
-    return 14.f * view_layout(scale).top_height / 360.f;
+    return 16.f * view_layout(scale).top_height / 360.f;
 }
 
-constexpr ParameterRect gear_radio(const ParametersLayout &layout) {
+// The P/R/N/D radio fills the fifth movement row with four segments of the shared radio cell.
+constexpr ParameterRect gear_radio(const ParametersLayout &layout, float cell) {
     const auto row = layout.movement_row(0, 4);
 
-    if (!layout.scaled_form()) {
-        return {row.x, row.y, ParametersLayout::value_width, layout.radio_height()};
-    }
-
-    const float height = layout.radio_height();
-
-    return {row.x, row.y + (layout.input_height() - height) / 2, 4 * layout.gear_cell_width(),
-            height};
+    return {row.x, row.y, 4 * cell, layout.radio_height()};
 }
 
 // Visible wheel silhouette: per photo column, the first opaque row and one past the last.
@@ -390,8 +379,8 @@ constexpr ParameterRect wheel_photo(ParameterRect wheel, float joined_offset, bo
             wheel.y + (wheel_photo_height * wheel_scale - h) / 2, w, h};
 }
 
-// Choice captions are measured at this size.
-constexpr float wheel_choice_font = 14;
+// Choice captions are measured at the gear caption size at 100 percent.
+constexpr float wheel_choice_font = gear_font_size(100);
 constexpr float wordmark_aspect = 800.f / 144, wordmark_body = 107.f / 144;
 struct WheelColumn {
     float scale{};
@@ -407,9 +396,10 @@ struct WheelColumn {
 // The column around the wheel is laid out once at 100 percent and scaled by wheel width / 460.
 // Horizontal insets follow the visible wheel silhouette; without it, the wheel rectangle is used.
 // The scale and language choices share the gear row of the current form: top, height and caption
-// size. The cluster power glyph starts, and the multimedia power glyph ends, the edge margin of the
-// gear row from the area edges; the multimedia pair mirrors the cluster pair: power below, restart
-// above, and the screens window toggle right of power on its centre line.
+// size; their cell is the segment of every radio, the P/R/N/D radio included. The cluster power
+// glyph starts, and the multimedia power glyph ends, the edge margin of the gear row from the area
+// edges; the multimedia pair mirrors the cluster pair: power below, restart above, and the screens
+// window toggle right of power on its centre line.
 // The wheel rectangle at a scale: horizontally where view_layout puts it; vertically the visible
 // bottom of the wheel photos ends 40 physical pixels at 100 percent above the gear row, which ends
 // as far above the bottom of the area. Without a silhouette the rectangle stays centred.
@@ -543,7 +533,7 @@ inline WheelColumn wheel_column(unsigned screen_scale, const WheelInk &left, con
     const auto scaled = [&](ParameterRect r) {
         return ParameterRect{actual.x + (r.x - wheel.x) * k, r.y * k, r.width * k, r.height * k};
     };
-    const auto gear = gear_radio(parameters_layout(0, 0, 0, screen_scale));
+    const auto gear = gear_radio(parameters_layout(0, 0, 0, screen_scale), cell * k);
     const auto row = [&](float x) {
         return ParameterRect{actual.x + (x - wheel.x) * k, gear.y, choice_width * k, gear.height};
     };

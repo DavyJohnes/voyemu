@@ -68,11 +68,15 @@ int main() {
         require(column.scale == 1 && column.cluster_power.width == 40 &&
                         column.media_restart.height == 40,
                 "buttons are 40 points at 100 percent");
-        require(column.choice_cell <= 50 && near(column.choice_font, wheel_choice_font) &&
+        require(column.choice_cell <= std::ceil((30 + 2 * .7f * wheel_choice_font) * 2) / 2 &&
+                        near(column.choice_font, wheel_choice_font) &&
                         near(column.scale_choice.width, 3 * column.choice_cell) &&
                         near(column.language_choice.width, 3 * column.choice_cell) &&
-                        near(column.scale_choice.height, 35),
+                        near(column.scale_choice.height, 40),
                 "choices share one cell: widest caption plus at most 0.7 font on each side");
+        require(near(gear_radio(parameters_layout(0, 0, 0, 100), column.choice_cell).width,
+                     4 * column.choice_cell),
+                "gear segments are as wide as the scale and language segments");
         const float glyph = 40 * (1 - 2 * side), stack_left = column.cluster_power.x + 40 * side;
         require(near(stack_left, visible_left) &&
                         near(column.media_power.x, column.cluster_power.x),
@@ -105,7 +109,7 @@ int main() {
                         column.scale_choice.x > pair_right,
                 "scale choice is centred between the multimedia hit circle and language");
         const auto same_row = [](const WheelColumn &c, unsigned scale) {
-            const auto gear = gear_radio(parameters_layout(0, 0, 0, scale));
+            const auto gear = gear_radio(parameters_layout(0, 0, 0, scale), c.choice_cell);
 
             return near(c.scale_choice.y, gear.y) && near(c.language_choice.y, gear.y) &&
                    near(c.scale_choice.height, gear.height) &&
@@ -118,7 +122,8 @@ int main() {
                         near(column.media_power.bottom() - 40 * power_bottom,
                              design.top_height - 20) &&
                         near(column.scale_choice.bottom(), design.top_height - 20) &&
-                        near(gear_radio(parameters_layout(0, 0, 0, 100)).bottom(),
+                        near(gear_radio(parameters_layout(0, 0, 0, 100), column.choice_cell)
+                                     .bottom(),
                              design.top_height - 20),
                 "cluster power starts 40 pixels below the top; multimedia power, the choices and "
                 "the gear radio end 40 pixels above the bottom");

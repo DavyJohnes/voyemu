@@ -21,6 +21,8 @@ const ui::VectorArtwork &vector_artwork(ui::Resource id) {
     return id == ui::Resource::LogoText ? text : id == ui::Resource::ScreensIcon ? screens : figure;
 }
 
+constexpr std::array<const char *, 4> gear_labels{"P", "R", "N", "D"};
+
 constexpr std::array<const char *, 3> scale_labels{"50", "75", "100"};
 
 constexpr std::array<unsigned, 3> scale_choices{50, 75, 100};
@@ -868,119 +870,26 @@ void Window::editor() {
         numeric(tr("Скорость"), "speed", 1, 0, 0, 255, 1, true, movement_width, tr("км/ч"));
         position(0, 1);
         numeric(tr("Заряд"), "soc", 1, 0, 0, 100, 1, true, movement_width, "%");
-        const auto radio = gear_radio(layout);
-        const ImVec2 origin(radio.x, radio.y);
+        const auto column = wheel_layout();
+        const auto radio = gear_radio(layout, column.choice_cell);
         const auto gear = value("gear"), valid = value("gear_valid");
-        const float gear_width = radio.width, cell_width = gear_width / 4,
-                    gear_height = radio.height,
-                    gear_font_size = layout.scaled_form()
-                                             ? voyemu::cluster::gear_font_size(screen_scale_)
-                                             : 18;
-        const float animation_padding =
-                MusicTabIndicator::animation_padding(gear_width - cell_width);
-        const float raster_padding = 1.f / physical_density(screen_scale_);
-        const ImVec2 reserved_origin(std::floor(origin.x - animation_padding - raster_padding),
-                                     std::floor(origin.y - raster_padding));
         const bool gear_known = gear && valid && *valid == 1 && *gear < 4;
 
-        if (gear_known) {
-            const double target = double(*gear) * cell_width;
-
-            if (gear_cell_width_ != cell_width) {
-                gear_indicator_.snap(target, now);
-                gear_cell_width_ = cell_width;
-            } else {
-                gear_indicator_.select(target, now);
-            }
-        }
-
-        if (light_theme_ && gear_known) {
-            const auto clip = radio_background_clip({origin.x, origin.y, gear_width, gear_height},
-                                                    origin.x + float(gear_indicator_.position(now)),
-                                                    cell_width);
-            draw->PushClipRect(ImVec2(clip.x, clip.y), ImVec2(clip.right(), clip.bottom()), true);
-        }
-
-        draw->AddRectFilled(origin, ImVec2(origin.x + gear_width, origin.y + gear_height),
-                            control_ink(control_palette(light_theme_).input), gear_height / 2);
-
-        if (light_theme_ && gear_known) {
-            draw->PopClipRect();
-        }
-
-        if (gear_known) {
-            // The layout reserves the animated envelope, including interrupted edge transitions.
-            draw->PushClipRect(
-                    reserved_origin,
-                    ImVec2(std::ceil(origin.x + gear_width + animation_padding + raster_padding),
-                           std::ceil(origin.y + gear_height + raster_padding)),
-                    true);
-            const float x = origin.x + float(gear_indicator_.position(now));
-            const auto selection = light_theme_ ? light_radio_selection_ : radio_selection_;
-
-            if (selection.id && selection.width == 94 && selection.height == 70) {
-                for (const auto &patch :
-                     radio_patches({x, origin.y, cell_width, gear_height}, oem_scale)) {
-                    if (patch.bounds.width > 0 && patch.bounds.height > 0) {
-                        draw->AddImage(
-                                ImTextureRef(selection.id), ImVec2(patch.bounds.x, patch.bounds.y),
-                                ImVec2(patch.bounds.right(), patch.bounds.bottom()),
-                                ImVec2(patch.uv[0], patch.uv[1]), ImVec2(patch.uv[2], patch.uv[3]));
-                    }
-                }
-            } else {
-                draw->AddRectFilled(ImVec2(x, origin.y),
-                                    ImVec2(x + cell_width, origin.y + gear_height),
-                                    control_ink(light_theme_ ? control_palette(true).accent
-                                                             : IM_COL32(39, 129, 221, 255)),
-                                    gear_height / 2);
-            }
-
-            draw->PopClipRect();
-        }
-
         if (!options_.capture_ui.empty()) {
-            inspection_["radio_reference"] = {{"height_points", gear_height},
-                                              {"font_size_points", gear_font_size},
-                                              {"source_pixel_scale", oem_scale},
-                                              {"source_height_pixels", 70},
-                                              {"source_font_pixels", 28},
+            inspection_["radio_reference"] = {{"height_points", radio.height},
+                                              {"font_size_points", column.choice_font},
+                                              {"source_pixel_scale", radio.height / 70},
+                                              {"source_height_pixels", 80},
+                                              {"source_font_pixels", 32},
                                               {"normal_border_points", 0},
                                               {"animation_seconds", MusicTabIndicator::duration}};
         }
 
-        ImGui::PushFont(ui_text_font(UiFontRole::Choice), gear_font_size);
-
-        for (unsigned g = 0; g < 4; ++g) {
-            const ImVec2 a(origin.x + g * cell_width, origin.y),
-                    b(a.x + cell_width, a.y + gear_height);
-            ImGui::SetCursorScreenPos(a);
-            ImGui::PushID(static_cast<int>(g));
-            const float selection_left = origin.x + float(gear_indicator_.position(now)),
-                        text_center = a.x + cell_width / 2;
-            const bool selected = gear_known && *gear == g &&
-                                  selection_left + cell_width >= text_center - cell_width * .4f &&
-                                  selection_left <= text_center + cell_width * .4f;
-
-            if (ImGui::InvisibleButton("##gear", ImVec2(cell_width, gear_height),
-                                       ImGuiButtonFlags_NoNavFocus)) {
-                client_.patch({{"gear", g}, {"gear_valid", 1}});
-            }
-
-            record_item(std::string("gear_") + std::array<const char *, 4>{"P", "R", "N", "D"}[g],
-                        "gear_choice");
-            const auto *caption = std::array<const char *, 4>{"P", "R", "N", "D"}[g];
-            centered_caption(draw, a, ImVec2(cell_width, gear_height),
-                             control_ink(selected       ? IM_COL32(255, 255, 255, 255)
-                                         : light_theme_ ? control_palette(true).text
-                                                        : control_palette(false).inactive),
-                             caption);
-            ImGui::RenderNavCursor(ImRect(a, b), ImGui::GetItemID(),
-                                   ImGuiNavRenderCursorFlags_Compact, gear_height / 2);
-            ImGui::PopID();
+        if (const int picked = choice("gear", radio, column.choice_cell, column.choice_font,
+                                      gear_labels, gear_known ? int(*gear) : -1, gear_indicator_);
+            picked >= 0) {
+            client_.patch({{"gear", picked}, {"gear_valid", 1}});
         }
-
-        ImGui::PopFont();
 
         position(0, 2);
         numeric(tr("Запас EV"), "remain_mileage_e", 1, 0, 0, 2046, 1, true, movement_width,
@@ -1335,7 +1244,9 @@ void Window::artwork(ui::Resource id, const ParameterRect &bounds, std::uint32_t
                    ImVec2(1, 1), IM_COL32(255, 255, 255, 255));
 }
 
-// Same track, selection artwork and animation as the P/R/N/D radio, with bold captions.
+// The one segmented radio of the gear, scale and language choices: track, selection artwork,
+// animation, hit regions and bold captions. Without a selection (-1) only the track and captions
+// are drawn.
 int Window::choice(const char *id, const ParameterRect &bounds, float cell, float font,
                    std::span<const char *const> labels, int selected,
                    MusicTabIndicator &indicator) {
@@ -1344,10 +1255,13 @@ int Window::choice(const char *id, const ParameterRect &bounds, float cell, floa
     const double now = ImGui::GetTime();
 
     // Segment coordinates preserve the transition when changing the window scale.
-    indicator.select(selected, now);
+    if (selected >= 0) {
+        indicator.select(selected, now);
+    }
+
     const float selection_left = bounds.x + float(indicator.position(now)) * cell;
 
-    if (light_theme_) {
+    if (light_theme_ && selected >= 0) {
         const auto clip = radio_background_clip(bounds, selection_left, cell);
         draw->PushClipRect(ImVec2(clip.x, clip.y), ImVec2(clip.right(), clip.bottom()), true);
     }
@@ -1355,33 +1269,39 @@ int Window::choice(const char *id, const ParameterRect &bounds, float cell, floa
     draw->AddRectFilled(ImVec2(bounds.x, bounds.y), ImVec2(bounds.right(), bounds.bottom()),
                         control_ink(palette.input), bounds.height / 2);
 
-    if (light_theme_) {
+    if (light_theme_ && selected >= 0) {
         draw->PopClipRect();
     }
 
-    const float padding = MusicTabIndicator::animation_padding(bounds.width - cell);
-    draw->PushClipRect(ImVec2(std::floor(bounds.x - padding), std::floor(bounds.y - 1)),
-                       ImVec2(std::ceil(bounds.right() + padding), std::ceil(bounds.bottom() + 1)),
-                       true);
-    const auto selection = light_theme_ ? light_radio_selection_ : radio_selection_;
+    if (selected >= 0) {
+        // The clip reserves the animated envelope, including interrupted edge transitions.
+        const float padding = MusicTabIndicator::animation_padding(bounds.width - cell);
+        draw->PushClipRect(
+                ImVec2(std::floor(bounds.x - padding), std::floor(bounds.y - 1)),
+                ImVec2(std::ceil(bounds.right() + padding), std::ceil(bounds.bottom() + 1)), true);
+        const auto selection = light_theme_ ? light_radio_selection_ : radio_selection_;
 
-    if (selection.id && selection.width == 94 && selection.height == 70) {
-        for (const auto &patch :
-             radio_patches({selection_left, bounds.y, cell, bounds.height}, bounds.height / 70)) {
-            if (patch.bounds.width > 0 && patch.bounds.height > 0) {
-                draw->AddImage(ImTextureRef(selection.id), ImVec2(patch.bounds.x, patch.bounds.y),
-                               ImVec2(patch.bounds.right(), patch.bounds.bottom()),
-                               ImVec2(patch.uv[0], patch.uv[1]), ImVec2(patch.uv[2], patch.uv[3]));
+        if (selection.id && selection.width == 94 && selection.height == 70) {
+            for (const auto &patch : radio_patches({selection_left, bounds.y, cell, bounds.height},
+                                                   bounds.height / 70)) {
+                if (patch.bounds.width > 0 && patch.bounds.height > 0) {
+                    draw->AddImage(
+                            ImTextureRef(selection.id), ImVec2(patch.bounds.x, patch.bounds.y),
+                            ImVec2(patch.bounds.right(), patch.bounds.bottom()),
+                            ImVec2(patch.uv[0], patch.uv[1]), ImVec2(patch.uv[2], patch.uv[3]));
+                }
             }
+        } else {
+            draw->AddRectFilled(
+                    ImVec2(selection_left, bounds.y),
+                    ImVec2(selection_left + cell, bounds.bottom()),
+                    control_ink(light_theme_ ? palette.accent : IM_COL32(39, 129, 221, 255)),
+                    bounds.height / 2);
         }
-    } else {
-        draw->AddRectFilled(
-                ImVec2(selection_left, bounds.y), ImVec2(selection_left + cell, bounds.bottom()),
-                control_ink(light_theme_ ? palette.accent : IM_COL32(39, 129, 221, 255)),
-                bounds.height / 2);
+
+        draw->PopClipRect();
     }
 
-    draw->PopClipRect();
     int picked = -1;
     ImGui::PushFont(ui_text_font(UiFontRole::Choice), font);
     ImGui::PushID(id);
@@ -1459,6 +1379,30 @@ void Window::screens_toggle(const ParameterRect &bounds) {
             ImGui::GetItemID());
 }
 
+// All radios share one segment: the widest caption of the gear, scale and language radios.
+WheelColumn Window::wheel_layout() const {
+    float widest = 0;
+    auto *label_font = ui_text_font(UiFontRole::Choice);
+    const auto measure = [&](const char *label) {
+        widest = std::max(widest,
+                          label_font->CalcTextSizeA(wheel_choice_font, FLT_MAX, 0, label).x);
+    };
+
+    for (const auto *label : gear_labels) {
+        measure(label);
+    }
+
+    for (const auto *label : scale_labels) {
+        measure(label);
+    }
+
+    for (const auto language : ui::language_choices) {
+        measure(ui::language_choice_label(language));
+    }
+
+    return wheel_column(screen_scale_, wheel_ink_left_, wheel_ink_right_, joined_offset_, widest);
+}
+
 void Window::wheel_controls() {
     auto *draw = ImGui::GetWindowDrawList();
     std::array<const char *, 3> languages{};
@@ -1472,21 +1416,7 @@ void Window::wheel_controls() {
         }
     }
 
-    float widest = 0;
-    auto *label_font = ui_text_font(UiFontRole::Choice);
-
-    for (const auto *label : scale_labels) {
-        widest = std::max(widest,
-                          label_font->CalcTextSizeA(wheel_choice_font, FLT_MAX, 0, label).x);
-    }
-
-    for (const auto *label : languages) {
-        widest = std::max(widest,
-                          label_font->CalcTextSizeA(wheel_choice_font, FLT_MAX, 0, label).x);
-    }
-
-    const auto column = wheel_column(screen_scale_, wheel_ink_left_, wheel_ink_right_,
-                                     joined_offset_, widest);
+    const auto column = wheel_layout();
     {
         const auto &bounds = column.wordmark;
         ImGui::SetCursorScreenPos(ImVec2(bounds.x, bounds.y));

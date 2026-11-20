@@ -252,6 +252,7 @@ private:
                 tab_ink_height{}, checkbox_ink_height{};
     };
     void photo(Texture texture, std::string_view side, float y);
+    WheelColumn wheel_layout() const;
     void wheel_controls();
     int choice(const char *id, const ParameterRect &bounds, float cell, float font,
                std::span<const char *const> labels, int selected, MusicTabIndicator &indicator);
@@ -287,7 +288,6 @@ private:
     std::string frame_error_;
     Json inspection_ = Json::object();
     MusicTabIndicator tab_indicator_, gear_indicator_, scale_indicator_, language_indicator_;
-    float gear_cell_width_{-1};
     WheelInk wheel_ink_left_, wheel_ink_right_;
     ShellRequest shell_request_;
     bool about_open_{}, about_scroll_reset_{};
