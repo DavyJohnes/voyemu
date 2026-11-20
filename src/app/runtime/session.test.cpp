@@ -2165,7 +2165,8 @@ static void android_nonce_authority() {
 
 #ifdef _WIN32
 // Files created under an elevated Windows Server token are owned by Administrators; reproduce that
-// default owner whenever the token allows it. The previous default owner is returned for restoring.
+// default owner whenever the token allows it. The previous default owner is returned for restoring,
+// or nothing when the token, such as under Wine, keeps its default owner.
 static std::vector<std::byte> elevated_default_owner() {
     HANDLE token = nullptr;
 
@@ -2183,20 +2184,26 @@ static std::vector<std::byte> elevated_default_owner() {
                         CreateWellKnownSid(WinBuiltinAdministratorsSid, nullptr, administrators,
                                            &administrators_size) != 0;
 
-    if (loaded) {
-        SetTokenInformation(token, TokenOwner, &owner, sizeof owner);
-    }
-
+    const bool set = loaded && SetTokenInformation(token, TokenOwner, &owner, sizeof owner) != 0;
     CloseHandle(token);
 
     if (!loaded) {
         throw std::runtime_error("default owner unavailable");
     }
 
+    if (!set) {
+        previous.clear();
+    }
+
+    // Returned without a copy: the owner pointer of TOKEN_OWNER refers into this buffer.
     return previous;
 }
 
 static void restore_default_owner(std::vector<std::byte> &previous) {
+    if (previous.empty()) {
+        return;
+    }
+
     HANDLE token = nullptr;
     const bool restored = OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_DEFAULT, &token) !=
                                   0 &&
