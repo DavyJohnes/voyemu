@@ -2,6 +2,7 @@
 #include "check.hpp"
 #include "disk_space.hpp"
 #include "error.hpp"
+#include "interruption.hpp"
 #include "os/fs.hpp"
 #include "process.hpp"
 #include "quickboot.hpp"
@@ -425,6 +426,7 @@ Json extract_sdk_archive(const std::filesystem::path &file, const std::string &p
         std::array<char, 65536> buffer{};
 
         for (;;) {
+            interruption::check();
             const auto got = archive_read_data(reader.value, buffer.data(), buffer.size());
 
             if (got < 0) {

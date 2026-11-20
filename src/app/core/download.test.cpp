@@ -1,9 +1,11 @@
 #include "download.hpp"
+#include "interruption.hpp"
 #include "model.hpp"
 #include "os/https.hpp"
 #include "process.hpp"
 #include "progress.hpp"
 #include <cassert>
+#include <chrono>
 #include <exception>
 #include <fstream>
 #include <iostream>
@@ -105,6 +107,35 @@ int main(int argc, char **argv) try {
             assert(!entry.path().filename().string().starts_with(".part-"));
         }
     }
+
+    // Ctrl+C during a download stops it at the next block and removes the partial file; a busy
+    // server's delay is interrupted too.
+    std::string interrupted;
+    try {
+        download_pinned(pin, root / "interrupted", false, 0, [](const auto &, const auto &sink) {
+            sink("a");
+            interruption::requested = true;
+            sink("bc");
+        });
+    } catch (const std::exception &error) {
+        interrupted = error.what();
+    }
+
+    assert(interrupted.starts_with("INTERRUPTED:") &&
+           std::filesystem::is_empty(root / "interrupted"));
+    interrupted.clear();
+    const auto delay_start = std::chrono::steady_clock::now();
+    try {
+        download_pinned(pin, root / "interrupted-busy", false, 0, [](const auto &, const auto &) {
+            throw os::HttpsBusy(429, 300);
+        });
+    } catch (const std::exception &error) {
+        interrupted = error.what();
+    }
+
+    assert(interrupted.starts_with("INTERRUPTED:") &&
+           std::chrono::steady_clock::now() - delay_start < std::chrono::seconds(5));
+    interruption::requested = false;
 
     // A busy server is asked again after its Retry-After delay or the backoff; other failures and
     // the seventh refusal end the download.

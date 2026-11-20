@@ -1,6 +1,7 @@
 #include "qnx_update.hpp"
 #include "check.hpp"
 #include "error.hpp"
+#include "interruption.hpp"
 #include "ordinary_path.hpp"
 #include "os/digest.hpp"
 #include "os/fs.hpp"
@@ -226,6 +227,7 @@ static void decode_patch(const std::filesystem::path &patch, std::string_view pa
     bool ended = false;
 
     while (input) {
+        interruption::check();
         input.read(packed.data(), packed.size());
         const auto count = static_cast<std::size_t>(input.gcount());
 
@@ -297,6 +299,7 @@ std::string md5(const std::filesystem::path &path) {
     std::array<char, 65536> buffer{};
 
     while (input) {
+        interruption::check();
         input.read(buffer.data(), buffer.size());
         const auto count = input.gcount();
 
@@ -363,6 +366,7 @@ std::string collect(const std::vector<QnxUpdateSegment> &segments, std::uint64_t
         std::uint64_t copied = 0;
 
         while (source) {
+            interruption::check();
             source.read(buffer.data(), buffer.size());
             const auto count = source.gcount();
 

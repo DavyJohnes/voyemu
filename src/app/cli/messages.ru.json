@@ -10,6 +10,7 @@
     "error.empty_value": "пустое значение {option}",
     "error.installation_missing": "установка Voyemu на хосте не найдена",
     "error.internal_option": "внутренний параметр {option}",
+    "error.interrupted": "команда прервана.",
     "error.jdk_scope": "--jdk допустим только для deps и build",
     "error.lang_value": "--lang принимает en, ru или zh",
     "error.launch_scope": "параметры запуска допустимы только для start и restart",

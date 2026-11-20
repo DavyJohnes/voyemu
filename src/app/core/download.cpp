@@ -1,6 +1,7 @@
 #include "download.hpp"
 #include "check.hpp"
 #include "disk_space.hpp"
+#include "interruption.hpp"
 #include "logging.hpp"
 #include "model.hpp"
 #include "os/https.hpp"
@@ -275,6 +276,8 @@ DownloadedBlob download_pinned(const DownloadPin &pin, const std::filesystem::pa
     context["host"] = host;
     progress::Meter meter("download", context);
     const DownloadSink sink = [&](std::string_view bytes) {
+        interruption::check();
+
         if (bytes.size() > maximum_received - received) {
             throw VoyemuError("DOWNLOAD_BOUND", "response exceeds declared maximum");
         }
@@ -320,7 +323,12 @@ DownloadedBlob download_pinned(const DownloadPin &pin, const std::filesystem::pa
                               {"attempt", std::to_string(attempt)},
                               {"delay", progress::duration_text(static_cast<std::uint64_t>(delay),
                                                                 progress::language())}});
-            std::this_thread::sleep_for(std::chrono::seconds(delay));
+            const auto until = std::chrono::steady_clock::now() + std::chrono::seconds(delay);
+
+            while (std::chrono::steady_clock::now() < until) {
+                interruption::check();
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            }
         }
     }
 

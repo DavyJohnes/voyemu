@@ -1,6 +1,12 @@
 #include "model.hpp"
 #include "process.hpp"
+#include <chrono>
+#include <fstream>
 #include <iostream>
+#include <thread>
+#ifndef _WIN32
+#include <csignal>
+#endif
 using namespace voyemu;
 
 static void require(bool value, const std::string &message) {
@@ -48,6 +54,52 @@ int main(int argc, char **argv) {
                             unknown.output.starts_with("Voyemu: PROFILE_NOT_FOUND:"),
                     std::string(command) + " accepted an unknown profile: " + unknown.output);
         }
+
+#ifndef _WIN32
+        // Ctrl+C stops fetch while it hashes the update archive and ends it with code 130.
+        {
+            const std::string a9 = "free-09-chinese-20260106-6.0.3";
+            ensure_private_directory(root / "profiles" / a9);
+
+            for (const auto *name : {"profile.json", "profile-qnx.json"}) {
+                std::filesystem::copy_file(project / "profiles" / a9 / name,
+                                           root / "profiles" / a9 / name);
+            }
+
+            const auto archive = root / "update.zip";
+            std::ofstream(archive).close();
+            std::filesystem::resize_file(
+                    archive, read_private_json(root / "profiles" / a9 / "profile.json", 512 * 1024)
+                                     .at("ownerUpdate")
+                                     .at("bytes")
+                                     .get<std::uint64_t>());
+            ProcessSpec spec;
+            spec.executable = installed;
+            spec.arguments = {"fetch", a9, "--source=" + archive.string(), "--lang=en"};
+            spec.directory = root;
+            spec.output = root / "fetch-interrupted.log";
+            auto fetch = ChildProcess::launch(spec);
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+            const auto signalled = std::chrono::steady_clock::now();
+            require(::kill(static_cast<pid_t>(fetch.pid()), SIGINT) == 0, "SIGINT not sent");
+
+            while (fetch.alive() &&
+                   std::chrono::steady_clock::now() - signalled < std::chrono::seconds(30)) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(20));
+            }
+
+            const auto stopped = std::chrono::steady_clock::now() - signalled;
+            std::ifstream log(spec.output);
+            const std::string output(std::istreambuf_iterator<char>(log), {});
+            require(!fetch.alive() && fetch.exit_code() == 130 &&
+                            stopped < std::chrono::seconds(3) &&
+                            output.find("Voyemu: INTERRUPTED: the command was interrupted.\n") !=
+                                    std::string::npos,
+                    "Ctrl+C did not stop fetch promptly with code 130: " +
+                            std::to_string(fetch.exit_code()) + " " + output);
+            std::filesystem::remove(archive);
+        }
+#endif
 
         for (const auto *profile :
              {"free-11-chinese-20260731-7.3.1", "passion-11-russian-20260403-2.1.4.80"}) {

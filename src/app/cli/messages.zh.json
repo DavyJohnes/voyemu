@@ -10,6 +10,7 @@
     "error.empty_value": "{option} 的值为空",
     "error.installation_missing": "找不到主机上的 Voyemu 安装",
     "error.internal_option": "内部选项 {option}",
+    "error.interrupted": "命令已中断。",
     "error.jdk_scope": "--jdk 仅适用于 deps/build",
     "error.lang_value": "--lang 只接受 en、ru 或 zh",
     "error.launch_scope": "启动选项仅适用于 start 或 restart",

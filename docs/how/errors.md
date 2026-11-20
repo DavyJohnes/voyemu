@@ -50,4 +50,4 @@ Host code never hides a known failure behind `INTERNAL_ERROR`. Codes of other ar
 
 ## Command line
 
-Commands other than `test` print a failure as text on `stderr`, `Voyemu: CODE: message`, and exit with code `4`. `test` always prints a JSON response on `stdout`, even when the request cannot be read; its exit codes are listed in [the Voyemu API](api.md).
+Commands other than `test` print a failure as text on `stderr`, `Voyemu: CODE: message`, and exit with code `4`. A command interrupted with Ctrl+C stops at its next safe point, removes its partial downloads and temporary files, prints `Voyemu: INTERRUPTED: the command was interrupted.` and exits with code `130`. `test` always prints a JSON response on `stdout`, even when the request cannot be read; its exit codes are listed in [the Voyemu API](api.md).

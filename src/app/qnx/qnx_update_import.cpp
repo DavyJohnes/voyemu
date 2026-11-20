@@ -1,6 +1,7 @@
 #include "qnx_update_import.hpp"
 #include "check.hpp"
 #include "error.hpp"
+#include "interruption.hpp"
 #include "ordinary_path.hpp"
 #include "os/fs.hpp"
 #include "process.hpp"
@@ -43,6 +44,7 @@ void append(std::ifstream &source, std::ofstream &output, std::uint64_t bytes,
     std::uint64_t copied = 0;
 
     while (copied < bytes) {
+        interruption::check();
         const auto count = static_cast<std::streamsize>(
                 std::min<std::uint64_t>(buffer.size(), bytes - copied));
         source.read(buffer.data(), count);
@@ -107,6 +109,7 @@ void selected_entry(const std::filesystem::path &file, const std::string &select
         std::uint64_t copied = 0;
 
         for (;;) {
+            interruption::check();
             const auto count = archive_read_data(reader, buffer.data(), buffer.size());
             need(count >= 0, "QNX_IMPORT_ZIP_CRC");
 

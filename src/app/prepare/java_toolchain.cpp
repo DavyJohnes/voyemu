@@ -3,6 +3,7 @@
 #include "disk_space.hpp"
 #include "e2fs_helper.hpp"
 #include "error.hpp"
+#include "interruption.hpp"
 #include "java_runtime.hpp"
 #include "ordinary_path.hpp"
 #include "os/fs.hpp"
@@ -136,6 +137,7 @@ public:
         const auto deadline = std::chrono::steady_clock::now() + std::chrono::minutes(10);
 
         for (lock_ = owner_lock(path); !lock_->held(); lock_ = owner_lock(path)) {
+            interruption::check();
             need(std::chrono::steady_clock::now() < deadline, "helper build lock unavailable");
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }

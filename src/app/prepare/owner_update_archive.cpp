@@ -1,6 +1,7 @@
 #include "owner_update_archive.hpp"
 #include "check.hpp"
 #include "error.hpp"
+#include "interruption.hpp"
 #include "ordinary_path.hpp"
 #include "os/fs.hpp"
 #include "process.hpp"
@@ -110,6 +111,7 @@ void copy(std::istream &input, std::ostream &output, std::uint64_t bytes,
     std::array<char, 65536> buffer{};
 
     while (bytes) {
+        interruption::check();
         const auto count =
                 static_cast<std::streamsize>(std::min<std::uint64_t>(bytes, buffer.size()));
         input.read(buffer.data(), count);
@@ -204,6 +206,7 @@ void extract(const std::filesystem::path &source, const std::vector<Member> &mem
         std::uint64_t written = 0;
 
         for (;;) {
+            interruption::check();
             const auto got = archive_read_data(reader, buffer.data(), buffer.size());
             need(got >= 0 && std::chrono::steady_clock::now() < deadline,
                  "archive payload/deadline failed");
@@ -416,6 +419,7 @@ void extract(const std::filesystem::path &source, const std::vector<Member> &mem
     std::array<char, 65536> buffer{};
     auto consume = [&](std::uint64_t bytes, std::ostream *output, std::string *text) {
         while (bytes) {
+            interruption::check();
             need(std::chrono::steady_clock::now() < deadline, "archive deadline reached");
             const auto n = static_cast<std::size_t>(std::min<std::uint64_t>(bytes, buffer.size()));
             input.exact(buffer.data(), n);
@@ -562,6 +566,7 @@ void extract(const std::filesystem::path &source, const std::vector<Member> &mem
          "selected member missing or dangling pax header");
 
     for (;;) {
+        interruption::check();
         need(std::chrono::steady_clock::now() < deadline, "archive deadline reached");
         const auto got = input.read(buffer.data(), buffer.size());
 

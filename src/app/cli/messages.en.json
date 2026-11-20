@@ -10,6 +10,7 @@
     "error.empty_value": "empty {option}",
     "error.installation_missing": "cannot locate Voyemu host installation",
     "error.internal_option": "internal option {option}",
+    "error.interrupted": "the command was interrupted.",
     "error.jdk_scope": "--jdk is only valid for deps/build",
     "error.lang_value": "--lang requires en, ru or zh",
     "error.launch_scope": "launch options require start or restart",

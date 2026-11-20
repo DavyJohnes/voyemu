@@ -1,9 +1,17 @@
 #include "cli_commands.hpp"
+#include "interruption.hpp"
 #include "version.hpp"
 
 namespace {
+// Whether the command stops at the interruption checks of its preparation work: deps, fetch, build.
+std::atomic<bool> preparation = false;
+
 void interrupt(int) {
     voyemu::cli::interrupted = true;
+
+    if (preparation) {
+        voyemu::interruption::requested = true;
+    }
 }
 } // namespace
 
@@ -48,6 +56,7 @@ int main(int argc, char **argv) {
         }
 
         const auto public_command = args.command;
+        preparation = args.command == "deps" || args.command == "fetch" || args.command == "build";
         const auto emit = [&](const Json &value) {
             if (args.private_start) {
                 std::cout << value.dump(2) << '\n';
@@ -163,6 +172,13 @@ int main(int argc, char **argv) {
         if (argc > 1 &&
             (std::string_view(argv[1]) == "_start" || std::string_view(argv[1]) == "_supervise")) {
             std::cerr << voyemu::Json{{"ok", false}, {"error", error.what()}}.dump() << '\n';
+        } else if (voyemu::cli::interrupted) {
+            // Ctrl+C ends a command with the shell code of SIGINT, whichever step it stopped.
+            voyemu::progress::separate();
+            std::cerr << voyemu::human_cli_error(
+                    voyemu::cli::LocalizedError("INTERRUPTED", "error.interrupted"), language);
+
+            return 130;
         } else {
             std::cerr << voyemu::human_cli_error(error, language);
         }

@@ -1,5 +1,6 @@
 #include "process.hpp"
 #include "error.hpp"
+#include "interruption.hpp"
 #include "os/digest.hpp"
 #include "os/process.hpp"
 #ifdef _WIN32
@@ -160,6 +161,7 @@ std::string sha256_file(const std::filesystem::path &path) {
     os::Sha256 hash;
 
     while (file) {
+        interruption::check();
         file.read(buffer.data(), buffer.size());
         hash.update(buffer.data(), std::size_t(file.gcount()));
     }
@@ -194,6 +196,7 @@ std::string sha256_file_range(const std::filesystem::path &path, std::uint64_t o
     os::Sha256 hash;
 
     while (bytes) {
+        interruption::check();
         const auto count = std::min<std::uint64_t>(bytes, buffer.size());
         file.read(buffer.data(), count);
 

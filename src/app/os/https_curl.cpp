@@ -1,5 +1,6 @@
 #include "curl.hpp"
 #include "error.hpp"
+#include "interruption.hpp"
 #include <exception>
 #include <limits>
 #include <mutex>
@@ -15,10 +16,11 @@ constexpr int option_write_data = 10001, option_url = 10002, option_error_buffer
               option_low_speed_time = 20, option_user_agent = 10018, option_http_header = 10023,
               option_fail_on_error = 45, option_follow_location = 52, option_ca_info = 10065,
               option_max_redirects = 68, option_connect_timeout = 78, option_no_signal = 99,
-              option_protocols = 181, option_redirect_protocols = 182,
-              option_protocols_text = 10318, option_redirect_protocols_text = 10319,
-              info_response_code = 0x200002, info_content_length = 0x600000 + 15,
-              info_retry_after = 0x600000 + 57;
+              option_no_progress = 43, option_xferinfo_data = 10057,
+              option_xferinfo_function = 20219, option_protocols = 181,
+              option_redirect_protocols = 182, option_protocols_text = 10318,
+              option_redirect_protocols_text = 10319, info_response_code = 0x200002,
+              info_content_length = 0x600000 + 15, info_retry_after = 0x600000 + 57;
 } // namespace
 
 void curl_https_get(const Curl &curl, const std::string &url,
@@ -94,6 +96,23 @@ void curl_https_get(const Curl &curl, const std::string &url,
             return 0;
         }
     };
+    // libcurl calls the transfer information function about once a second even while no bytes
+    // arrive, so an interrupted command does not wait for a stalled transfer.
+    using Progress = int (*)(void *, long long, long long, long long, long long);
+    Progress progress = [](void *opaque, long long, long long, long long,
+                           long long) noexcept -> int {
+        auto &result = *static_cast<Output *>(opaque);
+
+        try {
+            interruption::check();
+
+            return 0;
+        } catch (...) {
+            result.error = std::current_exception();
+
+            return 1;
+        }
+    };
     struct Headers {
         const Curl &curl;
         void *value = nullptr;
@@ -128,6 +147,9 @@ void curl_https_get(const Curl &curl, const std::string &url,
         set(option_fail_on_error, 1L) != curl_ok || set(option_connect_timeout, 30L) != curl_ok ||
         set(option_low_speed_limit, 1L) != curl_ok || set(option_low_speed_time, 60L) != curl_ok ||
         set(option_no_signal, 1L) != curl_ok || set(option_write_function, callback) != curl_ok ||
+        set(option_xferinfo_function, progress) != curl_ok ||
+        set(option_xferinfo_data, static_cast<void *>(&output)) != curl_ok ||
+        set(option_no_progress, 0L) != curl_ok ||
         set(option_write_data, static_cast<void *>(&output)) != curl_ok ||
         set(option_user_agent, "Voyemu/1.0") != curl_ok ||
         set(option_error_buffer, static_cast<char *>(detail)) != curl_ok ||

@@ -1,6 +1,7 @@
 #include "zip_archive.hpp"
 #include "check.hpp"
 #include "disk_space.hpp"
+#include "interruption.hpp"
 #include "model.hpp"
 #include "os/fs.hpp"
 #include "process.hpp"
@@ -234,6 +235,7 @@ ZipData scan(const std::filesystem::path &file, const std::string &pin, const st
             char buffer[16384];
 
             while (true) {
+                interruption::check();
                 const auto got = archive_read_data(reader, buffer, sizeof buffer);
 
                 if (got < 0) {
@@ -335,6 +337,8 @@ void stream_zip_member(std::ifstream &input, const ZipMember &member, Write writ
     input.clear();
     input.seekg(static_cast<std::streamoff>(member.data_offset));
     auto take = [&] {
+        interruption::check();
+
         if (!remaining) {
             return std::size_t{};
         }
@@ -1048,6 +1052,7 @@ std::string rewrite_pinned_zip(const std::filesystem::path &source, const std::s
             char buffer[65536];
 
             while (true) {
+                interruption::check();
                 const auto got = archive_read_data(cleanup.reader, buffer, sizeof buffer);
 
                 if (got < 0) {
