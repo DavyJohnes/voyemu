@@ -211,7 +211,7 @@ int main(int argc, char **argv) {
             }
         }
 
-        // build refuses an existing machine before any work and names the next steps; --update
+        // build refuses an existing machine before any work and names the next steps; --force
         // needs an existing machine.
         {
             const std::string profile = "free-11-chinese-20260731-7.3.1";
@@ -228,11 +228,11 @@ int main(int argc, char **argv) {
                                     ", or delete its directory and run build again.\nLog: "),
                     "build of an existing machine did not name it: " + existing.output);
             std::filesystem::remove(root / "machines" / profile);
-            spec.arguments = {"build", profile, "--update", "--offline", "--lang=en"};
+            spec.arguments = {"build", profile, "--force", "--offline", "--lang=en"};
             const auto missing = execute(spec, 15000);
             require(!missing.timed_out && missing.exit_code == 4 &&
                             missing.output.starts_with("Voyemu: MACHINE_PATH: "),
-                    "build --update accepted a missing machine: " + missing.output);
+                    "build --force accepted a missing machine: " + missing.output);
         }
 
         // The read-only list keeps no log.

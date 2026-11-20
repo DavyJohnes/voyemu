@@ -75,7 +75,7 @@ inline std::string cli_help(cli::Language language = cli::Language::english) {
     note("help.preparation_note", "  ");
     entries({{"--reuse-qnx FILE --reuse-qnx-sha256 SHA256", "help.reuse_qnx", {}},
              {"--reuse-qnx-source PATH", "help.reuse_qnx_source", {}},
-             {"--update", "help.update", {}},
+             {"--force", "help.force", {}},
              {"--offline", "help.offline", {}},
              {"--jdk PATH", "help.jdk", {}}});
     heading("help.global");

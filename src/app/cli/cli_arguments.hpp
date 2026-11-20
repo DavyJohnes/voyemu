@@ -21,8 +21,8 @@ struct Arguments {
     voyemu::MachineIdentity machine;
     bool refresh_host = false, profile_explicit = false, private_start = false;
     bool exclusive = false, offline = false, verbose = false;
-    // build --update: the build changes an existing machine.
-    bool update_existing = false;
+    // build --force: the build updates an existing machine instead of refusing it.
+    bool force_existing = false;
     std::string token, language;
     std::vector<std::filesystem::path> providers;
     voyemu::Json values = voyemu::Json::object();
@@ -217,8 +217,8 @@ inline Arguments parse(int argc, char **argv, const std::filesystem::path &execu
             result.verbose = true;
         } else if (option == "--offline") {
             result.offline = true;
-        } else if (option == "--update" && result.command == "build") {
-            result.update_existing = true;
+        } else if (option == "--force" && result.command == "build") {
+            result.force_existing = true;
         } else if (option == "--background") {
             result.background = true;
         } else if (option == "--request") {
@@ -498,8 +498,8 @@ inline Arguments parse(int argc, char **argv, const std::filesystem::path &execu
                                  {{"path", parent.string()}});
         }
 
-        // Only --update changes an existing machine.
-        if (std::filesystem::exists(target) && !result.update_existing) {
+        // Only --force changes an existing machine.
+        if (std::filesystem::exists(target) && !result.force_existing) {
             throw LocalizedError("CLI_ARGUMENT", "error.machine_exists",
                                  {{"machine", voyemu::progress::path_text(target)}});
         }

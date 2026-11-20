@@ -216,13 +216,13 @@ int main(int argc, char **argv) try {
         reject({"build", profile, path}, "CLI_ARGUMENT:");
     }
 
-    // An existing machine is named as such; only build --update selects it.
+    // An existing machine is named as such; only build --force selects it.
     reject({"build", profile, variant.string()},
            ("CLI_ARGUMENT: machine " + progress::path_text(variant) + " already exists.").c_str());
-    const auto update = parse({"build", profile, variant.string(), "--update", "--cluster=off"});
-    assert(update.update_existing && update.machine.name == "variant" &&
-           !parse({"build", profile}).update_existing);
-    reject({"start", machine.string(), "--update"}, "CLI_ARGUMENT:");
+    const auto update = parse({"build", profile, variant.string(), "--force", "--cluster=off"});
+    assert(update.force_existing && update.machine.name == "variant" &&
+           !parse({"build", profile}).force_existing);
+    reject({"start", machine.string(), "--force"}, "CLI_ARGUMENT:");
     reject({"build", profile, destination.string(), "machines/third-build"}, "CLI_ARGUMENT:");
     reject({"build", profile, destination.string(), "--machine", "second-build"}, "CLI_ARGUMENT:");
     const auto linked_destination = root / "machines/linked-build";

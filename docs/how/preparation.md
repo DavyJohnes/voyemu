@@ -56,9 +56,9 @@ The native Android components of a profile are CI-built as well: `build` downloa
 
 The QNX host image keeps the OEM bytes of every unchanged 64 KiB block of its boot stream; Voyemu packs the changed blocks itself and, on Free 6.0.3, sizes them so that the startup accepts the stream. See [own LZO1X packer](../why/lzo-packer.md).
 
-`--cluster=on|off` and `--multimedia=on|off` select the subsystems; both are on by default. `--cluster=off --multimedia=on` prepares only the multimedia, and a cluster-only build is rejected before preparation. For profiles that support it, `--update` with an Android-only build of an existing stopped machine updates its Android system and keeps the writable disks and an existing cluster.
+`--cluster=on|off` and `--multimedia=on|off` select the subsystems; both are on by default. `--cluster=off --multimedia=on` prepares only the multimedia, and a cluster-only build is rejected before preparation. For profiles that support it, `--force` with an Android-only build of an existing stopped machine updates its Android system and keeps the writable disks and an existing cluster.
 
-Without `--update` `build` refuses an existing machine before any work and suggests starting it or deleting its directory; `--update` needs an existing machine. Preparation checks free space before each storage-heavy stage; tools, OEM inputs, intermediate files and writable disks need far more space than the firmware archive alone.
+Without `--force` `build` refuses an existing machine before any work and suggests starting it or deleting its directory; `--force` needs an existing machine. Preparation checks free space before each storage-heavy stage; tools, OEM inputs, intermediate files and writable disks need far more space than the firmware archive alone.
 
 Profiles using `qg-runtime` keep emulated NVRAM in `/data/user_de/0/com.voyemu/nvram` inside the guest. The first caller atomically creates it from the read-only `/system/etc/nvram` seed; later calls from OEM processes share the same file, which survives a cold boot in the machine's writable Android disk. Clearing the Android app data of `com.voyemu` removes this state, so the next access creates it from the seed again.
 
