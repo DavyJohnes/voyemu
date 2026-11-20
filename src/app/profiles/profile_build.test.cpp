@@ -2328,7 +2328,10 @@ static void api30_publication_checks(const std::filesystem::path &stage, bool ol
             build_profile(root, id, machine_identity(id, {}), true);
         } catch (const std::exception &e) {
             early = std::string_view(e.what()) ==
-                    "PROFILE_BUILD: target machine already exists; never replaced";
+                    "PROFILE_BUILD: machine " + progress::path_text(root / "machines" / id) +
+                            " already exists.\nStart it: voyemu start " +
+                            progress::path_text(root / "machines" / id) +
+                            ", or delete its directory and run build again.";
         }
 
         if (!early || read_private_json_bytes(root / "machines" / id / "runtime.json") != before) {
@@ -4255,8 +4258,8 @@ int main(int argc, char **argv) {
                                           {}, {});
                 }
             } catch (const std::exception &error) {
-                refused = std::string(error.what()).find("target machine already exists") !=
-                          std::string::npos;
+                refused = std::string(error.what()).starts_with("PROFILE_BUILD: machine ") &&
+                          std::string(error.what()).find(" already exists.") != std::string::npos;
             }
 
             if (!refused || std::filesystem::exists(isolated / ".local/toolchains")) {

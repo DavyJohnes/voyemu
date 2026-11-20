@@ -5,6 +5,7 @@
 #include "machine_path.hpp"
 #include "profile_catalog.hpp"
 #include "profile_runtime.hpp"
+#include "progress.hpp"
 #include <charconv>
 #include <cstdlib>
 #include <set>
@@ -20,6 +21,8 @@ struct Arguments {
     voyemu::MachineIdentity machine;
     bool refresh_host = false, profile_explicit = false, private_start = false;
     bool exclusive = false, offline = false, verbose = false;
+    // build --update: the build changes an existing machine.
+    bool update_existing = false;
     std::string token, language;
     std::vector<std::filesystem::path> providers;
     voyemu::Json values = voyemu::Json::object();
@@ -214,6 +217,8 @@ inline Arguments parse(int argc, char **argv, const std::filesystem::path &execu
             result.verbose = true;
         } else if (option == "--offline") {
             result.offline = true;
+        } else if (option == "--update" && result.command == "build") {
+            result.update_existing = true;
         } else if (option == "--background") {
             result.background = true;
         } else if (option == "--request") {
@@ -488,10 +493,15 @@ inline Arguments parse(int argc, char **argv, const std::filesystem::path &execu
             std::filesystem::is_symlink(std::filesystem::symlink_status(parent)) ||
             (std::filesystem::exists(parent) && (!std::filesystem::is_directory(parent) ||
                                                  std::filesystem::canonical(parent) != parent)) ||
-            std::filesystem::exists(target) ||
             std::filesystem::is_symlink(std::filesystem::symlink_status(target))) {
             throw LocalizedError("CLI_ARGUMENT", "error.destination_parent",
                                  {{"path", parent.string()}});
+        }
+
+        // Only --update changes an existing machine.
+        if (std::filesystem::exists(target) && !result.update_existing) {
+            throw LocalizedError("CLI_ARGUMENT", "error.machine_exists",
+                                 {{"machine", voyemu::progress::path_text(target)}});
         }
 
         result.build_destination = target;

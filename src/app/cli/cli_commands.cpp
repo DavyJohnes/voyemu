@@ -202,6 +202,15 @@ int build_command(const Arguments &args, const Emit &emit) {
     const auto target = args.root / "machines" / args.machine.name;
     const auto machine = progress::path_text(target);
 
+    // Only --update changes an existing machine, and it needs one.
+    if (std::filesystem::exists(std::filesystem::symlink_status(target)) != args.update_existing) {
+        if (args.update_existing) {
+            throw LocalizedError("MACHINE_PATH", "error.machine_missing");
+        }
+
+        throw LocalizedError("PROFILE_BUILD", "error.machine_exists", {{"machine", machine}});
+    }
+
     // The header names the machine, its subsystems and the space that preparation keeps free.
     progress::block();
     progress::report("build_plan", {{"machine", machine},
@@ -233,6 +242,7 @@ int build_command(const Arguments &args, const Emit &emit) {
 
     // The summary names the machine as the header did, and the time the build took.
     result["machine_seed"] = machine;
+    result["machine_updated"] = args.update_existing;
     result["build_seconds"] = std::chrono::duration_cast<std::chrono::seconds>(
                                       std::chrono::steady_clock::now() - started)
                                       .count();

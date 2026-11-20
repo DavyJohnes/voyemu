@@ -958,9 +958,13 @@ Json build_profile(const std::filesystem::path &root, std::string_view profile,
 
     root_profile(root, profile);
     const auto target = build_target(root, profile, machine);
-    need((!std::filesystem::exists(target) || profile == "free-11-chinese-20260731-7.3.1") &&
-                 !std::filesystem::is_symlink(target),
-         "target machine already exists; never replaced");
+
+    if ((std::filesystem::exists(target) && profile != "free-11-chinese-20260731-7.3.1") ||
+        std::filesystem::is_symlink(target)) {
+        throw cli::LocalizedError("PROFILE_BUILD", "error.machine_exists",
+                                  {{"machine", progress::path_text(target)}});
+    }
+
     progress::Phase checking("build_check");
     // Check the configured local host before spending time preparing or booting Android.
     const auto binding_file = qnx_host_bindings_path(root);
@@ -1082,10 +1086,13 @@ Json build_profile_android(const std::filesystem::path &root, std::string_view p
                            const std::string &artifact_receipt_pin) {
     root_profile(root, profile);
     const auto target = build_target(root, profile, machine);
-    need(!std::filesystem::is_symlink(target) &&
-                 (!std::filesystem::exists(target) || profile == "free-11-chinese-20260731-7.3.1" ||
-                  profile == passion_profile_id),
-         "target machine already exists; never replaced");
+
+    if (std::filesystem::is_symlink(target) ||
+        (std::filesystem::exists(target) && profile != "free-11-chinese-20260731-7.3.1" &&
+         profile != passion_profile_id)) {
+        throw cli::LocalizedError("PROFILE_BUILD", "error.machine_exists",
+                                  {{"machine", progress::path_text(target)}});
+    }
 
     if (std::filesystem::exists(target)) {
         (void)inspect_portable_runtime(root, profile, machine);
