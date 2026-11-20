@@ -1,6 +1,7 @@
 #include "fetch.hpp"
 #include "base_image.hpp"
 #include "check.hpp"
+#include "cli_messages.hpp"
 #include "deps.hpp"
 #include "error.hpp"
 #include "ext4_image.hpp"
@@ -1674,7 +1675,18 @@ Json fetch_native_inputs(const std::filesystem::path &root, std::string_view pro
                     "retain pinned vehicle inputs or pass --source=adb --serial SERIAL for a physical device");
         }
 
-        install_native_dependencies(root, true, reserve);
+        // The physical device is read with the adb that deps installed.
+        try {
+            install_native_dependencies(root, true, reserve);
+        } catch (const std::runtime_error &error) {
+            if (message_code(error.what()) != "DOWNLOAD_OFFLINE") {
+                throw;
+            }
+
+            throw cli::LocalizedError("DOWNLOAD_OFFLINE", "error.deps_missing",
+                                      {{"profile", std::string(profile)}});
+        }
+
         const auto adb = root / ".local/toolchains/native-sdk/platform-tools" /
 #ifdef _WIN32
                          "adb.exe";

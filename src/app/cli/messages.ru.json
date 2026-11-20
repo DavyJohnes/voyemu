@@ -2,6 +2,7 @@
     "error.adb_serial": "--source=adb требует --serial",
     "error.both_off": "приборку и мультимедиа нельзя выключить одновременно",
     "error.cluster_syntax": "используйте --cluster=on или --cluster=off",
+    "error.deps_missing": "инструменты Voyemu не установлены.\nЗапустите: voyemu deps {profile}",
     "error.destination_name": "каталог назначения build должен быть новым каталогом machines/NAME",
     "error.destination_parent": "каталог назначения build должен быть новым непосредственным подкаталогом {path}",
     "error.disk_space": "мало места на диске: свободно {free} ГиБ, нужно {required} ГиБ.\nОсвободите {missing} ГиБ на томе с {path} или перенесите Voyemu на другой диск.",

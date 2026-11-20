@@ -1,4 +1,5 @@
 #include "fetch_segmented.hpp"
+#include "cli_messages.hpp"
 #include "os/platform.hpp"
 #include "process.hpp"
 #include "qinggan11_startup.hpp"
@@ -313,6 +314,21 @@ int segmented_synthetic_import(const std::filesystem::path &project) {
         check(denied, "invalid 6.0.3 plan accepted");
     }
 
+    // Without deps the missing codec asks for voyemu deps instead of failing on the file.
+    const auto codec_away = codec.string() + ".away";
+    std::filesystem::rename(codec, codec_away);
+    bool asked_for_deps = false;
+    try {
+        import_segmented_profile_inputs(root, profile, update, 0);
+    } catch (const cli::LocalizedError &error) {
+        asked_for_deps = error.code() == "FETCH_UPDATE" &&
+                         error.render(cli::Language::english).find("Run: voyemu deps " + profile) !=
+                                 std::string::npos;
+    }
+
+    check(asked_for_deps && !std::filesystem::exists(root / ".local/profiles" / profile),
+          "fetch without deps did not ask for voyemu deps");
+    std::filesystem::rename(codec_away, codec);
     const auto imported = import_segmented_profile_inputs(root, profile, update, 0);
     check(!imported.contains("profile_sha256") && !imported.contains("qnx_profile_sha256"),
           "segmented fetch must not pin its authoring profiles");

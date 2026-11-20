@@ -2,6 +2,7 @@
     "error.adb_serial": "--source=adb requires --serial",
     "error.both_off": "cluster and multimedia cannot both be off",
     "error.cluster_syntax": "use --cluster=on or --cluster=off",
+    "error.deps_missing": "Voyemu tools are not installed.\nRun: voyemu deps {profile}",
     "error.destination_name": "build destination must be a new machines/NAME directory",
     "error.destination_parent": "build destination must be a new immediate directory in {path}",
     "error.disk_space": "not enough disk space: {free} GiB free, {required} GiB required.\nFree up {missing} GiB on the volume of {path} or move Voyemu to another disk.",

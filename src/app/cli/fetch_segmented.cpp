@@ -1,5 +1,6 @@
 #include "fetch_segmented.hpp"
 #include "check.hpp"
+#include "cli_messages.hpp"
 #include "error.hpp"
 #include "ext4_image.hpp"
 #include "fetch.hpp"
@@ -342,6 +343,13 @@ Json import_segmented_profile_inputs(const std::filesystem::path &root, std::str
                                     .at(host);
     const auto codec = root / codec_spec.at("file").get<std::string>();
     ordinary(codec);
+
+    // deps installs the codec with the Android SDK tools.
+    if (!std::filesystem::exists(codec)) {
+        throw cli::LocalizedError("FETCH_UPDATE", "error.deps_missing",
+                                  {{"profile", std::string(profile)}});
+    }
+
     need(matches(codec, codec_spec.at("sha256").get<std::string>(),
                  std::filesystem::file_size(codec)),
          "run voyemu deps for pinned codec");

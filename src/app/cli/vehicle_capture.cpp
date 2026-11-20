@@ -1,5 +1,6 @@
 #include "vehicle_capture.hpp"
 #include "check.hpp"
+#include "cli_messages.hpp"
 #include "deps.hpp"
 #include "error.hpp"
 #include "java_toolchain.hpp"
@@ -55,6 +56,12 @@ Json native_qnx_originals(const std::filesystem::path &root, std::string_view pr
     const auto codec = root / relative;
     ordinary_qnx(codec);
     const auto codec_pin = codec_definition.at("sha256").get<std::string>();
+
+    // deps installs the codec with the Android SDK tools.
+    if (!std::filesystem::exists(codec) && !std::filesystem::is_symlink(codec)) {
+        throw cli::LocalizedError("QNX_ORIGINALS_CODEC_SHA", "error.deps_missing",
+                                  {{"profile", std::string(profile)}});
+    }
 
     if (!sha(codec_pin) || !std::filesystem::is_regular_file(codec) ||
         std::filesystem::hard_link_count(codec) != 1 || sha256_file(codec) != codec_pin) {

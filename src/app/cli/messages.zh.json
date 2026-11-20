@@ -2,6 +2,7 @@
     "error.adb_serial": "--source=adb 需要 --serial",
     "error.both_off": "仪表和多媒体不能同时关闭",
     "error.cluster_syntax": "请使用 --cluster=on 或 --cluster=off",
+    "error.deps_missing": "Voyemu 工具尚未安装。\n请运行：voyemu deps {profile}",
     "error.destination_name": "build 目标必须是新的 machines/NAME 目录",
     "error.destination_parent": "build 目标必须是 {path} 下新的直接子目录",
     "error.disk_space": "磁盘空间不足：可用 {free} GiB，需要 {required} GiB。\n请在 {path} 所在卷上释放 {missing} GiB，或将 Voyemu 移到其他磁盘。",
