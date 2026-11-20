@@ -89,6 +89,7 @@ void emit(std::string_view key, const Arguments &arguments, bool live) {
 // language.
 std::string decimal(double value, cli::Language language) {
     char text[32];
+
     std::snprintf(text, sizeof text, "%.1f", value);
     std::string result = text;
 
@@ -118,6 +119,7 @@ void report(std::string_view key, const Arguments &arguments) {
 
 void block() {
     std::lock_guard lock(blocks);
+
     pending = true;
 }
 
@@ -213,6 +215,7 @@ std::string duration_text(std::uint64_t seconds, cli::Language language) {
 std::string url_host(std::string_view url) {
     const auto scheme = url.find("://");
     auto host = scheme == std::string_view::npos ? url : url.substr(scheme + 3);
+
     host = host.substr(0, host.find_first_of("/?#"));
 
     // A pinned URL carries no credentials; a port follows the last colon.
@@ -225,6 +228,7 @@ std::string url_host(std::string_view url) {
 
 std::string url_file(std::string_view url) {
     auto path = url.substr(0, url.find_first_of("?#"));
+
     path = path.substr(path.rfind('/') == std::string_view::npos ? 0 : path.rfind('/') + 1);
     const auto digit = [](char c) {
         return c >= '0' && c <= '9'   ? c - '0'
@@ -321,6 +325,7 @@ Arguments Meter::rates() const {
     const std::uint64_t rate =
             milliseconds > 0 ? done_ * 1000 / static_cast<std::uint64_t>(milliseconds) : done_;
     auto arguments = context_;
+
     arguments["done"] = size_text(done_, language_);
     arguments["rate"] = rate_text(rate, language_);
     arguments["time"] = duration_text(static_cast<std::uint64_t>(milliseconds) / 1000, language_);

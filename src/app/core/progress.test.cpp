@@ -35,6 +35,7 @@ struct Recorder {
 
 int main() try {
     const auto english = cli::Language::english, russian = cli::Language::russian;
+
     assert(progress::size_text(900, english) == "900 B");
     assert(progress::size_text(1536, english) == "1.5 KiB");
     assert(progress::size_text(1536, russian) == "1,5 КиБ");

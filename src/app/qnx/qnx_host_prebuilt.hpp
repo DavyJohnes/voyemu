@@ -84,6 +84,7 @@ inline void extract_prebuilt_qnx_host(const std::filesystem::path &root, const J
     const auto archive = download_pinned(download, root / ".local/toolchains/downloads/qnx-host",
                                          offline, reserve)
                                  .file;
+
     progress::report("extract", download_names(download));
 
     if (std::filesystem::exists(std::filesystem::symlink_status(destination))) {

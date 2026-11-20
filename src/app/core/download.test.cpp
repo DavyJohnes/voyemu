@@ -198,6 +198,7 @@ int main(int argc, char **argv) try {
                             .ends_with("on the volume of " + (root / "space").string() +
                                        " or move Voyemu to another disk.");
     }
+
     assert(spaceless && requests == 2);
 
     // The console lines of a fresh deps: each step that downloads is a block, an archive that an

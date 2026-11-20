@@ -814,6 +814,7 @@ JavaPreparationToolchain ensure_java_preparation_tools(const std::filesystem::pa
     if (!reused) {
         require_disk_space("JAVA_TOOLCHAIN", root, 512ULL << 20, reserve);
     }
+
     install_java_sdk(root, offline, reserve, {});
     const auto folder = install_java_helper(
             root, embedded_toolchain_manifest().at("javaHelper"), offline, reserve, {},

@@ -49,6 +49,7 @@ void console_line(std::string_view text, bool live) {
 
 void console_blank() {
     std::lock_guard lock(console);
+
     std::cerr << (live_width ? "\n\n" : "\n") << std::flush;
     live_width = 0;
 }
