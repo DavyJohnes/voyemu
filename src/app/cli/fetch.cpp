@@ -13,6 +13,7 @@
 #include "portable_runtime.hpp"
 #include "process.hpp"
 #include "profile_catalog.hpp"
+#include "profile_identity.hpp"
 #include "profile_originals.hpp"
 #include "qnx_originals_directory.hpp"
 #include "quickboot.hpp"
@@ -216,7 +217,7 @@ std::string acquisition_identity(const Json &definition, const Json &qnx) {
              qnx.at("update")}}.dump());
 }
 
-bool passion_media_role(std::string_view profile, const Json &definition, const std::string &name) {
+bool passion_media_role(const Json &definition, const std::string &name) {
     static const Json roles = {
             {"LY_Camera",
              {{"package", "com.voyah.camera"},
@@ -241,7 +242,7 @@ bool passion_media_role(std::string_view profile, const Json &definition, const 
     const auto &role = roles.at(name);
     const auto &item = definition.at("original").at(name);
 
-    if (profile != "passion-11-russian-20260403-2.1.4.80" ||
+    if (profile_platform(definition) != ProfilePlatform::passion ||
         definition.at("android").at("package") != "system-images;android-30;default;arm64-v8a" ||
         item.at("file") != name + ".apk" || item.value("type", std::string("file")) != "file" ||
         item.value("source", Json::object()) != Json{{"package", role.at("package")}} ||
@@ -253,8 +254,7 @@ bool passion_media_role(std::string_view profile, const Json &definition, const 
     return true;
 }
 
-std::vector<std::string> passion_screen_control_roles(std::string_view profile,
-                                                      const Json &definition) {
+std::vector<std::string> passion_screen_control_roles(const Json &definition) {
     static const std::map<std::string, std::string> pins = {
             {"screen-control-screen0_off_change",
              "7e82e683f773e0e300fe7e1f2c097381f0f94ff784d9705d350523f870081881"},
@@ -284,7 +284,7 @@ std::vector<std::string> passion_screen_control_roles(std::string_view profile,
         return roles;
     }
 
-    if (profile != "passion-11-russian-20260403-2.1.4.80" ||
+    if (profile_platform(definition) != ProfilePlatform::passion ||
         definition.at("android").at("package") != "system-images;android-30;default;arm64-v8a" ||
         roles.size() != pins.size()) {
         throw VoyemuError("FETCH_UPDATE",
@@ -308,6 +308,17 @@ std::vector<std::string> passion_screen_control_roles(std::string_view profile,
     return roles;
 }
 
+// An NXP owner update import needs the NXP board, the pinned device board and API 28.
+void nxp_update_profile(const Json &definition) {
+    if (definition.value("acquisition", Json::object()).value("format", std::string{}) !=
+                "nxp-update-zip" ||
+        profile_board(definition) != ProfileBoard::nxp ||
+        definition.at("device").at("board") != "f0501h" ||
+        native_base_api(definition.at("android")) != 28) {
+        throw VoyemuError("FETCH_NXP", "exact NXP API28 owner update profile required");
+    }
+}
+
 Json fetch_nxp_update(const std::filesystem::path &root, std::string_view profile,
                       const std::filesystem::path &archive, std::uint64_t reserve) {
     const auto started = std::chrono::steady_clock::now();
@@ -316,12 +327,7 @@ Json fetch_nxp_update(const std::filesystem::path &root, std::string_view profil
     const auto profile_epoch = cache_file_identity(profile_file);
     const auto profile_pin = sha256_file(profile_file);
 
-    if (profile != "free-09-chinese-20221230-nxp-rc45" || definition.at("id") != profile ||
-        definition.at("device").at("board") != "f0501h" ||
-        native_base_api(definition.at("android")) != 28) {
-        throw VoyemuError("FETCH_NXP", "exact NXP RC45 API28 profile required");
-    }
-
+    nxp_update_profile(definition);
     const Json source = {
             {"bytes", 2415112497ULL},
             {"sha256", "e91855241d9587a17f9f2349784fe86bcd23fdf88800eec368a61d71b12a5523"}};
@@ -595,7 +601,7 @@ Json fetch_update(const std::filesystem::path &root, std::string_view profile,
     }
 
     const auto acquisition_sha = acquisition_identity(definition, qnx);
-    const auto screen_roles = passion_screen_control_roles(profile, definition);
+    const auto screen_roles = passion_screen_control_roles(definition);
     std::vector<std::string> paths, vendor_paths, media_paths;
     std::set<std::string> selected;
 
@@ -606,7 +612,7 @@ Json fetch_update(const std::filesystem::path &root, std::string_view profile,
         const bool vendor = source.at("image") == "vendor";
 
         if (vendor) {
-            if (profile != "passion-11-russian-20260403-2.1.4.80" ||
+            if (profile_platform(definition) != ProfilePlatform::passion ||
                 definition.at("android").at("package") !=
                         "system-images;android-30;default;arm64-v8a" ||
                 input.name != "LY_Car" || input.file != "LY_Car.apk" ||
@@ -622,9 +628,9 @@ Json fetch_update(const std::filesystem::path &root, std::string_view profile,
             throw VoyemuError("FETCH_UPDATE", "exact system/vendor original path/extent required");
         }
 
-        (vendor                                                ? vendor_paths
-         : passion_media_role(profile, definition, input.name) ? media_paths
-                                                               : paths)
+        (vendor                                       ? vendor_paths
+         : passion_media_role(definition, input.name) ? media_paths
+                                                      : paths)
                 .push_back(path);
     }
 
@@ -781,7 +787,7 @@ Json fetch_update(const std::filesystem::path &root, std::string_view profile,
         } else if (declared.contains("LY_Camera") || declared.contains("LY_Video") ||
                    declared.contains("LY_AVM")) {
             for (const auto *name : {"LY_Camera", "LY_Video", "LY_AVM"}) {
-                if (!declared.contains(name) || !passion_media_role(profile, definition, name)) {
+                if (!declared.contains(name) || !passion_media_role(definition, name)) {
                     throw VoyemuError("FETCH_UPDATE",
                                       "complete pinned Passion media extension required");
                 }
@@ -1552,23 +1558,21 @@ Json import_owner_profile_inputs(const std::filesystem::path &root, std::string_
         throw VoyemuError("FETCH_ROOT", "canonical root and safe profile required");
     }
 
-    {
-        const auto source = root / "profiles" / std::string(profile) / "profile.json";
+    // The acquisition format of the profile selects the importer of its owner update.
+    const auto format = read_private_json(root / "profiles" / std::string(profile) / "profile.json",
+                                          512 * 1024)
+                                .value("acquisition", Json::object())
+                                .value("format", std::string{});
 
-        if (read_private_json(source, 512 * 1024)
-                    .value("acquisition", Json::object())
-                    .value("format", std::string{}) == "pinned-snapshot-raw-images") {
-            return import_snapshot_profile_inputs(root, profile, update, reserve);
-        }
-    }
-
-    if (profile == "free-11-chinese-20260731-7.3.1" ||
-        profile == "free-11-chinese-20250710-6.11.1" ||
-        profile == "free-09-chinese-20260106-6.0.3") {
+    if (format == "pinned-zip-zero-base-zstd-segments") {
         return import_segmented_profile_inputs(root, profile, update, reserve);
     }
 
-    if (profile == "free-09-chinese-20221230-nxp-rc45") {
+    if (format == "pinned-snapshot-raw-images") {
+        return import_snapshot_profile_inputs(root, profile, update, reserve);
+    }
+
+    if (format == "nxp-update-zip") {
         return fetch_nxp_update(root, profile, update, reserve);
     }
 
@@ -1576,11 +1580,7 @@ Json import_owner_profile_inputs(const std::filesystem::path &root, std::string_
 }
 
 Json nxp_acquisition_plan(const Json &definition) {
-    if (definition.at("id") != "free-09-chinese-20221230-nxp-rc45" ||
-        definition.at("device").at("board") != "f0501h" ||
-        native_base_api(definition.at("android")) != 28) {
-        throw VoyemuError("FETCH_NXP", "exact NXP RC45 API28 profile required");
-    }
+    nxp_update_profile(definition);
 
     const auto inputs = original_input_plan(definition);
 

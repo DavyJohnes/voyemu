@@ -628,12 +628,18 @@ int main(int argc, char **argv) {
                       "Exact512MiB and256path extraction boundaries must split only after the limit");
             }
 
-            for (unsigned fault = 0; fault < 9; ++fault) {
+            // The plan follows the profile data, not its id.
+            auto renamed = profile;
+            renamed["id"] = "test-nxp";
+            check(nxp_acquisition_plan(renamed).at("originals") == plan.at("originals"),
+                  "NXP plan depends on the profile id");
+
+            for (unsigned fault = 0; fault < 10; ++fault) {
                 auto bad = profile;
                 auto &item = bad["original"][first];
 
                 if (fault == 0) {
-                    bad["id"] = "foreign";
+                    bad["acquisition"]["format"] = "pinned-zip-tgz-raw-scatter";
                 }
 
                 if (fault == 1) {
@@ -677,6 +683,10 @@ int main(int argc, char **argv) {
                     item["bytes"] = (256ULL << 20) + 1;
                 }
 
+                if (fault == 9) {
+                    bad["board"] = "8155";
+                }
+
                 bool rejected = false;
                 try {
                     nxp_acquisition_plan(bad);
@@ -685,11 +695,11 @@ int main(int argc, char **argv) {
                 }
 
                 check(rejected,
-                      "NXP Voice foreign image/profile, traversal, mapping, extent, alias and count negatives rejected");
+                      "NXP Voice foreign image/format/board, traversal, mapping, extent, alias and count negatives rejected");
             }
 
             std::cout
-                    << "NXP Voice owner acquisition plan PASS: actual system/resource mapping and expanded bounded originals; nine negatives plus exact extraction batch bounds; no archive expansion or guest\n";
+                    << "NXP Voice owner acquisition plan PASS: actual system/resource mapping and expanded bounded originals; ten negatives plus exact extraction batch bounds; no archive expansion or guest\n";
 
             return 0;
         }
@@ -1078,8 +1088,9 @@ int main(int argc, char **argv) {
                   {"sha256", owner.at("sha256")},
                   {"nested_member", "update.tgz"},
                   {"nested_sha256", owner.at("inner").at("sha256")}}}};
-        const std::string passion = "passion-11-russian-20260403-2.1.4.80";
+        const std::string passion = "test-passion";
         auto vendor_definition = local;
+        vendor_definition["platform"] = "passion";
         vendor_definition["android"]["package"] = "system-images;android-30;default;arm64-v8a";
         vendor_definition["acquisition"]["vendor"] = scatter;
         vendor_definition["original"]["LY_Car"] = {
@@ -1089,7 +1100,7 @@ int main(int argc, char **argv) {
                 {"source", {{"package", "com.voyah.car"}}},
                 {"acquisition", {{"image", "vendor"}, {"path", "/vendor/app/LY_Car/LY_Car.apk"}}}};
 
-        for (unsigned mode = 0; mode < 5; ++mode) {
+        for (unsigned mode = 0; mode < 6; ++mode) {
             auto requested = vendor_definition;
 
             if (mode == 0) {
@@ -1113,6 +1124,10 @@ int main(int argc, char **argv) {
                 requested["acquisition"]["vendor"]["sha256"] = std::string(64, 'f');
             }
 
+            if (mode == 5) {
+                requested["platform"] = "qinggan11";
+            }
+
             write_private_json(root / "profiles" / passion / "profile.json", requested);
             write_private_json(root / "profiles" / passion / "profile-qnx.json", qnx);
             bool denied = false;
@@ -1123,10 +1138,11 @@ int main(int argc, char **argv) {
             }
 
             check(denied && !std::filesystem::exists(root / ".local/profiles" / passion),
-                  "finite vendor acquisition rejects wrong API, unknown partition, traversal, package and image pin without publication");
+                  "finite vendor acquisition rejects wrong API, unknown partition, traversal, package, image pin and platform without publication");
         }
 
         auto media_definition = local;
+        media_definition["platform"] = "passion";
         media_definition["android"]["package"] = "system-images;android-30;default;arm64-v8a";
         media_definition["original"]["LY_Camera"] = {
                 {"file", "LY_Camera.apk"},
@@ -1136,7 +1152,7 @@ int main(int argc, char **argv) {
                 {"acquisition",
                  {{"image", "system"}, {"path", "/system/app/LY_Camera/LY_Camera.apk"}}}};
 
-        for (unsigned mode = 0; mode < 6; ++mode) {
+        for (unsigned mode = 0; mode < 7; ++mode) {
             auto requested = media_definition;
 
             if (mode == 0) {
@@ -1164,6 +1180,10 @@ int main(int argc, char **argv) {
                 requested["original"]["LY_Camera"]["acquisition"]["image"] = "vendor";
             }
 
+            if (mode == 6) {
+                requested["platform"] = "qinggan11";
+            }
+
             write_private_json(root / "profiles" / passion / "profile.json", requested);
             write_private_json(root / "profiles" / passion / "profile-qnx.json", qnx);
             bool denied = false;
@@ -1174,10 +1194,11 @@ int main(int argc, char **argv) {
             }
 
             check(denied && !std::filesystem::exists(root / ".local/profiles" / passion),
-                  "finite media role rejects foreign API, pin, path, package, extent and partition without publication");
+                  "finite media role rejects foreign API, pin, path, package, extent, partition and platform without publication");
         }
 
         auto screen_definition = local;
+        screen_definition["platform"] = "passion";
         screen_definition["android"]["package"] = "system-images;android-30;default;arm64-v8a";
         const auto screen_roles = Json::parse(
                 R"CSV({"screen-control-screen0_off_change":{"file":"screen0_off_change.csv","bytes":6111,"sha256":"7e82e683f773e0e300fe7e1f2c097381f0f94ff784d9705d350523f870081881","source":{"path":"/system/etc/screen-control/screen0_off_change.csv"},"acquisition":{"image":"system","path":"/system/etc/screen-control/screen0_off_change.csv"}},"screen-control-screen0_off_keep":{"file":"screen0_off_keep.csv","bytes":6111,"sha256":"826ff8847dd688819344780bb67dea7cf6287622752ed02cd56d286ae28bf33f","source":{"path":"/system/etc/screen-control/screen0_off_keep.csv"},"acquisition":{"image":"system","path":"/system/etc/screen-control/screen0_off_keep.csv"}},"screen-control-screen0_on_change":{"file":"screen0_on_change.csv","bytes":6111,"sha256":"dbfe5e0802173415484a1640ed3024a181843ad40d895320952db3a4d8a7bfff","source":{"path":"/system/etc/screen-control/screen0_on_change.csv"},"acquisition":{"image":"system","path":"/system/etc/screen-control/screen0_on_change.csv"}},"screen-control-screen0_on_keep":{"file":"screen0_on_keep.csv","bytes":6111,"sha256":"826ff8847dd688819344780bb67dea7cf6287622752ed02cd56d286ae28bf33f","source":{"path":"/system/etc/screen-control/screen0_on_keep.csv"},"acquisition":{"image":"system","path":"/system/etc/screen-control/screen0_on_keep.csv"}},"screen-control-screen1_off_change":{"file":"screen1_off_change.csv","bytes":6111,"sha256":"3aee3f501728d48de7a4c2a189fec04b1c9ddfb7898cd0dcc636129faa908ac0","source":{"path":"/system/etc/screen-control/screen1_off_change.csv"},"acquisition":{"image":"system","path":"/system/etc/screen-control/screen1_off_change.csv"}},"screen-control-screen1_off_keep":{"file":"screen1_off_keep.csv","bytes":6111,"sha256":"826ff8847dd688819344780bb67dea7cf6287622752ed02cd56d286ae28bf33f","source":{"path":"/system/etc/screen-control/screen1_off_keep.csv"},"acquisition":{"image":"system","path":"/system/etc/screen-control/screen1_off_keep.csv"}},"screen-control-screen1_on_change":{"file":"screen1_on_change.csv","bytes":6111,"sha256":"e2a2f3a83123cf347c7f0ec8cba58fa077e402b9a3317b36bec2225cbfb65f82","source":{"path":"/system/etc/screen-control/screen1_on_change.csv"},"acquisition":{"image":"system","path":"/system/etc/screen-control/screen1_on_change.csv"}},"screen-control-screen1_on_keep":{"file":"screen1_on_keep.csv","bytes":6111,"sha256":"826ff8847dd688819344780bb67dea7cf6287622752ed02cd56d286ae28bf33f","source":{"path":"/system/etc/screen-control/screen1_on_keep.csv"},"acquisition":{"image":"system","path":"/system/etc/screen-control/screen1_on_keep.csv"}}})CSV");
@@ -1186,7 +1207,7 @@ int main(int argc, char **argv) {
             screen_definition["original"][it.key()] = it.value();
         }
 
-        for (unsigned mode = 0; mode < 8; ++mode) {
+        for (unsigned mode = 0; mode < 9; ++mode) {
             auto requested = screen_definition;
             const std::string key = "screen-control-screen0_off_change";
 
@@ -1224,6 +1245,10 @@ int main(int argc, char **argv) {
                 requested["original"]["screen-control-foreign"]["file"] = "extra.csv";
             }
 
+            if (mode == 8) {
+                requested["platform"] = "qinggan11";
+            }
+
             write_private_json(root / "profiles" / passion / "profile.json", requested);
             bool denied = false;
             try {
@@ -1239,7 +1264,7 @@ int main(int argc, char **argv) {
             }
 
             check(denied && !std::filesystem::exists(root / ".local/profiles" / passion),
-                  "finite eight CSV role rejects API, partial group, pin, extent, traversal, source, name and extra role before publication");
+                  "finite eight CSV role rejects API, partial group, pin, extent, traversal, source, name, extra role and platform before publication");
         }
 
         const auto selected = root / "profiles/archive-fixture";

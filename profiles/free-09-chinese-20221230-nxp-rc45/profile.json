@@ -6,6 +6,9 @@
  "board": "nxp",
  "status": "ready",
  "referenceProfile": "free-09-chinese-20260106-6.0.3",
+ "acquisition": {
+  "format": "nxp-update-zip"
+ },
  "device": {
   "soc": "NXP i.MX 8QuadMax (fsl,imx8qm)",
   "board": "f0501h",
