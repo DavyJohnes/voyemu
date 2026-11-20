@@ -183,6 +183,7 @@
     "progress.fetch_qnx_size": "QNX 镜像（{count}）",
     "progress.fetch_qnx_status_size": "  解包：{done} / {total}（{percent}%），{rate}，剩余 {eta}",
     "progress.fetch_saved": "原始文件已保存：{android} 个 Android 文件和 {qnx} 个 QNX 镜像，用时 {time}。",
+    "progress.fetch_saved_android": "原始文件已保存：{android} 个 Android 文件，用时 {time}。",
     "progress.fetch_sources": "正在下载组件源码",
     "progress.fetch_sources_done": "组件源码：已下载 {count} 个，用时 {time}",
     "progress.guest_base_cached": "Android 基础镜像：已安装",

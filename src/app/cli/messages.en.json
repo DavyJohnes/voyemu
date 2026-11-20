@@ -183,6 +183,7 @@
     "progress.fetch_qnx_size": "QNX images ({count})",
     "progress.fetch_qnx_status_size": "  Unpacking: {done} of {total} ({percent}%), {rate}, {eta} left",
     "progress.fetch_saved": "Originals saved: {android} Android files and {qnx} QNX images in {time}.",
+    "progress.fetch_saved_android": "Originals saved: {android} Android files in {time}.",
     "progress.fetch_sources": "Downloading component sources",
     "progress.fetch_sources_done": "Component sources: {count} downloaded in {time}",
     "progress.guest_base_cached": "Android base: already installed",

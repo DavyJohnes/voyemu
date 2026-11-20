@@ -196,6 +196,13 @@ int main() {
             check(std::distance(std::filesystem::directory_iterator(output),
                                 std::filesystem::directory_iterator{}) == 2,
                   "split producer writes only image and receipt");
+            std::uint64_t written = 0;
+            import_pinned_zip_image(source, pin, image, root / "split-progress", 0, {},
+                                    PinnedZipImageKind::SplitFragments,
+                                    [&written](std::uint64_t block) {
+                                        written += block;
+                                    });
+            check(written == 5, "split import reports its image bytes");
             {
                 const auto zero_zip = root / "zero-split.zip";
                 const std::string zero(100000, '\0'), expected_zero = zero + "TAIL";
@@ -522,8 +529,13 @@ int main() {
                   {"bytes", 3u},
                   {"sha256", sha256_bytes("raw")},
                   {"acquisition", {{"kind", "raw-tar-member"}, {"member", "ota/qnx"}}}}}};
-        const auto receipt = import_owner_update_archive(zip, owner, system, originals,
-                                                         root / "good", 0);
+        std::uint64_t advanced = 0;
+        const auto receipt = import_owner_update_archive(
+                zip, owner, system, originals, root / "good", 0, [&advanced](std::uint64_t block) {
+                    advanced += block;
+                });
+        check(advanced == system.at("bytes").get<std::uint64_t>(),
+              "owner archive import reports the extent of its system image");
         check(bytes(root / "good/system.img") == expected &&
                       bytes(root / "good/qnx/role.img") == "raw" &&
                       receipt.at("guest_started") == false &&

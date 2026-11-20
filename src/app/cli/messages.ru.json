@@ -183,6 +183,7 @@
     "progress.fetch_qnx_size": "Образы QNX ({count})",
     "progress.fetch_qnx_status_size": "  Распаковка: {done} из {total} ({percent}%), {rate}, осталось {eta}",
     "progress.fetch_saved": "Оригиналы сохранены: {android} файлов Android и {qnx} образа QNX за {time}.",
+    "progress.fetch_saved_android": "Оригиналы сохранены: {android} файлов Android за {time}.",
     "progress.fetch_sources": "Загрузка исходников компонентов",
     "progress.fetch_sources_done": "Исходники компонентов: загружено {count} за {time}",
     "progress.guest_base_cached": "База Android: уже установлена",

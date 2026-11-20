@@ -107,7 +107,8 @@ void exact(const Member &member) {
 }
 
 void copy(std::istream &input, std::ostream &output, std::uint64_t bytes,
-          const std::filesystem::path &stage, std::uint64_t reserve) {
+          const std::filesystem::path &stage, std::uint64_t reserve,
+          const std::function<void(std::uint64_t)> &advance) {
     std::array<char, 65536> buffer{};
 
     while (bytes) {
@@ -120,13 +121,15 @@ void copy(std::istream &input, std::ostream &output, std::uint64_t bytes,
         need(bool(output), "output write failed");
         bytes -= count;
         space(stage, reserve);
+        advance(static_cast<std::uint64_t>(count));
     }
 }
 
 #ifdef __APPLE__
 // Selected members of one pinned gzip TAR layer; ZIP layers use the portable pinned reader.
 void extract(const std::filesystem::path &source, const std::vector<Member> &members,
-             const std::filesystem::path &stage, std::uint64_t reserve) {
+             const std::filesystem::path &stage, std::uint64_t reserve,
+             const std::function<void(std::uint64_t)> &advance) {
     auto *reader = archive_read_new();
 
     need(reader, "archive allocation failed");
@@ -220,6 +223,7 @@ void extract(const std::filesystem::path &source, const std::vector<Member> &mem
             need(bool(output), "selected output failed");
             written += got;
             space(stage, reserve);
+            advance(static_cast<std::uint64_t>(got));
         }
 
         output.close();
@@ -402,7 +406,8 @@ std::uint64_t tar_number(const char *p, std::size_t n) {
 }
 
 void extract(const std::filesystem::path &source, const std::vector<Member> &members,
-             const std::filesystem::path &stage, std::uint64_t reserve) {
+             const std::filesystem::path &stage, std::uint64_t reserve,
+             const std::function<void(std::uint64_t)> &advance) {
     GzipReader input(source);
     std::map<std::string, const Member *> selected;
 
@@ -428,6 +433,7 @@ void extract(const std::filesystem::path &source, const std::vector<Member> &mem
                 output->write(buffer.data(), static_cast<std::streamsize>(n));
                 need(bool(*output), "selected output failed");
                 space(stage, reserve);
+                advance(n);
             }
 
             if (text) {
@@ -587,7 +593,7 @@ void extract(const std::filesystem::path &source, const std::vector<Member> &mem
 static Json import_selected(const std::filesystem::path &file, const Json &owner,
                             const Json &system, const Json &originals,
                             const std::filesystem::path &output, std::uint64_t reserve,
-                            bool system_only) {
+                            bool system_only, const std::function<void(std::uint64_t)> &advance) {
     ordinary(file);
     ordinary(output);
     need(std::filesystem::is_regular_file(file) && std::filesystem::hard_link_count(file) == 1,
@@ -682,16 +688,38 @@ static Json import_selected(const std::filesystem::path &file, const Json &owner
     const auto stage = output / ".stage";
     ensure_private_directory(stage);
     ensure_private_directory(output / "qnx");
+    // The nested archive, its members and the assembled segments pass in turn; their bytes advance
+    // in proportion to the extent of system.img.
+    std::uint64_t passed = inner_bytes + total, processed = 0, shown = 0;
+
+    for (std::size_t i = 0; i < offsets.size(); ++i) {
+        passed += members[i].bytes;
+    }
+
+    const std::function<void(std::uint64_t)> step = [&](std::uint64_t count) {
+        processed += count;
+        const auto reached = processed >= passed
+                                     ? bytes
+                                     : std::min(bytes, static_cast<std::uint64_t>(
+                                                               static_cast<long double>(processed) *
+                                                               static_cast<long double>(bytes) /
+                                                               static_cast<long double>(passed)));
+
+        if (advance && reached > shown) {
+            advance(reached - shown);
+            shown = reached;
+        }
+    };
     const Member nested_member{inner_name, inner_sha, inner_bytes, stage / "update.tgz"};
     extract_pinned_zip_members(file, archive_sha, {{inner_name, 0, inner_bytes}},
-                               nested_member.file, inner_bytes, reserve);
+                               nested_member.file, inner_bytes, reserve, {}, step);
     exact(nested_member);
 
     for (std::size_t i = 0; i < members.size(); ++i) {
         members[i].file = stage / ("member-" + std::to_string(i));
     }
 
-    extract(nested_member.file, members, stage, reserve);
+    extract(nested_member.file, members, stage, reserve, step);
     const auto image = output / "system.img";
     std::ofstream assembled(image, std::ios::binary);
     need(bool(assembled), "scatter output open failed");
@@ -702,7 +730,7 @@ static Json import_selected(const std::filesystem::path &file, const Json &owner
     for (std::size_t i = 0; i < offsets.size(); ++i) {
         std::ifstream input(members[i].file, std::ios::binary);
         assembled.seekp(static_cast<std::streamoff>(offsets[i]));
-        copy(input, assembled, members[i].bytes, stage, reserve);
+        copy(input, assembled, members[i].bytes, stage, reserve, step);
     }
 
     assembled.close();
@@ -739,14 +767,16 @@ static Json import_selected(const std::filesystem::path &file, const Json &owner
 
 Json import_owner_update_archive(const std::filesystem::path &file, const Json &owner,
                                  const Json &system, const Json &originals,
-                                 const std::filesystem::path &output, std::uint64_t reserve) {
-    return import_selected(file, owner, system, originals, output, reserve, false);
+                                 const std::filesystem::path &output, std::uint64_t reserve,
+                                 const std::function<void(std::uint64_t)> &advance) {
+    return import_selected(file, owner, system, originals, output, reserve, false, advance);
 }
 
 Json import_owner_update_system(const std::filesystem::path &file, const Json &owner,
                                 const Json &system, const std::filesystem::path &output,
-                                std::uint64_t reserve) {
-    return import_selected(file, owner, system, Json::object(), output, reserve, true);
+                                std::uint64_t reserve,
+                                const std::function<void(std::uint64_t)> &advance) {
+    return import_selected(file, owner, system, Json::object(), output, reserve, true, advance);
 }
 
 Json owner_update_directory_identity(const std::filesystem::path &path) {
@@ -756,7 +786,8 @@ Json owner_update_directory_identity(const std::filesystem::path &path) {
 Json import_pinned_zip_image(const std::filesystem::path &file, const Json &source,
                              const Json &image, const std::filesystem::path &output,
                              std::uint64_t reserve, const std::function<bool()> &cancelled,
-                             PinnedZipImageKind kind) {
+                             PinnedZipImageKind kind,
+                             const std::function<void(std::uint64_t)> &advance) {
     ordinary(file);
     ordinary(output);
     need(std::filesystem::is_regular_file(file) && std::filesystem::hard_link_count(file) == 1,
@@ -823,7 +854,7 @@ Json import_pinned_zip_image(const std::filesystem::path &file, const Json &sour
     } cleanup{output, identity, published};
     const auto target = output / "system.img";
     extract_pinned_zip_members(file, archive_sha, fragments, target, image_bytes, reserve,
-                               cancelled);
+                               cancelled, advance);
     exact({"system.img", image_sha, image_bytes, target});
     need(cache_file_identity(file) == epoch && pinned_file_sha256(file) == archive_sha,
          "split source changed");

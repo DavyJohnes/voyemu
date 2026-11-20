@@ -529,8 +529,8 @@ std::string read_pinned_zip_entry(const std::filesystem::path &file, const std::
 void extract_pinned_zip_members(const std::filesystem::path &source, const std::string &source_pin,
                                 const std::vector<ZipExtraction> &members,
                                 const std::filesystem::path &output, std::uint64_t output_bytes,
-                                std::uint64_t reserve_bytes,
-                                const std::function<bool()> &cancelled) {
+                                std::uint64_t reserve_bytes, const std::function<bool()> &cancelled,
+                                const std::function<void(std::uint64_t)> &advance) {
     if (!valid_sha(source_pin)) {
         throw VoyemuError("ZIP_PIN", "lowercase SHA256 required");
     }
@@ -652,6 +652,10 @@ void extract_pinned_zip_members(const std::filesystem::path &source, const std::
 
                     if (std::filesystem::space(parent).available < reserve_bytes) {
                         require_disk_space("ZIP_SPACE", parent, 0, reserve_bytes);
+                    }
+
+                    if (advance) {
+                        advance(count);
                     }
                 },
                 progress);

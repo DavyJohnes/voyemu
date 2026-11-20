@@ -154,6 +154,37 @@ std::string android_image_version(const Json &image) {
     return release == releases.end() ? "API " + api : release->second + " (API " + api + ")";
 }
 
+// The console meter of an Android image that an import unpacks, in its own block.
+std::unique_ptr<progress::Meter> unpacking(const std::string &image, std::uint64_t bytes) {
+    progress::block();
+    auto meter = std::make_unique<progress::Meter>("fetch_image",
+                                                   progress::Arguments{{"image", image}});
+    meter->length(bytes);
+
+    return meter;
+}
+
+// The console line of the saved originals and the time since started.
+void report_saved(std::size_t android, std::size_t qnx,
+                  std::chrono::steady_clock::time_point started) {
+    const auto seconds = std::chrono::duration_cast<std::chrono::seconds>(
+                                 std::chrono::steady_clock::now() - started)
+                                 .count();
+    const auto time = progress::duration_text(static_cast<std::uint64_t>(seconds),
+                                              progress::language());
+
+    progress::block();
+
+    if (qnx) {
+        progress::report("fetch_saved", {{"android", std::to_string(android)},
+                                         {"qnx", std::to_string(qnx)},
+                                         {"time", time}});
+    } else {
+        progress::report("fetch_saved_android",
+                         {{"android", std::to_string(android)}, {"time", time}});
+    }
+}
+
 std::string acquisition_identity(const Json &definition, const Json &qnx) {
     Json declared = Json::object();
 
@@ -279,6 +310,7 @@ std::vector<std::string> passion_screen_control_roles(std::string_view profile,
 
 Json fetch_nxp_update(const std::filesystem::path &root, std::string_view profile,
                       const std::filesystem::path &archive, std::uint64_t reserve) {
+    const auto started = std::chrono::steady_clock::now();
     const auto profile_file = root / "profiles" / std::string(profile) / "profile.json";
     const auto definition = read_private_json(profile_file, 512 * 1024);
     const auto profile_epoch = cache_file_identity(profile_file);
@@ -389,7 +421,12 @@ Json fetch_nxp_update(const std::filesystem::path &root, std::string_view profil
                                       {{"member", "factory_image/system_raw.img1"},
                                        {"offset", 2147483648ULL},
                                        {"bytes", 1610612736ULL}}})}};
-    const auto imported = import_pinned_zip_image(archive, source, image, stage / "image", reserve);
+    auto meter = unpacking("system", image.at("bytes").get<std::uint64_t>());
+    const auto advance = [&meter](std::uint64_t block) {
+        meter->advance(block);
+    };
+    const auto imported = import_pinned_zip_image(archive, source, image, stage / "image", reserve,
+                                                  {}, PinnedZipImageKind::SplitFragments, advance);
     const auto extracted = stage / "extracted";
     ensure_private_directory(extracted);
     Json extraction = {
@@ -415,6 +452,8 @@ Json fetch_nxp_update(const std::filesystem::path &root, std::string_view profil
         extraction["batches"].push_back(batch_receipt);
     }
 
+    progress::report("fetch_extracted", {{"count", std::to_string(extraction.at("files").size())}});
+
     const auto resource_extracted = stage / "resource-extracted";
     Json resource_import = Json::object(), resource_extraction = Json::object();
 
@@ -425,12 +464,14 @@ Json fetch_nxp_update(const std::filesystem::path &root, std::string_view profil
                 {"segments", Json::array({{{"member", "factory_image/resource.img"},
                                            {"offset", 0ULL},
                                            {"bytes", 1073741824ULL}}})}};
+        meter = unpacking("resource", resource_image.at("bytes").get<std::uint64_t>());
         resource_import = import_pinned_zip_image(archive, source, resource_image,
                                                   stage / "resource-image", reserve, {},
-                                                  PinnedZipImageKind::SingleImage);
+                                                  PinnedZipImageKind::SingleImage, advance);
         resource_extraction = extract_pinned_ext4_files(
                 stage / "resource-image/system.img", resource_image.at("sha256").get<std::string>(),
                 resource_paths, resource_extracted, reserve);
+        progress::report("fetch_extracted", {{"count", std::to_string(resource_paths.size())}});
     }
 
     const auto vendor_extracted = stage / "vendor-extracted";
@@ -443,12 +484,14 @@ Json fetch_nxp_update(const std::filesystem::path &root, std::string_view profil
                 {"segments", Json::array({{{"member", "factory_image/vendor_raw.img"},
                                            {"offset", 0ULL},
                                            {"bytes", 268435456ULL}}})}};
+        meter = unpacking("vendor", vendor_image.at("bytes").get<std::uint64_t>());
         vendor_import = import_pinned_zip_image(archive, source, vendor_image,
                                                 stage / "vendor-image", reserve, {},
-                                                PinnedZipImageKind::SingleImage);
+                                                PinnedZipImageKind::SingleImage, advance);
         vendor_extraction = extract_pinned_ext4_files(
                 stage / "vendor-image/system.img", vendor_image.at("sha256").get<std::string>(),
                 vendor_paths, vendor_extracted, reserve, "vendor");
+        progress::report("fetch_extracted", {{"count", std::to_string(vendor_paths.size())}});
     }
 
     const auto extracted_input = [&](const OriginalInput &input) {
@@ -504,12 +547,16 @@ Json fetch_nxp_update(const std::filesystem::path &root, std::string_view profil
                     {"vendor_image_import", vendor_import},
                     {"vendor_ext4", vendor_extraction}};
     write_private_json(destination / "nxp-owner-inputs.json", receipt);
+    meter.reset();
+    report_saved(inputs.size(), 0, started);
 
     return receipt;
 }
 
 Json fetch_update(const std::filesystem::path &root, std::string_view profile,
                   const std::filesystem::path &archive, std::uint64_t reserve) {
+    const auto started = std::chrono::steady_clock::now();
+
     if (!archive.is_absolute() || archive.lexically_normal() != archive) {
         throw VoyemuError("FETCH_UPDATE", "absolute normalized local archive required");
     }
@@ -847,11 +894,16 @@ Json fetch_update(const std::filesystem::path &root, std::string_view profile,
         const auto imported = stage / "archive", extracted = stage / "extracted";
         const bool vendor = extension_kind == "PassionVehicle";
         const auto &image = acquisition.at(vendor ? "vendor" : "system");
-        const auto import_receipt = import_owner_update_system(archive, owner, image, imported,
-                                                               reserve);
+        const auto meter = unpacking(vendor ? "vendor" : "system",
+                                     image.at("bytes").get<std::uint64_t>());
+        const auto import_receipt = import_owner_update_system(
+                archive, owner, image, imported, reserve, [&meter](std::uint64_t block) {
+                    meter->advance(block);
+                });
         const auto extra_receipt =
                 extract_pinned_ext4_files(imported / "system.img", pinned_sha(image.at("sha256")),
                                           extra_paths, extracted, reserve, vendor ? "vendor" : "");
+        progress::report("fetch_extracted", {{"count", std::to_string(extra_paths.size())}});
 
         for (const auto &name : additions) {
             const auto &item = declared.at(name);
@@ -1181,8 +1233,15 @@ Json fetch_update(const std::filesystem::path &root, std::string_view profile,
     } cleanup{stage, token, owner_identity};
     const auto imported = stage / "archive", extracted = stage / "extracted",
                pending = stage / "publish";
-    const auto imported_receipt = import_owner_update_archive(
-            archive, owner, acquisition.at("system"), qnx.at("originals"), imported, reserve);
+    // The QNX images come out of the same nested archive as the system image, so one meter shows
+    // both.
+    auto meter = unpacking("system", acquisition.at("system").at("bytes").get<std::uint64_t>());
+    const auto advance = [&meter](std::uint64_t block) {
+        meter->advance(block);
+    };
+    const auto imported_receipt =
+            import_owner_update_archive(archive, owner, acquisition.at("system"),
+                                        qnx.at("originals"), imported, reserve, advance);
     extract_pinned_ext4_files(imported / "system.img",
                               pinned_sha(acquisition.at("system").at("sha256")), paths, extracted,
                               reserve);
@@ -1215,15 +1274,19 @@ Json fetch_update(const std::filesystem::path &root, std::string_view profile,
         write_private_json(extracted / "receipt.json", combined);
     }
 
+    progress::report("fetch_extracted",
+                     {{"count", std::to_string(paths.size() + media_paths.size())}});
     const auto vendor_extracted = stage / "vendor-extracted";
 
     if (!vendor_paths.empty()) {
         const auto imported_vendor = stage / "vendor-archive";
+        meter = unpacking("vendor", acquisition.at("vendor").at("bytes").get<std::uint64_t>());
         import_owner_update_system(archive, owner, acquisition.at("vendor"), imported_vendor,
-                                   reserve);
+                                   reserve, advance);
         const auto vendor_receipt = extract_pinned_ext4_files(
                 imported_vendor / "system.img", pinned_sha(acquisition.at("vendor").at("sha256")),
                 vendor_paths, vendor_extracted, reserve, "vendor");
+        progress::report("fetch_extracted", {{"count", std::to_string(vendor_paths.size())}});
         auto combined = read_private_json(extracted / "receipt.json", 256 * 1024);
         combined["vendor"] = vendor_receipt;
 
@@ -1287,6 +1350,9 @@ Json fetch_update(const std::filesystem::path &root, std::string_view profile,
     if (!os::rename_exclusive(pending, destination)) {
         throw VoyemuError("FETCH_UPDATE", "exclusive input publication failed");
     }
+
+    meter.reset();
+    report_saved(inputs.size(), qnx.at("originals").size(), started);
 
     return result;
 }

@@ -5,6 +5,7 @@
 #include "process.hpp"
 #include "profile_catalog.hpp"
 #include "profile_originals.hpp"
+#include "progress.hpp"
 #include "qinggan11_startup.hpp"
 #include "quickboot.hpp"
 #include <algorithm>
@@ -12,6 +13,7 @@
 #include <fstream>
 #include <iostream>
 #include <map>
+#include <sstream>
 #ifdef __APPLE__
 #include <archive.h>
 #include <archive_entry.h>
@@ -1264,7 +1266,28 @@ int main(int argc, char **argv) {
             return inventory;
         };
         const auto host_before_import = host_inventory();
-        const auto imported = import_owner_profile_inputs(root, "archive-fixture", zip, 0);
+        // The import shows the system image it unpacks, the files extracted from it and the saved
+        // originals with the QNX images.
+        std::ostringstream console;
+        auto *prior = std::cerr.rdbuf(console.rdbuf());
+        progress::console(cli::Language::english, false);
+        Json imported;
+        try {
+            imported = import_owner_profile_inputs(root, "archive-fixture", zip, 0);
+        } catch (...) {
+            std::cerr.rdbuf(prior);
+            throw;
+        }
+
+        std::cerr.rdbuf(prior);
+        const auto lines = console.str();
+        const auto image_line = lines.find("\n\nAndroid system image ("),
+                   extracted_line = lines.find("\n  Files extracted: ", image_line),
+                   saved_line = lines.find("\n\nOriginals saved: ", extracted_line);
+        check(image_line != std::string::npos && extracted_line != std::string::npos &&
+                      saved_line != std::string::npos &&
+                      lines.find(" QNX images in ", saved_line) != std::string::npos,
+              ("owner archive import lines differ: " + lines).c_str());
         check(!imported.contains("profile_sha256") && !imported.contains("qnx_profile_sha256"),
               "owner input history must not pin authoring profiles");
         check(imported.at("native") == true && imported.at("frame_verified") == false &&

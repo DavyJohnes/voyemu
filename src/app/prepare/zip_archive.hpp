@@ -36,13 +36,15 @@ struct ZipExtraction {
 // Streams declared members of one pinned ZIP into a fresh output file of the exact declared extent,
 // each member at its own offset. Decoded content is verified against the entry CRC, all-zero blocks
 // are not written so sparse scatter targets keep their holes, and the archive pin is checked twice.
-// Entry SHA256 belongs to the caller, which re-reads the published file.
+// Entry SHA256 belongs to the caller, which re-reads the published file. advance receives the byte
+// count of each decoded block, for a progress meter.
 void extract_pinned_zip_members(const std::filesystem::path &source,
                                 const std::string &source_sha256,
                                 const std::vector<ZipExtraction> &members,
                                 const std::filesystem::path &output, std::uint64_t output_bytes,
                                 std::uint64_t reserve_bytes,
-                                const std::function<bool()> &cancelled = {});
+                                const std::function<bool()> &cancelled = {},
+                                const std::function<void(std::uint64_t)> &advance = {});
 struct ZipTreeEntry {
     std::string name;
     std::filesystem::path output;
