@@ -13,6 +13,8 @@ std::atomic<std::uint64_t> lines = 0;
 // Whether the console has shown a progress line and whether the next one starts a block.
 std::mutex blocks;
 bool shown = false, pending = false;
+// The open phases, each indenting the lines inside it by two spaces.
+unsigned depth = 0;
 
 // The catalog names of a labelled component in language; trailing space of an empty version
 // removed.
@@ -57,18 +59,22 @@ void emit(std::string_view key, const Arguments &arguments, bool live) {
     ++lines;
 
     if (console_enabled) {
+        std::string indent;
         {
             std::lock_guard lock(blocks);
 
-            if ((pending || key == "download" || key == "download_size") && shown) {
+            // The lines inside a phase form one block with it.
+            if ((pending || key == "download" || key == "download_size") && shown && !depth) {
                 logging::console_blank();
             }
 
             pending = false;
             shown = true;
+            indent.assign(2 * depth, ' ');
         }
-        logging::console_line(cli::message(console_language, "progress." + std::string(key),
-                                           named(arguments, console_language)),
+        logging::console_line(indent + cli::message(console_language,
+                                                    "progress." + std::string(key),
+                                                    named(arguments, console_language)),
                               live);
 
         return;
@@ -157,6 +163,42 @@ void Elapsed::tick() {
            {{"time", duration_text(static_cast<std::uint64_t>(seconds), language())}});
 }
 
+void Elapsed::done(std::string_view key) {
+    const auto seconds =
+            std::chrono::duration_cast<std::chrono::seconds>(clock_() - start_).count();
+
+    report(key, {{"time", duration_text(static_cast<std::uint64_t>(seconds), language())}});
+}
+
+Phase::Phase(std::string kind, const Arguments &arguments, Clock clock)
+    : kind_(std::move(kind)), clock_(std::move(clock)), start_(clock_()) {
+    block();
+    report(kind_, arguments);
+    std::lock_guard lock(blocks);
+    ++depth;
+}
+
+Phase::~Phase() {
+    if (open_) {
+        std::lock_guard lock(blocks);
+        --depth;
+    }
+}
+
+void Phase::done(const Arguments &arguments) {
+    if (open_) {
+        std::lock_guard lock(blocks);
+        --depth;
+        open_ = false;
+    }
+
+    const auto seconds =
+            std::chrono::duration_cast<std::chrono::seconds>(clock_() - start_).count();
+    auto values = arguments;
+    values["time"] = duration_text(static_cast<std::uint64_t>(seconds), language());
+    report(kind_ + "_done", values);
+}
+
 std::uint64_t reported() {
     return lines;
 }
@@ -234,6 +276,22 @@ std::string duration_text(std::uint64_t seconds, cli::Language language) {
 
     return unit(seconds / 3600, hour) +
            (seconds / 60 % 60 ? " " + unit(seconds / 60 % 60, minute) : "");
+}
+
+std::string path_text(const std::filesystem::path &path) {
+    std::error_code error;
+    const auto current = std::filesystem::current_path(error);
+
+    if (!error) {
+        const auto relative =
+                path.lexically_relative(std::filesystem::weakly_canonical(current, error));
+
+        if (!error && !relative.empty() && relative != "." && *relative.begin() != "..") {
+            return relative.string();
+        }
+    }
+
+    return path.string();
 }
 
 std::string url_host(std::string_view url) {

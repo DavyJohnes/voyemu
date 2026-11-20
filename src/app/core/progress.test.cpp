@@ -7,6 +7,7 @@
 #include <iostream>
 #include <limits>
 #include <sstream>
+#include <stdexcept>
 #include <tuple>
 #include <vector>
 
@@ -207,6 +208,71 @@ int main() try {
     std::cerr.rdbuf(prior);
     assert(captured.str() ==
            "\nПроверка холодного старта приборки\n  прошло 1 мин\n  прошло 2 мин\n");
+
+    // A cold boot ends with the line of its outcome and the elapsed time.
+    captured.str({});
+    prior = std::cerr.rdbuf(captured.rdbuf());
+    {
+        auto now = std::chrono::steady_clock::time_point{};
+        progress::Elapsed elapsed("cold_boot_multimedia", [&] {
+            return now;
+        });
+        now += std::chrono::seconds(71);
+        elapsed.done("cold_boot_multimedia_done");
+    }
+    std::cerr.rdbuf(prior);
+    assert(captured.str() ==
+           "\nПроверка холодного старта мультимедиа\nAndroid загрузился за 1 мин 11 с\n");
+
+    // A phase indents the lines of its work, which form one block with it even when they start
+    // blocks of their own, and ends with its time; the next block follows an empty line.
+    captured.str({});
+    prior = std::cerr.rdbuf(captured.rdbuf());
+    {
+        auto now = std::chrono::steady_clock::time_point{};
+        progress::Phase phase("build_qnx_images", {}, [&] {
+            return now;
+        });
+        progress::block();
+        progress::report("download_done", {{"name", "Модули гостя QNX"},
+                                           {"done", "836 КиБ"},
+                                           {"time", "1 с"},
+                                           {"rate", "836 КиБ/с"}});
+        progress::block();
+        progress::report("extract", {{"name", "CMake 3.22.1"}});
+        now += std::chrono::seconds(190);
+        phase.done();
+    }
+    progress::block();
+    progress::report("sdk_cached");
+    std::cerr.rdbuf(prior);
+    assert(captured.str() == "\nСборка образов QNX\n"
+                             "  Модули гостя QNX: загружено 836 КиБ за 1 с (836 КиБ/с), SHA-256 "
+                             "совпадает\n"
+                             "  Распаковка CMake 3.22.1\n"
+                             "Образы QNX собраны за 3 мин 10 с\n"
+                             "\nИнструменты Android SDK: уже установлены\n");
+
+    // A phase that a failure leaves ends its indentation.
+    captured.str({});
+    prior = std::cerr.rdbuf(captured.rdbuf());
+    try {
+        progress::Phase phase("build_check");
+        throw std::runtime_error("failed");
+    } catch (const std::runtime_error &) { /* Ignored: the failure only leaves the phase. */
+    }
+
+    progress::report("sdk_cached");
+    std::cerr.rdbuf(prior);
+    assert(captured.str() == "\nПроверка инструментов и оригиналов\n"
+                             "Инструменты Android SDK: уже установлены\n");
+
+    // A path below the current directory is shown relative to it, any other absolute.
+    const auto current = std::filesystem::weakly_canonical(std::filesystem::current_path());
+    assert(progress::path_text(current / "machines" / "car") ==
+           (std::filesystem::path("machines") / "car").string());
+    assert(progress::path_text(current.parent_path() / "car") ==
+           (current.parent_path() / "car").string());
 
     // A short disk space error in whole GiB: free rounded down, required up, their difference to
     // free; the path is the installation root.

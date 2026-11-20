@@ -2,6 +2,7 @@
 #include "cli_messages.hpp"
 #include <chrono>
 #include <cstdint>
+#include <filesystem>
 #include <functional>
 #include <string>
 #include <string_view>
@@ -46,11 +47,32 @@ public:
     using Clock = std::function<std::chrono::steady_clock::time_point()>;
     explicit Elapsed(std::string kind, Clock clock = std::chrono::steady_clock::now);
     void tick();
+    // Ends the phase with the line key and its {time}.
+    void done(std::string_view key);
 
 private:
     std::string kind_;
     Clock clock_;
     std::chrono::steady_clock::time_point start_, shown_;
+};
+// A step of a long command such as build: the line <kind> in a new block, the lines that its work
+// reports indented by two spaces below it without empty lines, and done() ends it with the line
+// <kind>_done with {time}. An unfinished phase ends its indentation without a line.
+class Phase {
+public:
+    using Clock = std::function<std::chrono::steady_clock::time_point()>;
+    explicit Phase(std::string kind, const Arguments &arguments = {},
+                   Clock clock = std::chrono::steady_clock::now);
+    ~Phase();
+    Phase(const Phase &) = delete;
+    Phase &operator=(const Phase &) = delete;
+    void done(const Arguments &arguments = {});
+
+private:
+    std::string kind_;
+    Clock clock_;
+    std::chrono::steady_clock::time_point start_;
+    bool open_ = true;
 };
 // The number of lines reported so far, by which a caller tells whether a step did any work.
 std::uint64_t reported();
@@ -61,6 +83,9 @@ std::string size_text(std::uint64_t bytes, cli::Language language);
 std::string rate_text(std::uint64_t bytes_per_second, cli::Language language);
 // A duration: "42 s", "3 min 5 s", "1 h 2 min"; Russian "42 с", "3 мин 5 с", "1 ч 2 мин".
 std::string duration_text(std::uint64_t seconds, cli::Language language);
+// A path for the console: relative to the current directory when it lies below it, as a command
+// typed there takes it, otherwise absolute.
+std::string path_text(const std::filesystem::path &path);
 // The host of an https:// URL.
 std::string url_host(std::string_view url);
 // The percent-decoded last path segment of a URL.
