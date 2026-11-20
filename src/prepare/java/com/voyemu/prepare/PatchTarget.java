@@ -41,9 +41,11 @@ final class PatchTarget implements Recipes.Target {
     private final Map<String, Set<String>> classSets;
     private final List<Path> added;
     private final Map<String, byte[]> donorSlots;
+    private final Map<String, Object> constants;
     private final boolean planValidation;
 
-    PatchTarget(Patch patch, Path stepRoot, boolean planValidation) {
+    PatchTarget(
+            Patch patch, Path stepRoot, Map<String, Object> constants, boolean planValidation) {
         profile = patch.profile();
         api = patch.api();
         abi = patch.abi();
@@ -60,12 +62,18 @@ final class PatchTarget implements Recipes.Target {
         added = patch.added();
         donorSlots = patch.donorSlots();
         this.stepRoot = stepRoot;
+        this.constants = Map.copyOf(constants);
         this.planValidation = planValidation;
     }
 
     @Override
     public String profile() {
         return profile.referenceProfile();
+    }
+
+    @Override
+    public Map<String, Object> constants() {
+        return constants;
     }
 
     @Override

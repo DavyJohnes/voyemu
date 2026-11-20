@@ -3,6 +3,7 @@ package com.voyemu.prepare;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Map;
 
 /** Source profiles chosen by their declared data; tests never name a concrete profile ID. */
 final class TestProfiles {
@@ -54,5 +55,32 @@ final class TestProfiles {
         }
 
         throw new AssertionError("No source profile pins " + sha256);
+    }
+
+    /** Constants of the step NAME.json of the first source profile whose step admits the pin. */
+    static Map<String, Object> constants(Path root, String name, String sha256) throws IOException {
+        try (var entries = Files.list(root.resolve("profiles"))) {
+            for (Path directory : entries.sorted().toList()) {
+                Path step = directory.resolve("patches").resolve(name + ".json");
+
+                if (!Files.isRegularFile(step)) {
+                    continue;
+                }
+
+                var constants =
+                        Json.obj(Json.object(Json.parse(Files.readString(step))), "constants");
+
+                if (StepConstants.admits(constants, sha256)) {
+                    return constants;
+                }
+            }
+        }
+
+        throw new AssertionError("No step " + name + ".json admits " + sha256);
+    }
+
+    /** Constants of the step NAME.json that admits the original file. */
+    static Map<String, Object> constants(Path root, String name, Path original) throws Exception {
+        return constants(root, name, FilesSupport.hash(original));
     }
 }

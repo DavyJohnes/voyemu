@@ -936,13 +936,21 @@ final class Artifacts {
                         "Native patch step must have a registered handler",
                         2);
                 Path stepRoot = Storage.confined(recipe.resolve("patches"), step).getParent();
-                Recipes.Target target = new PatchTarget(patch, stepRoot, pass == 0);
+                Map<String, Object> metadata = Json.object(patches.get(step));
+                Recipes.Target target =
+                        new PatchTarget(
+                                patch,
+                                stepRoot,
+                                metadata.get("constants") instanceof Map<?, ?>
+                                        ? Json.obj(metadata, "constants")
+                                        : Map.of(),
+                                pass == 0);
                 log.accept("Applying patch " + name + ": " + step);
 
                 if (pass == 0) {
-                    Recipes.validateApi30(step, Json.object(patches.get(step)), target);
+                    Recipes.validateApi30(step, metadata, target);
                 } else {
-                    Recipes.apply(step, Json.object(patches.get(step)), target);
+                    Recipes.apply(step, metadata, target);
                 }
             }
         }

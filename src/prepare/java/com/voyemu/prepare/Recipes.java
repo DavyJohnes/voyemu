@@ -121,6 +121,11 @@ final class Recipes {
             return "";
         }
 
+        /** The constants of the step this target applies; guards read their values from them. */
+        default Map<String, Object> constants() {
+            return Map.of();
+        }
+
         int api();
 
         String abi();
