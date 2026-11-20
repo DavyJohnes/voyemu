@@ -1,6 +1,7 @@
 #include "vehicle_capture.hpp"
 #include "process.hpp"
 #include "qnx_originals_directory.hpp"
+#include "qnx_qinggan11.hpp"
 #include <fstream>
 #include <iostream>
 using namespace voyemu;
@@ -129,7 +130,7 @@ int main(int argc, char **argv) {
                 std::filesystem::remove_all(p, e);
             }
         } cleanup{root};
-        const auto old_id = "free-11-chinese-20250710-6.11.1";
+        const auto old_id = "test-qinggan11";
         const auto old_dir = root / "profiles" / old_id;
         ensure_private_directory(old_dir);
         Json foreign_originals = Json::object();
@@ -152,7 +153,35 @@ int main(int argc, char **argv) {
         }
 
         if (!old_denied) {
-            throw std::runtime_error("6.11 accepted foreign four-role descriptor");
+            throw std::runtime_error("qinggan11 adapter accepted foreign four-role descriptor");
+        }
+
+        // The pinned originals of the declared adapter pass the guard under any profile id and
+        // then need their files.
+        Json adapter_originals = Json::object();
+
+        for (const auto &pin :
+             qnx_qinggan11_adapter_originals(QnxGuestAdapter::sa8155_qinggan11_611)) {
+            adapter_originals[pin.file] = {
+                    {"file", pin.file}, {"bytes", pin.bytes}, {"sha256", pin.sha256}};
+        }
+
+        for (const auto &[adapter, expected] :
+             {std::pair{"sa8155-qinggan11-611", "QNX_ORIGINALS_MISSING:"},
+              std::pair{"sa8155-qinggan11-731", "QNX_ORIGINALS_PROFILE:"}}) {
+            write_private_json(old_dir / "profile-qnx.json", {{"schema", 1},
+                                                              {"hardware_adapter", adapter},
+                                                              {"originals", adapter_originals}});
+            std::string error;
+            try {
+                materialize_qnx_originals(root, old_id, {}, true);
+            } catch (const std::exception &e) {
+                error = e.what();
+            }
+
+            if (!error.starts_with(expected)) {
+                throw std::runtime_error("adapter originals guard differs: " + error);
+            }
         }
 
         for (const auto &serial : {"", "emulator-5554", "device;reboot"}) {
@@ -196,7 +225,7 @@ int main(int argc, char **argv) {
             throw std::runtime_error("capture guards installed tools or contacted a device");
         }
 
-        const std::string passion_id = "passion-11-russian-20260403-2.1.4.80";
+        const std::string passion_id = "test-passion";
         const Json passion = Json::parse(
                 R"PASSION({"schema":1,"status":"incomplete","hardware_adapter":"sa8155-passion-21480","update":{"source":"owner-update","container":"zip-stored-tgz","sha256":"a1b651223453ed23d1835a70a5cac64c43247a21165ccd88d56a21cc3215ddb9","nested_member":"h53y-cdc-8155-H53_8155_OTA_1.4.0_release-soc_ota-user-secure-2.1.4.80-20260403174306.tgz","nested_sha256":"00d41ae4ff1283040e97276d3b287daf381b2ee9843a7b0f3977ec5b7a06eae4"},"originals":{"mifs_hyp_la.img":{"file":"mifs_hyp_la.img","bytes":2254664,"sha256":"1e7c487aae4f4353621f8d0301b352cc974e9037d114ff3ec2556d048512ad28","acquisition":{"kind":"raw-tar-member","member":"otaPack/mifs_hyp_la.img"}},"mifs_recovery_hyp_la.img":{"file":"mifs_recovery_hyp_la.img","bytes":2330096,"sha256":"8376e6340f719d8a4b6e572fee7a675dd7bd6e88e14c589ba2eba27ee60c239b","acquisition":{"kind":"raw-tar-member","member":"otaPack/mifs_recovery_hyp_la.img"}},"ifs2_la.img":{"file":"ifs2_la.img","bytes":200925932,"sha256":"1e942ab83e59ab78ff0096f474d3677ba7e83f6a00f86a1ebe9f0ae755a3e157","acquisition":{"kind":"raw-tar-member","member":"otaPack/ifs2_la.img"}},"ifs2_recovery_la.img":{"file":"ifs2_recovery_la.img","bytes":32080412,"sha256":"1635c921b73544411a08028005b906e677d029c047d2a6e0a041598c9847709c","acquisition":{"kind":"raw-tar-member","member":"otaPack/ifs2_recovery_la.img"}},"system_la.img":{"file":"system_la.img","bytes":2684354560,"sha256":"9e6395255f9bc51d926fd5ab604612d779de93da59ba71832ee580c8534f42ec","acquisition":{"kind":"raw-tar-member","member":"otaPack/system_la.img"}}}})PASSION");
         const auto passion_directory = root / "profiles" / passion_id;

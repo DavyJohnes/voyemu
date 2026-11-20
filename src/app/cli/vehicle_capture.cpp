@@ -159,8 +159,11 @@ Json materialize_qnx_originals(const std::filesystem::path &root, std::string_vi
 
     const auto definition = root / "profiles" / std::string(profile) / "profile-qnx.json";
     const auto config = read_private_json(definition, 128 * 1024);
+    // The guest adapter of profile-qnx.json selects the originals its OEM build needs.
+    const auto adapter_name = config.value("hardware_adapter", std::string{});
+    const auto *adapter = adapter_name.empty() ? nullptr : &qnx_adapter(adapter_name);
 
-    if (profile == "passion-11-russian-20260403-2.1.4.80") {
+    if (adapter && adapter->platform == QnxGuestPlatform::passion) {
         const Json
                 expected_originals = Json::parse(
                         R"PASSION({"mifs_hyp_la.img":{"file":"mifs_hyp_la.img","bytes":2254664,"sha256":"1e7c487aae4f4353621f8d0301b352cc974e9037d114ff3ec2556d048512ad28","acquisition":{"kind":"raw-tar-member","member":"otaPack/mifs_hyp_la.img"}},"mifs_recovery_hyp_la.img":{"file":"mifs_recovery_hyp_la.img","bytes":2330096,"sha256":"8376e6340f719d8a4b6e572fee7a675dd7bd6e88e14c589ba2eba27ee60c239b","acquisition":{"kind":"raw-tar-member","member":"otaPack/mifs_recovery_hyp_la.img"}},"ifs2_la.img":{"file":"ifs2_la.img","bytes":200925932,"sha256":"1e942ab83e59ab78ff0096f474d3677ba7e83f6a00f86a1ebe9f0ae755a3e157","acquisition":{"kind":"raw-tar-member","member":"otaPack/ifs2_la.img"}},"ifs2_recovery_la.img":{"file":"ifs2_recovery_la.img","bytes":32080412,"sha256":"1635c921b73544411a08028005b906e677d029c047d2a6e0a041598c9847709c","acquisition":{"kind":"raw-tar-member","member":"otaPack/ifs2_recovery_la.img"}},"system_la.img":{"file":"system_la.img","bytes":2684354560,"sha256":"9e6395255f9bc51d926fd5ab604612d779de93da59ba71832ee580c8534f42ec","acquisition":{"kind":"raw-tar-member","member":"otaPack/system_la.img"}}})PASSION"),
@@ -225,20 +228,12 @@ Json materialize_qnx_originals(const std::filesystem::path &root, std::string_vi
                 {"native", true}, {"vehicle_modified", false},   {"originals_verified", 5}};
     }
 
-    if (profile == "free-11-chinese-20250710-6.11.1" &&
-        (config.value("hardware_adapter", std::string{}) != "sa8155-qinggan11-611" ||
-         !qnx_qinggan11_611_originals_match(config.at("originals")))) {
-        throw VoyemuError("QNX_ORIGINALS_PROFILE", "exact 6.11 adapter and originals required");
-    }
-
     if (config.at("schema") != 1 ||
-        (config.at("originals").size() != 4 &&
-         !(config.value("hardware_adapter", std::string{}) == "sa8155-qinggan11-731" &&
-           qnx_qinggan11_originals_match(config.at("originals"))) &&
-         !(profile == "free-11-chinese-20250710-6.11.1" &&
-           config.value("hardware_adapter", std::string{}) == "sa8155-qinggan11-611" &&
-           qnx_qinggan11_611_originals_match(config.at("originals"))))) {
-        throw VoyemuError("QNX_ORIGINALS_PROFILE", "four pinned originals required");
+        (adapter && adapter->platform == QnxGuestPlatform::qinggan11
+                 ? !qnx_qinggan11_adapter_originals_match(adapter->adapter, config.at("originals"))
+                 : config.at("originals").size() != 4)) {
+        throw VoyemuError("QNX_ORIGINALS_PROFILE",
+                          "pinned originals of the declared adapter required");
     }
 
     bool missing = false;
