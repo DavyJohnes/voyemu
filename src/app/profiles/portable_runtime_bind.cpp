@@ -706,7 +706,8 @@ std::filesystem::path bind_machine_configuration(const std::filesystem::path &ro
 
         return launch.value("hardware_adapter", std::string{}) == layout.adapter &&
                qnx_mcu_delivery_scope(
-                       Json{{"mcu_projection", launch.value("mcu_projection", Json())}})
+                       Json{{"mcu_projection", launch.value("mcu_projection", Json())}},
+                       layout.projection)
                        .has_value() &&
                launch.value("simulated_initial_native_state", Json()) ==
                        layout.simulated_initial_native_state;
