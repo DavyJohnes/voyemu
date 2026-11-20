@@ -490,7 +490,8 @@ function /bin/sleep { qm_test_steps=$((qm_test_steps+1)); }
             ensure_private_directory(fixture_root / ".local/build");
             Json originals = Json::object();
 
-            for (const auto &pin : qnx_qinggan11_originals) {
+            for (const auto &pin :
+                 qnx_qinggan11_adapter_originals(QnxGuestAdapter::sa8155_qinggan11_731)) {
                 originals[pin.file] = {
                         {"file", pin.file}, {"bytes", pin.bytes}, {"sha256", pin.sha256}};
             }

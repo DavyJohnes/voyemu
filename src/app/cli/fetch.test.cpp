@@ -704,34 +704,34 @@ int main(int argc, char **argv) {
             return 0;
         }
 
-        if (argc == 4 && std::string_view(argv[1]) == "--qinggan11-731-plan") {
+        if (argc == 4 && std::string_view(argv[1]) == "--qinggan11-segmented-plan") {
             const auto root = std::filesystem::canonical(argv[2]);
-            const auto profile = read_private_json(argv[3], 512 * 1024),
-                       qnx = read_private_json(
-                               root / "profiles/free-11-chinese-20260731-7.3.1/profile-qnx.json",
-                               128 * 1024);
+            const auto source = std::filesystem::path(argv[3]);
+            const auto id = source.parent_path().filename().string();
+            const auto profile = read_private_json(source, 512 * 1024),
+                       qnx = read_private_json(source.parent_path() / "profile-qnx.json",
+                                               128 * 1024);
             const auto plan = segmented_acquisition_plan(profile, qnx);
             check(!declared_patch_plan(profile).at("patches").empty(),
                   "acquired profile patch graph rejected");
             check(qinggan11_wheel_capability(profile).at("supported") == true,
                   "acquired profile wheel graph rejected");
-            check(plan.at("originals").size() == 52,
-                  "Free A11 7.3.1 current graph has 52 exact original files");
 
             for (const auto &row : plan.at("originals")) {
-                const auto file = root /
-                                  ".local/profiles/free-11-chinese-20260731-7.3.1/originals" /
+                const auto file = root / ".local/profiles" / id / "originals" /
                                   row.at("file").get<std::string>();
                 check(std::filesystem::file_size(file) == row.at("bytes") &&
                               sha256_file(file) == row.at("sha256").get<std::string>(),
-                      "Free A11 7.3.1 declared original pin/extent differs from retained OEM input");
+                      "declared original pin/extent differs from retained OEM input");
             }
 
             for (unsigned fault = 0; fault < 19; ++fault) {
                 auto bad = profile, badq = qnx;
 
                 if (fault == 0) {
-                    bad["id"] = "foreign";
+                    badq["hardware_adapter"] = qnx.at("hardware_adapter") == "sa8155-qinggan11-731"
+                                                       ? "sa8155-qinggan11-611"
+                                                       : "sa8155-qinggan11-731";
                 }
 
                 if (fault == 1) {
@@ -739,7 +739,7 @@ int main(int argc, char **argv) {
                 }
 
                 if (fault == 2) {
-                    bad["ownerUpdate"]["bytes"] = 1u;
+                    bad["ownerUpdate"]["bytes"] = -1;
                 }
 
                 if (fault == 3) {
@@ -747,7 +747,7 @@ int main(int argc, char **argv) {
                 }
 
                 if (fault == 4) {
-                    bad["acquisition"]["images"]["system"]["sha256"] = std::string(64, '0');
+                    bad["acquisition"]["images"]["system"]["sha256"] = "not-a-sha256";
                 }
 
                 if (fault == 5) {
@@ -815,11 +815,11 @@ int main(int argc, char **argv) {
                     denied = true;
                 }
 
-                check(denied, "Free A11 7.3.1 acquisition plan negative accepted");
+                check(denied, "segmented acquisition plan negative accepted");
             }
 
             std::cout << Json{{"plan", plan},
-                              {"original_files_verified", 45},
+                              {"original_files_verified", plan.at("originals").size()},
                               {"negative_cases", 19},
                               {"guest_started", false},
                               {"source_images_rebuilt", false}}

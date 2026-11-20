@@ -143,10 +143,7 @@ Json import_qnx_update(const std::filesystem::path &file, std::string_view archi
     ordinary(file);
     ordinary(output);
     need(sha256_text(archive_sha256) && originals.is_object() &&
-                 (originals.size() == 4 || qnx_qinggan11_originals_match(originals) ||
-                  (archive_sha256 ==
-                           "ce6d1ffcd158c91383b61a44ea529bf54238512c520b436973fc0f6222047e42" &&
-                   qnx_qinggan11_611_originals_match(originals))),
+                 (originals.size() == 4 || qnx_qinggan11_pinned_originals(originals)),
          "QNX_IMPORT_PINS");
     need(std::filesystem::is_regular_file(file) && std::filesystem::hard_link_count(file) == 1,
          "QNX_IMPORT_ARCHIVE");

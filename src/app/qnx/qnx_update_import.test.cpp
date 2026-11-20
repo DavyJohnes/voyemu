@@ -131,35 +131,37 @@ int main(int argc, char **argv) {
             return 0;
         }
 
-        Json qinggan11_611 = Json::object();
+        const auto metadata = [](QnxGuestAdapter adapter) {
+            Json result = Json::object();
 
-        for (const auto &pin : qnx_qinggan11_611_originals) {
-            qinggan11_611[pin.file] = {
-                    {"file", pin.file}, {"bytes", pin.bytes}, {"sha256", pin.sha256}};
-        }
+            for (const auto &pin : qnx_qinggan11_adapter_originals(adapter)) {
+                result[pin.file] = {
+                        {"file", pin.file}, {"bytes", pin.bytes}, {"sha256", pin.sha256}};
+            }
 
-        check(qnx_qinggan11_611_originals_match(qinggan11_611) &&
-                      !qnx_qinggan11_originals_match(qinggan11_611),
-              "exact pinned triple of the second qinggan11 adapter required");
-        auto cross = qinggan11_611;
-        cross["ifs2_la.img"]["sha256"] = qnx_qinggan11_originals[1].sha256;
-        check(!qnx_qinggan11_611_originals_match(cross), "mixed 7.3 IFS rejected");
-        Json qinggan11 = Json::object();
-
-        for (const auto &pin : qnx_qinggan11_originals) {
-            qinggan11[pin.file] = {
-                    {"file", pin.file}, {"bytes", pin.bytes}, {"sha256", pin.sha256}};
-        }
-
-        check(qnx_qinggan11_originals_match(qinggan11), "exact three-role metadata selected");
-        auto wrong_qinggan11 = qinggan11;
-        wrong_qinggan11["hyp_la.img"]["bytes"] = std::uint64_t(7340031);
-        check(!qnx_qinggan11_originals_match(wrong_qinggan11), "A11 size mutation selected");
-        wrong_qinggan11 = qinggan11;
-        wrong_qinggan11["system_la.img"]["sha256"] = std::string(64, '0');
-        check(!qnx_qinggan11_originals_match(wrong_qinggan11), "A11 SHA mutation selected");
-        qinggan11["ifs2_recovery_la.img"] = {{"file", "ifs2_recovery_la.img"}};
-        check(!qnx_qinggan11_originals_match(qinggan11), "foreign recovery selected as A11");
+            return result;
+        };
+        const auto second = metadata(QnxGuestAdapter::sa8155_qinggan11_611),
+                   first = metadata(QnxGuestAdapter::sa8155_qinggan11_731);
+        check(qnx_qinggan11_adapter_originals_match(QnxGuestAdapter::sa8155_qinggan11_611,
+                                                    second) &&
+                      !qnx_qinggan11_adapter_originals_match(QnxGuestAdapter::sa8155_qinggan11_731,
+                                                             second) &&
+                      qnx_qinggan11_pinned_originals(second) &&
+                      qnx_qinggan11_pinned_originals(first),
+              "exact pinned triple of each qinggan11 adapter required");
+        auto cross = second;
+        cross["ifs2_la.img"]["sha256"] = first.at("ifs2_la.img").at("sha256");
+        check(!qnx_qinggan11_pinned_originals(cross), "mixed IFS of another adapter rejected");
+        auto wrong = first;
+        wrong["hyp_la.img"]["bytes"] = std::uint64_t(7340031);
+        check(!qnx_qinggan11_pinned_originals(wrong), "size mutation selected");
+        wrong = first;
+        wrong["system_la.img"]["sha256"] = std::string(64, '0');
+        check(!qnx_qinggan11_pinned_originals(wrong), "SHA mutation selected");
+        wrong = first;
+        wrong["ifs2_recovery_la.img"] = {{"file", "ifs2_recovery_la.img"}};
+        check(!qnx_qinggan11_pinned_originals(wrong), "foreign recovery selected");
 
         if (argc != 4) {
             rejects([] {
@@ -221,7 +223,7 @@ int main(int argc, char **argv) {
             run(definitions, "bad-pin", std::string(64, '0'));
         });
         check(!std::filesystem::exists(root / "bad-pin"), "archive SHA before writes");
-        auto wrong = definitions;
+        wrong = definitions;
         wrong["hyp_la.img"]["sha256"] = std::string(64, '0');
         rejects([&] {
             run(wrong, "bad-image");

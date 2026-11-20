@@ -151,7 +151,7 @@ std::filesystem::path zstd_library(const std::filesystem::path &project) {
     return {};
 }
 
-// A synthetic 6.0.3 owner update: segmented system and resc images, four QNX images and a role
+// A synthetic segmented owner update: segmented system and resc images, four QNX images and a role
 // without an update source, imported through the shared Free update route.
 int segmented_synthetic_import(const std::filesystem::path &project) {
     const auto library = zstd_library(project);
@@ -191,7 +191,7 @@ int segmented_synthetic_import(const std::filesystem::path &project) {
         return output;
     };
     ensure_private_directory(project / ".local/build/tmp");
-    const auto root = project / ".local/build/tmp" / ("free603-update-" + random_token());
+    const auto root = project / ".local/build/tmp" / ("segmented-update-" + random_token());
     check(std::filesystem::create_directory(root), "fresh fixture root");
     struct Cleanup {
         std::filesystem::path path;
@@ -201,7 +201,7 @@ int segmented_synthetic_import(const std::filesystem::path &project) {
             std::filesystem::remove_all(path, ignored);
         }
     } cleanup{root};
-    const std::string profile = "free-09-chinese-20260106-6.0.3";
+    const std::string profile = "test-qinggan09-1.0.0";
     const auto codec = root / ".local/toolchains/codec" / library.filename();
     ensure_private_directory(codec.parent_path());
     std::filesystem::copy_file(library, codec);
@@ -300,8 +300,8 @@ int segmented_synthetic_import(const std::filesystem::path &project) {
                         {"originals", qnx_originals}});
     const auto definition = read_private_json(directory / "profile.json"),
                qnx = read_private_json(directory / "profile-qnx.json");
-    check(segmented_acquisition_plan(definition, qnx, profile).at("originals").size() == 4,
-          "6.0.3 plan differs");
+    check(segmented_acquisition_plan(definition, qnx).at("originals").size() == 4,
+          "segmented plan differs");
 
     for (unsigned fault = 0; fault < 4; ++fault) {
         auto bad = definition, badq = qnx;
@@ -325,12 +325,12 @@ int segmented_synthetic_import(const std::filesystem::path &project) {
 
         bool denied = false;
         try {
-            segmented_acquisition_plan(bad, badq, profile);
+            segmented_acquisition_plan(bad, badq);
         } catch (const std::exception &) {
             denied = true;
         }
 
-        check(denied, "invalid 6.0.3 plan accepted");
+        check(denied, "invalid segmented plan accepted");
     }
 
     // Without deps the missing codec asks for voyemu deps instead of failing on the file.
@@ -400,11 +400,11 @@ int segmented_synthetic_import(const std::filesystem::path &project) {
                   content(own / "originals/One.apk") == "synthetic package" &&
                   content(own / "originals/theme/defaulttheme/simple/description.xml") ==
                           "<theme/>",
-          "6.0.3 update originals differ");
+          "segmented update originals differ");
 
     for (auto it = qnx_originals.begin(); it != qnx_originals.end(); ++it) {
         check(it.value().at("sha256") == sha256_file(own / "qnx" / it.key()),
-              "6.0.3 update QNX image differs");
+              "segmented update QNX image differs");
     }
 
     console.str({});
@@ -418,7 +418,7 @@ int segmented_synthetic_import(const std::filesystem::path &project) {
     }
 
     std::cerr.rdbuf(prior);
-    check(rerun.at("cached") == true, "retained 6.0.3 inputs were imported again");
+    check(rerun.at("cached") == true, "retained segmented inputs were imported again");
     check(ordered(console.str(), {"Checking the archive\n",
                                   "The archive matches the pinned " + profile + " update",
                                   "\n\nChecking the " + profile + " originals (",
@@ -441,9 +441,9 @@ int segmented_synthetic_import(const std::filesystem::path &project) {
                   content(own / "originals/media/bootanimation2.zip") ==
                           system_files.at("/system/media/bootanimation2.zip") &&
                   cache_file_identity(own / "originals/One.apk") == retained,
-          "an added 6.0.3 original did not refresh the retained cache");
+          "an added original did not refresh the retained cache");
     check(import_segmented_profile_inputs(root, profile, update, 0).at("cached") == true,
-          "the refreshed 6.0.3 cache was imported again");
+          "the refreshed segmented cache was imported again");
     const auto pinned_bytes = std::filesystem::file_size(update);
     startup_fixture::zip(update, {{"foreign.bin", "foreign"}});
     bool denied = false;
@@ -455,17 +455,17 @@ int segmented_synthetic_import(const std::filesystem::path &project) {
                  text.starts_with("FETCH_UPDATE: " + update.string() + " is not the " + profile +
                                   " update: size ") &&
                  text.find(" bytes), expected " + std::to_string(pinned_bytes) +
-                           " bytes.\nA full head unit update archive of version 6.0.3 "
+                           " bytes.\nA full head unit update archive of version 1.0.0 "
                            "(update.zip) is needed.") != std::string::npos;
     }
 
-    check(denied, "unpinned 6.0.3 owner archive accepted without naming the expected update");
+    check(denied, "unpinned owner archive accepted without naming the expected update");
 #ifdef _WIN32
     FreeLibrary(handle);
 #else
     dlclose(handle);
 #endif
-    std::cout << "6.0.3 synthetic owner update: four plan rejections, segmented system/resc "
+    std::cout << "Synthetic segmented owner update: four plan rejections, segmented system/resc "
                  "originals, four QNX images, cache reuse, cache refresh with an added original "
                  "and archive pin passed\n";
 
@@ -479,27 +479,12 @@ int main(int argc, char **argv) {
             return segmented_synthetic_import(std::filesystem::canonical(argv[2]));
         }
 
-        if (argc == 4 && std::string_view(argv[1]) == "--free603-import") {
+        if (argc == 5 && std::string_view(argv[1]) == "--import") {
             const auto result = import_segmented_profile_inputs(
-                    std::filesystem::canonical(argv[2]), "free-09-chinese-20260106-6.0.3",
-                    std::filesystem::canonical(argv[3]), 4ULL << 30);
+                    std::filesystem::canonical(argv[2]), argv[3],
+                    std::filesystem::canonical(argv[4]), 20ULL << 30);
             check(result.at("guest_started") == false && result.at("frame_verified") == false,
-                  "6.0.3 import receipt differs");
-            std::cout << result.dump() << '\n';
-
-            return 0;
-        }
-
-        if (argc == 4 && std::string_view(argv[1]) == "--qinggan11-611-import") {
-            const auto root = std::filesystem::canonical(argv[2]),
-                       update = std::filesystem::canonical(argv[3]);
-            const auto result = import_segmented_profile_inputs(
-                    root, "free-11-chinese-20250710-6.11.1", update, 20ULL << 30);
-            check(result.at("archive_sha256") ==
-                                  "ce6d1ffcd158c91383b61a44ea529bf54238512c520b436973fc0f6222047e42" &&
-                          result.at("guest_started") == false &&
-                          result.at("frame_verified") == false,
-                  "6.11 import receipt differs");
+                  "segmented import receipt differs");
             std::cout << result.dump() << '\n';
 
             return 0;
@@ -508,9 +493,11 @@ int main(int argc, char **argv) {
         Json qnx = {
                 {"update",
                  {{"sha256", "a1b0c8e26eec79dcd738c140070ec7f31792dbafd63006d8be113c2bbdec4220"}}},
+                {"hardware_adapter", "sa8155-qinggan11-731"},
                 {"originals", Json::object()}};
 
-        for (const auto &pin : qnx_qinggan11_originals) {
+        for (const auto &pin :
+             qnx_qinggan11_adapter_originals(QnxGuestAdapter::sa8155_qinggan11_731)) {
             const auto base = std::string(pin.file).substr(0, std::string(pin.file).size() - 4);
             Json entries = Json::array(), sizes = Json::array();
 
@@ -570,7 +557,7 @@ int main(int argc, char **argv) {
                 {"acquisition", {{"image", "resc"}, {"path", "/resc/defaulttheme"}}}};
         const Json definition = {
                 {"schema", 1},
-                {"id", "free-11-chinese-20260731-7.3.1"},
+                {"id", "test-qinggan11-a"},
                 {"original", {{"one", input}, {"theme", tree}}},
                 {"ownerUpdate",
                  {{"bytes", 4137925521ULL},
@@ -583,12 +570,15 @@ int main(int argc, char **argv) {
         check(plan.at("originals").size() == 3 &&
                       plan.at("originals")[1].at("path") == "/resc/defaulttheme/one.xml",
               "file/tree source plan differs");
+        auto renamed = definition;
+        renamed["id"] = "test-qinggan11-b";
+        check(segmented_acquisition_plan(renamed, qnx) == plan, "plan depends on the profile id");
 
         for (unsigned fault = 0; fault < 10; ++fault) {
             auto bad = definition, badq = qnx;
 
             if (fault == 0) {
-                bad["id"] = "foreign";
+                badq["hardware_adapter"] = "sa8155-qinggan11-611";
             }
 
             if (fault == 1) {
@@ -639,14 +629,15 @@ int main(int argc, char **argv) {
         }
 
         auto older = definition, older_qnx = qnx;
-        older["id"] = "free-11-chinese-20250710-6.11.1";
+        older_qnx["hardware_adapter"] = "sa8155-qinggan11-611";
         older["ownerUpdate"] = {
                 {"bytes", 4226266936ULL},
                 {"sha256", "ce6d1ffcd158c91383b61a44ea529bf54238512c520b436973fc0f6222047e42"}};
         older_qnx["update"]["sha256"] =
                 "ce6d1ffcd158c91383b61a44ea529bf54238512c520b436973fc0f6222047e42";
 
-        for (const auto &pin : qnx_qinggan11_611_originals) {
+        for (const auto &pin :
+             qnx_qinggan11_adapter_originals(QnxGuestAdapter::sa8155_qinggan11_611)) {
             older_qnx["originals"][pin.file]["sha256"] = pin.sha256;
         }
 
@@ -657,13 +648,13 @@ int main(int argc, char **argv) {
         older["acquisition"]["images"]["resc"]["sha256"] =
                 "a5d0bc0c357d99c5f85277c13461c763f5a68bf9cf34ca71d425371b9d8decc2";
         check(segmented_acquisition_plan(older, older_qnx).at("originals").size() == 3,
-              "6.11 exact acquisition rejected");
+              "second adapter acquisition rejected");
 
         for (unsigned fault = 0; fault < 8; ++fault) {
             auto bad = older, badq = older_qnx;
 
             if (fault == 0) {
-                bad["id"] = "foreign";
+                badq["hardware_adapter"] = "sa8155-qinggan11-731";
             }
 
             if (fault == 1) {
@@ -671,8 +662,7 @@ int main(int argc, char **argv) {
             }
 
             if (fault == 2) {
-                bad["acquisition"]["images"]["system"]["sha256"] =
-                        definition.at("acquisition").at("images").at("system").at("sha256");
+                bad["acquisition"]["images"]["system"]["sha256"] = "not-a-sha256";
             }
 
             if (fault == 3) {
@@ -689,8 +679,7 @@ int main(int argc, char **argv) {
             }
 
             if (fault == 6) {
-                bad["acquisition"]["images"]["resc"]["sha256"] =
-                        definition.at("acquisition").at("images").at("resc").at("sha256");
+                bad["acquisition"]["images"]["modem"] = bad["acquisition"]["images"]["resc"];
             }
 
             if (fault == 7) {
@@ -704,7 +693,7 @@ int main(int argc, char **argv) {
                 denied = true;
             }
 
-            check(denied, "6.11 mixed or invalid acquisition accepted");
+            check(denied, "second adapter mixed or invalid acquisition accepted");
         }
 
         const Json qgapi = {
@@ -744,7 +733,7 @@ int main(int argc, char **argv) {
         }
 
         std::cout
-                << "Free A11 7.3.1 native file/tree acquisition plan and 10 negative contracts passed\n";
+                << "qinggan11 segmented file/tree acquisition plan and 10 negative contracts passed\n";
 
         return 0;
     } catch (const std::exception &error) {
