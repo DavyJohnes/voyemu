@@ -385,8 +385,7 @@ void Session::poll_passion_display_power() {
                            std::chrono::system_clock::now().time_since_epoch())
                     .count();
         };
-        media::PassionPointerWake::Binding binding{true, "passion-11-russian-20260403-2.1.4.80",
-                                                   session_id_, boot, random_token()};
+        media::PassionPointerWake::Binding binding{true, session_id_, boot, random_token()};
         // Opt-in bounded causal trace. Environment inheritance is the delivery channel already used
         // by VOYEMU_ANDROID_BOOT_TRACE; the value is a bare marker, never a pathname (a typed path
         // is rejected), so no caller, request or profile can choose a destination. The only

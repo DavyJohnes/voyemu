@@ -6,8 +6,7 @@ using namespace voyemu;
 using namespace voyemu::media;
 
 int main() try {
-    PassionPointerWake::Binding binding{true, "passion-11-russian-20260403-2.1.4.80", "session",
-                                        "boot", "watch"};
+    PassionPointerWake::Binding binding{true, "session", "boot", "watch"};
     PassionDisplayCache cache(binding);
     Json event = {{"schema", 1},
                   {"kind", "display_state_event"},

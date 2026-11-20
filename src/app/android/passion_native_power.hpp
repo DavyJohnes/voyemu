@@ -85,8 +85,7 @@ public:
 
             if (changed) {
                 clear();
-                binding_ = PassionPointerWake::Binding{true, "passion-11-russian-20260403-2.1.4.80",
-                                                       session_, boot, epoch};
+                binding_ = PassionPointerWake::Binding{true, session_, boot, epoch};
             }
 
             const auto &items = value.at("states");

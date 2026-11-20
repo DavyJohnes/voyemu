@@ -13,8 +13,7 @@ struct Fake {
 int main() try {
     std::vector<std::shared_ptr<Fake>> children;
     unsigned accepted = 0, lost = 0;
-    PassionPointerWake::Binding b{true, "passion-11-russian-20260403-2.1.4.80", "session", "boot",
-                                  "watch"};
+    PassionPointerWake::Binding b{true, "session", "boot", "watch"};
     PassionWatchStream stream(
             b,
             [&](const std::vector<std::string> &args) {

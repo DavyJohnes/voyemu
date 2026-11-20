@@ -26,7 +26,7 @@ public:
     };
     struct Binding {
         bool enabled{};
-        std::string profile, session, boot, epoch;
+        std::string session, boot, epoch;
     };
     using Cache = std::function<std::optional<PassionDisplayProof>(unsigned)>;
     using Wake = std::function<PassionDisplayProof(unsigned)>;
@@ -37,8 +37,7 @@ public:
         : binding_(std::move(binding)), cache_(std::move(cache)), wake_(std::move(wake)),
           recheck_(std::move(recheck)), now_(std::move(now)) {
         if (binding_.enabled &&
-            (binding_.profile != "passion-11-russian-20260403-2.1.4.80" ||
-             binding_.session.empty() || binding_.boot.empty() || binding_.epoch.empty() ||
+            (binding_.session.empty() || binding_.boot.empty() || binding_.epoch.empty() ||
              !cache_ || !wake_ || !recheck_ || !now_)) {
             throw VoyemuError("OEM_DISPLAY_POWER", "exact prepared binding required");
         }

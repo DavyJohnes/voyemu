@@ -50,7 +50,7 @@ int main() try {
     auto now = []() {
         return 100u;
     };
-    Gate::Binding binding{true, "passion-11-russian-20260403-2.1.4.80", "session", "boot", "watch"};
+    Gate::Binding binding{true, "session", "boot", "watch"};
     Gate mouse(binding, cache, wake, recheck, now);
     auto input = [&](Gate::Phase phase, unsigned d) {
         auto r = mouse.before(phase, d);

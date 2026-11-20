@@ -5454,8 +5454,7 @@ int main(int argc, char **argv) try {
            unknown_power_record.at("canonical_on") == false &&
            unknown_power_record.at("canonical_off") == false &&
            !unknown_power_record.contains("states"));
-    media::PassionDisplayCache unknown_watch(
-            {true, "passion-11-russian-20260403-2.1.4.80", "session", "boot", "watch"});
+    media::PassionDisplayCache unknown_watch({true, "session", "boot", "watch"});
     const Json unknown_event = {
             {"schema", 1},
             {"kind", "display_state_event"},

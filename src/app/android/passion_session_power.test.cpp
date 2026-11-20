@@ -8,8 +8,7 @@ using namespace voyemu::media;
 int main() try {
     unsigned fences = 0, wakes = 0, rechecks = 0;
     bool changed = false;
-    PassionPointerWake::Binding b{true, "passion-11-russian-20260403-2.1.4.80", "session", "boot",
-                                  "watch"};
+    PassionPointerWake::Binding b{true, "session", "boot", "watch"};
     PassionSessionPower s(
             b,
             [&] {

@@ -105,9 +105,7 @@ int main() try {
             }
         };
         PassionPowerOwner live(
-                PassionPointerWake::Binding{true, "passion-11-russian-20260403-2.1.4.80", "session",
-                                            "boot", "watch"},
-                [] {},
+                PassionPointerWake::Binding{true, "session", "boot", "watch"}, [] {},
                 [&](const auto &) {
                     auto fake = std::make_shared<Fake>();
                     children.push_back(fake);
@@ -174,9 +172,7 @@ int main() try {
         unsigned calls{};
         std::shared_ptr<Fake> fake;
         PassionPowerOwner batch(
-                PassionPointerWake::Binding{true, "passion-11-russian-20260403-2.1.4.80", "session",
-                                            "boot", "watch"},
-                [] {},
+                PassionPointerWake::Binding{true, "session", "boot", "watch"}, [] {},
                 [&](const auto &) {
                     fake = std::make_shared<Fake>();
                     fake->lines.push_back(frame(1, 1000, 1000).dump() + "\n");
@@ -251,9 +247,7 @@ int main() try {
             return frame(static_cast<unsigned>(sequence), observed, observed).dump() + "\n";
         };
         PassionPowerOwner capped(
-                PassionPointerWake::Binding{true, "passion-11-russian-20260403-2.1.4.80", "session",
-                                            "boot", "watch"},
-                [] {},
+                PassionPointerWake::Binding{true, "session", "boot", "watch"}, [] {},
                 [&](const auto &) {
                     auto fake = std::make_shared<Fake>();
                     fake->lines.push_back(publish());
@@ -336,9 +330,7 @@ int main() try {
                 return 1200LL;
             };
             PassionPowerOwner o(
-                    PassionPointerWake::Binding{true, "passion-11-russian-20260403-2.1.4.80",
-                                                "session", "boot", "watch"},
-                    [] {},
+                    PassionPointerWake::Binding{true, "session", "boot", "watch"}, [] {},
                     [&](const auto &) {
                         fake = std::make_shared<Fake>();
                         std::string buffered;
@@ -406,9 +398,7 @@ int main() try {
             std::size_t gc{};
             std::shared_ptr<Fake> f;
             PassionPowerOwner o(
-                    PassionPointerWake::Binding{true, "passion-11-russian-20260403-2.1.4.80",
-                                                "session", "boot", "watch"},
-                    [] {},
+                    PassionPointerWake::Binding{true, "session", "boot", "watch"}, [] {},
                     [&f](const auto &) {
                         f = std::make_shared<Fake>();
                         f->lines.push_back(line_of(1, 5000, 5000));
@@ -453,9 +443,7 @@ int main() try {
         std::int64_t coarse = 1200;
         std::vector<std::shared_ptr<Fake>> kids;
         PassionPowerOwner rel(
-                PassionPointerWake::Binding{true, "passion-11-russian-20260403-2.1.4.80", "session",
-                                            "boot", "watch"},
-                [] {},
+                PassionPointerWake::Binding{true, "session", "boot", "watch"}, [] {},
                 [&coarse, &kids](const auto &) {
                     auto f = std::make_shared<Fake>();
                     kids.push_back(f);
@@ -507,9 +495,7 @@ int main() try {
         };
         std::vector<std::shared_ptr<Child>> kids;
         PassionPowerOwner owner(
-                PassionPointerWake::Binding{true, "passion-11-russian-20260403-2.1.4.80", "session",
-                                            "boot", "watch"},
-                [] {},
+                PassionPointerWake::Binding{true, "session", "boot", "watch"}, [] {},
                 [&](const auto &) {
                     auto child = std::make_shared<Child>();
                     const auto guest = 1200 + static_cast<std::int64_t>((host - 2600100) / 1000);
@@ -590,8 +576,7 @@ int main() try {
                                            {"order", 1},
                                            {"observed_ms", 1000}}})}};
     bytes = event.dump() + "\n";
-    PassionPointerWake::Binding b{true, "passion-11-russian-20260403-2.1.4.80", "session", "boot",
-                                  "watch"};
+    PassionPointerWake::Binding b{true, "session", "boot", "watch"};
     PassionPowerOwner owner(
             b, [] {},
             [&](const auto &) {
