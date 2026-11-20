@@ -166,12 +166,14 @@ int main() try {
 
     const Json passion_source = {
             {"schema", 1},
-            {"id", voyemu::passion_profile_id},
+            {"id", "synthetic-passion"},
+            {"platform", "passion"},
+            {"board", "8155"},
             {"status", "incomplete"},
             {"android", {{"package", "system-images;android-30;default;arm64-v8a"}}}};
     assert(voyemu::passion_startup_values(passion_source).empty());
 
-    for (const auto *field : {"schema", "id", "status", "android"}) {
+    for (const auto *field : {"schema", "platform", "status", "android"}) {
         auto invalid = passion_source;
         invalid.erase(field);
         bool denied = false;
@@ -210,27 +212,57 @@ int main() try {
     }
     Json passion_spec = {
             {"api", 30},
+            {"reference_profile", "synthetic-passion"},
+            {"platform", "passion"},
+            {"board", "8155"},
             {"home",
              {{"package", "com.voyah.os.carlauncher"}, {"component", voyemu::passion_home}}},
-            {"presentation_adapter", voyemu::passion_presentation_contract()}};
+            {"presentation_adapter", voyemu::passion_presentation_contract("synthetic-passion")}};
+    assert(voyemu::passion_presentation(passion_spec) && !voyemu::nxp_presentation(passion_spec));
     const auto passion_owner = media::readiness_owner(epoch, passion_spec);
+    assert(passion_owner.at("presentation_family") == "passion");
     assert(media::presentation_only(passion_owner, epoch) &&
            !media::presentation_only(generic, epoch));
+
+    // The presentation adapter belongs to the reference profile of its own launch.
+    for (const bool adapter : {false, true}) {
+        auto foreign = passion_spec;
+        (adapter ? foreign["presentation_adapter"]["family"]
+                 : foreign["reference_profile"]) = "synthetic-other";
+        bool denied = false;
+        try {
+            voyemu::passion_presentation(foreign);
+        } catch (...) {
+            denied = true;
+        }
+
+        assert(denied);
+    }
+
+    {
+        auto other = passion_spec;
+        other["platform"] = "qinggan11";
+        assert(!voyemu::passion_presentation(other) && !voyemu::nxp_presentation(other));
+    }
+
     auto presentation = android;
     presentation["status"] = "presentation_ready";
-    presentation["presentation_family"] = voyemu::passion_profile_id;
+    presentation["presentation_family"] = "passion";
     presentation["guest_acknowledged"] = false;
     assert(media::presentation_ready(presentation, false, true) &&
            !media::presentation_ready(presentation, false));
     assert(!media::presentation_ready(android, false, true));
-    assert(media::android_public_ready(presentation, voyemu::passion_profile_id));
-    assert(!media::android_public_ready(presentation, "free-11-chinese-20260731-7.3.1"));
-    assert(!media::android_public_ready(android, voyemu::passion_profile_id));
-    assert(media::android_public_ready(android, "free-11-chinese-20260731-7.3.1"));
+    assert(media::android_public_ready(presentation));
+    assert(media::android_public_ready(android));
+    {
+        auto claimed = android;
+        claimed["presentation_family"] = "passion";
+        assert(!media::android_public_ready(claimed));
+    }
     {
         auto failed = presentation;
         failed["last_error"] = "identity unavailable";
-        assert(!media::android_public_ready(failed, voyemu::passion_profile_id));
+        assert(!media::android_public_ready(failed));
     }
 
     for (const auto *key : {"home", "displays", "presentation_family"}) {
@@ -268,21 +300,36 @@ int main() try {
     assert(!voyemu::nxp_key_manager_service_ready(0, true, "Service qg.key_manager: found\n"));
     Json nxp_spec = {
             {"api", 28},
+            {"reference_profile", "synthetic-nxp"},
+            {"platform", "qinggan09"},
+            {"board", "nxp"},
             {"home", {{"package", "com.qinggan.app.launcher"}, {"component", voyemu::nxp_home}}},
-            {"presentation_adapter", voyemu::nxp_presentation_contract()}};
+            {"presentation_adapter", voyemu::nxp_presentation_contract("synthetic-nxp")}};
     assert(voyemu::nxp_presentation(nxp_spec) && !voyemu::passion_presentation(nxp_spec));
     const auto nxp_owner = media::readiness_owner(epoch, nxp_spec);
+    assert(nxp_owner.at("presentation_family") == "nxp");
     assert(media::presentation_only(nxp_owner, epoch));
+    {
+        auto foreign = nxp_spec;
+        foreign["presentation_adapter"]["family"] = "synthetic-other";
+        bool denied = false;
+        try {
+            voyemu::nxp_presentation(foreign);
+        } catch (...) {
+            denied = true;
+        }
+
+        assert(denied);
+    }
+
     auto nxp_delivery = presentation;
-    nxp_delivery["presentation_family"] = voyemu::nxp_profile_id;
-    assert(media::android_public_ready(nxp_delivery, voyemu::nxp_profile_id));
-    assert(!media::android_public_ready(nxp_delivery, voyemu::passion_profile_id));
-    assert(!media::android_public_ready(presentation, voyemu::nxp_profile_id));
+    nxp_delivery["presentation_family"] = "nxp";
+    assert(media::android_public_ready(nxp_delivery));
 
     for (const auto *key : {"home", "displays"}) {
         auto invalid = nxp_delivery;
         invalid.erase(key);
-        assert(!media::android_public_ready(invalid, voyemu::nxp_profile_id));
+        assert(!media::android_public_ready(invalid));
     }
 
     {

@@ -1720,10 +1720,12 @@ int main(int argc, char **argv) try {
                     "normal native presentation disabled prepared audio");
 #ifndef _WIN32
             android["api"] = 30;
-            android["reference_profile"] = passion_profile_id;
+            android["reference_profile"] = "synthetic-passion";
+            android["platform"] = "passion";
+            android["board"] = "8155";
             android["home"] = {{"package", "com.voyah.os.carlauncher"},
                                {"component", passion_home}};
-            android["presentation_adapter"] = passion_presentation_contract();
+            android["presentation_adapter"] = passion_presentation_contract("synthetic-passion");
             android.erase("vehicle_adapter");
             android.erase("wheel_adapter");
             android.erase("systemui_adapter");

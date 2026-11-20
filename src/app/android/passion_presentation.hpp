@@ -2,6 +2,7 @@
 #include "model.hpp"
 #include "passion_mcu_property.hpp"
 #include "passion_wheel.hpp"
+#include "profile_catalog.hpp"
 #include <filesystem>
 #include <fstream>
 #include <map>
@@ -11,18 +12,23 @@
 namespace voyemu {
 inline constexpr const char *passion_profile_id = "passion-11-russian-20260403-2.1.4.80";
 
+// Whether a machine launch record belongs to a profile of the Passion platform.
+inline bool passion_launch(const Json &android) {
+    return record_declares(android, android.value("reference_profile", std::string{}),
+                           ProfilePlatform::passion, ProfileBoard::sa8155);
+}
+
 inline void passion_camera_config(const Json &definition,
                                   std::map<std::string, std::string> &values) {
-    if (definition.value("id", std::string{}) == passion_profile_id) {
+    if (record_declares(definition, runtime_profile_reference(definition), ProfilePlatform::passion,
+                        ProfileBoard::sa8155)) {
         values["hw.camera.back"] = "emulated";
         values["hw.camera.front"] = "none";
     }
 }
 
 inline bool passion_camera_identity(const Json &android) {
-    return android.value("reference_profile", std::string{}) == passion_profile_id ||
-           android.value("presentation_adapter", Json::object()).value("family", std::string{}) ==
-                   passion_profile_id ||
+    return passion_launch(android) ||
            android.value("home", Json::object()).value("package", std::string{}) ==
                    "com.voyah.os.carlauncher";
 }
@@ -45,9 +51,11 @@ inline std::string passion_camera_config_text(const Json &android) {
 }
 
 inline void passion_camera_validate(const Json &android, const std::string &config) {
-    if (android.value("reference_profile", std::string{}) != passion_profile_id ||
+    const auto reference = android.value("reference_profile", std::string{});
+
+    if (reference.empty() || !passion_launch(android) ||
         android.value("presentation_adapter", Json::object()).value("family", std::string{}) !=
-                passion_profile_id) {
+                reference) {
         throw VoyemuError("PASSION_CAMERA", "exact presentation identity required");
     }
 
@@ -109,7 +117,8 @@ inline constexpr const char *passion_secondary =
 
 inline Json passion_startup_values(const Json &definition) {
     if (definition.value("schema", 0) != 1 ||
-        definition.value("id", std::string{}) != passion_profile_id ||
+        !record_declares(definition, runtime_profile_reference(definition),
+                         ProfilePlatform::passion, ProfileBoard::sa8155) ||
         definition.value("status", std::string{}) != "incomplete" ||
         definition.value("android", Json::object()).value("package", std::string{}) !=
                 "system-images;android-30;default;arm64-v8a" ||
@@ -121,8 +130,10 @@ inline Json passion_startup_values(const Json &definition) {
     return Json::object();
 }
 
-inline Json passion_presentation_contract(bool mcu = false, bool media_wheel = false) {
-    return {{"family", passion_profile_id},
+// The family is the reference profile of the machine.
+inline Json passion_presentation_contract(std::string_view family, bool mcu = false,
+                                          bool media_wheel = false) {
+    return {{"family", family},
             {"secondary_component", passion_secondary},
             {"bootstrap_component", "com.voyemu/com.voyemu.output.SecondScreenService"},
             {"vehicle_state", mcu ? "partial-soc" : "unsupported"},
@@ -131,13 +142,7 @@ inline Json passion_presentation_contract(bool mcu = false, bool media_wheel = f
 }
 
 inline bool passion_presentation(const Json &android) {
-    if (!android.contains("presentation_adapter")) {
-        return false;
-    }
-
-    if (android.at("presentation_adapter").is_object() &&
-        android.at("presentation_adapter").value("family", std::string{}) ==
-                "free-09-chinese-20221230-nxp-rc45") {
+    if (!android.contains("presentation_adapter") || !passion_launch(android)) {
         return false;
     }
 
@@ -145,8 +150,12 @@ inline bool passion_presentation(const Json &android) {
     const bool media_wheel = android.value("wheel_capability", Json()) ==
                              passion_wheel_partial_capability();
 
-    if (android.at("presentation_adapter") !=
-                passion_presentation_contract(passion_mcu_available(android), media_wheel) ||
+    const auto reference = android.value("reference_profile", std::string{});
+
+    if (reference.empty() ||
+        android.at("presentation_adapter") !=
+                passion_presentation_contract(reference, passion_mcu_available(android),
+                                              media_wheel) ||
         android.value("api", 0) != 30 ||
         android.value("home", Json::object()) !=
                 Json{{"package", "com.voyah.os.carlauncher"}, {"component", passion_home}} ||

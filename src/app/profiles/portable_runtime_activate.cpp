@@ -311,9 +311,9 @@ Json activate_portable_runtime(const std::filesystem::path &root, std::string_vi
 
     if (manifest.at("android").contains("mcu_property")) {
         android["mcu_property_adapter"] = portable_passion_mcu(seed, manifest, definition);
-        android["presentation_adapter"] =
-                passion_presentation_contract(true, android.value("wheel_capability", Json()) ==
-                                                            passion_wheel_partial_capability());
+        android["presentation_adapter"] = passion_presentation_contract(
+                family, true,
+                android.value("wheel_capability", Json()) == passion_wheel_partial_capability());
     }
 
     if (manifest.at("android").contains("camera_package")) {
@@ -347,7 +347,9 @@ Json activate_portable_runtime(const std::filesystem::path &root, std::string_vi
     if (manifest.at("android").contains("qinggan09_owned_packages")) {
         auto packages = manifest.at("android").at("qinggan09_owned_packages");
         qinggan09_owned_packages_descriptor(packages, true);
-        need(family == qinggan09_owned_packages_profile && api == 28,
+        need(record_declares(definition, family, ProfilePlatform::qinggan09,
+                             ProfileBoard::sa8155) &&
+                     api == 28,
              "exact A9 activation required");
 
         for (unsigned i = 0; i < qinggan09_owned_packages_payloads(packages).size(); ++i) {
@@ -371,7 +373,9 @@ Json activate_portable_runtime(const std::filesystem::path &root, std::string_vi
     if (manifest.at("android").contains("qinggan09_phone_package")) {
         auto descriptor = manifest.at("android").at("qinggan09_phone_package");
         qinggan09_phone_package_descriptor(descriptor, true);
-        need(family == qinggan09_phone_package_profile && api == 28,
+        need(record_declares(definition, family, ProfilePlatform::qinggan09,
+                             ProfileBoard::sa8155) &&
+                     api == 28,
              "exact A9 Phone activation required");
         auto &package = descriptor.at("package");
         const auto relative = std::filesystem::path(package.at("file").get<std::string>())

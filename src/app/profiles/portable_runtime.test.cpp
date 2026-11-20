@@ -5196,6 +5196,20 @@ int main(int argc, char **argv) {
                           !nxp_launch.contains("wheel_adapter"),
                   "NXP inherited A9 CAN, wheel or SystemUI support");
             {
+                // The declared platform and board select the presentation, not the id.
+                auto declared = nxp_definition;
+                declared["id"] = "synthetic-nxp";
+                declared["platform"] = "qinggan09";
+                declared["board"] = "nxp";
+                const auto launch = portable_android_launch(
+                        app, PortableRuntimeHostBindings{}, seed30 / "android", clean30,
+                        bound30 / "config-template.ini", "synthetic-nxp", Json::array(), declared);
+                check(nxp_presentation(launch) && !passion_presentation(launch) &&
+                              launch.at("presentation_adapter").at("family") == "synthetic-nxp" &&
+                              launch.at("platform") == "qinggan09" && launch.at("board") == "nxp",
+                      "declared NXP platform and board did not select the NXP presentation");
+            }
+            {
                 auto wheel_definition = nxp_definition;
                 wheel_definition["components"]["wheel"] = "components/wheel";
                 wheel_definition["wheel"]["androidRoutes"] = "nxp-wheel-routes.json";
@@ -5288,7 +5302,8 @@ int main(int argc, char **argv) {
                 partial["wheel_capability"] = passion_wheel_partial_capability();
                 partial["wheel_adapter"] = {{"authority", "com.voyemu.input.wheel"},
                                             {"routes", passion_wheel_routes()}};
-                partial["presentation_adapter"] = passion_presentation_contract(false, true);
+                partial["presentation_adapter"] = passion_presentation_contract(
+                        passion_launch.at("reference_profile").get<std::string>(), false, true);
                 check(passion_presentation(partial),
                       "Passion exact prepared partial wheel capability rejected");
 
@@ -5338,7 +5353,8 @@ int main(int argc, char **argv) {
                 partial["wheel_adapter"] = {{"authority", "com.voyemu.input.wheel"},
                                             {"routes", passion_wheel_routes()}};
                 partial["mcu_property_adapter"] = passion_mcu_capability();
-                partial["presentation_adapter"] = passion_presentation_contract(true, true);
+                partial["presentation_adapter"] = passion_presentation_contract(
+                        passion_launch.at("reference_profile").get<std::string>(), true, true);
                 check(passion_presentation(partial),
                       "Passion MCU and Android wheel capabilities must coexist");
             }

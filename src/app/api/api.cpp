@@ -619,7 +619,7 @@ Json observation(const Json &status, std::string_view predicate, const Json &req
     if (predicate == "session.reachable") {
         ready = !status.value("stopped", true);
     } else if (predicate == "android.ready") {
-        ready = media::android_public_ready(android, request.value("profile", std::string{}));
+        ready = media::android_public_ready(android);
     } else if (predicate == "android.delivery") {
         ready = android.value("guest_acknowledged", false) &&
                 android.value("sequence", 0ULL) >= number(request, "revision", 0, 1, UINT32_MAX);

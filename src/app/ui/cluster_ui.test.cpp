@@ -1579,17 +1579,16 @@ void passion_unsupported_wheel(const std::filesystem::path &legacy_assets) {
 
         ++polls;
 
-        return Json{
-                {"ok", true},
-                {"session_id", "passion-unsupported-wheel"},
-                {"revision", canonical.at("sequence")},
-                {"state", canonical},
-                {"catalog", catalog_json()},
-                {"wheel_routes", Json::object()},
-                {"wheel_capability", nullptr},
-                {"deliveries",
-                 {{"android", {{"presentation_family", "passion-11-russian-20260403-2.1.4.80"}}},
-                  {"qnx", {{"status", "off"}, {"lifecycle_supported", false}}}}}};
+        return Json{{"ok", true},
+                    {"session_id", "passion-unsupported-wheel"},
+                    {"revision", canonical.at("sequence")},
+                    {"state", canonical},
+                    {"catalog", catalog_json()},
+                    {"wheel_routes", Json::object()},
+                    {"wheel_capability", nullptr},
+                    {"deliveries",
+                     {{"android", {{"presentation_family", "passion"}}},
+                      {"qnx", {{"status", "off"}, {"lifecycle_supported", false}}}}}};
     };
     ImGui::CreateContext();
     try {
@@ -2885,8 +2884,7 @@ void wheel_hover_without_tooltips(const std::filesystem::path &assets) {
             }
         }
 
-        for (const char *family :
-             {"free-09-chinese-20221230-nxp-rc45", "passion-11-russian-20260403-2.1.4.80"}) {
+        for (const char *family : {"nxp", "passion"}) {
             auto unavailable = window.client().state();
             unavailable.deliveries["android"]["presentation_family"] = family;
             unavailable.routes = Json::object();

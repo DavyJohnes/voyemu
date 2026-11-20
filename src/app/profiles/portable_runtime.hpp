@@ -1,7 +1,9 @@
 #pragma once
+#include "base_image.hpp"
 #include "check.hpp"
 #include "deps.hpp"
 #include "model.hpp"
+#include "profile_catalog.hpp"
 #include <functional>
 #include <map>
 #include <set>
@@ -26,10 +28,19 @@ inline std::string portable_system_image_file(const Json &descriptor, unsigned a
     return file;
 }
 
+// A bundled API30 profile that declares the view-observation component takes the UI observer
+// bound to it.
 inline bool portable_api30_ui_observer_profile(std::string_view profile) {
-    return profile == "free-11-chinese-20250710-6.11.1" ||
-           profile == "free-11-chinese-20260731-7.3.1" ||
-           profile == "passion-11-russian-20260403-2.1.4.80";
+    for (const auto &record : embedded_profile_catalog()) {
+        if (record.at("id") == profile) {
+            const auto &definition = record.at("definition");
+
+            return definition.value("components", Json::object()).contains("view-observation") &&
+                   native_base_api(definition.at("android")) == 30;
+        }
+    }
+
+    return false;
 }
 
 inline bool portable_ui_observer_binding(const Json &value, std::string_view profile) {

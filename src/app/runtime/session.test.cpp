@@ -2816,7 +2816,10 @@ static void android_avd_config_guards() {
         presentation["api"] = 30;
         presentation["home"] = {{"package", "com.voyah.os.carlauncher"},
                                 {"component", passion_home}};
-        presentation["presentation_adapter"] = passion_presentation_contract();
+        presentation["reference_profile"] = "synthetic-passion";
+        presentation["platform"] = "passion";
+        presentation["board"] = "8155";
+        presentation["presentation_adapter"] = passion_presentation_contract("synthetic-passion");
         presentation["gpuMode"] = "invalid-before-child";
         bool before_child = false;
         try {
@@ -2850,7 +2853,10 @@ static void android_avd_config_guards() {
         auto presentation = spec;
         presentation["api"] = 28;
         presentation["home"] = {{"package", "com.qinggan.app.launcher"}, {"component", nxp_home}};
-        presentation["presentation_adapter"] = nxp_presentation_contract();
+        presentation["reference_profile"] = "synthetic-nxp";
+        presentation["platform"] = "qinggan09";
+        presentation["board"] = "nxp";
+        presentation["presentation_adapter"] = nxp_presentation_contract("synthetic-nxp");
         presentation["gpuMode"] = "invalid-before-child";
         bool before_child = false;
         try {
@@ -2884,7 +2890,10 @@ static void android_avd_config_guards() {
         auto presentation = spec;
         presentation["api"] = 28;
         presentation["home"] = {{"package", "com.qinggan.app.launcher"}, {"component", nxp_home}};
-        presentation["presentation_adapter"] = nxp_presentation_contract();
+        presentation["reference_profile"] = "synthetic-nxp";
+        presentation["platform"] = "qinggan09";
+        presentation["board"] = "nxp";
+        presentation["presentation_adapter"] = nxp_presentation_contract("synthetic-nxp");
         presentation["wheel_adapter"] = nxp_wheel_adapter();
         presentation["gpuMode"] = "invalid-before-child";
         bool before_child = false;

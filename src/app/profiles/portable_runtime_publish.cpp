@@ -8,7 +8,8 @@ using namespace portable_detail;
 Json refresh_machine_ui_observer(const std::filesystem::path &root, std::string_view profile,
                                  const MachineIdentity &machine, const std::filesystem::path &seed,
                                  const std::function<Json()> &prepare, bool refresh_configuration) {
-    const bool a9 = profile == qinggan09_owned_packages_profile;
+    const bool a9 = embedded_profile_declares(profile, ProfilePlatform::qinggan09,
+                                              ProfileBoard::sa8155);
 
     need((a9 || portable_api30_ui_observer_profile(profile)) && machine.valid_for(profile) &&
                  (machine.selected || !refresh_configuration),
@@ -351,7 +352,8 @@ Json publish_machine_android_system(const std::filesystem::path &root, std::stri
                                     const Json &disk_tool, const Json &owned_package,
                                     std::uint64_t reserve, const Json &source_evidence,
                                     const Json &camera_package, const Json &prepared_packages) {
-    need((profile == qinggan11_731_profile_id || profile == passion_profile_id) &&
+    need((profile == qinggan11_731_profile_id ||
+          embedded_profile_declares(profile, ProfilePlatform::passion, ProfileBoard::sa8155)) &&
                  machine.valid_for(profile) && sha256_text(expected_manifest_sha) &&
                  sha256_text(source_sha),
          "exact Free A11/Passion system upgrade required");
@@ -445,7 +447,8 @@ Json publish_machine_android_system(const std::filesystem::path &root, std::stri
          "prepared API30 machine required");
     const auto definition = portable_profile_definition(root, profile, machine, seed);
     need(definition.at("id") == profile, "machine profile snapshot differs");
-    need((profile == passion_profile_id) == !source_evidence.is_null(),
+    need(record_declares(definition, profile, ProfilePlatform::passion, ProfileBoard::sa8155) ==
+                 !source_evidence.is_null(),
          "Passion system upgrade requires actual cold source evidence");
     Json generation = Json::object();
 

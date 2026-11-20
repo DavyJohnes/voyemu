@@ -300,7 +300,7 @@ void Session::advance_android(bool guest_possible, std::chrono::steady_clock::ti
                                                      : "awaiting_presentation";
             deliveries_["android"]["guest_acknowledged"] = false;
             deliveries_["android"]["presentation_family"] =
-                    nxp_presentation(android_spec_) ? nxp_profile_id : passion_profile_id;
+                    media::presentation_family(android_spec_);
 
             if (!android_spec_.contains("wheel_adapter")) {
                 deliveries_["android"]["wheel"] = {{"status", "unsupported"}, {"supported", false}};

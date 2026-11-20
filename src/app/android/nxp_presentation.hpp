@@ -1,5 +1,6 @@
 #pragma once
 #include "model.hpp"
+#include "profile_catalog.hpp"
 #include <stdexcept>
 #include <string_view>
 
@@ -17,8 +18,9 @@ inline bool nxp_key_manager_service_ready(int exit_code, bool timed_out, std::st
     return !timed_out && exit_code == 0 && output == "Service qg.key_manager: found\n";
 }
 
-inline Json nxp_presentation_contract() {
-    return {{"family", nxp_profile_id},
+// The family is the reference profile of the machine.
+inline Json nxp_presentation_contract(std::string_view family) {
+    return {{"family", family},
             {"vehicle_state", "unsupported"},
             {"wheel", "unsupported"},
             {"language", "unsupported"},
@@ -53,13 +55,17 @@ inline Json nxp_wheel_adapter() {
             {"routes", nxp_wheel_routes()}};
 }
 
+// The Free/Dreamer platform on the NXP board presents the OEM screens as they are.
 inline bool nxp_presentation(const Json &android) {
+    const auto reference = android.value("reference_profile", std::string{});
+
     if (!android.contains("presentation_adapter") ||
-        android.at("presentation_adapter").value("family", std::string{}) != nxp_profile_id) {
+        !record_declares(android, reference, ProfilePlatform::qinggan09, ProfileBoard::nxp)) {
         return false;
     }
 
-    if (android.at("presentation_adapter") != nxp_presentation_contract() ||
+    if (reference.empty() ||
+        android.at("presentation_adapter") != nxp_presentation_contract(reference) ||
         android.value("api", 0) != 28 ||
         android.value("home", Json::object()) !=
                 Json{{"package", "com.qinggan.app.launcher"}, {"component", nxp_home}} ||

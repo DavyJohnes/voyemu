@@ -21,16 +21,13 @@ Json audio_diagnostic_activation(const std::filesystem::path &record) {
     const auto value = read_private_json(path, 4096);
     need(value.is_object(), "audio diagnostic activation object required");
     const auto profile = value.value("profile", std::string{});
+    const auto bundled = embedded_profile_names();
     need(value.value("schema", 0) == 1 && value.value("route", std::string{}) == "wav" &&
-                 (profile == passion_profile_id || qinggan11_profile_id(profile) ||
-                  profile == "free-11-chinese-20250710-6.11.1" || profile == nxp_profile_id ||
-                  embedded_profile_declares(profile, ProfilePlatform::qinggan09,
-                                            ProfileBoard::sa8155)),
+                 std::find(bundled.begin(), bundled.end(), profile) != bundled.end(),
          "audio diagnostic activation must be the exact wav route for an owned run");
 
-    if (qinggan11_profile_id(profile) || profile == "free-11-chinese-20250710-6.11.1" ||
-        profile == nxp_profile_id ||
-        embedded_profile_declares(profile, ProfilePlatform::qinggan09, ProfileBoard::sa8155)) {
+    // Only the Passion platform runs without a one-run nonce.
+    if (!embedded_profile_declares(profile, ProfilePlatform::passion, ProfileBoard::sa8155)) {
         const auto nonce = value.value("nonce", std::string{});
         need(hex_text(nonce, 32), "Owned audio diagnostic requires a one-run nonce");
         need(value.value("directory", std::string{}) == std::filesystem::canonical(record).string(),
@@ -273,7 +270,9 @@ std::filesystem::path bind_machine_configuration(const std::filesystem::path &ro
     }
 
     if (manifest.at("android").contains("qinggan09_owned_packages")) {
-        need(family == qinggan09_owned_packages_profile && manifest.at("android").at("api") == 28,
+        need(record_declares(retained_definition, family, ProfilePlatform::qinggan09,
+                             ProfileBoard::sa8155) &&
+                     manifest.at("android").at("api") == 28,
              "exact A9 package machine required");
         desired_qinggan09 = manifest.at("android").at("qinggan09_owned_packages");
         qinggan09_owned_packages_descriptor(desired_qinggan09, true);
@@ -295,7 +294,9 @@ std::filesystem::path bind_machine_configuration(const std::filesystem::path &ro
     Json desired_phone = Json::object();
 
     if (manifest.at("android").contains("qinggan09_phone_package")) {
-        need(family == qinggan09_phone_package_profile && manifest.at("android").at("api") == 28,
+        need(record_declares(retained_definition, family, ProfilePlatform::qinggan09,
+                             ProfileBoard::sa8155) &&
+                     manifest.at("android").at("api") == 28,
              "exact A9 Phone machine required");
         desired_phone = manifest.at("android").at("qinggan09_phone_package");
         qinggan09_phone_package_descriptor(desired_phone, true);
@@ -406,7 +407,15 @@ std::filesystem::path bind_machine_configuration(const std::filesystem::path &ro
             return false;
         }
 
-        if (family == nxp_profile_id && !nxp_presentation(launch)) {
+        if (record_declares(retained_definition, family, ProfilePlatform::qinggan09,
+                            ProfileBoard::nxp) &&
+            !nxp_presentation(launch)) {
+            return false;
+        }
+
+        // A launch written before it carried the platform of its profile is written again.
+        if (launch.value("platform", Json{}) != retained_definition.value("platform", Json{}) ||
+            launch.value("board", Json{}) != retained_definition.value("board", Json{})) {
             return false;
         }
 
@@ -444,8 +453,11 @@ std::filesystem::path bind_machine_configuration(const std::filesystem::path &ro
             }
         }
 
-        if (!qinggan11_profile_id(family) && family != passion_profile_id &&
-            (family != nxp_profile_id ||
+        if (!qinggan11_profile_id(family) &&
+            !record_declares(retained_definition, family, ProfilePlatform::passion,
+                             ProfileBoard::sa8155) &&
+            (!record_declares(retained_definition, family, ProfilePlatform::qinggan09,
+                              ProfileBoard::nxp) ||
              retained_definition.value("components", Json::object()).contains("wheel"))) {
             Json routes = Json::object();
             const auto route_metadata =
@@ -575,7 +587,7 @@ std::filesystem::path bind_machine_configuration(const std::filesystem::path &ro
 
         const auto definition = portable_profile_definition(root, profile, machine, seed);
 
-        if (family == passion_profile_id) {
+        if (record_declares(definition, family, ProfilePlatform::passion, ProfileBoard::sa8155)) {
             const auto capability = passion_wheel_capability(definition);
 
             if (launch.value("wheel_capability", Json{}) != capability) {
@@ -583,7 +595,7 @@ std::filesystem::path bind_machine_configuration(const std::filesystem::path &ro
             }
 
             if (launch.value("presentation_adapter", Json{}) !=
-                passion_presentation_contract(!prepared_mcu.empty(),
+                passion_presentation_contract(family, !prepared_mcu.empty(),
                                               capability == passion_wheel_partial_capability())) {
                 return false;
             }
@@ -1170,7 +1182,8 @@ std::filesystem::path bind_machine_configuration(const std::filesystem::path &ro
                          sha256_text(archive),
                  "API28/API30 arm64 configuration required");
 
-            if (family == passion_profile_id) {
+            if (record_declares(definition, family, ProfilePlatform::passion,
+                                ProfileBoard::sa8155)) {
                 host.android_port = 5590;
             } else if (!bindings.contains("android_port")) {
                 host.android_port =
@@ -1369,9 +1382,10 @@ std::filesystem::path bind_machine_configuration(const std::filesystem::path &ro
 
             if (!prepared_mcu.empty()) {
                 launch["mcu_property_adapter"] = prepared_mcu;
-                launch["presentation_adapter"] = passion_presentation_contract(
-                        true, launch.value("wheel_capability", Json()) ==
-                                      passion_wheel_partial_capability());
+                launch["presentation_adapter"] =
+                        passion_presentation_contract(family, true,
+                                                      launch.value("wheel_capability", Json()) ==
+                                                              passion_wheel_partial_capability());
             }
 
             if (api == 28) {

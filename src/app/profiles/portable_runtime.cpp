@@ -1102,8 +1102,7 @@ Json passion_system_evidence(const std::filesystem::path &seed, const Json &mani
     const auto &android = manifest.at("android");
     const auto &lineage = android.at("system_upgrade");
 
-    need(manifest.at("profile") == passion_profile_id && lineage.is_object() &&
-                 lineage.size() == 4 && lineage.at("schema") == 1,
+    need(lineage.is_object() && lineage.size() == 4 && lineage.at("schema") == 1,
          "exact Passion system lineage required");
     const auto prefix = "android/system-versions/" +
                         android.at("images").at("system.img").at("sha256").get<std::string>() + "/";
@@ -1127,8 +1126,10 @@ Json passion_system_evidence(const std::filesystem::path &seed, const Json &mani
                parent = read("parent_manifest", "parent-manifest.json", 128 * 1024);
     api30_framework_boot::verify(definition);
     need(candidate.at("schema") == 1 && candidate.at("kind") == "android-candidate" &&
-                 candidate.at("profile") == passion_profile_id &&
-                 definition.at("id") == passion_profile_id &&
+                 candidate.at("profile") == manifest.at("profile") &&
+                 definition.at("id") == manifest.at("profile") &&
+                 record_declares(definition, manifest.at("profile").get<std::string>(),
+                                 ProfilePlatform::passion, ProfileBoard::sa8155) &&
                  candidate.at("profile_sha256") == lineage.at("source_profile").at("sha256") &&
                  candidate.at("stopped") == true && candidate.at("cold_boot_verified") == true &&
                  candidate.at("prepared_VM") == true &&
@@ -1235,8 +1236,9 @@ static std::pair<Json, std::string> passion_wheel_guest_source(const std::filesy
         return {definition, current};
     }
 
-    need(manifest.at("profile") == passion_profile_id &&
-                 definition.at("id") == passion_profile_id &&
+    need(definition.at("id") == manifest.at("profile") &&
+                 record_declares(definition, manifest.at("profile").get<std::string>(),
+                                 ProfilePlatform::passion, ProfileBoard::sa8155) &&
                  !manifest.at("android").contains("system_upgrade"),
          "wheel provenance requires base Passion generation");
     const auto &descriptor = manifest.at("resources").at("ui/cockpit-provenance.json");
@@ -1413,6 +1415,12 @@ Json portable_android_launch(const std::filesystem::path &root,
         android["reference_profile"] = reference;
     }
 
+    // The launch record carries the platform and board of its profile for the runtime.
+    if (definition.contains("platform")) {
+        android["platform"] = definition.at("platform");
+        android["board"] = definition.at("board");
+    }
+
     const auto phone_adapter = phone_adapter_for_profile(definition, verified_profile);
 
     if (!phone_adapter.empty()) {
@@ -1500,16 +1508,19 @@ Json portable_android_launch(const std::filesystem::path &root,
                      audio_diagnostic.value("profile", std::string{}) == diagnostic_profile,
              "audio diagnostic profile differs from selected definition");
         need(android.at("api") == 30 ||
-                     ((diagnostic_profile == nxp_profile_id ||
-                       embedded_profile_declares(diagnostic_profile, ProfilePlatform::qinggan09,
-                                                 ProfileBoard::sa8155)) &&
+                     ((record_declares(definition, diagnostic_profile, ProfilePlatform::qinggan09,
+                                       ProfileBoard::nxp) ||
+                       record_declares(definition, diagnostic_profile, ProfilePlatform::qinggan09,
+                                       ProfileBoard::sa8155)) &&
                       android.at("api") == 28),
              "audio diagnostic requires the selected pinned runtime");
         android["diagnostic_audio"] = "wav";
     }
 
-    const bool passion = definition.value("id", std::string{}) == passion_profile_id;
-    const bool nxp = definition.value("id", std::string{}) == nxp_profile_id;
+    const bool passion = record_declares(definition, reference, ProfilePlatform::passion,
+                                         ProfileBoard::sa8155);
+    const bool nxp = record_declares(definition, reference, ProfilePlatform::qinggan09,
+                                     ProfileBoard::nxp);
 
     if (passion) {
 #ifdef _WIN32
@@ -1529,7 +1540,7 @@ Json portable_android_launch(const std::filesystem::path &root,
 
         android.erase("vehicle_adapter");
         android.erase("systemui_adapter");
-        android["presentation_adapter"] = passion_presentation_contract();
+        android["presentation_adapter"] = passion_presentation_contract(reference);
         need(passion_presentation(android), "Passion presentation contract required");
     } else {
         need(android.at("home").at("package") == "com.qinggan.app.launcher",
@@ -1579,7 +1590,7 @@ Json portable_android_launch(const std::filesystem::path &root,
              "exact NXP API28 HOME required");
         android.erase("vehicle_adapter");
         android.erase("systemui_adapter");
-        android["presentation_adapter"] = nxp_presentation_contract();
+        android["presentation_adapter"] = nxp_presentation_contract(reference);
         need(nxp_presentation(android), "NXP presentation contract required");
 
         if (!definition.value("components", Json::object()).contains("wheel")) {
@@ -1596,7 +1607,8 @@ Json portable_android_launch(const std::filesystem::path &root,
         }
 
         android["presentation_adapter"] = passion_presentation_contract(
-                false, android.at("wheel_capability") == passion_wheel_partial_capability());
+                reference, false,
+                android.at("wheel_capability") == passion_wheel_partial_capability());
 
         return android;
     }
@@ -1631,7 +1643,7 @@ Json portable_android_launch(const std::filesystem::path &root,
     }
 
     if (nxp) {
-        need(route_metadata.value("profile", std::string{}) == nxp_profile_id &&
+        need(route_metadata.value("profile", std::string{}) == reference &&
                      routes == nxp_wheel_routes(),
              "exact NXP wheel metadata required");
     }
@@ -1875,7 +1887,9 @@ static Json inspect_portable_runtime_impl(const std::filesystem::path &root,
     }
 
     if (manifest.at("android").contains("qinggan09_owned_packages")) {
-        need(family == qinggan09_owned_packages_profile && api == 28,
+        need(record_declares(definition, family, ProfilePlatform::qinggan09,
+                             ProfileBoard::sa8155) &&
+                     api == 28,
              "A9 packages require exact API28 profile");
         const auto &packages = manifest.at("android").at("qinggan09_owned_packages");
         qinggan09_owned_packages_descriptor(packages, true);
@@ -1889,7 +1903,9 @@ static Json inspect_portable_runtime_impl(const std::filesystem::path &root,
     }
 
     if (manifest.at("android").contains("qinggan09_phone_package")) {
-        need(family == qinggan09_phone_package_profile && api == 28,
+        need(record_declares(definition, family, ProfilePlatform::qinggan09,
+                             ProfileBoard::sa8155) &&
+                     api == 28,
              "A9 Phone package requires exact API28 profile");
         const auto &descriptor = manifest.at("android").at("qinggan09_phone_package");
         qinggan09_phone_package_descriptor(descriptor, true);

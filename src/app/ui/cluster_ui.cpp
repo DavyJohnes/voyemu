@@ -596,7 +596,7 @@ bool wheel_action_available(const ViewState &state, std::string_view id) {
     const auto family = state.deliveries.value("android", Json::object())
                                 .value("presentation_family", std::string{});
 
-    if (family == "free-09-chinese-20221230-nxp-rc45" && !state.routes.contains(std::string(id))) {
+    if (family == "nxp" && !state.routes.contains(std::string(id))) {
         return false;
     }
 
@@ -652,8 +652,7 @@ bool Client::wheel(std::string_view id, std::string_view phase) {
     }
 
     if (state_.deliveries.value("android", Json::object())
-                        .value("presentation_family", std::string{}) ==
-                "passion-11-russian-20260403-2.1.4.80" &&
+                        .value("presentation_family", std::string{}) == "passion" &&
         (!state_.wheel_capability.is_object() ||
          !state_.wheel_capability.value("routes", Json::object()).contains(std::string(id)))) {
         return true;
@@ -686,8 +685,7 @@ bool Client::detent(std::string_view id) {
     }
 
     if (state_.deliveries.value("android", Json::object())
-                        .value("presentation_family", std::string{}) ==
-                "passion-11-russian-20260403-2.1.4.80" &&
+                        .value("presentation_family", std::string{}) == "passion" &&
         (!state_.wheel_capability.is_object() ||
          !state_.wheel_capability.value("routes", Json::object()).contains(std::string(id)))) {
         return true;

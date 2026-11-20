@@ -7,18 +7,32 @@
 #include <string_view>
 
 namespace voyemu::media {
+// The presentation family of a machine whose OEM screens are presented as they are, by the platform
+// or board it belongs to; empty for a machine that acknowledges vehicle state.
+inline std::string presentation_family(const Json &android_spec) {
+    if (passion_presentation(android_spec)) {
+        return "passion";
+    }
+
+    if (nxp_presentation(android_spec)) {
+        return "nxp";
+    }
+
+    return {};
+}
+
+inline bool presentation_family_known(const Json &value) {
+    return value == "passion" || value == "nxp";
+}
+
 // Written once by the session owner before launching its frontend; never inferred from deliveries.
 inline Json readiness_owner(std::string_view session, const Json &android_spec) {
     Json owner = {{"schema", 1},
                   {"session_id", session},
                   {"require_oem_systemui", android_spec.contains("systemui_adapter")}};
 
-    if (passion_presentation(android_spec)) {
-        owner["presentation_family"] = passion_profile_id;
-    }
-
-    if (nxp_presentation(android_spec)) {
-        owner["presentation_family"] = nxp_profile_id;
+    if (const auto family = presentation_family(android_spec); !family.empty()) {
+        owner["presentation_family"] = family;
     }
 
     // The window takes the screens of the machine from the displays list of its profile.
@@ -57,8 +71,7 @@ inline bool presentation_only(const Json &owner, std::string_view session) {
         return false;
     }
 
-    if ((owner.at("presentation_family") != passion_profile_id &&
-         owner.at("presentation_family") != nxp_profile_id) ||
+    if (!presentation_family_known(owner.at("presentation_family")) ||
         owner.at("require_oem_systemui") != false) {
         throw VoyemuError("MEDIA_OWNER", "unsupported presentation family");
     }
@@ -71,8 +84,7 @@ inline bool presentation_ready(const Json &android, bool require_oem,
     const bool acknowledged = android.value("status", std::string{}) == "guest_acknowledged";
     const bool presented =
             android.value("status", std::string{}) == "presentation_ready" &&
-            (android.value("presentation_family", std::string{}) == passion_profile_id ||
-             android.value("presentation_family", std::string{}) == nxp_profile_id) &&
+            presentation_family_known(android.value("presentation_family", Json{})) &&
             !android.value("guest_acknowledged", false);
 
     return (presentation_only ? presented : acknowledged) &&
@@ -85,14 +97,14 @@ inline bool presentation_ready(const Json &android, bool require_oem,
                     "both_OEM_bars_visible");
 }
 
-inline bool android_public_ready(const Json &android, std::string_view profile) {
+// A delivered presentation family selects presentation readiness instead of acknowledgement.
+inline bool android_public_ready(const Json &android) {
     if (android.contains("last_error")) {
         return false;
     }
 
-    if (profile == passion_profile_id || profile == nxp_profile_id) {
-        return android.value("presentation_family", std::string{}) == profile &&
-               presentation_ready(android, false, true);
+    if (android.contains("presentation_family")) {
+        return presentation_ready(android, false, true);
     }
 
     return android.value("guest_acknowledged", false) &&

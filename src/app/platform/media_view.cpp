@@ -239,7 +239,8 @@ struct MediaView::Impl {
             };
         }
 
-        if (options.profile == "passion-11-russian-20260403-2.1.4.80") {
+        // A touch on a powered-off OEM screen of a Passion machine wakes it.
+        if (owner.value("presentation_family", std::string{}) == "passion") {
             display_power = std::make_unique<PassionNativePower>(
                     id,
                     [this](unsigned display, const std::string &boot) {
