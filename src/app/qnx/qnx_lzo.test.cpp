@@ -273,55 +273,67 @@ void synthetic() {
 
 int main(int argc, char **argv) {
     try {
-        if (argc == 3 && std::string_view(argv[1]) == "--qinggan11-older") {
-            std::ifstream in(argv[2], std::ios::binary);
+        // --host ADAPTER HYP [HOST_SHA256]: HYP is the hyp_la.img of the hardware_adapter ADAPTER.
+        if ((argc == 4 || argc == 5) && std::string_view(argv[1]) == "--host") {
+            const auto &spec = qnx_adapter(std::string_view(argv[2]));
+            std::ifstream in(argv[3], std::ios::binary);
 
             if (!in) {
-                throw std::runtime_error("older qinggan11 owner input open");
+                throw std::runtime_error("adapter owner input open");
             }
 
-            const std::string hyp((std::istreambuf_iterator<char>(in)), {}),
-                    pin = "dbb3bc2c6f9b0308e38627cf6a3e3b6757ba98c4f5413334526c26d812ab08f0";
-            const auto host = decode_qnx_qinggan11_older_host(hyp, pin);
+            const std::string hyp((std::istreambuf_iterator<char>(in)), {}), pin(spec.hyp_sha256);
+            const auto host = decode_qnx_qinggan11_host(spec.adapter, hyp, pin);
 
-            if (sha256_bytes(host) !=
-                        "734b0b0f0c0383853231f5d1ba216cd4e9d6e9fe8373ec4aeb21b1db7d5ed7e2" ||
-                encode_qnx_qinggan11_older_host(hyp, pin, host) !=
-                        hyp.substr(0x69108, 0x2d76d0 - 0x69108)) {
-                throw std::runtime_error("older qinggan11 host identity");
+            if ((argc == 5 && sha256_bytes(host) != argv[4]) ||
+                encode_qnx_qinggan11_host(spec.adapter, hyp, pin, host) !=
+                        hyp.substr(0x69108, std::size_t(spec.host_stream_end) + 0x3000 - 0x69108)) {
+                throw std::runtime_error("adapter host identity");
             }
 
             auto changed = host;
             changed.at(changed.size() - 8) ^= 1;
-            const auto packed = encode_qnx_qinggan11_older_host(hyp, pin, changed);
+            const auto packed = encode_qnx_qinggan11_host(spec.adapter, hyp, pin, changed);
 
             if (decode_qnx_declared_boot_stream(packed, 103, 6704052) != changed) {
-                throw std::runtime_error("older qinggan11 host changed roundtrip");
+                throw std::runtime_error("adapter host changed roundtrip");
             }
 
-            for (unsigned mode = 0; mode < 3; ++mode) {
-                bool rejected = false;
+            for (const auto &other : qnx_adapter_registry) {
+                bool rejected = other.adapter == spec.adapter;
                 try {
-                    if (mode == 0) {
-                        decode_qnx_qinggan11_host(hyp, pin);
-                    } else if (mode == 1) {
-                        decode_qnx_qinggan11_older_host(hyp, std::string(64, '0'));
-                    } else {
-                        auto bad = hyp;
-                        bad[0x3024] ^= 1;
-                        decode_qnx_qinggan11_older_host(bad, sha256_bytes(bad));
+                    if (!rejected) {
+                        decode_qnx_qinggan11_host(other.adapter, hyp, pin);
                     }
                 } catch (...) {
                     rejected = true;
                 }
 
                 if (!rejected) {
-                    throw std::runtime_error(
-                            "older qinggan11 cross-version or mutated host accepted");
+                    throw std::runtime_error("foreign adapter host accepted");
                 }
             }
 
-            std::cout << "older qinggan11 host identity and mixed-version guards passed\n";
+            for (unsigned mode = 0; mode < 2; ++mode) {
+                bool rejected = false;
+                try {
+                    if (mode == 0) {
+                        decode_qnx_qinggan11_host(spec.adapter, hyp, std::string(64, '0'));
+                    } else {
+                        auto bad = hyp;
+                        bad[0x3024] ^= 1;
+                        decode_qnx_qinggan11_host(spec.adapter, bad, sha256_bytes(bad));
+                    }
+                } catch (...) {
+                    rejected = true;
+                }
+
+                if (!rejected) {
+                    throw std::runtime_error("mutated adapter host accepted");
+                }
+            }
+
+            std::cout << spec.name << " host identity and foreign adapter guards passed\n";
 
             return 0;
         }
@@ -336,16 +348,18 @@ int main(int argc, char **argv) {
             const std::string hyp((std::istreambuf_iterator<char>(in)), {});
             const std::string input_pin =
                     "a476a1e3d3aaa51d855d2d91c412a962efb6ef1e3e63540ec739779d35ce3ce8";
-            const auto host = decode_qnx_qinggan11_host(hyp, input_pin);
+            const auto host = decode_qnx_qinggan11_host(QnxGuestAdapter::sa8155_qinggan11_731, hyp,
+                                                        input_pin);
 
-            if (encode_qnx_qinggan11_host(hyp, input_pin, host) !=
-                hyp.substr(0x69108, 0x2d75a8 - 0x69108)) {
+            if (encode_qnx_qinggan11_host(QnxGuestAdapter::sa8155_qinggan11_731, hyp, input_pin,
+                                          host) != hyp.substr(0x69108, 0x2d75a8 - 0x69108)) {
                 throw std::runtime_error("A11 identity repack");
             }
 
             auto changed_host = host;
             changed_host.at(changed_host.size() - 8) ^= 1;
-            const auto repacked = encode_qnx_qinggan11_host(hyp, input_pin, changed_host);
+            const auto repacked = encode_qnx_qinggan11_host(QnxGuestAdapter::sa8155_qinggan11_731,
+                                                            hyp, input_pin, changed_host);
 
             if (repacked.empty() || repacked == hyp.substr(0x69108, 0x2d75a8 - 0x69108)) {
                 throw std::runtime_error("A11 changed repack");
@@ -353,7 +367,8 @@ int main(int argc, char **argv) {
 
             bool extent_rejected = false;
             try {
-                encode_qnx_qinggan11_host(hyp, input_pin, std::string_view(host).substr(1));
+                encode_qnx_qinggan11_host(QnxGuestAdapter::sa8155_qinggan11_731, hyp, input_pin,
+                                          std::string_view(host).substr(1));
             } catch (...) {
                 extent_rejected = true;
             }
@@ -372,7 +387,8 @@ int main(int argc, char **argv) {
                 changed[at] ^= 1;
                 bool rejected = false;
                 try {
-                    decode_qnx_qinggan11_host(changed, sha256_bytes(changed));
+                    decode_qnx_qinggan11_host(QnxGuestAdapter::sa8155_qinggan11_731, changed,
+                                              sha256_bytes(changed));
                 } catch (...) {
                     rejected = true;
                 }
@@ -384,7 +400,8 @@ int main(int argc, char **argv) {
 
             bool rejected = false;
             try {
-                decode_qnx_qinggan11_host(hyp, std::string(64, '0'));
+                decode_qnx_qinggan11_host(QnxGuestAdapter::sa8155_qinggan11_731, hyp,
+                                          std::string(64, '0'));
             } catch (...) {
                 rejected = true;
             }

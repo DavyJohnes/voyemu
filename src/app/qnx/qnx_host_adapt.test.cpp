@@ -258,13 +258,13 @@ void qinggan11_boot_fixture(std::string_view script, std::string_view manager,
 
 int main(int argc, char **argv) {
     try {
-        if (argc == 7 && std::string_view(argv[1]) == "--qinggan11-older") {
+        if (argc == 7 && std::string_view(argv[1]) == "--host-transforms") {
             const auto a = dma_read(argv[2]), b = dma_read(argv[3]), stub = dma_read(argv[6]);
             const auto patched = qnx_qinggan11_developer_candidate(a, stub, std::string(64, '1'),
                                                                    std::string(64, '2'));
             dma_need(patched.size() == a.size() &&
                              adapt_qnx_qinggan11_symlinks(b).size() == b.size(),
-                     "older qinggan11 host transforms");
+                     "qinggan11 host transforms");
 
             bool rejected = false;
             try {
@@ -276,8 +276,8 @@ int main(int argc, char **argv) {
                 rejected = true;
             }
 
-            dma_need(rejected, "older qinggan11 mutated host accepted");
-            std::cout << "older qinggan11 host transformations and mutation guard passed\n";
+            dma_need(rejected, "qinggan11 mutated host accepted");
+            std::cout << "qinggan11 host transformations and mutation guard passed\n";
 
             return 0;
         }

@@ -535,7 +535,8 @@ void qinggan11_elf_fixture(std::string_view raw, std::string_view packed) {
 
     check(sha256_bytes(packed) ==
           "21864b96671d2183b9e34a135ad0e4710fd3fe364597cf1d37355cdc27bb9519");
-    const auto changed = assemble_qnx_qinggan11_kernel(raw, pin, packed);
+    const auto changed = assemble_qnx_qinggan11_kernel(QnxGuestAdapter::sa8155_qinggan11_731, raw,
+                                                       pin, packed);
     const auto declared = std::uint64_t(0x66108) + packed.size();
     check(get(changed, 0xd0) >= declared && get(changed, 0xd8) >= declared);
     check(get(changed, 0xd0) == declared && get(changed, 0xd8) == declared);
@@ -548,33 +549,40 @@ void qinggan11_elf_fixture(std::string_view raw, std::string_view packed) {
     check(0x3000 + get(raw, 0xd0) + 196 == 0x69108 + packed.size());
     const auto loaded = changed.substr(get(changed, 0xb8), get(changed, 0xd0));
     check(loaded.substr(0x66108) == packed);
-    const auto identity = assemble_qnx_qinggan11_kernel(raw, pin,
+    const auto identity = assemble_qnx_qinggan11_kernel(QnxGuestAdapter::sa8155_qinggan11_731, raw,
+                                                        pin,
                                                         raw.substr(0x69108, 0x2d75a8 - 0x69108));
-    check(identity == prepare_qnx_qinggan11_startup(raw, pin));
-    const auto short_image = assemble_qnx_qinggan11_kernel(raw, pin, std::string(4, 0));
+    check(identity ==
+          prepare_qnx_qinggan11_startup(QnxGuestAdapter::sa8155_qinggan11_731, raw, pin));
+    const auto short_image = assemble_qnx_qinggan11_kernel(QnxGuestAdapter::sa8155_qinggan11_731,
+                                                           raw, pin, std::string(4, 0));
     check(get(short_image, 0xd0) == get(raw, 0xd0) && get(short_image, 0xd8) == get(raw, 0xd8));
     // Checksum-valid synthetic streams test the exact geometry boundary, not codec validity.
     constexpr std::size_t capacity = 0x859d5000 - 0x85700200 - 0x66108;
-    const auto boundary = assemble_qnx_qinggan11_kernel(raw, pin, std::string(capacity, 0));
+    const auto boundary = assemble_qnx_qinggan11_kernel(QnxGuestAdapter::sa8155_qinggan11_731, raw,
+                                                        pin, std::string(capacity, 0));
     check(get(boundary, 0xc8) + get(boundary, 0xd8) == get(raw, 0x90));
 
     for (unsigned mode = 0; mode < 8; ++mode) {
         bool refused = false;
         try {
             if (mode == 0) {
-                assemble_qnx_qinggan11_kernel(raw, pin, std::string(capacity + 4, 0));
+                assemble_qnx_qinggan11_kernel(QnxGuestAdapter::sa8155_qinggan11_731, raw, pin,
+                                              std::string(capacity + 4, 0));
             } else if (mode == 1) {
-                assemble_qnx_qinggan11_kernel(raw, pin, std::string(3, 0));
+                assemble_qnx_qinggan11_kernel(QnxGuestAdapter::sa8155_qinggan11_731, raw, pin,
+                                              std::string(3, 0));
             } else if (mode == 2) {
-                assemble_qnx_qinggan11_kernel(raw, pin, "");
+                assemble_qnx_qinggan11_kernel(QnxGuestAdapter::sa8155_qinggan11_731, raw, pin, "");
             } else if (mode == 3) {
                 auto bad = std::string(packed);
                 bad[4] ^= 1;
-                assemble_qnx_qinggan11_kernel(raw, pin, bad);
+                assemble_qnx_qinggan11_kernel(QnxGuestAdapter::sa8155_qinggan11_731, raw, pin, bad);
             } else {
                 auto bad = std::string(raw);
                 bad[mode == 4 ? 0xd0 : mode == 5 ? 0xd8 : mode == 6 ? 0x90 : 0xb8] ^= 1;
-                assemble_qnx_qinggan11_kernel(bad, sha256_bytes(bad), packed);
+                assemble_qnx_qinggan11_kernel(QnxGuestAdapter::sa8155_qinggan11_731, bad,
+                                              sha256_bytes(bad), packed);
             }
         } catch (...) {
             refused = true;
@@ -601,45 +609,59 @@ int main(int argc, char **argv) {
         misc_failure_fixture();
         boot_query_fixture();
 
-        if (argc == 3 && std::string_view(argv[1]) == "--qinggan11-older") {
-            std::ifstream in(argv[2], std::ios::binary);
+        // --adapter ADAPTER HYP: HYP is the hyp_la.img of the hardware_adapter ADAPTER.
+        if (argc == 4 && std::string_view(argv[1]) == "--adapter") {
+            const auto &spec = qnx_adapter(std::string_view(argv[2]));
+            std::ifstream in(argv[3], std::ios::binary);
 
             if (!in) {
-                throw std::runtime_error("older qinggan11 startup input");
+                throw std::runtime_error("adapter startup input");
             }
 
-            const std::string raw((std::istreambuf_iterator<char>(in)), {}),
-                    pin = "dbb3bc2c6f9b0308e38627cf6a3e3b6757ba98c4f5413334526c26d812ab08f0";
-            const auto changed = prepare_qnx_qinggan11_older_startup(raw, pin),
-                       packed = raw.substr(0x69108, 0x2d76d0 - 0x69108);
+            const std::string raw((std::istreambuf_iterator<char>(in)), {}), pin(spec.hyp_sha256);
+            const auto changed = prepare_qnx_qinggan11_startup(spec.adapter, raw, pin),
+                       packed = raw.substr(0x69108,
+                                           std::size_t(spec.host_stream_end) + 0x3000 - 0x69108);
 
-            if (assemble_qnx_qinggan11_older_kernel(raw, pin, packed) != changed) {
-                throw std::runtime_error("older qinggan11 identity assembly");
+            if (assemble_qnx_qinggan11_kernel(spec.adapter, raw, pin, packed) != changed) {
+                throw std::runtime_error("adapter identity assembly");
             }
 
-            for (unsigned i = 0; i < 3; ++i) {
-                bool denied = false;
+            for (const auto &other : qnx_adapter_registry) {
+                bool denied = other.adapter == spec.adapter;
                 try {
-                    if (i == 0) {
-                        prepare_qnx_qinggan11_startup(raw, pin);
-                    } else if (i == 1) {
-                        prepare_qnx_qinggan11_older_startup(raw, std::string(64, '0'));
-                    } else {
-                        auto bad = packed;
-                        bad[4] ^= 1;
-                        assemble_qnx_qinggan11_older_kernel(raw, pin, bad);
+                    if (!denied) {
+                        prepare_qnx_qinggan11_startup(other.adapter, raw, pin);
                     }
                 } catch (...) {
                     denied = true;
                 }
 
                 if (!denied) {
-                    throw std::runtime_error(
-                            "older qinggan11 wrong version or corrupt stream accepted");
+                    throw std::runtime_error("foreign adapter startup accepted");
                 }
             }
 
-            std::cout << "older qinggan11 startup and kernel guards passed\n";
+            for (unsigned i = 0; i < 2; ++i) {
+                bool denied = false;
+                try {
+                    if (i == 0) {
+                        prepare_qnx_qinggan11_startup(spec.adapter, raw, std::string(64, '0'));
+                    } else {
+                        auto bad = packed;
+                        bad[4] ^= 1;
+                        assemble_qnx_qinggan11_kernel(spec.adapter, raw, pin, bad);
+                    }
+                } catch (...) {
+                    denied = true;
+                }
+
+                if (!denied) {
+                    throw std::runtime_error("wrong pin or corrupt stream accepted");
+                }
+            }
+
+            std::cout << spec.name << " startup and kernel guards passed\n";
 
             return 0;
         }
@@ -686,13 +708,15 @@ int main(int argc, char **argv) {
             const std::string raw((std::istreambuf_iterator<char>(input)), {});
             constexpr std::string_view pin =
                     "a476a1e3d3aaa51d855d2d91c412a962efb6ef1e3e63540ec739779d35ce3ce8";
-            const auto changed = prepare_qnx_qinggan11_startup(raw, pin);
+            const auto changed =
+                    prepare_qnx_qinggan11_startup(QnxGuestAdapter::sa8155_qinggan11_731, raw, pin);
             gic_device_fixture(raw, changed);
             cpu_name_fixture(raw, changed);
             bool wrong_model = false;
             try {
                 prepare_qnx_qinggan11_startup(
-                        raw, "1e7c487aae4f4353621f8d0301b352cc974e9037d114ff3ec2556d048512ad28");
+                        QnxGuestAdapter::sa8155_qinggan11_731, raw,
+                        "1e7c487aae4f4353621f8d0301b352cc974e9037d114ff3ec2556d048512ad28");
             } catch (...) {
                 wrong_model = true;
             }
@@ -746,7 +770,8 @@ int main(int argc, char **argv) {
 
             const auto packed = raw.substr(0x69108, 0x2d75a8 - 0x69108);
 
-            if (assemble_qnx_qinggan11_kernel(raw, pin, packed) != changed) {
+            if (assemble_qnx_qinggan11_kernel(QnxGuestAdapter::sa8155_qinggan11_731, raw, pin,
+                                              packed) != changed) {
                 throw std::runtime_error("A11 kernel identity stream parity");
             }
 
@@ -754,17 +779,21 @@ int main(int argc, char **argv) {
                 bool rejected = false;
                 try {
                     if (which == 0) {
-                        prepare_qnx_qinggan11_startup(changed, sha256_bytes(changed));
+                        prepare_qnx_qinggan11_startup(QnxGuestAdapter::sa8155_qinggan11_731,
+                                                      changed, sha256_bytes(changed));
                     } else if (which == 1) {
                         auto bad = raw;
                         bad[0x322c] ^= 1;
-                        prepare_qnx_qinggan11_startup(bad, sha256_bytes(bad));
+                        prepare_qnx_qinggan11_startup(QnxGuestAdapter::sa8155_qinggan11_731, bad,
+                                                      sha256_bytes(bad));
                     } else if (which == 2) {
-                        prepare_qnx_qinggan11_startup(raw, std::string(64, '0'));
+                        prepare_qnx_qinggan11_startup(QnxGuestAdapter::sa8155_qinggan11_731, raw,
+                                                      std::string(64, '0'));
                     } else {
                         auto bad = packed;
                         bad[4] ^= 1;
-                        assemble_qnx_qinggan11_kernel(raw, pin, bad);
+                        assemble_qnx_qinggan11_kernel(QnxGuestAdapter::sa8155_qinggan11_731, raw,
+                                                      pin, bad);
                     }
                 } catch (...) {
                     rejected = true;

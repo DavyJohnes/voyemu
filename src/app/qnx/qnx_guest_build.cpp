@@ -258,30 +258,18 @@ std::string module_digest(QnxGuestAdapter adapter, const Json &pins) {
 } // namespace
 
 std::string qnx_guest_adapter_name(QnxGuestAdapter adapter) {
-    switch (adapter) {
-    case QnxGuestAdapter::qinggan09:
-        return "sa8155-qinggan09";
-    case QnxGuestAdapter::qinggan11:
-        return "sa8155-qinggan11-731";
-    case QnxGuestAdapter::qinggan11_older:
-        return "sa8155-qinggan11-611";
-    case QnxGuestAdapter::passion:
-        return "sa8155-passion-21480";
-    }
-
-    throw VoyemuError("QNX_GUEST_ADAPTER", "unknown guest adapter");
+    return std::string(qnx_adapter(adapter).name);
 }
 
 std::vector<std::string> qnx_guest_module_files(QnxGuestAdapter adapter) {
-    switch (adapter) {
-    case QnxGuestAdapter::qinggan09:
+    switch (qnx_adapter(adapter).platform) {
+    case QnxGuestPlatform::qinggan09:
         return {"front.so",     "observer.so",      "virtual_wfd.so",
                 "readstub.bin", "qnx-ipl-virt.bin", "qnx-ifs2-restore.bin"};
-    case QnxGuestAdapter::qinggan11:
-    case QnxGuestAdapter::qinggan11_older:
+    case QnxGuestPlatform::qinggan11:
         return {"front.so",         "observer.so",          "virtual_wfd.so",       "readstub.bin",
                 "qnx-ipl-virt.bin", "qnx-ifs2-restore.bin", "qnx-pl011-console.bin"};
-    case QnxGuestAdapter::passion:
+    case QnxGuestPlatform::passion:
         return {"front.so",
                 "bounded.so",
                 "ram64.so",
@@ -297,24 +285,19 @@ std::vector<std::string> qnx_guest_module_files(QnxGuestAdapter adapter) {
 }
 
 std::string qnx_guest_modules_digest(std::string_view hardware_adapter) {
-    for (const auto adapter : {QnxGuestAdapter::qinggan09, QnxGuestAdapter::qinggan11,
-                               QnxGuestAdapter::qinggan11_older, QnxGuestAdapter::passion}) {
-        if (qnx_guest_adapter_name(adapter) == hardware_adapter) {
-            return module_digest(adapter, module_pins(adapter));
-        }
-    }
+    const auto adapter = qnx_adapter(hardware_adapter).adapter;
 
-    throw VoyemuError("QNX_GUEST_ADAPTER", "unknown guest adapter");
+    return module_digest(adapter, module_pins(adapter));
 }
 
 Json build_qnx_guest_recipe(const std::filesystem::path &root, const std::filesystem::path &zig,
                             const std::filesystem::path &output, bool offline,
                             QnxGuestAdapter adapter, const Json &initial_native_state) {
-    const auto name = qnx_guest_adapter_name(adapter);
-    const bool older = adapter == QnxGuestAdapter::qinggan11_older,
-               qinggan11 = adapter == QnxGuestAdapter::qinggan11 || older,
-               passion = adapter == QnxGuestAdapter::passion,
-               qinggan09 = adapter == QnxGuestAdapter::qinggan09;
+    const auto &spec = qnx_adapter(adapter);
+    const auto name = std::string(spec.name);
+    const bool qinggan11 = spec.platform == QnxGuestPlatform::qinggan11,
+               passion = spec.platform == QnxGuestPlatform::passion,
+               qinggan09 = spec.platform == QnxGuestPlatform::qinggan09;
 
     need(initial_native_state.is_object() && (qinggan11 || initial_native_state.empty()),
          "QNX_GUEST_INITIAL_STATE_ADAPTER");
@@ -376,8 +359,7 @@ Json build_qnx_guest_recipe(const std::filesystem::path &root, const std::filesy
             copy_source(file_name);
         }
 
-        const auto layout_file = older ? "native_mcu_qinggan11_611.json"
-                                       : "native_mcu_qinggan11.json";
+        const auto layout_file = std::string(spec.mcu_layout_file);
         copy_source(layout_file);
         write(work / "src/native_mcu_qinggan11_layout.inc",
               qnx_qinggan11_mcu_layout(read_private_json(work / "src" / layout_file, 256 * 1024),
@@ -605,8 +587,8 @@ Json build_qnx_guest_recipe(const std::filesystem::path &root, const std::filesy
                 args.push_back("-DQGFX_KANZI_UI=1");
             }
 
-            if (older) {
-                args.push_back("-DQGFX_QINGGAN11_611=1");
+            if (!spec.guest_define.empty()) {
+                args.emplace_back(spec.guest_define);
             }
         }
 
@@ -798,13 +780,10 @@ Json build_qnx_guest_modules(const std::filesystem::path &root, std::string_view
                              bool offline, QnxGuestAdapter adapter,
                              const Json &initial_native_state, std::string_view startup_baseline,
                              std::string_view sysmgrtool_original) {
-    need(adapter == QnxGuestAdapter::qinggan09 || adapter == QnxGuestAdapter::qinggan11 ||
-                 adapter == QnxGuestAdapter::qinggan11_older || adapter == QnxGuestAdapter::passion,
-         "QNX_GUEST_ADAPTER");
-    const bool older = adapter == QnxGuestAdapter::qinggan11_older,
-               qinggan11 = adapter == QnxGuestAdapter::qinggan11 || older,
-               passion = adapter == QnxGuestAdapter::passion,
-               qinggan09 = adapter == QnxGuestAdapter::qinggan09;
+    const auto &spec = qnx_adapter(adapter);
+    const bool qinggan11 = spec.platform == QnxGuestPlatform::qinggan11,
+               passion = spec.platform == QnxGuestPlatform::passion,
+               qinggan09 = spec.platform == QnxGuestPlatform::qinggan09;
     need(initial_native_state.is_object() && (qinggan11 || initial_native_state.empty()),
          "QNX_GUEST_INITIAL_STATE_ADAPTER");
 
@@ -888,9 +867,7 @@ Json build_qnx_guest_modules(const std::filesystem::path &root, std::string_view
              qinggan11 ? qnx_qinggan11_simulated_initial_state(initial_native_state,
                                                                qnx_guest_adapter_name(adapter))
                        : Json(nullptr)},
-            {"mcu_projection", older       ? qnx_qinggan11_older_mcu_projection()
-                               : qinggan11 ? qnx_qinggan11_mcu_projection()
-                                           : Json(nullptr)},
+            {"mcu_projection", qinggan11 ? qnx_mcu_projection(adapter) : Json(nullptr)},
             {"oem_libc_sha256", sha256_bytes(libc)},
             {"oem_screen_sha256", sha256_bytes(screen)},
             {"startup_baseline_sha256",

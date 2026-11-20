@@ -24,7 +24,19 @@ struct QnxRuntimeLayout {
 };
 
 inline QnxRuntimeLayout qnx_runtime_layout(std::string_view adapter) {
-    if (adapter == "sa8155-passion-21480") {
+    const QnxAdapterSpec *spec = nullptr;
+
+    for (const auto &item : qnx_adapter_registry) {
+        if (item.name == adapter) {
+            spec = &item;
+        }
+    }
+
+    if (spec == nullptr) {
+        throw VoyemuError("QNX_LAYOUT", "unsupported hardware adapter");
+    }
+
+    if (spec->platform == QnxGuestPlatform::passion) {
         return {std::string(adapter),
                 {"mifs_hyp_la.img", "ifs2_la.img", "system_la.img", "mifs_recovery_hyp_la.img",
                  "ifs2_recovery_la.img"},
@@ -55,11 +67,6 @@ inline QnxRuntimeLayout qnx_runtime_layout(std::string_view adapter) {
                 11713};
     }
 
-    if (adapter != "sa8155-qinggan09" && adapter != "sa8155-qinggan11-731" &&
-        adapter != "sa8155-qinggan11-611") {
-        throw VoyemuError("QNX_LAYOUT", "unsupported hardware adapter");
-    }
-
     QnxRuntimeLayout layout{std::string(adapter),
                             {"hyp_la.img", "ifs2_la.img", "system_la.img", "ifs2_recovery_la.img"},
                             {"hyp-hvf.img", "ifs2-native.img", "host-native-lzo.bin", "smem.bin",
@@ -77,13 +84,12 @@ inline QnxRuntimeLayout qnx_runtime_layout(std::string_view adapter) {
                             nullptr,
                             nullptr};
 
-    if (adapter == "sa8155-qinggan11-731" || adapter == "sa8155-qinggan11-611") {
+    if (spec->platform == QnxGuestPlatform::qinggan11) {
         layout.originals.pop_back();
         layout.images.insert(layout.images.end(), {"gpt-primary.bin", "gpt-backup.bin"});
         layout.loaders.insert(layout.loaders.end(), {{"gpt-primary.bin", "0xaffc0000"},
                                                      {"gpt-backup.bin", "0xbffbe000"}});
-        layout.projection = adapter == "sa8155-qinggan11-611" ? qnx_qinggan11_older_mcu_projection()
-                                                              : qnx_qinggan11_mcu_projection();
+        layout.projection = qnx_mcu_projection(spec->adapter);
     }
 
     return layout;
@@ -95,14 +101,13 @@ inline QnxRuntimeLayout qnx_runtime_layout(std::string_view profile, const Json 
     auto layout = qnx_runtime_layout(adapter);
 
     layout.profile = profile;
-    const bool older = adapter == "sa8155-qinggan11-611",
-               free = adapter == "sa8155-qinggan11-731" || older;
+    const auto &spec = qnx_adapter(adapter);
+    const bool free = spec.platform == QnxGuestPlatform::qinggan11;
 
-    if (older &&
+    if (free && spec.mcu_previous_projected_fields &&
         metadata.value("mcu_projection", Json()) ==
-                qnx_qinggan11_older_mcu_projection(qnx_qinggan11_older_previous_projected_fields)) {
-        layout.projection =
-                qnx_qinggan11_older_mcu_projection(qnx_qinggan11_older_previous_projected_fields);
+                qnx_mcu_projection(spec.adapter, spec.mcu_previous_projected_fields)) {
+        layout.projection = qnx_mcu_projection(spec.adapter, spec.mcu_previous_projected_fields);
     }
 
     if (free && (!metadata.contains("mcu_projection") ||
@@ -121,7 +126,8 @@ inline QnxRuntimeLayout qnx_runtime_layout(std::string_view profile, const Json 
                                {"userdata_image", "userdata-qnx6.img"}};
 
         // Only the qinggan09 adapter keeps a persistent system image and QNX6 userdata.
-        if (adapter != "sa8155-qinggan09" || metadata.at("persistence") != expected) {
+        if (spec.platform != QnxGuestPlatform::qinggan09 ||
+            metadata.at("persistence") != expected) {
             throw VoyemuError("QNX_LAYOUT", "unsupported persistent storage contract");
         }
 
@@ -130,7 +136,7 @@ inline QnxRuntimeLayout qnx_runtime_layout(std::string_view profile, const Json 
     }
 
     if (metadata.contains("interguest_network")) {
-        if (adapter != "sa8155-qinggan09" && !free) {
+        if (spec.platform == QnxGuestPlatform::passion) {
             throw VoyemuError("QNX_LAYOUT",
                               "interguest network requires its accepted guest adapter");
         }
@@ -170,9 +176,9 @@ inline QnxRuntimeLayout qnx_runtime_layout(std::string_view profile, const Json 
 inline QnxRuntimeLayout qnx_portable_layout(std::string_view profile, const Json &metadata) {
     auto layout = qnx_runtime_layout(profile, metadata);
 
-    if (metadata.size() != (layout.adapter == "sa8155-passion-21480" ? 3U
-                            : layout.projection.is_null()            ? 2U
-                                                                     : 4U) +
+    if (metadata.size() != (qnx_adapter(layout.adapter).platform == QnxGuestPlatform::passion ? 3U
+                            : layout.projection.is_null() ? 2U
+                                                          : 4U) +
                                    (layout.simulated_initial_native_state.is_null() ? 0U : 1U) +
                                    (layout.interguest_network.is_null() ? 0U : 1U) +
                                    (layout.persistence.is_null() ? 0U : 1U) ||
@@ -204,23 +210,27 @@ inline QnxRuntimeLayout qnx_portable_layout(std::string_view profile, const Json
     return layout;
 }
 
-// Read only the previous MCU projection scope of the older qinggan11 adapter at the stopped
-// QNX-upgrade boundary. Scope 33 stays upgrade-only. Scope 34 is a previously accepted runtime.
+// Read the upgrade-only MCU projection scope of an adapter (mcu_upgrade_source_fields) only at the
+// stopped QNX-upgrade boundary; its previous runtime scope is an ordinary accepted runtime.
 inline QnxRuntimeLayout qnx_portable_upgrade_source_layout(std::string_view profile,
                                                            const Json &metadata) {
-    const auto previous = qnx_qinggan11_older_mcu_projection(33);
+    for (const auto &spec : qnx_adapter_registry) {
+        if (spec.mcu_upgrade_source_fields == 0 ||
+            metadata.value("hardware_adapter", std::string{}) != spec.name ||
+            metadata.value("mcu_projection", Json()) !=
+                    qnx_mcu_projection(spec.adapter, spec.mcu_upgrade_source_fields)) {
+            continue;
+        }
 
-    if (metadata.value("hardware_adapter", std::string{}) != "sa8155-qinggan11-611" ||
-        metadata.value("mcu_projection", Json()) != previous) {
-        return qnx_portable_layout(profile, metadata);
+        auto checked = metadata;
+        checked["mcu_projection"] = qnx_mcu_projection(spec.adapter);
+        auto layout = qnx_portable_layout(profile, checked);
+        layout.projection = qnx_mcu_projection(spec.adapter, spec.mcu_upgrade_source_fields);
+
+        return layout;
     }
 
-    auto checked = metadata;
-    checked["mcu_projection"] = qnx_qinggan11_older_mcu_projection();
-    auto layout = qnx_portable_layout(profile, checked);
-    layout.projection = previous;
-
-    return layout;
+    return qnx_portable_layout(profile, metadata);
 }
 
 inline std::set<std::string> qnx_image_roles(const QnxRuntimeLayout &layout) {
@@ -236,7 +246,7 @@ inline void qnx_runtime_metadata(Json &target, const QnxRuntimeLayout &layout) {
         target["persistence"] = layout.persistence;
     }
 
-    if (layout.adapter == "sa8155-passion-21480") {
+    if (qnx_adapter(layout.adapter).platform == QnxGuestPlatform::passion) {
         target["hardware_adapter"] = layout.adapter;
     }
 
@@ -253,7 +263,8 @@ inline void qnx_runtime_metadata(Json &target, const QnxRuntimeLayout &layout) {
 inline void qnx_runtime_launch_metadata(Json &target, const QnxRuntimeLayout &layout) {
     qnx_runtime_metadata(target, layout);
 
-    if (layout.adapter == "sa8155-passion-21480" && !layout.profile.empty()) {
+    if (qnx_adapter(layout.adapter).platform == QnxGuestPlatform::passion &&
+        !layout.profile.empty()) {
         target["profile"] = layout.profile;
     }
 }

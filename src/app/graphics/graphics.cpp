@@ -1520,9 +1520,15 @@ struct Backend::Impl {
         }
 
         const auto scope = qnx_mcu_request_projection(a[1], a[2], a[3]);
-        const bool qinggan11_611 = scope.is_object() &&
-                                   scope.value("hardware_adapter", std::string{}) ==
-                                           "sa8155-qinggan11-611";
+        const auto scope_adapter =
+                scope.is_object() ? scope.value("hardware_adapter", std::string{}) : std::string{};
+        const bool language_off_wire =
+                std::any_of(qnx_adapter_registry.begin(), qnx_adapter_registry.end(),
+                            [&](const QnxAdapterSpec &spec) {
+                                return spec.name == scope_adapter &&
+                                       spec.platform == QnxGuestPlatform::qinggan11 &&
+                                       !spec.mcu_language_on_wire;
+                            });
         ack("vehicle-ack.json", a[0], vehicle_issued, vehicle_acked, true, scope);
         auto path = (std::filesystem::exists(options.session / "mcu-state.json")
                              ? options.session / "mcu-state.json"
@@ -1555,10 +1561,10 @@ struct Backend::Impl {
                          (!std::string_view(f.name).starts_with("swm_") || !v),
                  "OEM field width/transient state");
 
-            // Free A11 6.11.1 language is delivered by IPP_LANGUAGE_SET, not its MCU wire.
-            // Preserve the logical source while keeping this unmapped wire word initial.
-            // Every other unsupported field still reaches the guest's fail-closed guard.
-            if (qinggan11_611 && std::string_view(f.name) == "ivi_languageSet") {
+            // An adapter whose OEM takes the language from IPP_LANGUAGE_SET, not its MCU wire,
+            // keeps the logical source while this unmapped wire word stays initial. Every other
+            // unsupported field still reaches the guest's fail-closed guard.
+            if (language_off_wire && std::string_view(f.name) == "ivi_languageSet") {
                 v = 0;
             }
 

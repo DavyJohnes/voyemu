@@ -117,7 +117,7 @@ Json run(const std::filesystem::path &root, const std::string &profile,
         checked(qnx_originals_directory(root, profile) / name, pin, 4ULL << 30);
     }
 
-    if (layout.adapter == "sa8155-passion-21480") {
+    if (qnx_adapter(layout.adapter).platform == QnxGuestPlatform::passion) {
         const auto &extra = source.at("supplemental_original");
         const std::filesystem::path file = extra.at("file").get<std::string>();
         inside(root / ".local", file);
@@ -538,8 +538,8 @@ Json run(const std::filesystem::path &root, const std::string &profile,
                         payload["sha256"] = pin;
                     }
                 }
-            } else if (layout.adapter == "sa8155-qinggan09" && !layout.persistence.is_null() &&
-                       name == "sysla-gpt-ramdisk-v3.img") {
+            } else if (qnx_adapter(layout.adapter).platform == QnxGuestPlatform::qinggan09 &&
+                       !layout.persistence.is_null() && name == "sysla-gpt-ramdisk-v3.img") {
                 need(std::filesystem::file_size(file) == (1025ULL << 20),
                      "initialized system extent differs");
                 const auto &seed = request.at("images").at(name);

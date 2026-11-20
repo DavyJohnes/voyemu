@@ -49,66 +49,80 @@ template <class Function> void rejects_code(Function function, std::string_view 
 
 int main(int argc, char **argv) {
     try {
-        if (argc == 4 && std::string_view(argv[1]) == "--qinggan11-older-display") {
+        if (argc == 4 && std::string_view(argv[1]) == "--display-config") {
             const auto image = read(argv[2]), configuration = read(argv[3]);
-            const auto changed = prepare_qnx_qinggan11_older_display_config(image, configuration);
+            const auto changed = prepare_qnx_qinggan11_display_config(image, configuration);
             const auto actual = read_qnx_imagefs_file(changed, "lib64/graphics.conf");
 
             if (actual.substr(0, configuration.size()) != configuration || actual.size() != 1119) {
-                throw std::runtime_error("older qinggan11 display configuration differs");
+                throw std::runtime_error("display configuration differs");
             }
 
             rejects([&] {
-                prepare_qnx_qinggan11_older_display_config(changed, configuration);
+                prepare_qnx_qinggan11_display_config(changed, configuration);
             });
-            std::cout << "older qinggan11 display exact guard passed\n";
+            std::cout << "display exact guard passed\n";
 
             return 0;
         }
 
-        if (argc == 5 && std::string_view(argv[1]) == "--qinggan11-older") {
-            const auto manager = read(argv[2]), scene = read(argv[3]), driver = read(argv[4]);
-            const auto fixed_manager = prepare_qnx_qinggan11_older_theme_manager(manager),
-                       fixed_scene = prepare_qnx_qinggan11_older_theme_scene(scene);
+        // --adapter-files ADAPTER THEMMGR SCENE DEVB_RAM: OEM files of the hardware_adapter
+        // ADAPTER.
+        if (argc == 6 && std::string_view(argv[1]) == "--adapter-files") {
+            const auto &spec = qnx_adapter(std::string_view(argv[2]));
+            const auto manager = read(argv[3]), scene = read(argv[4]), driver = read(argv[5]);
+            const auto fixed_manager = prepare_qnx_qinggan11_theme_manager(spec.adapter, manager),
+                       fixed_scene = prepare_qnx_qinggan11_theme_scene(spec.adapter, scene);
 
             for (const auto at : {0x5844, 0x587c, 0x58ec, 0x5924, 0x59b0}) {
                 if (static_cast<unsigned char>(fixed_manager[at + 1]) != 0xcc) {
-                    throw std::runtime_error("older qinggan11 manager comparator");
+                    throw std::runtime_error("adapter manager comparator");
                 }
             }
 
             for (const auto at : {0x9de4, 0x9ed4, 0xa2cc, 0xa3b4}) {
                 if (static_cast<unsigned char>(fixed_scene[at + 1]) != 0xcc) {
-                    throw std::runtime_error("older qinggan11 scene comparator");
+                    throw std::runtime_error("adapter scene comparator");
                 }
             }
 
-            validate_qnx_qinggan11_older_ram_driver(driver);
+            validate_qnx_qinggan11_ram_driver(spec.adapter, driver);
+
+            for (const auto &other : qnx_adapter_registry) {
+                if (other.adapter != spec.adapter) {
+                    rejects([&] {
+                        prepare_qnx_qinggan11_theme_manager(other.adapter, manager);
+                    });
+                    rejects([&] {
+                        prepare_qnx_qinggan11_theme_scene(other.adapter, scene);
+                    });
+                }
+            }
+
             rejects([&] {
-                prepare_qnx_qinggan11_theme_manager(manager);
+                prepare_qnx_qinggan11_theme_manager(spec.adapter, fixed_manager);
             });
             rejects([&] {
-                prepare_qnx_qinggan11_theme_scene(scene);
+                prepare_qnx_qinggan11_theme_scene(spec.adapter, fixed_scene);
             });
-            rejects([&] {
-                prepare_qnx_qinggan11_older_theme_manager(fixed_manager);
-            });
-            rejects([&] {
-                prepare_qnx_qinggan11_older_theme_scene(fixed_scene);
-            });
-            auto bad = driver;
-            bad[201] ^= 1;
-            rejects([&] {
-                validate_qnx_qinggan11_older_ram_driver(bad);
-            });
-            std::cout << "older qinggan11 theme and OEM RAM driver guards passed\n";
+
+            if (spec.ram_driver_paddr != std::array<std::uint8_t, 2>{}) {
+                auto bad = driver;
+                bad[201] ^= 1;
+                rejects([&] {
+                    validate_qnx_qinggan11_ram_driver(spec.adapter, bad);
+                });
+            }
+
+            std::cout << spec.name << " theme and OEM RAM driver guards passed\n";
 
             return 0;
         }
 
         if (argc == 3 && std::string_view(argv[1]) == "--theme-scene") {
             const auto original = read(argv[2]);
-            const auto fixed = prepare_qnx_qinggan11_theme_scene(original);
+            const auto fixed = prepare_qnx_qinggan11_theme_scene(
+                    QnxGuestAdapter::sa8155_qinggan11_731, original);
             auto expected = original;
 
             for (const auto at : {0x9de4, 0x9ed4, 0xa2cc, 0xa3b4}) {
@@ -121,10 +135,10 @@ int main(int argc, char **argv) {
             }
 
             rejects([&] {
-                prepare_qnx_qinggan11_theme_scene(fixed);
+                prepare_qnx_qinggan11_theme_scene(QnxGuestAdapter::sa8155_qinggan11_731, fixed);
             });
             rejects([] {
-                prepare_qnx_qinggan11_theme_scene({});
+                prepare_qnx_qinggan11_theme_scene(QnxGuestAdapter::sa8155_qinggan11_731, {});
             });
             std::cout << "A11 OEM HMI readiness regression passed\n";
 
@@ -133,7 +147,8 @@ int main(int argc, char **argv) {
 
         if (argc == 3 && std::string_view(argv[1]) == "--theme-manager") {
             const auto original = read(argv[2]);
-            const auto fixed = prepare_qnx_qinggan11_theme_manager(original);
+            const auto fixed = prepare_qnx_qinggan11_theme_manager(
+                    QnxGuestAdapter::sa8155_qinggan11_731, original);
 
             if (fixed.size() != original.size()) {
                 throw std::runtime_error("theme manager extent");
@@ -158,7 +173,7 @@ int main(int argc, char **argv) {
             }
 
             rejects([&] {
-                prepare_qnx_qinggan11_theme_manager(fixed);
+                prepare_qnx_qinggan11_theme_manager(QnxGuestAdapter::sa8155_qinggan11_731, fixed);
             });
             std::cout << "A11 OEM theme consumer readiness regression passed\n";
 
@@ -166,10 +181,10 @@ int main(int argc, char **argv) {
         }
 
         rejects([] {
-            prepare_qnx_qinggan11_theme_manager({});
+            prepare_qnx_qinggan11_theme_manager(QnxGuestAdapter::sa8155_qinggan11_731, {});
         });
         rejects([] {
-            prepare_qnx_qinggan11_theme_scene({});
+            prepare_qnx_qinggan11_theme_scene(QnxGuestAdapter::sa8155_qinggan11_731, {});
         });
         rejects([] {
             prepare_qnx_qinggan11_display_config({}, {});

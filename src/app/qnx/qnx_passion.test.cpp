@@ -678,7 +678,8 @@ int main(int argc, char **argv) {
                 validate_qnx_passion_ram_parent_source(reapplied);
             });
             rejects([&] {
-                prepare_qnx_qinggan11_startup(original, sha256_bytes(original));
+                prepare_qnx_qinggan11_startup(QnxGuestAdapter::sa8155_qinggan11_731, original,
+                                              sha256_bytes(original));
             });
             const auto host = decode_qnx_passion_host(original), hash = sha256_bytes(host),
                        reference = original.substr(0x69108);

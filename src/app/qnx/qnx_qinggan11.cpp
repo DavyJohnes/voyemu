@@ -6,64 +6,25 @@
 #include <cctype>
 #include <stdexcept>
 namespace voyemu {
-void validate_qnx_qinggan11_older_ram_driver(std::string_view driver) {
+void validate_qnx_qinggan11_ram_driver(QnxGuestAdapter adapter, std::string_view driver) {
+    const auto &spec = qnx_adapter(adapter);
+
     if (driver.size() != 22165) {
-        throw VoyemuError("QNX_QINGGAN11_OLDER_RAM_DRIVER_SIZE",
+        throw VoyemuError("QNX_QINGGAN11_RAM_DRIVER_SIZE",
                           "OEM image differs from the expected layout");
     }
 
-    // Exact OEM ELF differs from the qinggan11 adapter one only in the p_paddr of its two PT_LOAD
-    // segments.
     // Preserve OEM bytes: this verifies code and relocations without rewriting the loader metadata.
-    if (static_cast<unsigned char>(driver[201]) != 0x50 ||
-        static_cast<unsigned char>(driver[257]) != 0x8b) {
-        throw VoyemuError("QNX_QINGGAN11_OLDER_RAM_DRIVER_ADDRESS",
+    if (spec.ram_driver_paddr != std::array<std::uint8_t, 2>{} &&
+        (static_cast<unsigned char>(driver[201]) != spec.ram_driver_paddr[0] ||
+         static_cast<unsigned char>(driver[257]) != spec.ram_driver_paddr[1])) {
+        throw VoyemuError("QNX_QINGGAN11_RAM_DRIVER_ADDRESS",
                           "OEM image differs from the expected layout");
     }
 }
 
-std::string prepare_qnx_qinggan11_older_theme_scene(std::string_view original) {
-    if (original.size() != 207032) {
-        throw VoyemuError("QNX_QINGGAN11_OLDER_THEME_SCENE_SIZE",
-                          "OEM image differs from the expected layout");
-    }
-
-    std::string output(original);
-
-    for (const auto at : {0x9de4, 0x9ed4, 0xa2cc, 0xa3b4}) {
-        if (original.substr(at, 4) != std::string_view("\x5f\x4c\x00\x71", 4)) {
-            throw VoyemuError("QNX_QINGGAN11_OLDER_THEME_SCENE_COMPARATOR",
-                              "OEM image differs from the expected layout");
-        }
-
-        output[at + 1] = static_cast<char>(0xcc);
-    }
-
-    return output;
-}
-
-std::string prepare_qnx_qinggan11_older_theme_manager(std::string_view original) {
-    if (original.size() != 116616) {
-        throw VoyemuError("QNX_QINGGAN11_OLDER_THEME_MANAGER_SIZE",
-                          "OEM image differs from the expected layout");
-    }
-
-    std::string output(original);
-
-    for (const auto at : {0x5844, 0x587c, 0x58ec, 0x5924, 0x59b0}) {
-        if (original.substr(at, 4) != std::string_view("\x1f\x4c\x00\x71", 4)) {
-            throw VoyemuError("QNX_QINGGAN11_OLDER_THEME_MANAGER_COMPARATOR",
-                              "OEM image differs from the expected layout");
-        }
-
-        output[at + 1] = static_cast<char>(0xcc);
-    }
-
-    return output;
-}
-
-std::string prepare_qnx_qinggan11_theme_scene(std::string_view original) {
-    if (original.size() != 207048) {
+std::string prepare_qnx_qinggan11_theme_scene(QnxGuestAdapter adapter, std::string_view original) {
+    if (original.size() != qnx_adapter(adapter).theme_scene_bytes) {
         throw VoyemuError("QNX_QINGGAN11_THEME_SCENE_SIZE",
                           "OEM image differs from the expected layout");
     }
@@ -82,10 +43,11 @@ std::string prepare_qnx_qinggan11_theme_scene(std::string_view original) {
     return output;
 }
 
-std::string prepare_qnx_qinggan11_theme_manager(std::string_view original) {
-    // The pinned A11 manager sends to MID 1/2/3/12; MID 12 sets bit 0x20.
+std::string prepare_qnx_qinggan11_theme_manager(QnxGuestAdapter adapter,
+                                                std::string_view original) {
+    // The pinned manager sends to MID 1/2/3/12; MID 12 sets bit 0x20.
     // Require its genuine response too, retaining the OEM transitions and timers.
-    if (original.size() != 116824) {
+    if (original.size() != qnx_adapter(adapter).theme_manager_bytes) {
         throw VoyemuError("QNX_QINGGAN11_THEME_MANAGER_SIZE",
                           "OEM image differs from the expected layout");
     }
@@ -339,23 +301,6 @@ qm_qconn=$!
     output.replace(ready_at, ready.size(), "test_powFakeMsg test_evt 60 1 power");
 
     return output;
-}
-
-std::string prepare_qnx_qinggan11_older_display_config(std::string_view image,
-                                                       std::string_view configuration) {
-    if (configuration.empty() || configuration.size() > 1119) {
-        throw VoyemuError("QNX_QINGGAN11_OLDER_GRAPHICS_CAPACITY",
-                          "OEM image differs from the expected layout");
-    }
-
-    const auto unique = rename_qnx_imagefs_duplicate_file(
-            image, "lib64/graphics.conf", "lib64/graphics.old",
-            "c02066b2f5d7e0dc14d21ad1911baf53fa289d93f2c4a2c60644b3428d81d178");
-
-    return replace_qnx_imagefs_file(
-            unique, "lib64/graphics.conf",
-            sha256_bytes(read_qnx_imagefs_file(unique, "lib64/graphics.conf")), configuration, 1,
-            true);
 }
 
 std::string prepare_qnx_qinggan11_display_config(std::string_view image,

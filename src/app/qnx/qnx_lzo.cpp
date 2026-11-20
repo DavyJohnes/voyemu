@@ -93,11 +93,18 @@ std::string decode_qnx_boot_stream(std::string_view stream) {
     return decode_stream(stream, 105, 0);
 }
 
-std::string decode_qnx_qinggan11_host(std::string_view hyp, std::string_view hyp_pin) {
-    constexpr std::string_view expected =
-            "a476a1e3d3aaa51d855d2d91c412a962efb6ef1e3e63540ec739779d35ce3ce8";
+// The OEM host LZO stream of a qinggan11 adapter, from 0x69108 to the end its header declares.
+static std::string_view qinggan11_host_stream(const QnxAdapterSpec &spec, std::string_view hyp) {
+    return hyp.substr(0x69108, std::size_t(spec.host_stream_end) + 0x3000 - 0x69108);
+}
 
-    need(hyp_pin == expected && hyp.size() == 7340032 && sha256_bytes(hyp) == expected,
+std::string decode_qnx_qinggan11_host(QnxGuestAdapter adapter, std::string_view hyp,
+                                      std::string_view hyp_pin) {
+    const auto &spec = qnx_adapter(adapter);
+    const auto expected = spec.hyp_sha256;
+
+    need(spec.platform == QnxGuestPlatform::qinggan11 && hyp_pin == expected &&
+                 hyp.size() == spec.hyp_bytes && sha256_bytes(hyp) == expected,
          "QNX_QINGGAN11_HYP_SHA");
     auto word = [&](std::size_t at) {
         need(at + 4 <= hyp.size(), "QNX_QINGGAN11_HEADER_BOUNDS");
@@ -109,8 +116,8 @@ std::string decode_qnx_qinggan11_host(std::string_view hyp, std::string_view hyp
 
         return value;
     };
-    need(word(0x3000) == 0x00ff7eeb && word(0x3020) == 0x66108 && word(0x3024) == 0x2d45a8 &&
-                 word(0x302c) == 6704052,
+    need(word(0x3000) == 0x00ff7eeb && word(0x3020) == 0x66108 &&
+                 word(0x3024) == spec.host_stream_end && word(0x302c) == 6704052,
          "QNX_QINGGAN11_HEADER_LAYOUT");
     std::uint32_t sum = 0;
 
@@ -120,37 +127,7 @@ std::string decode_qnx_qinggan11_host(std::string_view hyp, std::string_view hyp
 
     need(sum == 0, "QNX_QINGGAN11_STARTUP_CHECKSUM");
 
-    return decode_stream(hyp.substr(0x69108, 0x2d75a8 - 0x69108), 103, 6704052);
-}
-
-std::string decode_qnx_qinggan11_older_host(std::string_view hyp, std::string_view hyp_pin) {
-    constexpr std::string_view expected =
-            "dbb3bc2c6f9b0308e38627cf6a3e3b6757ba98c4f5413334526c26d812ab08f0";
-
-    need(hyp_pin == expected && hyp.size() == 7340032 && sha256_bytes(hyp) == expected,
-         "QNX_QINGGAN11_OLDER_HYP_SHA");
-    auto word = [&](std::size_t at) {
-        need(at + 4 <= hyp.size(), "QNX_QINGGAN11_OLDER_HEADER_BOUNDS");
-        std::uint32_t value = 0;
-
-        for (unsigned i = 0; i < 4; ++i) {
-            value |= std::uint32_t(static_cast<unsigned char>(hyp[at + i])) << (i * 8);
-        }
-
-        return value;
-    };
-    need(word(0x3000) == 0x00ff7eeb && word(0x3020) == 0x66108 && word(0x3024) == 0x2d46d0 &&
-                 word(0x302c) == 6704052,
-         "QNX_QINGGAN11_OLDER_HEADER_LAYOUT");
-    std::uint32_t sum = 0;
-
-    for (std::size_t at = 0x3000; at < 0x69108; at += 4) {
-        sum += word(at);
-    }
-
-    need(sum == 0, "QNX_QINGGAN11_OLDER_STARTUP_CHECKSUM");
-
-    return decode_stream(hyp.substr(0x69108, 0x2d76d0 - 0x69108), 103, 6704052);
+    return decode_stream(qinggan11_host_stream(spec, hyp), 103, 6704052);
 }
 
 static std::string encode_declared(std::string_view reference, std::string_view original,
@@ -221,24 +198,14 @@ std::string encode_qnx_declared_boot_stream(std::string_view reference, std::str
     return encode_declared(reference, original, plaintext, blocks, extent);
 }
 
-std::string encode_qnx_qinggan11_host(std::string_view hyp, std::string_view hyp_pin,
-                                      std::string_view plaintext) {
-    const auto original = decode_qnx_qinggan11_host(hyp, hyp_pin);
+std::string encode_qnx_qinggan11_host(QnxGuestAdapter adapter, std::string_view hyp,
+                                      std::string_view hyp_pin, std::string_view plaintext) {
+    const auto original = decode_qnx_qinggan11_host(adapter, hyp, hyp_pin);
 
     need(plaintext.size() == original.size(), "QNX_QINGGAN11_LZO_PLAINTEXT_EXTENT");
 
-    return encode_declared(hyp.substr(0x69108, 0x2d75a8 - 0x69108), original, plaintext, 103,
-                           6704052);
-}
-
-std::string encode_qnx_qinggan11_older_host(std::string_view hyp, std::string_view hyp_pin,
-                                            std::string_view plaintext) {
-    const auto original = decode_qnx_qinggan11_older_host(hyp, hyp_pin);
-
-    need(plaintext.size() == original.size(), "QNX_QINGGAN11_OLDER_LZO_PLAINTEXT_EXTENT");
-
-    return encode_declared(hyp.substr(0x69108, 0x2d76d0 - 0x69108), original, plaintext, 103,
-                           6704052);
+    return encode_declared(qinggan11_host_stream(qnx_adapter(adapter), hyp), original, plaintext,
+                           103, 6704052);
 }
 
 std::string encode_qnx_boot_stream(std::string_view reference, std::string_view plaintext) {

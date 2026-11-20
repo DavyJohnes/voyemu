@@ -333,8 +333,8 @@ static Json upgrade_profile_qnx_impl(const std::filesystem::path &root, std::str
     const auto target = explicit_seed.empty() ? build_target(root, profile, machine)
                                               : explicit_seed;
     const auto expected = hash(target / "runtime.json", 128 * 1024);
-    const bool older_adapter = layout.adapter == "sa8155-qinggan11-611";
-    const auto previous = older_adapter
+    const bool upgrade_scope = qnx_adapter(layout.adapter).mcu_upgrade_source_fields != 0;
+    const auto previous = upgrade_scope
                                   ? inspect_qinggan11_qnx_upgrade_source(root, profile, machine)
                                   : inspect_portable_runtime(root, profile, machine, explicit_seed);
     need(previous.contains("qnx") &&
@@ -366,7 +366,7 @@ static Json upgrade_profile_qnx_impl(const std::filesystem::path &root, std::str
     result["qnx_acceptance_sha256"] = qnx_pin;
     result["runtime_sha256"] = hash(target / "runtime.json", 128 * 1024);
 
-    if (older_adapter && previous.at("qnx").at("mcu_projection") != layout.projection) {
+    if (upgrade_scope && previous.at("qnx").at("mcu_projection") != layout.projection) {
         result["migration_reason"] =
                 "MCU projection scope33 to34: deliver genuine HDC availability";
     }

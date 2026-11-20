@@ -140,7 +140,7 @@ int main(int argc, char **argv) {
 
         check(qnx_qinggan11_611_originals_match(qinggan11_611) &&
                       !qnx_qinggan11_originals_match(qinggan11_611),
-              "exact older qinggan11 triple required");
+              "exact pinned triple of the second qinggan11 adapter required");
         auto cross = qinggan11_611;
         cross["ifs2_la.img"]["sha256"] = qnx_qinggan11_originals[1].sha256;
         check(!qnx_qinggan11_611_originals_match(cross), "mixed 7.3 IFS rejected");

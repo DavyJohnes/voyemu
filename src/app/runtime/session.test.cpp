@@ -550,7 +550,8 @@ struct SessionPersistenceFixture {
                     session.cluster_spec_["hardware_adapter"] = "sa8155-qinggan11-731";
                     session.cluster_spec_.erase("profile");
                     session.cluster_spec_.erase("interguest_ram");
-                    session.cluster_spec_["mcu_projection"] = qnx_qinggan11_mcu_projection();
+                    session.cluster_spec_["mcu_projection"] =
+                            qnx_mcu_projection(QnxGuestAdapter::sa8155_qinggan11_731);
                 }
 
                 session.cluster_boot_spec_ = session.cluster_spec_;

@@ -160,12 +160,14 @@ template <class Function> void qinggan11_rejects(Function action) {
     }
 }
 
+// The golden fixture of the ifs2_la.img of the sa8155-qinggan11-731 adapter.
 void qinggan11_gpt_fixture(const char *path) {
+    constexpr auto adapter = QnxGuestAdapter::sa8155_qinggan11_731;
     const auto image = qinggan11_read(path), pin = sha256_bytes(image);
-    const auto images = qnx_qinggan11_gpt(image, pin);
+    const auto images = qnx_qinggan11_gpt(adapter, image, pin);
 
-    validate_qnx_qinggan11_gpt(images, image, pin);
-    const auto loader = qnx_qinggan11_loader_image(image, pin);
+    validate_qnx_qinggan11_gpt(adapter, images, image, pin);
+    const auto loader = qnx_qinggan11_loader_image(adapter, image, pin);
 
     if (loader.size() != 147841024 || loader.size() % 4096 != 0 ||
         loader != image.substr(0, loader.size()) ||
@@ -181,21 +183,21 @@ void qinggan11_gpt_fixture(const char *path) {
     }
 
     qinggan11_rejects([&] {
-        qnx_qinggan11_loader_image(image, std::string(64, '0'));
+        qnx_qinggan11_loader_image(adapter, image, std::string(64, '0'));
     });
     qinggan11_rejects([&] {
         const auto short_image = image.substr(0, image.size() - 1);
-        qnx_qinggan11_loader_image(short_image, sha256_bytes(short_image));
+        qnx_qinggan11_loader_image(adapter, short_image, sha256_bytes(short_image));
     });
     qinggan11_rejects([&] {
         auto tail = image;
         tail[147839040] = 0;
-        qnx_qinggan11_loader_image(tail, sha256_bytes(tail));
+        qnx_qinggan11_loader_image(adapter, tail, sha256_bytes(tail));
     });
     qinggan11_rejects([&] {
         auto tail = image;
         tail.back() = 0;
-        qnx_qinggan11_loader_image(tail, sha256_bytes(tail));
+        qnx_qinggan11_loader_image(adapter, tail, sha256_bytes(tail));
     });
 
     if (sha256_bytes(images.cache) !=
@@ -230,10 +232,10 @@ void qinggan11_gpt_fixture(const char *path) {
     }
 
     qinggan11_rejects([&] {
-        qnx_qinggan11_gpt(image, std::string(64, '0'));
+        qnx_qinggan11_gpt(adapter, image, std::string(64, '0'));
     });
     qinggan11_rejects([&] {
-        qnx_qinggan11_gpt(std::string_view(image).substr(0, image.size() - 1), pin);
+        qnx_qinggan11_gpt(adapter, std::string_view(image).substr(0, image.size() - 1), pin);
     });
     auto put = [](std::string &data, std::size_t at, std::uint32_t value) {
         for (unsigned i = 0; i < 4; ++i) {
@@ -257,7 +259,7 @@ void qinggan11_gpt_fixture(const char *path) {
 
     put(bad, 147839040, 0 - sum);
     qinggan11_rejects([&] {
-        qnx_qinggan11_loader_image(bad, sha256_bytes(bad));
+        qnx_qinggan11_loader_image(adapter, bad, sha256_bytes(bad));
     });
 
     for (unsigned which = 0; which < 3; ++which) {
@@ -265,7 +267,7 @@ void qinggan11_gpt_fixture(const char *path) {
         auto &part = which == 0 ? corrupt.cache : which == 1 ? corrupt.primary : corrupt.backup;
         part[part.size() / 2] ^= 1;
         qinggan11_rejects([&] {
-            validate_qnx_qinggan11_gpt(corrupt, image, pin);
+            validate_qnx_qinggan11_gpt(adapter, corrupt, image, pin);
         });
     }
 
@@ -288,37 +290,40 @@ int main(int argc, char **argv) {
         }
 
         qinggan11_rejects([] {
-            qnx_qinggan11_gpt({}, {});
+            qnx_qinggan11_gpt(QnxGuestAdapter::sa8155_qinggan11_731, {}, {});
         });
 
-        if (argc == 3 && std::string_view(argv[1]) == "--qinggan11-older") {
-            std::ifstream in(argv[2], std::ios::binary);
+        // --adapter ADAPTER IFS2: IFS2 is the ifs2_la.img of the hardware_adapter ADAPTER.
+        if (argc == 4 && std::string_view(argv[1]) == "--adapter") {
+            const auto adapter = qnx_adapter(std::string_view(argv[2])).adapter;
+            const auto image = qinggan11_read(argv[3]), pin = sha256_bytes(image);
+            const auto gpt = qnx_qinggan11_gpt(adapter, image, pin);
+            validate_qnx_qinggan11_gpt(adapter, gpt, image, pin);
+            const std::size_t extent = qnx_adapter(adapter).imagefs_extent;
 
-            if (!in) {
-                throw std::runtime_error("older qinggan11 IFS input");
+            if (qnx_qinggan11_loader_image(adapter, image, pin).size() !=
+                (extent + 4095) / 4096 * 4096) {
+                throw std::runtime_error("adapter loader extent");
             }
 
-            const std::string image((std::istreambuf_iterator<char>(in)), {}),
-                    pin = "fe181358fb9f827bc9df2d63e7ba0fad4f5fb0264b3bfa43f9fa6d0b47bc3ad7";
-            const auto gpt = qnx_qinggan11_older_gpt(image, pin);
-            validate_qnx_qinggan11_older_gpt(gpt, image, pin);
-
-            if (qnx_qinggan11_older_loader_image(image, pin).size() != 147832832) {
-                throw std::runtime_error("older qinggan11 loader extent");
+            for (const auto &spec : qnx_adapter_registry) {
+                if (spec.adapter != adapter) {
+                    qinggan11_rejects([&] {
+                        qnx_qinggan11_gpt(spec.adapter, image, pin);
+                    });
+                }
             }
 
             qinggan11_rejects([&] {
-                qnx_qinggan11_gpt(image, pin);
-            });
-            qinggan11_rejects([&] {
-                qnx_qinggan11_older_gpt(image, std::string(64, '0'));
+                qnx_qinggan11_gpt(adapter, image, std::string(64, '0'));
             });
             auto corrupt = gpt;
             corrupt.cache[0] ^= 1;
             qinggan11_rejects([&] {
-                validate_qnx_qinggan11_older_gpt(corrupt, image, pin);
+                validate_qnx_qinggan11_gpt(adapter, corrupt, image, pin);
             });
-            std::cout << "older qinggan11 IFS GPT and cross-version guards passed\n";
+            std::cout << qnx_adapter(adapter).name
+                      << " IFS GPT and foreign adapter guards passed\n";
 
             return 0;
         }

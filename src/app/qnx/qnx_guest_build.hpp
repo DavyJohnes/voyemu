@@ -1,6 +1,7 @@
 #pragma once
 #include "download.hpp"
 #include "model.hpp"
+#include "qnx_adapter.hpp"
 #include <functional>
 #include <string>
 #include <vector>
@@ -26,12 +27,6 @@ inline constexpr bool qnx_qinggan11_source_space_available(std::uint64_t availab
            qnx_qinggan11_disk_floor + qnx_qinggan11_guest_workspace + qnx_qinggan11_image_budget;
 }
 
-enum class QnxGuestAdapter {
-    qinggan09,
-    qinggan11,
-    passion,
-    qinggan11_older
-};
 // The guest ldqnx preloader reads a full page per PT_GNU_RELRO segment; a file ending short of the
 // last relro page fails preload fatally.
 bool elf64_gnu_relro_covers_page_rounded_read(const std::filesystem::path &file);
@@ -68,7 +63,7 @@ std::string qnx_qinggan09_front_oem_data(std::string_view front, std::string_vie
 Json build_qnx_guest_modules(const std::filesystem::path &root, std::string_view libc,
                              std::string_view screen, const std::filesystem::path &fresh_directory,
                              bool offline = false,
-                             QnxGuestAdapter adapter = QnxGuestAdapter::qinggan09,
+                             QnxGuestAdapter adapter = QnxGuestAdapter::sa8155_qinggan09,
                              const Json &initial_native_state = Json::object(),
                              std::string_view startup_baseline = {},
                              std::string_view sysmgrtool_original = {});

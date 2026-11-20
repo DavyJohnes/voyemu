@@ -52,17 +52,13 @@ void qnx_a11_console_layout_guard(std::string_view original) {
          "QNX_CONSOLE_DEVICE_MAPPING");
 }
 
-static std::string a11_console(std::string_view original, std::string_view pin,
-                               std::string_view prepared, std::string_view own, bool older) {
-    const bool qinggan11 = pin ==
-                           "a476a1e3d3aaa51d855d2d91c412a962efb6ef1e3e63540ec739779d35ce3ce8",
-               passion = pin == "1e7c487aae4f4353621f8d0301b352cc974e9037d114ff3ec2556d048512ad28";
-    const bool valid =
-            older ? pin == "dbb3bc2c6f9b0308e38627cf6a3e3b6757ba98c4f5413334526c26d812ab08f0"
-                  : (qinggan11 || passion);
+std::string adapt_qnx_pl011_console(QnxGuestAdapter adapter, std::string_view original,
+                                    std::string_view pin, std::string_view prepared,
+                                    std::string_view own) {
+    const auto &spec = qnx_adapter(adapter);
 
-    need(valid && original.size() == ((older || qinggan11) ? 7340032 : 2254664) &&
-                 sha256_bytes(original) == pin,
+    need(spec.platform != QnxGuestPlatform::qinggan09 && pin == spec.hyp_sha256 &&
+                 original.size() == spec.hyp_bytes && sha256_bytes(original) == pin,
          "QNX_CONSOLE_ORIGINAL_SHA");
     qnx_a11_console_layout_guard(original);
     need(own.size() == 112, "QNX_CONSOLE_OWN_BLOB");
@@ -107,16 +103,5 @@ static std::string a11_console(std::string_view original, std::string_view pin,
          "QNX_CONSOLE_PACKED_BINDING");
 
     return output;
-}
-
-std::string adapt_qnx_a11_pl011_console(std::string_view original, std::string_view pin,
-                                        std::string_view prepared, std::string_view own) {
-    return a11_console(original, pin, prepared, own, false);
-}
-
-std::string adapt_qnx_qinggan11_older_pl011_console(std::string_view original, std::string_view pin,
-                                                    std::string_view prepared,
-                                                    std::string_view own) {
-    return a11_console(original, pin, prepared, own, true);
 }
 } // namespace voyemu

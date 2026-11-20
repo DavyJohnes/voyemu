@@ -24,6 +24,7 @@
 #include "qnx_startup.hpp"
 #include "quickboot.hpp"
 #include "toolchain_manifest.hpp"
+#include <algorithm>
 #include <array>
 #include <fstream>
 #include <map>
@@ -279,26 +280,31 @@ Json prepare_qnx_images(const std::filesystem::path &root, std::string_view prof
 
     // The adapter paths read installed guest modules; downloads happen here, where offline is
     // known.
-    for (const auto guest : {QnxGuestAdapter::qinggan09, QnxGuestAdapter::qinggan11,
-                             QnxGuestAdapter::qinggan11_older, QnxGuestAdapter::passion}) {
-        if (adapter == qnx_guest_adapter_name(guest)) {
-            install_qnx_guest_modules(root, guest,
-                                      embedded_toolchain_manifest()
-                                              .at("qnxGuestModules")
-                                              .at(qnx_guest_adapter_name(guest)),
-                                      offline);
+    for (const auto &spec : qnx_adapter_registry) {
+        if (adapter == spec.name) {
+            install_qnx_guest_modules(
+                    root, spec.adapter,
+                    embedded_toolchain_manifest().at("qnxGuestModules").at(std::string(spec.name)),
+                    offline);
         }
     }
 
-    if (adapter == "sa8155-passion-21480") {
+    const auto known = std::find_if(qnx_adapter_registry.begin(), qnx_adapter_registry.end(),
+                                    [&](const QnxAdapterSpec &spec) {
+                                        return spec.name == adapter;
+                                    });
+    need(known != qnx_adapter_registry.end(), "QNX_PREPARE_ADAPTER");
+    const auto platform = known->platform;
+
+    if (platform == QnxGuestPlatform::passion) {
         return prepare_qnx_passion_developer_images(root, profile, output);
     }
 
-    if (adapter == "sa8155-qinggan11-731" || adapter == "sa8155-qinggan11-611") {
+    if (platform == QnxGuestPlatform::qinggan11) {
         return prepare_qnx_qinggan11_images(root, profile, output);
     }
 
-    need(config.at("schema") == 1 && adapter == "sa8155-qinggan09" &&
+    need(config.at("schema") == 1 && platform == QnxGuestPlatform::qinggan09 &&
                  config.at("originals").size() == 4,
          "QNX_PREPARE_ADAPTER");
     const auto input_root = qnx_originals_directory(root, profile);
@@ -405,8 +411,8 @@ Json prepare_qnx_images(const std::filesystem::path &root, std::string_view prof
             "usr/bin/sysmgrtool");
     phase("build-guest-sources");
     const auto guest = build_qnx_guest_modules(root, libc, screen, output / "guest", offline,
-                                               QnxGuestAdapter::qinggan09, Json::object(),
-                                               startup_baseline, sysmgrtool_original);
+                                               known->adapter, Json::object(), startup_baseline,
+                                               sysmgrtool_original);
     const auto bundle = read(output / "guest/front-bundle.so", 360000),
                observer = read(output / "guest/observer.so", 16928),
                wfd = read(output / "guest/virtual_wfd.so", 97855),
@@ -594,18 +600,22 @@ Json prepare_qnx_qinggan11_images(const std::filesystem::path &root, std::string
                   (std::filesystem::is_regular_file(referenced_config) &&
                    read_private_json(referenced_config, 128 * 1024) == config)),
          "QNX_QINGGAN11_DEVELOPER_IDENTITY");
-    const bool older = qnx_profile_adapter(config) == "sa8155-qinggan11-611";
-    need(config.at("schema") == 1 &&
-                 (older ? qnx_qinggan11_611_originals_match(config.at("originals"))
-                        : (config.at("hardware_adapter") == "sa8155-qinggan11-731" &&
-                           qnx_qinggan11_originals_match(config.at("originals")))),
+    const auto spec = std::find_if(qnx_adapter_registry.begin(), qnx_adapter_registry.end(),
+                                   [&](const QnxAdapterSpec &item) {
+                                       return item.name == qnx_profile_adapter(config) &&
+                                              item.platform == QnxGuestPlatform::qinggan11;
+                                   });
+    need(config.at("schema") == 1 && spec != qnx_adapter_registry.end() &&
+                 qnx_qinggan11_adapter_originals_match(spec->adapter, config.at("originals")),
          "QNX_QINGGAN11_DEVELOPER_ADAPTER");
+    const auto adapter = spec->adapter;
+    const auto &originals = qnx_qinggan11_adapter_originals(adapter);
     std::map<std::string, std::filesystem::path> files;
     std::map<std::string, Json> epochs;
     Json inputs = Json::object(), sources = Json::object();
     const auto input_root = qnx_originals_directory(root, profile);
 
-    for (const auto &pin : (older ? qnx_qinggan11_611_originals : qnx_qinggan11_originals)) {
+    for (const auto &pin : originals) {
         const auto file = input_root / pin.file;
         ordinary(file);
         need(std::filesystem::is_regular_file(file) &&
@@ -645,15 +655,13 @@ Json prepare_qnx_qinggan11_images(const std::filesystem::path &root, std::string
          "QNX_QINGGAN11_DEVELOPER_RESERVE");
     const auto hyp = read(files.at("hyp_la.img"), 8 * 1024 * 1024),
                ifs = read(files.at("ifs2_la.img"), 256 * 1024 * 1024);
-    const auto host = older ? decode_qnx_qinggan11_older_host(
-                                      hyp, inputs.at("hyp_la.img").at("sha256").get<std::string>())
-                            : decode_qnx_qinggan11_host(
-                                      hyp, inputs.at("hyp_la.img").at("sha256").get<std::string>());
+    const auto host = decode_qnx_qinggan11_host(
+            adapter, hyp, inputs.at("hyp_la.img").at("sha256").get<std::string>());
     const auto original_display = read_qnx_imagefs_file(ifs, "ifs_display.img"),
                disk = read_qnx_imagefs_file(ifs, "ifs_disk.img");
 
-    if (older) {
-        validate_qnx_qinggan11_older_ram_driver(read_qnx_imagefs_file(disk, "bin/devb-ram"));
+    if (spec->ram_driver_paddr != std::array<std::uint8_t, 2>{}) {
+        validate_qnx_qinggan11_ram_driver(adapter, read_qnx_imagefs_file(disk, "bin/devb-ram"));
     }
 
     need(std::filesystem::file_size(files.at("system_la.img")) / 512 + 98 == 2097250,
@@ -664,13 +672,13 @@ Json prepare_qnx_qinggan11_images(const std::filesystem::path &root, std::string
     need(at != std::string::npos && runtime.find(marker, at + 1) == std::string::npos,
          "QNX_QINGGAN11_DEVELOPER_CAPTURE_MARKER");
 
-    if (older) {
+    if (spec->mcu_layout_embedded) {
         need(!qnx_qinggan11_mcu_layout(
-                      project_file_json(root, "src/guest/qnx/native_mcu_qinggan11_611.json",
+                      project_file_json(root, "src/guest/qnx/" + std::string(spec->mcu_layout_file),
                                         256 * 1024),
                       config.value("initial_native_state", Json::object()))
                       .empty(),
-             "QNX_QINGGAN11_OLDER_MCU_LAYOUT_REQUIRED");
+             "QNX_QINGGAN11_MCU_LAYOUT_REQUIRED");
     }
 
     need(std::filesystem::create_directory(output), "QNX_QINGGAN11_DEVELOPER_CREATE");
@@ -678,8 +686,7 @@ Json prepare_qnx_qinggan11_images(const std::filesystem::path &root, std::string
     const auto guest = build_qnx_guest_modules(
             root, read_qnx_imagefs_file(host, "lib64/libc.so.4"),
             read_qnx_imagefs_file(original_display, "lib64/libscreen.so.1"), output / "guest", true,
-            older ? QnxGuestAdapter::qinggan11_older : QnxGuestAdapter::qinggan11,
-            config.value("initial_native_state", Json::object()));
+            adapter, config.value("initial_native_state", Json::object()));
     const auto bundle = read(output / "guest/front-bundle.so", 360000),
                observer = read(output / "guest/observer.so", 21312),
                wfd = read(output / "guest/virtual_wfd.so", 97847),
@@ -698,9 +705,7 @@ Json prepare_qnx_qinggan11_images(const std::filesystem::path &root, std::string
                                             sha256_bytes(padded));
     runtime = prepare_qnx_guest_shell(
             qnx_kanzi_gauge_observer(config) ? qnx_kanzi_gauge_runtime(runtime) : runtime);
-    auto display = older ? prepare_qnx_qinggan11_older_display_config(original_display,
-                                                                      screen_config)
-                         : prepare_qnx_qinggan11_display_config(original_display, screen_config);
+    auto display = prepare_qnx_qinggan11_display_config(original_display, screen_config);
     auto replace_display = [&](std::string_view name, std::string_view bytes,
                                unsigned alignment = 1, bool retain = true) {
         display = replace_qnx_imagefs_file(display, name,
@@ -745,28 +750,17 @@ Json prepare_qnx_qinggan11_images(const std::filesystem::path &root, std::string
                                            read_qnx_imagefs_file(host, "bin/startupmgr"), stub,
                                            sha256_bytes(display), sha256_bytes(disk)));
     const auto hyp_pin = inputs.at("hyp_la.img").at("sha256").get<std::string>();
-    const auto packed = older ? encode_qnx_qinggan11_older_host(hyp, hyp_pin, derived_host)
-                              : encode_qnx_qinggan11_host(hyp, hyp_pin, derived_host);
-    const auto prepared = older ? assemble_qnx_qinggan11_older_kernel(hyp, hyp_pin, packed)
-                                : assemble_qnx_qinggan11_kernel(hyp, hyp_pin, packed);
+    const auto packed = encode_qnx_qinggan11_host(adapter, hyp, hyp_pin, derived_host);
+    const auto prepared = assemble_qnx_qinggan11_kernel(adapter, hyp, hyp_pin, packed);
     const auto console = read(output / "guest/qnx-pl011-console.bin", 112);
-    const auto kernel = older ? adapt_qnx_qinggan11_older_pl011_console(hyp, hyp_pin, prepared,
-                                                                        console)
-                              : adapt_qnx_a11_pl011_console(hyp, hyp_pin, prepared, console);
+    const auto kernel = adapt_qnx_pl011_console(adapter, hyp, hyp_pin, prepared, console);
     write(output / "hyp-hvf.img", kernel);
     write(output / "host-native-lzo.bin", packed);
     write(output / "ifs2-native.img",
-          older ? qnx_qinggan11_older_loader_image(new_ifs, sha256_bytes(new_ifs))
-                : qnx_qinggan11_loader_image(new_ifs, sha256_bytes(new_ifs)));
+          qnx_qinggan11_loader_image(adapter, new_ifs, sha256_bytes(new_ifs)));
     write(output / "smem.bin", qnx_smem_memory());
-    const auto gpt = older ? qnx_qinggan11_older_gpt(new_ifs, sha256_bytes(new_ifs))
-                           : qnx_qinggan11_gpt(new_ifs, sha256_bytes(new_ifs));
-
-    if (older) {
-        validate_qnx_qinggan11_older_gpt(gpt, new_ifs, sha256_bytes(new_ifs));
-    } else {
-        validate_qnx_qinggan11_gpt(gpt, new_ifs, sha256_bytes(new_ifs));
-    }
+    const auto gpt = qnx_qinggan11_gpt(adapter, new_ifs, sha256_bytes(new_ifs));
+    validate_qnx_qinggan11_gpt(adapter, gpt, new_ifs, sha256_bytes(new_ifs));
 
     write(output / "synthetic-gpt.bin", gpt.cache);
     write(output / "gpt-primary.bin", gpt.primary);
@@ -783,17 +777,13 @@ Json prepare_qnx_qinggan11_images(const std::filesystem::path &root, std::string
             files.at("system_la.img"), inputs.at("system_la.img").at("sha256").get<std::string>(),
             "usr/bin/themmgr");
     replace_qnx6_file(system, sha256_file(system), "usr/bin/themmgr", sha256_bytes(theme_manager),
-                      (older ? prepare_qnx_qinggan11_older_theme_manager(theme_manager)
-                             : prepare_qnx_qinggan11_theme_manager(theme_manager)),
-                      64 * 512);
+                      prepare_qnx_qinggan11_theme_manager(adapter, theme_manager), 64 * 512);
     const auto theme_scene = read_qnx6_file(
             files.at("system_la.img"), inputs.at("system_la.img").at("sha256").get<std::string>(),
             "lib64/libclusterscene_withoutfaceid.so.0.1");
     replace_qnx6_file(system, sha256_file(system), "lib64/libclusterscene_withoutfaceid.so.0.1",
                       sha256_bytes(theme_scene),
-                      (older ? prepare_qnx_qinggan11_older_theme_scene(theme_scene)
-                             : prepare_qnx_qinggan11_theme_scene(theme_scene)),
-                      64 * 512);
+                      prepare_qnx_qinggan11_theme_scene(adapter, theme_scene), 64 * 512);
     std::filesystem::rename(system, output / "sysla-gpt-ramdisk-v3.img");
     std::filesystem::remove(output / "system");
     Json images = Json::object();
@@ -807,7 +797,7 @@ Json prepare_qnx_qinggan11_images(const std::filesystem::path &root, std::string
                         {"bytes", std::filesystem::file_size(output / name)}};
     }
 
-    for (const auto &pin : (older ? qnx_qinggan11_611_originals : qnx_qinggan11_originals)) {
+    for (const auto &pin : originals) {
         need(cache_file_identity(files.at(pin.file)) == epochs.at(pin.file) &&
                      sha256_file(files.at(pin.file)) == pin.sha256,
              "QNX_QINGGAN11_DEVELOPER_SOURCE_CHANGED");
@@ -824,7 +814,7 @@ Json prepare_qnx_qinggan11_images(const std::filesystem::path &root, std::string
     const Json receipt = {
             {"schema", 1},
             {"kind", "raw-qnx-source-build"},
-            {"hardware_adapter", older ? "sa8155-qinggan11-611" : "sa8155-qinggan11-731"},
+            {"hardware_adapter", spec->name},
             {"interguest_network", qnx_interguest_contract()},
             {"mcu_projection", guest.at("mcu_projection")},
             {"simulated_initial_native_state", guest.at("simulated_initial_native_state")},
@@ -864,7 +854,7 @@ Json prepare_qnx_passion_developer_images(const std::filesystem::path &root,
     const auto profile_pin = sha256_file(profile_file), config_pin = sha256_file(config_file);
     const auto config = read_private_json(config_file, 128 * 1024);
     need(config.at("schema") == 1 && config.at("status") == "incomplete" &&
-                 qnx_profile_adapter(config) == "sa8155-passion-21480",
+                 qnx_adapter(qnx_profile_adapter(config)).platform == QnxGuestPlatform::passion,
          "QNX_PASSION_DEVELOPER_ADAPTER");
     // The supplemental recovery is a qinggan09 original that the profile declares as a donor input.
     const auto donor = qnx_donor_input(root, config, "ifs2_recovery_la.img");
@@ -963,10 +953,10 @@ Json prepare_qnx_passion_developer_images(const std::filesystem::path &root,
     const auto placement = qnx_passion_11713_placement();
     need(std::filesystem::create_directory(output), "QNX_PASSION_DEVELOPER_CREATE");
     ensure_private_directory(output);
-    const auto guest =
-            build_qnx_guest_modules(root, read_qnx_imagefs_file(host, "lib64/libc.so.4"),
-                                    read_qnx_imagefs_file(display, "lib64/libscreen.so.1"),
-                                    output / "guest", true, QnxGuestAdapter::passion);
+    const auto guest = build_qnx_guest_modules(
+            root, read_qnx_imagefs_file(host, "lib64/libc.so.4"),
+            read_qnx_imagefs_file(display, "lib64/libscreen.so.1"), output / "guest", true,
+            qnx_adapter(qnx_profile_adapter(config)).adapter);
     const auto front = read(output / "guest/front.so", 360000),
                bounded = read(output / "guest/bounded.so", 21313),
                ram64 = read(output / "guest/ram64.so", 5728),
@@ -1052,11 +1042,11 @@ Json prepare_qnx_passion_developer_images(const std::filesystem::path &root,
     // every subsequent "on -T" launch (ENOTSUP) before startupmgr.
     const auto bootstrap = prepare_qnx_passion_11713_config_bootstrap(hyp);
     const auto packed = encode_qnx_passion_host(hyp, new_host),
-               kernel = adapt_qnx_a11_pl011_console(
-                       hyp, originals[0].sha,
-                       assemble_qnx_passion_11713_config_kernel(hyp, packed,
-                                                                sha256_bytes(new_host)),
-                       read(output / "guest/qnx-pl011-console.bin", 112));
+               kernel = adapt_qnx_pl011_console(qnx_adapter(qnx_profile_adapter(config)).adapter,
+                                                hyp, originals[0].sha,
+                                                assemble_qnx_passion_11713_config_kernel(
+                                                        hyp, packed, sha256_bytes(new_host)),
+                                                read(output / "guest/qnx-pl011-console.bin", 112));
     need(kernel.substr(0x69108) == packed, "QNX_PASSION_PACKED_BINDING");
     const auto smem = qnx_passion_smem_memory();
     // Regression: the produced kernel must carry the adapted 11713 startup;
@@ -1171,7 +1161,7 @@ Json prepare_qnx_passion_developer_images(const std::filesystem::path &root,
               {"runtime_abi_verified", false}}},
             {"guest_build", guest},
             {"images", images},
-            {"hardware_adapter", "sa8155-passion-21480"},
+            {"hardware_adapter", qnx_profile_adapter(config)},
             {"memory_mib", 11713},
             {"runtime_sha256", sha256_bytes(runtime)},
             {"source_capture", 1},

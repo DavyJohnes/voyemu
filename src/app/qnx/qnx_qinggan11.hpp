@@ -1,5 +1,6 @@
 #pragma once
 #include "model.hpp"
+#include "qnx_adapter.hpp"
 #include <array>
 namespace voyemu {
 struct QnxQinggan11Original {
@@ -69,15 +70,53 @@ inline bool qnx_qinggan11_originals_match(const Json &originals) {
     return true;
 }
 
-void validate_qnx_qinggan11_older_ram_driver(std::string_view driver);
-std::string prepare_qnx_qinggan11_older_theme_scene(std::string_view original);
-std::string prepare_qnx_qinggan11_older_theme_manager(std::string_view original);
-std::string prepare_qnx_qinggan11_theme_scene(std::string_view original);
-std::string prepare_qnx_qinggan11_theme_manager(std::string_view original);
+// The pinned originals of a qinggan11 adapter: the table whose host image is the one of its
+// registry entry.
+inline const std::array<QnxQinggan11Original, 3> &
+qnx_qinggan11_adapter_originals(QnxGuestAdapter adapter) {
+    const auto hyp = qnx_adapter(adapter).hyp_sha256;
+
+    for (const auto *table : {&qnx_qinggan11_originals, &qnx_qinggan11_611_originals}) {
+        if (hyp == (*table)[0].sha256) {
+            return *table;
+        }
+    }
+
+    throw VoyemuError("QNX_GUEST_ADAPTER", "adapter has no qinggan11 originals");
+}
+
+// Whether profile-qnx.json originals declare exactly the pinned originals of the adapter.
+inline bool qnx_qinggan11_adapter_originals_match(QnxGuestAdapter adapter, const Json &originals) {
+    const auto &pins = qnx_qinggan11_adapter_originals(adapter);
+
+    if (!originals.is_object() || originals.size() != pins.size()) {
+        return false;
+    }
+
+    for (const auto &pin : pins) {
+        if (!originals.contains(pin.file)) {
+            return false;
+        }
+
+        const auto &value = originals.at(pin.file);
+
+        if (!value.is_object() || value.value("file", std::string{}) != pin.file ||
+            value.value("sha256", std::string{}) != pin.sha256 || !value.contains("bytes") ||
+            !value.at("bytes").is_number_unsigned() ||
+            value.at("bytes").get<std::uint64_t>() != pin.bytes) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+// OEM file guards and patches of a qinggan11 adapter; the registry holds its sizes and addresses.
+void validate_qnx_qinggan11_ram_driver(QnxGuestAdapter adapter, std::string_view driver);
+std::string prepare_qnx_qinggan11_theme_scene(QnxGuestAdapter adapter, std::string_view original);
+std::string prepare_qnx_qinggan11_theme_manager(QnxGuestAdapter adapter, std::string_view original);
 std::string prepare_qnx_qinggan11_runtime(std::string_view owned_runtime,
                                           std::string_view padded_observer_sha256);
-std::string prepare_qnx_qinggan11_older_display_config(std::string_view original_display,
-                                                       std::string_view owned_configuration);
 std::string prepare_qnx_qinggan11_display_config(std::string_view original_display,
                                                  std::string_view owned_configuration);
 } // namespace voyemu

@@ -1,4 +1,5 @@
 #pragma once
+#include "qnx_adapter.hpp"
 #include <cstdint>
 #include <filesystem>
 #include <string>
@@ -20,14 +21,13 @@ struct QnxIfs2Gpt {
 };
 QnxIfs2Gpt qnx_passion_gpt(std::uint64_t ifs_bytes);
 void validate_qnx_passion_gpt(const QnxIfs2Gpt &images, std::uint64_t ifs_bytes);
-QnxIfs2Gpt qnx_qinggan11_older_gpt(std::string_view ifs_image, std::string_view sha256);
-std::string qnx_qinggan11_older_loader_image(std::string_view ifs_image, std::string_view sha256);
-void validate_qnx_qinggan11_older_gpt(const QnxIfs2Gpt &images, std::string_view ifs_image,
-                                      std::string_view sha256);
-QnxIfs2Gpt qnx_qinggan11_gpt(std::string_view ifs_image, std::string_view sha256);
-std::string qnx_qinggan11_loader_image(std::string_view ifs_image, std::string_view sha256);
-void validate_qnx_qinggan11_gpt(const QnxIfs2Gpt &images, std::string_view ifs_image,
-                                std::string_view sha256);
+// The ifs2 GPT and loaded ImageFS prefix of a qinggan11 adapter; the registry holds its extent.
+QnxIfs2Gpt qnx_qinggan11_gpt(QnxGuestAdapter adapter, std::string_view ifs_image,
+                             std::string_view sha256);
+std::string qnx_qinggan11_loader_image(QnxGuestAdapter adapter, std::string_view ifs_image,
+                                       std::string_view sha256);
+void validate_qnx_qinggan11_gpt(QnxGuestAdapter adapter, const QnxIfs2Gpt &images,
+                                std::string_view ifs_image, std::string_view sha256);
 std::string qnx_synthetic_gpt();
 std::string qnx_synthetic_gpt_for_ifs2(std::uint64_t bytes);
 // Wraps the unchanged OEM partition in the known QNX RAM-disk GPT layout.

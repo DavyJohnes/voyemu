@@ -1,28 +1,46 @@
 #pragma once
 #include "model.hpp"
+#include "qnx_adapter.hpp"
 #include <optional>
 #include <stdexcept>
 namespace voyemu {
-inline Json qnx_qinggan11_mcu_projection() {
-    return {{"packet_bytes", 650},       {"wire_fields", 736},
-            {"normalized_fields", 579},  {"projected_fields", 462},
-            {"unsupported_fields", 117}, {"unmapped_wire_bits", "preserved-original-each-call"}};
-}
+// The MCU projection of a qinggan11 adapter at its current scope, or at the given earlier scope.
+// Without settings feedback the projection names its adapter and rejects changes of the fields it
+// does not project.
+inline Json qnx_mcu_projection(QnxGuestAdapter adapter, unsigned fields = 0) {
+    const auto &spec = qnx_adapter(adapter);
 
-inline constexpr unsigned qnx_qinggan11_older_previous_projected_fields = 34;
-inline constexpr unsigned qnx_qinggan11_older_projected_fields = 56;
+    if (spec.platform != QnxGuestPlatform::qinggan11) {
+        throw VoyemuError("QNX_MCU_PROJECTION", "adapter has no MCU projection");
+    }
 
-inline Json
-qnx_qinggan11_older_mcu_projection(unsigned fields = qnx_qinggan11_older_projected_fields) {
-    return {{"hardware_adapter", "sa8155-qinggan11-611"},
+    const unsigned projected = fields ? fields : spec.mcu_projected_fields;
+
+    if (spec.mcu_settings_feedback) {
+        return {{"packet_bytes", 650},
+                {"wire_fields", 736},
+                {"normalized_fields", 579},
+                {"projected_fields", projected},
+                {"unsupported_fields", 579 - projected},
+                {"unmapped_wire_bits", "preserved-original-each-call"}};
+    }
+
+    return {{"hardware_adapter", spec.name},
             {"settings_feedback_supported", false},
             {"unsupported_field_policy", "reject_changes_from_initial_state"},
             {"packet_bytes", 650},
             {"wire_fields", 736},
             {"normalized_fields", 579},
-            {"projected_fields", fields},
-            {"unsupported_fields", 579 - fields},
+            {"projected_fields", projected},
+            {"unsupported_fields", 579 - projected},
             {"unmapped_wire_bits", "preserved-original-each-call"}};
+}
+
+// Whether fields is the current or the earlier accepted runtime scope of the adapter.
+inline bool qnx_mcu_runtime_scope(const QnxAdapterSpec &spec, std::uint64_t fields) {
+    return spec.platform == QnxGuestPlatform::qinggan11 &&
+           (fields == spec.mcu_projected_fields ||
+            (spec.mcu_previous_projected_fields && fields == spec.mcu_previous_projected_fields));
 }
 
 inline Json qnx_mcu_request_projection(std::uint64_t packet_bytes, std::uint64_t wire_fields,
@@ -31,17 +49,15 @@ inline Json qnx_mcu_request_projection(std::uint64_t packet_bytes, std::uint64_t
         return nullptr;
     }
 
-    if (packet_bytes == 650 && wire_fields == 736 &&
-        (projected_fields == qnx_qinggan11_older_previous_projected_fields ||
-         projected_fields == qnx_qinggan11_older_projected_fields)) {
-        return qnx_qinggan11_older_mcu_projection(static_cast<unsigned>(projected_fields));
+    if (packet_bytes == 650 && wire_fields == 736) {
+        for (const auto &spec : qnx_adapter_registry) {
+            if (qnx_mcu_runtime_scope(spec, projected_fields)) {
+                return qnx_mcu_projection(spec.adapter, static_cast<unsigned>(projected_fields));
+            }
+        }
     }
 
-    if (packet_bytes != 650 || wire_fields != 736 || projected_fields != 462) {
-        throw VoyemuError("QNX_MCU_PROJECTION", "unsupported guest scope");
-    }
-
-    return qnx_qinggan11_mcu_projection();
+    throw VoyemuError("QNX_MCU_PROJECTION", "unsupported guest scope");
 }
 
 inline std::optional<Json> qnx_mcu_delivery_scope(const Json &ack, const Json &expected = Json()) {
@@ -72,20 +88,20 @@ inline std::optional<Json> qnx_mcu_delivery_scope(const Json &ack, const Json &e
         }
     }
 
-    if (scope == qnx_qinggan11_older_mcu_projection() ||
-        scope ==
-                qnx_qinggan11_older_mcu_projection(qnx_qinggan11_older_previous_projected_fields)) {
-        return Json{{"fields", scope.at("projected_fields")},
-                    {"mcu_projection", scope},
-                    {"full_wire_verified", false}};
+    for (const auto &spec : qnx_adapter_registry) {
+        if (spec.platform != QnxGuestPlatform::qinggan11) {
+            continue;
+        }
+
+        if (scope == qnx_mcu_projection(spec.adapter) ||
+            (spec.mcu_previous_projected_fields &&
+             scope == qnx_mcu_projection(spec.adapter, spec.mcu_previous_projected_fields))) {
+            return Json{{"fields", scope.at("projected_fields")},
+                        {"mcu_projection", scope},
+                        {"full_wire_verified", false}};
+        }
     }
 
-    if (ack.at("mcu_projection") != qnx_qinggan11_mcu_projection()) {
-        return std::nullopt;
-    }
-
-    return Json{{"fields", 462},
-                {"mcu_projection", qnx_qinggan11_mcu_projection()},
-                {"full_wire_verified", false}};
+    return std::nullopt;
 }
 } // namespace voyemu

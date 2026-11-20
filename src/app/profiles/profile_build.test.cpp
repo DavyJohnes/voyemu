@@ -2386,7 +2386,7 @@ static void api30_publication_checks(const std::filesystem::path &stage, bool ol
     if (older) {
         auto foreign = qnx_acceptance;
         foreign["hardware_adapter"] = "sa8155-qinggan11-731";
-        foreign["mcu_projection"] = qnx_qinggan11_mcu_projection();
+        foreign["mcu_projection"] = qnx_mcu_projection(QnxGuestAdapter::sa8155_qinggan11_731);
         rejects_qnx(foreign, "wrong-611-version");
     }
 
@@ -2461,7 +2461,8 @@ static void api30_publication_checks(const std::filesystem::path &stage, bool ol
 
     if (full.at("qnx").at("images").size() != 10 ||
         full.at("qnx").at("mcu_projection") !=
-                (older ? qnx_qinggan11_older_mcu_projection() : qnx_qinggan11_mcu_projection()) ||
+                (older ? qnx_mcu_projection(QnxGuestAdapter::sa8155_qinggan11_611)
+                       : qnx_mcu_projection(QnxGuestAdapter::sa8155_qinggan11_731)) ||
         combined.at("profile_ready") != true || full.at("android").at("api") != 30 ||
         full.at("android").at("base_archive_sha256") != archive ||
         read_private_json(definition).at("status") != "incomplete") {

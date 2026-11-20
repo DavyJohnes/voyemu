@@ -1,6 +1,7 @@
 #pragma once
 #include "error.hpp"
 #include "qnx_mcu_projection.hpp"
+#include <algorithm>
 #include <array>
 #include <stdexcept>
 namespace voyemu {
@@ -20,7 +21,11 @@ qnx_qinggan11_simulated_initial_state(const Json &values,
                                       std::string_view adapter = "sa8155-qinggan11-731") {
     validate_qnx_qinggan11_initial_state(values);
 
-    if (adapter != "sa8155-qinggan11-731" && adapter != "sa8155-qinggan11-611") {
+    if (std::none_of(qnx_adapter_registry.begin(), qnx_adapter_registry.end(),
+                     [&](const QnxAdapterSpec &spec) {
+                         return spec.name == adapter &&
+                                spec.platform == QnxGuestPlatform::qinggan11;
+                     })) {
         throw VoyemuError("QNX_QINGGAN11_INITIAL_ADAPTER", "unknown initial adapter");
     }
 
@@ -43,26 +48,24 @@ qnx_qinggan11_simulated_initial_state(const Json &values,
 inline std::string qnx_qinggan11_mcu_layout(const Json &definition,
                                             const Json &initial_native = Json::object()) {
     validate_qnx_qinggan11_initial_state(initial_native);
-    const bool older = definition.value("hardware_adapter", std::string{}) ==
-                       "sa8155-qinggan11-611";
-    const unsigned projected_count = older ? qnx_qinggan11_older_projected_fields : 462U;
     auto need = [](bool okay) {
         if (!okay) {
             throw VoyemuError("QNX_QINGGAN11_MCU_LAYOUT", "invalid MCU layout");
         }
     };
-    need(definition.at("schema") == 1 &&
-         definition.at("hardware_adapter") ==
-                 (older ? "sa8155-qinggan11-611" : "sa8155-qinggan11-731") &&
-         definition.at("map_sha256") == map_sha256 && definition.at("packet_bytes") == 650 &&
-         definition.at("wire_fields") == 736 &&
+    const auto adapter = definition.value("hardware_adapter", std::string{});
+    const auto spec = std::find_if(qnx_adapter_registry.begin(), qnx_adapter_registry.end(),
+                                   [&](const QnxAdapterSpec &item) {
+                                       return item.name == adapter &&
+                                              item.platform == QnxGuestPlatform::qinggan11;
+                                   });
+    need(spec != qnx_adapter_registry.end());
+    const unsigned projected_count = spec->mcu_projected_fields;
+    need(definition.at("schema") == 1 && definition.at("map_sha256") == map_sha256 &&
+         definition.at("packet_bytes") == 650 && definition.at("wire_fields") == 736 &&
          definition.at("projected_fields") == projected_count &&
-         definition.at("source_parser_sha256") ==
-                 (older ? "a830d876d9091190096025f4f4eb81294078b3002d955283b3a9dec296414f05"
-                        : "6c381808b343adba849fa22f1efd18547de90cba7f3f3b43e43970a7f7222f39") &&
-         definition.at("source_engine_sha256") ==
-                 (older ? "faeb580b46c5c92d7ecd5b707be15b85874c838471f5cb9ca010b9a90e9ae195"
-                        : "20a4ec0855a4e1955156dd13ec8e6731af0c28a0a5344db91be7d83e7a93d74a"));
+         definition.at("source_parser_sha256") == std::string(spec->mcu_parser_sha256) &&
+         definition.at("source_engine_sha256") == std::string(spec->mcu_engine_sha256));
     const auto &fields = definition.at("fields");
     const auto &model = catalog();
     const auto initial = initial_state().at("raw_oem");
@@ -113,7 +116,8 @@ inline std::string qnx_qinggan11_mcu_layout(const Json &definition,
 
     return result + "};\nstatic const unsigned qinggan11_projected_fields=" +
            std::to_string(projected_count) +
-           "U;\nstatic const unsigned qinggan11_settings_feedback_enabled=" + (older ? "0" : "1") +
+           "U;\nstatic const unsigned qinggan11_settings_feedback_enabled=" +
+           (spec->mcu_settings_feedback ? "1" : "0") +
            "U;\nstatic const unsigned qinggan11_calibration_fixture_enabled=" +
            (initial_native.empty() ? "0" : "1") +
            "U;\nstatic const unsigned qinggan11_calibration_fixture=" +

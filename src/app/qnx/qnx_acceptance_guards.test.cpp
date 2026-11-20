@@ -164,21 +164,27 @@ int main() try {
     assert(build_entries == 2);
     const Json owner = {
             {"schema", 1}, {"source", "original-OEM-Screen-BMP"}, {"producer_address", 0x50010000}};
+    const auto projection = qnx_mcu_projection(QnxGuestAdapter::sa8155_qinggan11_731);
     Json delivery = {{"vehicle",
                       {{"status", "guest_acknowledged"},
                        {"fields", 462},
                        {"source_sequence", 2},
                        {"full_wire_verified", false},
-                       {"mcu_projection", qnx_qinggan11_mcu_projection()}}},
+                       {"mcu_projection", projection}}},
                      {"presentation", {{"after_timestamp_ns", 100}}}};
-    assert(qnx_qinggan11_post_ack_frame(delivery, owner, owner, 101, 2));
-    const auto projection_older = qnx_qinggan11_older_mcu_projection();
-    auto delivery_older = delivery;
-    delivery_older["vehicle"]["fields"] = qnx_qinggan11_older_projected_fields;
-    delivery_older["vehicle"]["mcu_projection"] = projection_older;
-    assert(qnx_qinggan11_post_ack_frame(delivery_older, owner, owner, 101, 2, projection_older));
-    assert(!qnx_qinggan11_post_ack_frame(delivery_older, owner, owner, 101, 2));
-    assert(!qnx_qinggan11_post_ack_frame(delivery, owner, owner, 101, 2, projection_older));
+    assert(qnx_qinggan11_post_ack_frame(delivery, owner, owner, 101, 2, projection));
+    const auto projection_without_feedback =
+            qnx_mcu_projection(QnxGuestAdapter::sa8155_qinggan11_611);
+    auto delivery_without_feedback = delivery;
+    delivery_without_feedback["vehicle"]["fields"] =
+            qnx_adapter(QnxGuestAdapter::sa8155_qinggan11_611).mcu_projected_fields;
+    delivery_without_feedback["vehicle"]["mcu_projection"] = projection_without_feedback;
+    assert(qnx_qinggan11_post_ack_frame(delivery_without_feedback, owner, owner, 101, 2,
+                                        projection_without_feedback));
+    assert(!qnx_qinggan11_post_ack_frame(delivery_without_feedback, owner, owner, 101, 2,
+                                         projection));
+    assert(!qnx_qinggan11_post_ack_frame(delivery, owner, owner, 101, 2,
+                                         projection_without_feedback));
     std::vector<std::byte> sparse(1920 * 720 * 4);
     assert(!qnx_native_frame_nonblank(sparse, 1920, 720));
     std::fill(sparse.begin(), sparse.end(), std::byte{255});
@@ -205,26 +211,26 @@ int main() try {
     assert(qnx_native_frame_nonblank(sparse, 1920, 720));
     assert(!qnx_native_frame_nonblank(sparse, 1919, 720));
 
-    assert(!qnx_qinggan11_post_ack_frame(delivery, owner, owner, 100, 2));
-    assert(!qnx_qinggan11_post_ack_frame(delivery, owner, owner, 101, 3));
+    assert(!qnx_qinggan11_post_ack_frame(delivery, owner, owner, 100, 2, projection));
+    assert(!qnx_qinggan11_post_ack_frame(delivery, owner, owner, 101, 3, projection));
     auto foreign = owner;
     foreign["producer_address"] = 0x50011000;
-    assert(!qnx_qinggan11_post_ack_frame(delivery, foreign, owner, 101, 2));
+    assert(!qnx_qinggan11_post_ack_frame(delivery, foreign, owner, 101, 2, projection));
     auto missing = delivery;
     missing["vehicle"].erase("mcu_projection");
-    assert(!qnx_qinggan11_post_ack_frame(missing, owner, owner, 101, 2));
+    assert(!qnx_qinggan11_post_ack_frame(missing, owner, owner, 101, 2, projection));
     auto wrong = delivery;
     wrong["vehicle"]["mcu_projection"]["projected_fields"] = 462.0;
-    assert(!qnx_qinggan11_post_ack_frame(wrong, owner, owner, 101, 2));
+    assert(!qnx_qinggan11_post_ack_frame(wrong, owner, owner, 101, 2, projection));
     wrong = delivery;
     wrong["vehicle"]["fields"] = 579;
-    assert(!qnx_qinggan11_post_ack_frame(wrong, owner, owner, 101, 2));
+    assert(!qnx_qinggan11_post_ack_frame(wrong, owner, owner, 101, 2, projection));
     wrong = delivery;
     wrong["vehicle"]["full_wire_verified"] = true;
-    assert(!qnx_qinggan11_post_ack_frame(wrong, owner, owner, 101, 2));
+    assert(!qnx_qinggan11_post_ack_frame(wrong, owner, owner, 101, 2, projection));
     wrong = delivery;
     wrong["vehicle"]["source_sequence"] = -1;
-    assert(!qnx_qinggan11_post_ack_frame(wrong, owner, owner, 101, 2));
+    assert(!qnx_qinggan11_post_ack_frame(wrong, owner, owner, 101, 2, projection));
     std::cout
             << "QNX cold acceptance rejects invalid root/profile/request before VM or output publication\n";
 } catch (const std::exception &error) {

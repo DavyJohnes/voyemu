@@ -106,10 +106,10 @@ inline bool qnx_native_frame_nonblank(std::span<const std::byte> data, std::size
 }
 
 // Free acceptance is typed ACK plus an owned native frame after that revision.
-inline bool
-qnx_qinggan11_post_ack_frame(const Json &qnx, const Json &owner, const Json &stable_owner,
-                             std::uint64_t timestamp_ns, std::uint64_t minimum_source_revision = 0,
-                             const Json &expected_projection = qnx_qinggan11_mcu_projection()) {
+inline bool qnx_qinggan11_post_ack_frame(const Json &qnx, const Json &owner,
+                                         const Json &stable_owner, std::uint64_t timestamp_ns,
+                                         std::uint64_t minimum_source_revision,
+                                         const Json &expected_projection) {
     if (!owner.is_object() || owner != stable_owner ||
         owner.value("source", std::string{}) != "original-OEM-Screen-BMP" ||
         !qnx.contains("vehicle") || !qnx.at("vehicle").is_object() ||

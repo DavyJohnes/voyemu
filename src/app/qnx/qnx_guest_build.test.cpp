@@ -80,8 +80,8 @@ std::filesystem::path pinned_zig(const std::filesystem::path &root) {
 }
 
 constexpr std::array<QnxGuestAdapter, 4> adapters = {
-        QnxGuestAdapter::qinggan09, QnxGuestAdapter::qinggan11, QnxGuestAdapter::qinggan11_older,
-        QnxGuestAdapter::passion};
+        QnxGuestAdapter::sa8155_qinggan09, QnxGuestAdapter::sa8155_qinggan11_731,
+        QnxGuestAdapter::sa8155_qinggan11_611, QnxGuestAdapter::sa8155_passion_21480};
 
 // Links an OEM-like library with a GNU hash table that exports names, with the pinned Zig.
 std::string library(const std::filesystem::path &zig, const std::filesystem::path &work,
@@ -188,14 +188,16 @@ int main(int argc, char **argv) {
             return 0;
         }
 
-        // --run, --run-qinggan11 and --run-passion read the fetched originals of PROFILE.
-        if (argc == 5 && (std::string_view(argv[1]) == "--run" ||
-                          std::string_view(argv[1]) == "--run-qinggan11" ||
-                          std::string_view(argv[1]) == "--run-passion")) {
-            const bool qinggan11 = std::string_view(argv[1]) == "--run-qinggan11",
-                       passion = std::string_view(argv[1]) == "--run-passion";
+        // --run ROOT PROFILE OUTPUT reads the fetched originals of PROFILE and builds the modules
+        // of the hardware adapter its profile-qnx.json names.
+        if (argc == 5 && std::string_view(argv[1]) == "--run") {
             const auto root = std::filesystem::canonical(argv[2]),
                        inputs = root / ".local/profiles" / argv[3] / "qnx";
+            const auto definition =
+                    read_private_json(root / "profiles" / argv[3] / "profile-qnx.json", 128 * 1024);
+            const auto &spec = qnx_adapter(definition.at("hardware_adapter").get<std::string>());
+            const bool qinggan11 = spec.platform == QnxGuestPlatform::qinggan11,
+                       passion = spec.platform == QnxGuestPlatform::passion;
             auto read = [](const std::filesystem::path &file) {
                 std::ifstream in(file, std::ios::binary);
 
@@ -208,16 +210,11 @@ int main(int argc, char **argv) {
             const auto hyp = read(inputs / (passion ? "mifs_hyp_la.img" : "hyp_la.img")),
                        ifs = read(inputs / "ifs2_la.img");
 
-            if (sha256_bytes(hyp) !=
-                        (passion ? "1e7c487aae4f4353621f8d0301b352cc974e9037d114ff3ec2556d048512ad28"
-                         : qinggan11
-                                 ? "a476a1e3d3aaa51d855d2d91c412a962efb6ef1e3e63540ec739779d35ce3ce8"
-                                 : "0af64f396f7de8dafe3488f21ec7e4cd989b3d02d3de0412aec020fdb1424b89") ||
-                sha256_bytes(ifs) !=
-                        (passion ? "1e942ab83e59ab78ff0096f474d3677ba7e83f6a00f86a1ebe9f0ae755a3e157"
-                         : qinggan11
-                                 ? "0e5598e15589c7816af65e2ee7257e240f62651fc142bf94129e08a1ce27c1c2"
-                                 : "403269cadb0b279a8698eddf909948408caf0e2d5bd2423fd6a11e58dcde0ee0")) {
+            if (sha256_bytes(hyp) != spec.hyp_sha256 ||
+                sha256_bytes(ifs) != definition.at("originals")
+                                             .at("ifs2_la.img")
+                                             .at("sha256")
+                                             .get<std::string>()) {
                 throw std::runtime_error("OEM pins");
             }
 
@@ -227,18 +224,16 @@ int main(int argc, char **argv) {
                 end |= std::uint32_t(static_cast<unsigned char>(hyp.at(0x3024 + i))) << (i * 8);
             }
 
-            const auto host = passion ? decode_qnx_passion_host(hyp)
-                              : qinggan11
-                                      ? decode_qnx_qinggan11_host(hyp, sha256_bytes(hyp))
-                                      : decode_qnx_boot_stream(hyp.substr(0x5a108, end - 0x57108));
+            const auto host =
+                    passion     ? decode_qnx_passion_host(hyp)
+                    : qinggan11 ? decode_qnx_qinggan11_host(spec.adapter, hyp, sha256_bytes(hyp))
+                                : decode_qnx_boot_stream(hyp.substr(0x5a108, end - 0x57108));
             const auto libc = read_qnx_imagefs_file(host, "lib64/libc.so.4"),
                        screen = read_qnx_imagefs_file(read_qnx_imagefs_file(ifs, "ifs_display.img"),
                                                       "lib64/libscreen.so.1");
             std::cout << build_qnx_guest_modules(
                                  root, libc, screen, std::filesystem::absolute(argv[4]), false,
-                                 passion     ? QnxGuestAdapter::passion
-                                 : qinggan11 ? QnxGuestAdapter::qinggan11
-                                             : QnxGuestAdapter::qinggan09,
+                                 spec.adapter,
                                  qinggan11 ? Json{{"eps_calibrationFlag", 1}} : Json::object())
                                  .dump()
                       << '\n';
@@ -246,8 +241,9 @@ int main(int argc, char **argv) {
             return 0;
         }
 
-        for (const auto adapter : {QnxGuestAdapter::qinggan11, QnxGuestAdapter::qinggan11_older,
-                                   QnxGuestAdapter::passion, static_cast<QnxGuestAdapter>(99)}) {
+        for (const auto adapter :
+             {QnxGuestAdapter::sa8155_qinggan11_731, QnxGuestAdapter::sa8155_qinggan11_611,
+              QnxGuestAdapter::sa8155_passion_21480, static_cast<QnxGuestAdapter>(99)}) {
             const auto error = failure_code([&] {
                 build_qnx_guest_modules("relative", "", "", {}, true, adapter);
             });
@@ -256,7 +252,8 @@ int main(int argc, char **argv) {
                   "adapter or path guard");
         }
 
-        for (const auto adapter : {QnxGuestAdapter::qinggan09, QnxGuestAdapter::passion}) {
+        for (const auto adapter :
+             {QnxGuestAdapter::sa8155_qinggan09, QnxGuestAdapter::sa8155_passion_21480}) {
             check(failure_code([&] {
                       build_qnx_guest_modules("relative", "", "", {}, true, adapter,
                                               Json{{"eps_calibrationFlag", 1}});
@@ -272,7 +269,7 @@ int main(int argc, char **argv) {
         for (const auto &value : Json::array({-1, 4, 1.0, "1"})) {
             check(failure_code([&] {
                       build_qnx_guest_modules("relative", "", "", {}, true,
-                                              QnxGuestAdapter::qinggan11,
+                                              QnxGuestAdapter::sa8155_qinggan11_731,
                                               Json{{"eps_calibrationFlag", value}});
                   }) == "QNX_QINGGAN11_INITIAL_STATE",
                   "invalid native fixture reached preparation");
@@ -366,7 +363,7 @@ int main(int argc, char **argv) {
 
         const auto scratch = project / ".local/build/tmp" / ("qnx-guest-test-" + random_token());
         ensure_private_directory(scratch);
-        const auto modules = qnx_guest_module_files(QnxGuestAdapter::qinggan09);
+        const auto modules = qnx_guest_module_files(QnxGuestAdapter::sa8155_qinggan09);
         Json fixture = {{"initialNativeState", Json::object()}, {"files", Json::object()}};
 
         for (const auto &file : modules) {
@@ -390,33 +387,35 @@ int main(int argc, char **argv) {
             };
         };
         check(failure([&] {
-                  install_qnx_guest_modules(scratch, QnxGuestAdapter::qinggan09, fixture, true);
+                  install_qnx_guest_modules(scratch, QnxGuestAdapter::sa8155_qinggan09, fixture,
+                                            true);
               }).starts_with("DOWNLOAD_OFFLINE:"),
               "missing module download is reported offline");
         check(failure([&] {
-                  install_qnx_guest_modules(scratch, QnxGuestAdapter::qinggan09, fixture, false,
-                                            missing, build(" changed"));
+                  install_qnx_guest_modules(scratch, QnxGuestAdapter::sa8155_qinggan09, fixture,
+                                            false, missing, build(" changed"));
               }).starts_with("QNX_GUEST_MODULES:"),
               "recipe output that differs from the pins rejected");
         check(!std::filesystem::exists(scratch / ".local/toolchains/qnx-guest") ||
                       std::filesystem::is_empty(scratch / ".local/toolchains/qnx-guest"),
               "rejected recipe output installs nothing");
         check(failure([&] {
-                  install_qnx_guest_modules(scratch, QnxGuestAdapter::qinggan09, fixture, false,
-                                            unreachable, build(""));
+                  install_qnx_guest_modules(scratch, QnxGuestAdapter::sa8155_qinggan09, fixture,
+                                            false, unreachable, build(""));
               }).starts_with("DOWNLOAD_HTTP: no connection"),
               "a network failure does not fall back to the recipe");
-        const auto installed = install_qnx_guest_modules(scratch, QnxGuestAdapter::qinggan09,
+        const auto installed = install_qnx_guest_modules(scratch, QnxGuestAdapter::sa8155_qinggan09,
                                                          fixture, false, missing, build(""));
         check(installed.parent_path() == scratch / ".local/toolchains/qnx-guest" &&
                       read(installed / "front.so") == "module front.so",
               "missing release assets fall back to the recipe and its pins");
-        check(install_qnx_guest_modules(scratch, QnxGuestAdapter::qinggan09, fixture, true) ==
-                      installed,
+        check(install_qnx_guest_modules(scratch, QnxGuestAdapter::sa8155_qinggan09, fixture,
+                                        true) == installed,
               "installed module set reused offline");
         write(installed / "observer.so", "changed");
         check(failure([&] {
-                  install_qnx_guest_modules(scratch, QnxGuestAdapter::qinggan09, fixture, true);
+                  install_qnx_guest_modules(scratch, QnxGuestAdapter::sa8155_qinggan09, fixture,
+                                            true);
               }).starts_with("QNX_GUEST_MODULES:"),
               "changed installed module rejected");
         std::filesystem::remove_all(scratch);
@@ -433,7 +432,8 @@ int main(int argc, char **argv) {
         const auto work = project / ".local/build" / ("qnx-guest-recipe-test-" + random_token());
         ensure_private_directory(work);
         const auto receipt = build_qnx_guest_recipe(project, zig, work / "modules", true,
-                                                    QnxGuestAdapter::qinggan09, Json::object());
+                                                    QnxGuestAdapter::sa8155_qinggan09,
+                                                    Json::object());
         check(!receipt.contains("source_inputs"),
               "guest recipe receipt must not pin repository sources");
         const auto &pins =

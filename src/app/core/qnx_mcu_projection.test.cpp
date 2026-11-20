@@ -7,7 +7,7 @@ using namespace voyemu;
 
 int main() try {
     assert(qnx_mcu_request_projection(0, 0, 0).is_null());
-    const auto expected = qnx_qinggan11_mcu_projection();
+    const auto expected = qnx_mcu_projection(QnxGuestAdapter::sa8155_qinggan11_731);
     assert(qnx_mcu_request_projection(650, 736, 462) == expected);
 
     for (const auto &args : {std::array<std::uint64_t, 3>{280, 579, 579},

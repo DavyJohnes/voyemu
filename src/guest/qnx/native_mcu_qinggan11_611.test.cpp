@@ -12,7 +12,9 @@ using u64 = unsigned long long;
 using usize = unsigned long;
 static Qinggan11McuField qinggan11_fields[579];
 static unsigned qinggan11_calibration_fixture = 1, qinggan11_calibration_fixture_enabled = 1;
-static unsigned qinggan11_projected_fields = voyemu::qnx_qinggan11_older_projected_fields,
+static unsigned qinggan11_projected_fields =
+                        voyemu::qnx_adapter(voyemu::QnxGuestAdapter::sa8155_qinggan11_611)
+                                .mcu_projected_fields,
                 qinggan11_settings_feedback_enabled = 0;
 #define QGFX_QINGGAN11_LAYOUT_DEFINED 1
 #include "mcu_catalog.inc"
@@ -296,17 +298,22 @@ int main(int argc, char **argv) {
         }
 
         assert(previous_scope_rejected);
-        const auto previous = voyemu::qnx_qinggan11_older_mcu_projection(
-                voyemu::qnx_qinggan11_older_previous_projected_fields);
+        const auto previous = voyemu::qnx_mcu_projection(
+                voyemu::QnxGuestAdapter::sa8155_qinggan11_611,
+                voyemu::qnx_adapter(voyemu::QnxGuestAdapter::sa8155_qinggan11_611)
+                        .mcu_previous_projected_fields);
         assert(voyemu::qnx_mcu_request_projection(650, 736, 34) == previous);
-        assert(!voyemu::qnx_mcu_delivery_scope(Json{{"mcu_projection", previous}},
-                                               voyemu::qnx_qinggan11_older_mcu_projection()));
-        const auto projection = voyemu::qnx_qinggan11_older_mcu_projection();
+        assert(!voyemu::qnx_mcu_delivery_scope(
+                Json{{"mcu_projection", previous}},
+                voyemu::qnx_mcu_projection(voyemu::QnxGuestAdapter::sa8155_qinggan11_611)));
+        const auto projection =
+                voyemu::qnx_mcu_projection(voyemu::QnxGuestAdapter::sa8155_qinggan11_611);
         assert(voyemu::qnx_mcu_request_projection(650, 736, 56) == projection);
         assert(voyemu::qnx_mcu_delivery_scope(Json{{"mcu_projection", projection}}, projection));
         assert(!voyemu::qnx_mcu_delivery_scope(Json{{"mcu_projection", projection}}, previous));
-        assert(!voyemu::qnx_mcu_delivery_scope(Json{{"mcu_projection", projection}},
-                                               voyemu::qnx_qinggan11_mcu_projection()));
+        assert(!voyemu::qnx_mcu_delivery_scope(
+                Json{{"mcu_projection", projection}},
+                voyemu::qnx_mcu_projection(voyemu::QnxGuestAdapter::sa8155_qinggan11_731)));
         const Json metadata = {{"hardware_adapter", "sa8155-qinggan11-611"},
                                {"mcu_projection", projection}};
         assert(voyemu::qnx_runtime_layout("test-profile", metadata).projection == projection);
@@ -323,7 +330,7 @@ int main(int argc, char **argv) {
         assert(!projection.at("settings_feedback_supported").get<bool>() &&
                projection.at("unsupported_fields") == 523);
         std::cout
-                << "Older qinggan11 adapter source56, stock controls, range sentinels, scoped RPC and unchanged unsupported bits passed\n";
+                << "sa8155-qinggan11-611 source56, stock controls, range sentinels, scoped RPC and unchanged unsupported bits passed\n";
 
         return 0;
     } catch (const std::exception &e) {

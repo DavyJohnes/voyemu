@@ -2,6 +2,7 @@
 #include "../../guest/qnx/cluster_ui_wire.h"
 #include "error.hpp"
 #include "model.hpp"
+#include "qnx_adapter.hpp"
 #include <algorithm>
 #include <array>
 #include <bit>
@@ -25,10 +26,13 @@ inline constexpr std::uint64_t qnx_kanzi_ram_base = 0x40000000ULL,
 // A node record: 24 header bytes and a 12-byte header per property.
 inline constexpr std::uint64_t qnx_kanzi_ui_min_record = 24 + 12 * QGFX_KANZI_UI_PROPERTIES;
 
-// The pinned A9 and A11 Gauges carry the Kanzi observer; Passion has no Kanzi Gauge.
+// The pinned qinggan09 and qinggan11 Gauges carry the Kanzi observer; Passion has no Kanzi Gauge.
 inline bool qnx_kanzi_ui_adapter(std::string_view adapter) {
-    return adapter == "sa8155-qinggan09" || adapter == "sa8155-qinggan11-611" ||
-           adapter == "sa8155-qinggan11-731";
+    return std::any_of(qnx_adapter_registry.begin(), qnx_adapter_registry.end(),
+                       [&](const QnxAdapterSpec &spec) {
+                           return spec.name == adapter &&
+                                  spec.platform != QnxGuestPlatform::passion;
+                       });
 }
 
 struct QnxKanziUiSample {

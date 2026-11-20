@@ -817,19 +817,20 @@ void Session::poll_qnx() {
     }
 
     const auto free_adapter = cluster_boot_spec_.value("hardware_adapter", std::string{});
-    const bool free_uart = free_adapter == "sa8155-qinggan11-731" ||
-                           free_adapter == "sa8155-qinggan11-611";
+    const auto free_spec = std::find_if(qnx_adapter_registry.begin(), qnx_adapter_registry.end(),
+                                        [&](const QnxAdapterSpec &spec) {
+                                            return spec.name == free_adapter &&
+                                                   spec.platform == QnxGuestPlatform::qinggan11;
+                                        });
+    const bool free_uart = free_spec != qnx_adapter_registry.end();
 
     if (free_uart) {
-        const bool older = free_adapter == "sa8155-qinggan11-611";
         const auto projection = cluster_boot_spec_.value("mcu_projection", Json());
-        const auto expected =
-                older && projection == qnx_qinggan11_older_mcu_projection(
-                                               qnx_qinggan11_older_previous_projected_fields)
-                        ? qnx_qinggan11_older_mcu_projection(
-                                  qnx_qinggan11_older_previous_projected_fields)
-                : older ? qnx_qinggan11_older_mcu_projection()
-                        : qnx_qinggan11_mcu_projection();
+        const auto previous = free_spec->mcu_previous_projected_fields;
+        const auto expected = previous && projection == qnx_mcu_projection(free_spec->adapter,
+                                                                           previous)
+                                      ? qnx_mcu_projection(free_spec->adapter, previous)
+                                      : qnx_mcu_projection(free_spec->adapter);
 
         if (!qnx_mcu_delivery_scope(Json{{"mcu_projection", projection}}, expected)) {
             throw VoyemuError("QNX_READY", "exact Free projection required for UART discovery");

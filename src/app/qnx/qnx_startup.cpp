@@ -292,21 +292,22 @@ std::string prepare_qnx_startup(std::string_view original, std::string_view pin)
     return output;
 }
 
-static std::string qinggan11_startup(std::string_view original, std::string_view pin, bool older) {
-    const std::string_view expected =
-            older ? "dbb3bc2c6f9b0308e38627cf6a3e3b6757ba98c4f5413334526c26d812ab08f0"
-                  : "a476a1e3d3aaa51d855d2d91c412a962efb6ef1e3e63540ec739779d35ce3ce8";
+static std::string qinggan11_startup(const QnxAdapterSpec &spec, std::string_view original,
+                                     std::string_view pin) {
+    const auto expected = spec.hyp_sha256;
 
-    need(pin == expected && original.size() == 7340032 && sha256_bytes(original) == expected,
+    need(spec.platform == QnxGuestPlatform::qinggan11 && pin == expected &&
+                 original.size() == spec.hyp_bytes && sha256_bytes(original) == expected,
          "QNX_QINGGAN11_STARTUP_SHA");
     need(word(original, 0x3000) == 0x00ff7eeb && word(original, 0x300c) == 0x85701000 &&
                  word(original, 0x3014) == 0x85700200 && word(original, 0x3020) == 0x66108 &&
-                 word(original, 0x3024) == (older ? 0x2d46d0 : 0x2d45a8) &&
+                 word(original, 0x3024) == spec.host_stream_end &&
                  word(original, 0x302c) == 6704052,
          "QNX_QINGGAN11_STARTUP_LAYOUT");
 
-    if (older) {
-        need(word(original, 0x32d9c, true) == 0x095dc000, "QNX_QINGGAN11_OLDER_STARTUP_FDT_SIZE");
+    if (spec.startup_fdt_size != 0) {
+        need(word(original, 0x32d9c, true) == spec.startup_fdt_size,
+             "QNX_QINGGAN11_STARTUP_FDT_SIZE");
     }
 
     constexpr std::array local_sites{
@@ -411,17 +412,15 @@ static std::string qinggan11_startup(std::string_view original, std::string_view
     return output;
 }
 
-std::string prepare_qnx_qinggan11_startup(std::string_view original, std::string_view pin) {
-    return qinggan11_startup(original, pin, false);
+std::string prepare_qnx_qinggan11_startup(QnxGuestAdapter adapter, std::string_view original,
+                                          std::string_view pin) {
+    return qinggan11_startup(qnx_adapter(adapter), original, pin);
 }
 
-std::string prepare_qnx_qinggan11_older_startup(std::string_view original, std::string_view pin) {
-    return qinggan11_startup(original, pin, true);
-}
-
-static std::string qinggan11_kernel(std::string_view original, std::string_view pin,
-                                    std::string_view packed, bool older) {
-    auto output = qinggan11_startup(original, pin, older);
+std::string assemble_qnx_qinggan11_kernel(QnxGuestAdapter adapter, std::string_view original,
+                                          std::string_view pin, std::string_view packed) {
+    const auto &spec = qnx_adapter(adapter);
+    auto output = qinggan11_startup(spec, original, pin);
     auto wide = [&](std::size_t at) {
         return std::uint64_t(word(original, at)) | (std::uint64_t(word(original, at + 4)) << 32);
     };
@@ -434,9 +433,8 @@ static std::string qinggan11_kernel(std::string_view original, std::string_view 
          "QNX_QINGGAN11_ELF_HEADER");
     need(word(original, 0xb0) == 1 && word(original, 0xb4) == 7 && wide(0xb8) == 0x3000 &&
                  wide(0xc0) == 0x85700200 && wide(0xc8) == 0x85700200 &&
-                 wide(0xd0) == (older ? 0x2d46d0 : 0x2d45a8) &&
-                 wide(0xd8) == (older ? 0x2d46d0 : 0x2d45a8) && wide(0xe0) == 0x200 &&
-                 wide(0x90) == 0x859d5000,
+                 wide(0xd0) == spec.host_stream_end && wide(0xd8) == spec.host_stream_end &&
+                 wide(0xe0) == 0x200 && wide(0x90) == 0x859d5000,
          "QNX_QINGGAN11_ELF_SEGMENT");
     const auto declared = std::uint64_t(0x66108) + packed.size();
     need(declared <= wide(0x90) - wide(0xc8), "QNX_QINGGAN11_ELF_SEGMENT_OVERLAP");
@@ -445,7 +443,7 @@ static std::string qinggan11_kernel(std::string_view original, std::string_view 
     put(output, 0xd0, extent);
     put(output, 0xd8, extent);
     constexpr std::size_t stream = 0x69108;
-    const std::size_t end = older ? 0x2d76d0 : 0x2d75a8;
+    const std::size_t end = std::size_t(spec.host_stream_end) + 0x3000;
     need(!packed.empty() && packed.size() % 4 == 0 && packed.size() <= original.size() - stream &&
                  std::all_of(original.begin() + end, original.end(),
                              [](char c) {
@@ -472,16 +470,6 @@ static std::string qinggan11_kernel(std::string_view original, std::string_view 
     put(output, 0x69104, 0 - sum);
 
     return output;
-}
-
-std::string assemble_qnx_qinggan11_kernel(std::string_view original, std::string_view pin,
-                                          std::string_view packed) {
-    return qinggan11_kernel(original, pin, packed, false);
-}
-
-std::string assemble_qnx_qinggan11_older_kernel(std::string_view original, std::string_view pin,
-                                                std::string_view packed) {
-    return qinggan11_kernel(original, pin, packed, true);
 }
 
 std::string assemble_qnx_kernel(std::string_view original, std::string_view pin,

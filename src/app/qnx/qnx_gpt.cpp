@@ -136,8 +136,13 @@ void validate_qnx_passion_gpt(const QnxIfs2Gpt &images, std::uint64_t bytes) {
 }
 
 namespace {
-std::uint32_t qinggan11_imagefs_extent(std::string_view image, std::string_view pin) {
-    need(image.size() == 0x10000000 && pin.size() == 64 && sha256_bytes(image) == pin,
+// The ImageFS extent of ifs2_la.img, checked against the registry entry of the adapter.
+std::uint32_t qinggan11_imagefs_extent(QnxGuestAdapter adapter, std::string_view image,
+                                       std::string_view pin) {
+    const auto &spec = qnx_adapter(adapter);
+
+    need(spec.platform == QnxGuestPlatform::qinggan11 && image.size() == 0x10000000 &&
+                 pin.size() == 64 && sha256_bytes(image) == pin,
          "QNX_QINGGAN11_GPT_INPUT_SHA");
     std::uint32_t extent = 0;
 
@@ -145,65 +150,23 @@ std::uint32_t qinggan11_imagefs_extent(std::string_view image, std::string_view 
         extent |= std::uint32_t(static_cast<unsigned char>(image[8 + i])) << (8 * i);
     }
 
-    need(extent == 147839040, "QNX_QINGGAN11_GPT_IMAGEFS_EXTENT");
-
-    return extent;
-}
-} // namespace
-namespace {
-std::uint32_t qinggan11_older_imagefs_extent(std::string_view image, std::string_view pin) {
-    need(image.size() == 0x10000000 && pin.size() == 64 && sha256_bytes(image) == pin,
-         "QNX_QINGGAN11_OLDER_GPT_INPUT_SHA");
-    std::uint32_t extent = 0;
-
-    for (unsigned i = 0; i < 4; ++i) {
-        extent |= std::uint32_t(static_cast<unsigned char>(image[8 + i])) << (8 * i);
-    }
-
-    need(extent == 147830848, "QNX_QINGGAN11_OLDER_GPT_IMAGEFS_EXTENT");
+    need(extent == spec.imagefs_extent, "QNX_QINGGAN11_GPT_IMAGEFS_EXTENT");
 
     return extent;
 }
 } // namespace
 
-QnxIfs2Gpt qnx_qinggan11_older_gpt(std::string_view image, std::string_view pin) {
-    return ifs2_gpt(qinggan11_older_imagefs_extent(image, pin));
+QnxIfs2Gpt qnx_qinggan11_gpt(QnxGuestAdapter adapter, std::string_view image,
+                             std::string_view pin) {
+    return ifs2_gpt(qinggan11_imagefs_extent(adapter, image, pin));
 }
 
-std::string qnx_qinggan11_older_loader_image(std::string_view image, std::string_view pin) {
-    const auto extent = qinggan11_older_imagefs_extent(image, pin);
+std::string qnx_qinggan11_loader_image(QnxGuestAdapter adapter, std::string_view image,
+                                       std::string_view pin) {
+    const auto extent = qinggan11_imagefs_extent(adapter, image, pin);
     const std::size_t loaded = (std::size_t(extent) + 4095) / 4096 * 4096;
 
-    need(loaded == 147832832 && loaded <= image.size() && loaded < 0x0ffbe000,
-         "QNX_QINGGAN11_OLDER_LOADER_EXTENT");
-    need(std::all_of(image.begin() + extent, image.end(),
-                     [](unsigned char value) {
-                         return value == 0xff;
-                     }),
-         "QNX_QINGGAN11_OLDER_LOADER_PADDING");
-
-    return std::string(image.substr(0, loaded));
-}
-
-void validate_qnx_qinggan11_older_gpt(const QnxIfs2Gpt &images, std::string_view image,
-                                      std::string_view pin) {
-    const auto expected = qnx_qinggan11_older_gpt(image, pin);
-
-    need(images.cache == expected.cache && images.primary == expected.primary &&
-                 images.backup == expected.backup,
-         "QNX_QINGGAN11_OLDER_GPT_METADATA");
-}
-
-QnxIfs2Gpt qnx_qinggan11_gpt(std::string_view image, std::string_view pin) {
-    return ifs2_gpt(qinggan11_imagefs_extent(image, pin));
-}
-
-std::string qnx_qinggan11_loader_image(std::string_view image, std::string_view pin) {
-    const auto extent = qinggan11_imagefs_extent(image, pin);
-    const std::size_t loaded = (std::size_t(extent) + 4095) / 4096 * 4096;
-
-    need(loaded == 147841024 && loaded % 4096 == 0 && loaded <= image.size() && loaded < 0x0ffbe000,
-         "QNX_QINGGAN11_LOADER_EXTENT");
+    need(loaded <= image.size() && loaded < 0x0ffbe000, "QNX_QINGGAN11_LOADER_EXTENT");
     need(std::all_of(image.begin() + extent, image.end(),
                      [](unsigned char value) {
                          return value == 0xff;
@@ -213,9 +176,9 @@ std::string qnx_qinggan11_loader_image(std::string_view image, std::string_view 
     return std::string(image.substr(0, loaded));
 }
 
-void validate_qnx_qinggan11_gpt(const QnxIfs2Gpt &images, std::string_view image,
-                                std::string_view pin) {
-    const auto expected = qnx_qinggan11_gpt(image, pin);
+void validate_qnx_qinggan11_gpt(QnxGuestAdapter adapter, const QnxIfs2Gpt &images,
+                                std::string_view image, std::string_view pin) {
+    const auto expected = qnx_qinggan11_gpt(adapter, image, pin);
 
     need(images.cache == expected.cache && images.primary == expected.primary &&
                  images.backup == expected.backup,

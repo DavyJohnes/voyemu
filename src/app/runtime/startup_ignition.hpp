@@ -1,5 +1,6 @@
 #pragma once
 #include "model.hpp"
+#include "qnx_adapter.hpp"
 #include "qnx_run_budget.hpp"
 #include <algorithm>
 #include <chrono>
@@ -35,10 +36,13 @@ public:
 
     explicit StartupIgnition(QnxEngine engine = host_qnx_engine) : engine_(engine) {}
 
-    // The Free A9 and A11 adapters project ign into the OEM power items of powermgr.
+    // The qinggan09 and qinggan11 adapters project ign into the OEM power items of powermgr.
     static bool applies(std::string_view adapter) {
-        return adapter == "sa8155-qinggan09" || adapter == "sa8155-qinggan11-611" ||
-               adapter == "sa8155-qinggan11-731";
+        return std::any_of(qnx_adapter_registry.begin(), qnx_adapter_registry.end(),
+                           [&](const QnxAdapterSpec &spec) {
+                               return spec.name == adapter &&
+                                      spec.platform != QnxGuestPlatform::passion;
+                           });
     }
 
     // A model with ign already off keeps it off and starts no sequence.

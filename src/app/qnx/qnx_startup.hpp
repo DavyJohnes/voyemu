@@ -1,4 +1,5 @@
 #pragma once
+#include "qnx_adapter.hpp"
 #include <cstdint>
 #include <string>
 #include <string_view>
@@ -16,11 +17,11 @@ std::uint32_t qnx_a11_misc_failure_guard(std::string_view original);
 // First stage only: guarded SA8155 startup adaptation, before host IFS packing.
 // Does not claim a bootable kernel or modify the embedded compressed stream.
 std::string prepare_qnx_startup(std::string_view original, std::string_view sha256);
-std::string prepare_qnx_qinggan11_startup(std::string_view original, std::string_view sha256);
-std::string prepare_qnx_qinggan11_older_startup(std::string_view original, std::string_view pin);
-std::string assemble_qnx_qinggan11_older_kernel(std::string_view original, std::string_view pin,
-                                                std::string_view packed);
-std::string assemble_qnx_qinggan11_kernel(std::string_view original, std::string_view sha256,
+// The startup and kernel of a qinggan11 adapter; the registry holds its OEM build facts.
+std::string prepare_qnx_qinggan11_startup(QnxGuestAdapter adapter, std::string_view original,
+                                          std::string_view sha256);
+std::string assemble_qnx_qinggan11_kernel(QnxGuestAdapter adapter, std::string_view original,
+                                          std::string_view sha256,
                                           std::string_view packed_host_ifs);
 std::string assemble_qnx_kernel(std::string_view original, std::string_view sha256,
                                 std::string_view packed_host_ifs);

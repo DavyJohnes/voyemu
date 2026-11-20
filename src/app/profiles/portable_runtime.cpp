@@ -2037,7 +2037,7 @@ Json inspect_portable_runtime(const std::filesystem::path &root, std::string_vie
 Json inspect_qinggan11_qnx_upgrade_source(const std::filesystem::path &root,
                                           std::string_view profile,
                                           const MachineIdentity &machine) {
-    // The upgrade-source layout relaxes only the previous scope of the older qinggan11 adapter.
+    // The upgrade-source layout relaxes only the upgrade-only MCU scope that an adapter declares.
     return inspect_portable_runtime_impl(root, profile, machine, {}, true);
 }
 } // namespace voyemu
