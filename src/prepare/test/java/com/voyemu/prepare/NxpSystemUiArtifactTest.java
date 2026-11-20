@@ -188,8 +188,9 @@ public final class NxpSystemUiArtifactTest {
         Path root = Path.of(args[0]).toRealPath(), work = Path.of(args[1]);
         Files.createDirectory(work);
         inverseControls(work.resolve("inverse-controls"));
-        var registry = new ProfileRegistry(root, NxpSettingsLibrary.PROFILE);
-        var profile = registry.get(NxpSettingsLibrary.PROFILE);
+        String id = TestProfiles.pinning(root, NxpSettingsLibrary.PIN);
+        var registry = new ProfileRegistry(root, id);
+        var profile = registry.get(id);
         Path local = root.resolve(".local");
         var storage =
                 new Storage(
@@ -428,9 +429,8 @@ public final class NxpSystemUiArtifactTest {
                         "component:systemui-runtime-c")) {
             Set<String> inventory = inventory(reference.substring("component:".length()));
             need(
-                    !NxpSettingsLibrary.slot("another-profile", 28, reference, inventory)
-                            && !NxpSettingsLibrary.slot(profile.id(), 30, reference, inventory),
-                    "profile/API scope bypass");
+                    !NxpSettingsLibrary.slot(profile.id(), 30, reference, inventory),
+                    "API scope bypass");
         }
     }
 }

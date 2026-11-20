@@ -19,7 +19,7 @@ public final class CameraRecipeTest {
                         "schema",
                         1,
                         "profile",
-                        "free-09-chinese-20260106-6.0.3",
+                        TestProfiles.SYNTHETIC,
                         "backend",
                         backend,
                         "physicalDms",

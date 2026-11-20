@@ -9,9 +9,9 @@ public final class Api28WrapperCodecTest {
     public static void main(String[] args) throws Exception {
         Path root = Path.of(args[0]);
         var base =
-                new ProfileRegistry(root, Api28CodecNativeFile.PROFILE)
-                        .get(Api28CodecNativeFile.PROFILE);
-        String name = Api28CodecNativeFile.PROFILE + "-copy";
+                new ProfileRegistry(root, TestProfiles.declaring(root, Api28CodecNativeFile.ID))
+                        .get(TestProfiles.declaring(root, Api28CodecNativeFile.ID));
+        String name = base.id() + "-copy";
         var data = new java.util.LinkedHashMap<String, Object>(base.data());
 
         data.put("id", name);

@@ -4,7 +4,6 @@ import java.util.Set;
 
 /** Exact owner-supplied NXP callback ABI; generated donor bytes remain outside source. */
 final class NxpMediaLibrary {
-    static final String PROFILE = "free-09-chinese-20221230-nxp-rc45";
     static final String PIN = "93f4bea56530bf2de8634b7898fd4275a3c8985ff0392fdc58607ef8bc5b2441";
     static final Set<String> TYPES =
             Set.of(
@@ -30,9 +29,8 @@ final class NxpMediaLibrary {
                     "Lcom/qinggan/media/MusicInfo;",
                     "Lcom/qinggan/media/RadioInfo;");
 
-    static boolean selected(String profile, int api, String pin, String output, Set<String> types) {
-        return PROFILE.equals(profile)
-                && api == 28
+    static boolean selected(int api, String pin, String output, Set<String> types) {
+        return api == 28
                 && PIN.equals(pin)
                 && output.equals("VoyemuNxpMediaCallbacks.jar")
                 && TYPES.equals(types);

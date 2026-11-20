@@ -43,7 +43,7 @@ public final class NxpPhoneConnectAnrTest {
     static final class Target implements Recipes.Target {
         Path work;
         DexClasses classes;
-        String profile = "free-09-chinese-20221230-nxp-rc45";
+        String profile = TestProfiles.SYNTHETIC;
         String pin = PIN;
         String abi = "arm64-v8a";
         int api = 28;
@@ -121,7 +121,11 @@ public final class NxpPhoneConnectAnrTest {
         Path root = Path.of(args[0]).toRealPath();
         Path work = Files.createTempDirectory("nxp-phone-connect-anr-").toRealPath();
         Path recipeFile =
-                root.resolve("profiles/free-09-chinese-20221230-nxp-rc45/patches/" + NAME);
+                root.resolve(
+                        "profiles/"
+                                + TestProfiles.declaring(root, "nxp-phone-connect-anr")
+                                + "/patches/"
+                                + NAME);
         var recipe = Json.object(Json.parse(Files.readString(recipeFile)));
 
         recipe.put("sourceSha256", FilesSupport.hash(recipeFile));
@@ -148,13 +152,10 @@ public final class NxpPhoneConnectAnrTest {
                                                 org.jf.dexlib2.Opcodes.forApi(28),
                                                 List.of(fixture)))));
         target.classes = new DexClasses(archive, List.of("classes2.dex"), 28);
-        int expectedRejections = 4;
+        int expectedRejections = 3;
 
-        for (int mode = 0; mode < 4; mode++) {
-            target.profile =
-                    mode == 0
-                            ? "free-09-chinese-20260106-6.0.3"
-                            : "free-09-chinese-20221230-nxp-rc45";
+        for (int mode = 1; mode < 4; mode++) {
+            target.profile = TestProfiles.SYNTHETIC;
             target.api = mode == 1 ? 30 : 28;
 
             if (mode == 2) {
@@ -179,7 +180,7 @@ public final class NxpPhoneConnectAnrTest {
                 refused = true;
             }
 
-            check(refused, "Profile/API/ABI/input mutation refused " + mode);
+            check(refused, "API/ABI/input mutation refused " + mode);
 
             if (refused) {
                 expectedRejections--;
@@ -190,11 +191,11 @@ public final class NxpPhoneConnectAnrTest {
                     "Rejected recipe must not modify the class " + mode);
         }
 
-        target.profile = "free-09-chinese-20221230-nxp-rc45";
+        target.profile = TestProfiles.SYNTHETIC;
         target.api = 28;
         target.abi = "arm64-v8a";
         target.pin = PIN;
-        check(expectedRejections == 0, "All four mutation guards must reject before mutation");
+        check(expectedRejections == 0, "All three mutation guards must reject before mutation");
         Recipes.apply(NAME, recipe, target);
         check(
                 lines(target.classes).equals(PATCHED),
@@ -214,7 +215,10 @@ public final class NxpPhoneConnectAnrTest {
                         Json.parse(
                                 Files.readString(
                                         root.resolve(
-                                                "profiles/free-09-chinese-20221230-nxp-rc45/profile.json"))));
+                                                "profiles/"
+                                                        + TestProfiles.declaring(
+                                                                root, "nxp-phone-connect-anr")
+                                                        + "/profile.json"))));
         check(
                 Json.list(
                                 Json.obj(Json.obj(definition, "patches"), "WakeupSpeechService")

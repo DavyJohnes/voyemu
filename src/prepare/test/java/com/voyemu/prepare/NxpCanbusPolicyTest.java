@@ -20,7 +20,7 @@ public final class NxpCanbusPolicyTest {
     static final class Target implements Recipes.Target {
         Path output;
         Map<String, Path> uses = Map.of();
-        String profile = "free-09-chinese-20221230-nxp-rc45";
+        String profile = TestProfiles.SYNTHETIC;
         int api = 28;
 
         @Override
@@ -77,7 +77,11 @@ public final class NxpCanbusPolicyTest {
     static Map<String, Object> metadata(Path root, String name) throws Exception {
         Path recipe =
                 root.resolve(
-                        "profiles/free-09-chinese-20221230-nxp-rc45/patches/" + name + ".json");
+                        "profiles/"
+                                + TestProfiles.declaring(root, "selinux-canbus-nxp")
+                                + "/patches/"
+                                + name
+                                + ".json");
 
         if (!Files.exists(recipe)) {
             return Map.of("constants", Map.of());
@@ -169,13 +173,18 @@ public final class NxpCanbusPolicyTest {
                         Json.parse(
                                 Files.readString(
                                         root.resolve(
-                                                "profiles/free-09-chinese-20221230-nxp-rc45/profile.json"))));
+                                                "profiles/"
+                                                        + TestProfiles.declaring(
+                                                                root, "selinux-canbus-nxp")
+                                                        + "/profile.json"))));
         var profile =
                 new ProfileRegistry.Profile(
-                        "free-09-chinese-20221230-nxp-rc45",
+                        TestProfiles.declaring(root, "selinux-canbus-nxp"),
                         "source",
                         definition,
-                        "voyemu/profiles/free-09-chinese-20221230-nxp-rc45/",
+                        "voyemu/profiles/"
+                                + TestProfiles.declaring(root, "selinux-canbus-nxp")
+                                + "/",
                         root);
         checkProfileDefinition(definition, profile);
         Target target = new Target();
@@ -348,22 +357,19 @@ public final class NxpCanbusPolicyTest {
         check(denied, "Reapplication rejected");
         rejectMutations(root, input, member, target, name);
         target.api = 28;
-        target.profile = "free-09-chinese-20221230-nxp-rc45";
+        target.profile = TestProfiles.SYNTHETIC;
     }
 
     static void rejectMutations(Path root, Path input, String member, Target target, String name)
             throws Exception {
         boolean denied;
 
-        for (int mode = 0; mode < 3; mode++) {
+        for (int mode = 1; mode < 3; mode++) {
             Files.copy(
                     input.resolve(member),
                     target.output,
                     java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-            target.profile =
-                    mode == 0
-                            ? "free-09-chinese-20260106-6.0.3"
-                            : "free-09-chinese-20221230-nxp-rc45";
+            target.profile = TestProfiles.SYNTHETIC;
             target.api = mode == 1 ? 30 : 28;
 
             if (mode == 2) {
@@ -379,7 +385,7 @@ public final class NxpCanbusPolicyTest {
                 denied = true;
             }
 
-            check(denied, "Profile/API/input/recipe mutation refused");
+            check(denied, "API/input/recipe mutation refused");
         }
     }
 }

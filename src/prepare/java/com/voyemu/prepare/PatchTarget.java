@@ -184,9 +184,9 @@ final class PatchTarget implements Recipes.Target {
     @Override
     public void addNxpPhoneProvider() throws Exception {
         Failure.require(
-                profile.referenceProfile().equals("free-09-chinese-20221230-nxp-rc45") && api == 28,
+                api == 28,
                 "PATCH_PROFILE_UNSUPPORTED",
-                "NXP Phone provider requires its exact profile",
+                "NXP Phone provider requires Android API 28",
                 5);
         entries.put("AndroidManifest.xml", PhoneManifest.add(entries.get("AndroidManifest.xml")));
         addDex("nxp-phone-provider/src");
@@ -195,9 +195,9 @@ final class PatchTarget implements Recipes.Target {
     @Override
     public void addPhoneProvider() throws Exception {
         Failure.require(
-                profile.referenceProfile().equals("free-09-chinese-20260106-6.0.3") && api == 28,
+                api == 28,
                 "PATCH_PROFILE_UNSUPPORTED",
-                "A9 Phone provider requires its exact profile",
+                "A9 Phone provider requires Android API 28",
                 5);
         entries.put(
                 "classes.dex",

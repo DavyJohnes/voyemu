@@ -5,11 +5,10 @@ import java.util.List;
 import java.util.Map;
 
 public final class NxpPhoneRecipeTest {
-    static final String ID = "free-09-chinese-20221230-nxp-rc45",
-            PIN = "55e7602d15f5d677a5ddeaaa44c0c04c355235c5322b51edefa3a6ef29636451";
+    static final String PIN = "55e7602d15f5d677a5ddeaaa44c0c04c355235c5322b51edefa3a6ef29636451";
 
     static final class Target implements Recipes.Target {
-        String id = ID, pin = PIN;
+        String id = TestProfiles.SYNTHETIC, pin = PIN;
         int api = 28, calls;
 
         @Override
@@ -99,7 +98,8 @@ public final class NxpPhoneRecipeTest {
                                 java.nio.file.Path.of(args[0])
                                         .resolve(
                                                 "profiles/"
-                                                        + ID
+                                                        + TestProfiles.pinning(
+                                                                java.nio.file.Path.of(args[0]), PIN)
                                                         + "/patches/nxp-phone-provider.json")));
         Target target = new Target();
         Recipes.apply("nxp-phone-provider.json", metadata(), target);
@@ -108,16 +108,7 @@ public final class NxpPhoneRecipeTest {
             throw new AssertionError();
         }
 
-        for (String id :
-                List.of(
-                        "free-09-chinese-20260106-6.0.3",
-                        "free-11-chinese-20260731-7.3.1",
-                        "other")) {
-            target.id = id;
-            reject(target);
-        }
-
-        target.id = ID;
+        target.id = TestProfiles.SYNTHETIC;
         target.api = 30;
         reject(target);
         target.api = 28;

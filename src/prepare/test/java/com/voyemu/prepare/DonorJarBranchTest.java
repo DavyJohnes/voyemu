@@ -127,12 +127,12 @@ public final class DonorJarBranchTest {
                         "profile",
                         "independent-local-copy",
                         "referenceProfile",
-                        Api28CodecNativeFile.PROFILE));
+                        TestProfiles.SYNTHETIC));
         localData.put("android", Map.of("package", "system-images;android-28;default;arm64-v8a"));
         localData.put("components", Map.of("bluetooth", "components/bluetooth"));
         var localProfile =
                 new ProfileRegistry.Profile("independent-local-copy", "test", localData, "");
-        Path sharedOriginal = storage.originals(Api28CodecNativeFile.PROFILE).resolve("owner.jar");
+        Path sharedOriginal = storage.originals(TestProfiles.SYNTHETIC).resolve("owner.jar");
         Storage.directory(sharedOriginal.getParent());
         Files.copy(original, sharedOriginal);
         localData.put(
@@ -144,7 +144,7 @@ public final class DonorJarBranchTest {
         }
 
         if (!localProfile.id().equals("independent-local-copy")
-                || !localProfile.referenceProfile().equals(Api28CodecNativeFile.PROFILE)) {
+                || !localProfile.referenceProfile().equals(TestProfiles.SYNTHETIC)) {
             throw new AssertionError("Logical source identity replaced by adapter family");
         }
 
@@ -172,11 +172,7 @@ public final class DonorJarBranchTest {
 
         localData.put(
                 "capture",
-                Map.of(
-                        "profile",
-                        "foreign-copy",
-                        "referenceProfile",
-                        Api28CodecNativeFile.PROFILE));
+                Map.of("profile", "foreign-copy", "referenceProfile", TestProfiles.SYNTHETIC));
         boolean refused = false;
 
         try {

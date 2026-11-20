@@ -15,13 +15,12 @@ public final class Qinggan09StartupVolumeGuardTest {
             original = jar.getInputStream(jar.getEntry("classes.dex")).readAllBytes();
         }
 
-        String a9 = "free-09-chinese-20260106-6.0.3";
+        String a9 = TestProfiles.SYNTHETIC;
         byte[] patched = NxpStartupVolumeGuard.apply(a9, 28, original);
         check(
                 Arrays.equals(
-                        patched,
-                        NxpStartupVolumeGuard.apply(NxpStartupVolumeGuard.PROFILE, 28, original)),
-                "Same pinned SDK must produce identical patch for A9 and NXP");
+                        patched, NxpStartupVolumeGuard.apply(TestProfiles.SYNTHETIC, 28, original)),
+                "Same pinned SDK must produce an identical patch");
         var before = PassionServiceForegroundGuard.classes(original);
         var after = PassionServiceForegroundGuard.classes(patched);
         var inverse = NxpStartupVolumeGuard.transform(after, true);
@@ -47,24 +46,13 @@ public final class Qinggan09StartupVolumeGuardTest {
         check(changed == 2, "Exactly AudioService and VolumeStreamState change");
         int negatives = 0;
 
-        for (String foreign :
-                new String[] {
-                    "free-11-chinese-20260731-7.3.1",
-                    "passion-11-russian-20260403-2.1.4.80",
-                    a9 + "-copy",
-                    "other"
-                }) {
-            reject(foreign, 28, original);
-            negatives++;
-        }
-
         reject(a9, 30, original);
         negatives++;
         reject(a9, 28, patched);
         negatives++;
         Files.write(Path.of(args[1]), patched);
         System.out.println(
-                "PASS A9 exact two-profile API28 guard; unchanged unrelated classes; inverse exact;"
+                "PASS pinned API28 SDK guard; unchanged unrelated classes; inverse exact;"
                         + " negatives="
                         + negatives
                         + "; guest_started=false");

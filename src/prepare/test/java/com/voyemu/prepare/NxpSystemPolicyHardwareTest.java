@@ -8,8 +8,7 @@ import java.util.TreeMap;
 
 /** OEM Bluetooth hardware policies are optional only when the real adapter is absent. */
 public final class NxpSystemPolicyHardwareTest {
-    static final String ID = "free-09-chinese-20221230-nxp-rc45",
-            PIN = "c4920cc36a257755335c6fae098172e30414711e9f2adf3fab6dbc566edabd15",
+    static final String PIN = "c4920cc36a257755335c6fae098172e30414711e9f2adf3fab6dbc566edabd15",
             NAME = "nxp-systempolicy-hardware.json";
     static final List<String> TYPES =
             List.of(
@@ -23,7 +22,7 @@ public final class NxpSystemPolicyHardwareTest {
     }
 
     static final class Target implements Recipes.Target {
-        String id = ID, pin = PIN;
+        String id = TestProfiles.SYNTHETIC, pin = PIN;
         int api = 28;
         final Path work;
         DexClasses classes;
@@ -157,16 +156,19 @@ public final class NxpSystemPolicyHardwareTest {
         Path root = Path.of(args[0]), work = Path.of(args[1]);
 
         Files.createDirectories(work);
-        Path apk = root.resolve(".local/profiles/" + ID + "/originals/systempolicy.apk");
+        Path apk =
+                root.resolve(
+                        ".local/profiles/"
+                                + TestProfiles.pinning(root, PIN)
+                                + "/originals/systempolicy.apk");
         NativeCore.pinned(apk, PIN);
-        Path recipePath = root.resolve("profiles/" + ID + "/patches/" + NAME);
+        Path recipePath =
+                root.resolve("profiles/" + TestProfiles.pinning(root, PIN) + "/patches/" + NAME);
         var recipe = Json.object(Json.parse(Files.readString(recipePath)));
         recipe.put("sourceSha256", FilesSupport.hash(recipePath));
         Target target = new Target(work);
         target.classes = classes(apk);
-        target.id = "free-09-chinese-20260106-6.0.3";
-        reject(target, recipe);
-        target.id = ID;
+        target.id = TestProfiles.SYNTHETIC;
         target.api = 30;
         reject(target, recipe);
         target.api = 28;

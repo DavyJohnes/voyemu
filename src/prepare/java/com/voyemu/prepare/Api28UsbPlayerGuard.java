@@ -18,7 +18,7 @@ import java.util.TreeMap;
 
 /** Type-reference adaptation only; the original USB queue, session and UI remain intact. */
 final class Api28UsbPlayerGuard {
-    static final String PROFILE = "free-09-chinese-20260106-6.0.3", NAME = "api28-usb-player";
+    static final String NAME = "api28-usb-player";
     static final String PIN = "4bc4c964d939541f6e11f4634df3d07bca06fb5dae3490e7284edf95d4c15e3f";
     static final String ORIGINAL = "Lorg/ijkplayer/IjkMediaPlayer;",
             HELPER = "Lcom/voyemu/oem/media/AndroidUsbPlayer;";
@@ -56,11 +56,9 @@ final class Api28UsbPlayerGuard {
         }
     }
 
-    private static void identity(String profile, int api, String abi, Path original)
-            throws Exception {
+    private static void identity(int api, String abi, Path original) throws Exception {
         require(
-                PROFILE.equals(profile)
-                        && api == 28
+                api == 28
                         && "arm64-v8a".equals(abi)
                         && original != null
                         && PIN.equals(FilesSupport.hash(original)));
@@ -107,14 +105,14 @@ final class Api28UsbPlayerGuard {
 
     static void validateOriginal(String profile, int api, String abi, Path apk, byte[] dex)
             throws Exception {
-        identity(profile, api, abi, apk);
+        identity(api, abi, apk);
         require(dex != null);
         rewrite(new DexBackedDexFile(Opcodes.forApi(28), dex), false);
     }
 
     static void validatePrepared(String profile, int api, String abi, Path apk, byte[] dex)
             throws Exception {
-        identity(profile, api, abi, apk);
+        identity(api, abi, apk);
         byte[] expected = originalDex(apk);
         require(dex != null && NativeCore.hash(expected).equals(NativeCore.hash(dex)));
         rewrite(new DexBackedDexFile(Opcodes.forApi(28), dex), false);
@@ -241,7 +239,7 @@ final class Api28UsbPlayerGuard {
     static Path compileHelper(
             String profile, int api, String abi, Path apk, Path source, Path platform, Path work)
             throws Exception {
-        identity(profile, api, abi, apk);
+        identity(api, abi, apk);
         validateSource(source);
         require(!Files.exists(work));
         Path dex = GuestJava.dex(new GuestJava.Unit(source, api), platform, work.resolve("java"));

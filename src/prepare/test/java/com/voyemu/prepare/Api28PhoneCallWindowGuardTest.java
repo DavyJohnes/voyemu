@@ -33,33 +33,23 @@ public final class Api28PhoneCallWindowGuardTest {
         Path apk =
                 root.resolve(
                         ".local/profiles/"
-                                + Api28PhoneCallWindowGuard.PROFILE
+                                + TestProfiles.pinning(root, Api28PhoneCallWindowGuard.APK_PIN)
                                 + "/originals/BluetoothPhone.apk");
         byte[] original = NativeCore.entries(apk).get("classes.dex");
-        byte[] changed =
-                Api28PhoneCallWindowGuard.apply(
-                        Api28PhoneCallWindowGuard.PROFILE, 28, apk, original);
+        byte[] changed = Api28PhoneCallWindowGuard.apply(TestProfiles.SYNTHETIC, 28, apk, original);
         Api28PhoneCallWindowGuard.verify(original, changed);
 
         if (!Arrays.equals(
                 changed,
-                Api28PhoneCallWindowGuard.apply(
-                        Api28PhoneCallWindowGuard.PROFILE, 28, apk, original))) {
+                Api28PhoneCallWindowGuard.apply(TestProfiles.SYNTHETIC, 28, apk, original))) {
             throw new AssertionError("nondeterministic");
         }
 
-        reject(() -> Api28PhoneCallWindowGuard.apply("foreign", 28, apk, original));
-        reject(() ->
-                Api28PhoneCallWindowGuard.apply(
-                        Api28PhoneCallWindowGuard.PROFILE, 30, apk, original));
-        reject(() ->
-                Api28PhoneCallWindowGuard.apply(
-                        Api28PhoneCallWindowGuard.PROFILE, 28, apk, changed));
+        reject(() -> Api28PhoneCallWindowGuard.apply(TestProfiles.SYNTHETIC, 30, apk, original));
+        reject(() -> Api28PhoneCallWindowGuard.apply(TestProfiles.SYNTHETIC, 28, apk, changed));
         byte[] unknown = original.clone();
         unknown[unknown.length - 1] ^= 1;
-        reject(() ->
-                Api28PhoneCallWindowGuard.apply(
-                        Api28PhoneCallWindowGuard.PROFILE, 28, apk, unknown));
+        reject(() -> Api28PhoneCallWindowGuard.apply(TestProfiles.SYNTHETIC, 28, apk, unknown));
         reject(() -> Api28PhoneCallWindowGuard.verify(original, original));
         byte[] drift = changed.clone();
         drift[drift.length - 1] ^= 1;
@@ -67,9 +57,7 @@ public final class Api28PhoneCallWindowGuardTest {
         reject(() -> Api28PhoneCallWindowGuard.verify(unknown, changed));
         Path wrong = stage.resolve("wrong-original.apk");
         Files.write(wrong, new byte[] {1});
-        reject(() ->
-                Api28PhoneCallWindowGuard.apply(
-                        Api28PhoneCallWindowGuard.PROFILE, 28, wrong, original));
+        reject(() -> Api28PhoneCallWindowGuard.apply(TestProfiles.SYNTHETIC, 28, wrong, original));
         var before = new DexBackedDexFile(Opcodes.forApi(28), original);
         var after = new DexBackedDexFile(Opcodes.forApi(28), changed);
         var methods = new TreeMap<String, String>();

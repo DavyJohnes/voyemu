@@ -46,7 +46,7 @@ final class RecipesNxp {
 
             require(
                     NxpSettingsLibrary.slot(
-                            NxpSettingsLibrary.PROFILE, target.api(), expected.get(index), types),
+                            target.profile(), target.api(), expected.get(index), types),
                     "Exact SystemUI donor class inventory required");
         }
 
@@ -65,10 +65,8 @@ final class RecipesNxp {
     static void musicMedia(String name, Map<String, Object> metadata, Recipes.Target target)
             throws Exception {
         require(
-                target.profile().equals("free-09-chinese-20221230-nxp-rc45")
-                        && target.originalSha256()
-                                .equals(
-                                        "c080bcb4a663e113bd0e7caa1f17948dce2de6a0eabec9b41a93aef5641f01c3"),
+                target.originalSha256()
+                        .equals("c080bcb4a663e113bd0e7caa1f17948dce2de6a0eabec9b41a93aef5641f01c3"),
                 "Exact NXP Music APK required");
         Recipes.literalCalls(name, metadata, target);
     }
@@ -89,8 +87,7 @@ final class RecipesNxp {
             Recipes.Target target)
             throws Exception {
         require(
-                target.profile().equals("free-09-chinese-20221230-nxp-rc45")
-                        && target.api() == 28
+                target.api() == 28
                         && target.originalSha256()
                                 .equals(
                                         "c4920cc36a257755335c6fae098172e30414711e9f2adf3fab6dbc566edabd15")
@@ -110,8 +107,7 @@ final class RecipesNxp {
             Recipes.Target target)
             throws Exception {
         require(
-                target.profile().equals("free-09-chinese-20221230-nxp-rc45")
-                        && target.originalSha256()
+                target.originalSha256()
                                 .equals(
                                         "b3a79c9cb737b5c84256c98b9e00553467bc9fda43b975398a7284a0a9cac741")
                         && Json.str(constants, "INPUT_SHA256").equals(target.originalSha256()),
@@ -124,8 +120,7 @@ final class RecipesNxp {
 
     static void phoneProvider(Recipes.Target target) throws Exception {
         require(
-                target.profile().equals("free-09-chinese-20221230-nxp-rc45")
-                        && target.api() == 28
+                target.api() == 28
                         && target.originalSha256()
                                 .equals(
                                         "55e7602d15f5d677a5ddeaaa44c0c04c355235c5322b51edefa3a6ef29636451"),
@@ -140,8 +135,7 @@ final class RecipesNxp {
             Recipes.Target target)
             throws Exception {
         require(
-                target.profile().equals("free-09-chinese-20221230-nxp-rc45")
-                        && target.api() == 28
+                target.api() == 28
                         && target.abi().equals("arm64-v8a")
                         && target.originalSha256()
                                 .equals(
@@ -154,8 +148,7 @@ final class RecipesNxp {
     static void voiceNatives(Map<String, Object> constants, Recipes.Target target)
             throws Exception {
         require(
-                target.profile().equals("free-09-chinese-20221230-nxp-rc45")
-                        && target.api() == 28
+                target.api() == 28
                         && target.abi().equals("arm64-v8a")
                         && target.originalSha256()
                                 .equals(

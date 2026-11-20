@@ -5,11 +5,7 @@ import java.util.HashSet;
 public final class NxpMediaLibraryTest {
     public static void main(String[] args) {
         if (!NxpMediaLibrary.selected(
-                NxpMediaLibrary.PROFILE,
-                28,
-                NxpMediaLibrary.PIN,
-                "VoyemuNxpMediaCallbacks.jar",
-                NxpMediaLibrary.TYPES)) {
+                28, NxpMediaLibrary.PIN, "VoyemuNxpMediaCallbacks.jar", NxpMediaLibrary.TYPES)) {
             throw new AssertionError("exact owner rejected");
         }
 
@@ -19,41 +15,18 @@ public final class NxpMediaLibraryTest {
         extra.add("Lunrelated/Class;");
 
         if (NxpMediaLibrary.selected(
-                        "another-profile",
-                        28,
-                        NxpMediaLibrary.PIN,
-                        "VoyemuNxpMediaCallbacks.jar",
-                        NxpMediaLibrary.TYPES)
-                || NxpMediaLibrary.selected(
-                        NxpMediaLibrary.PROFILE,
                         29,
                         NxpMediaLibrary.PIN,
                         "VoyemuNxpMediaCallbacks.jar",
                         NxpMediaLibrary.TYPES)
                 || NxpMediaLibrary.selected(
-                        NxpMediaLibrary.PROFILE,
-                        28,
-                        "0".repeat(64),
-                        "VoyemuNxpMediaCallbacks.jar",
-                        NxpMediaLibrary.TYPES)
+                        28, "0".repeat(64), "VoyemuNxpMediaCallbacks.jar", NxpMediaLibrary.TYPES)
                 || NxpMediaLibrary.selected(
-                        NxpMediaLibrary.PROFILE,
-                        28,
-                        NxpMediaLibrary.PIN,
-                        "other.jar",
-                        NxpMediaLibrary.TYPES)
+                        28, NxpMediaLibrary.PIN, "other.jar", NxpMediaLibrary.TYPES)
                 || NxpMediaLibrary.selected(
-                        NxpMediaLibrary.PROFILE,
-                        28,
-                        NxpMediaLibrary.PIN,
-                        "VoyemuNxpMediaCallbacks.jar",
-                        missing)
+                        28, NxpMediaLibrary.PIN, "VoyemuNxpMediaCallbacks.jar", missing)
                 || NxpMediaLibrary.selected(
-                        NxpMediaLibrary.PROFILE,
-                        28,
-                        NxpMediaLibrary.PIN,
-                        "VoyemuNxpMediaCallbacks.jar",
-                        extra)) {
+                        28, NxpMediaLibrary.PIN, "VoyemuNxpMediaCallbacks.jar", extra)) {
             throw new AssertionError("owner/API/pin/output/exactclosure guard bypass");
         }
 

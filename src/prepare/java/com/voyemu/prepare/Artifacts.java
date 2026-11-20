@@ -201,8 +201,6 @@ final class Artifacts {
                         var simulation = Json.obj(definition, "simulation");
                         Failure.require(
                                 api == 28
-                                        && profile.referenceProfile()
-                                                .equals("free-09-chinese-20260106-6.0.3")
                                         && name.equals("hybrid-nvram")
                                         && "qinggan09-equipment-item51-v1"
                                                 .equals(simulation.get("kind"))
@@ -682,10 +680,7 @@ final class Artifacts {
 
         if (definition.containsKey("compileOnly")) {
             Failure.require(
-                    (profile.referenceProfile().equals("free-09-chinese-20260106-6.0.3")
-                                    || profile.referenceProfile()
-                                            .equals("free-09-chinese-20221230-nxp-rc45"))
-                            && name.equals("bluetooth")
+                    name.equals("bluetooth")
                             && api == 28
                             && minimum == 28
                             && Json.str(definition, "output").equals("Ivt8BluetoothAdapter.jar")
@@ -994,16 +989,15 @@ final class Artifacts {
         // lookup.
         // The donor JARs are build inputs only: no uses-library declaration may shadow these
         // definitions.
+        // Only the NXP SystemUI steps declare donor slots; NxpSettingsLibrary.slot checks each.
         List<String> order =
-                profile.referenceProfile().equals(NxpSettingsLibrary.PROFILE)
-                        ? List.of(
-                                "component:media-callbacks",
-                                "component:settings-runtime",
-                                "component:settings-managers",
-                                "component:systemui-runtime-a",
-                                "component:systemui-runtime-b",
-                                "component:systemui-runtime-c")
-                        : List.of();
+                List.of(
+                        "component:media-callbacks",
+                        "component:settings-runtime",
+                        "component:settings-managers",
+                        "component:systemui-runtime-a",
+                        "component:systemui-runtime-b",
+                        "component:systemui-runtime-c");
         Failure.require(
                 donorSlots.keySet().stream().allMatch(order::contains)
                         && order.stream().filter(donorSlots::containsKey).count()

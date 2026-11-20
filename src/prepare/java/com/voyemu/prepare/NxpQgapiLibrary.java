@@ -7,7 +7,6 @@ import java.util.Set;
  * intersection).
  */
 final class NxpQgapiLibrary {
-    static final String PROFILE = "free-09-chinese-20221230-nxp-rc45";
     static final String PIN = "a716b2727060a923884df22dcce6434ae915e14e37bc9f442f015717bccf2ab0";
     static final String DONOR_DEX = "classes.dex";
     static final String OUTPUT = "QGAPI.jar";
@@ -1369,11 +1368,7 @@ final class NxpQgapiLibrary {
                     "Lcom/qinggan/windowpolicy/WindowPolicyManager$OnWindowPolicyListener;",
                     "Lcom/qinggan/windowpolicy/WindowPolicyManager;");
 
-    static boolean selected(String profile, int api, String pin, String output, Set<String> types) {
-        return PROFILE.equals(profile)
-                && api == 28
-                && PIN.equals(pin)
-                && output.equals(OUTPUT)
-                && TYPES.equals(types);
+    static boolean selected(int api, String pin, String output, Set<String> types) {
+        return api == 28 && PIN.equals(pin) && output.equals(OUTPUT) && TYPES.equals(types);
     }
 }

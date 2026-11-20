@@ -209,17 +209,13 @@ final class RecipesQinggan09 {
 
         if (early) {
             require(
-                    target.profile().equals("free-09-chinese-20260106-6.0.3")
-                            && target.uses().keySet().equals(Set.of("patched:can-early-policy-a9")),
+                    target.uses().keySet().equals(Set.of("patched:can-early-policy-a9")),
                     "Exact A9 early policy dependency required");
         }
 
         if (simulator) {
             require(
-                    target.profile().equals("free-09-chinese-20260106-6.0.3")
-                            && target.uses()
-                                    .keySet()
-                                    .equals(Set.of("patched:can-simulator-policy-a9")),
+                    target.uses().keySet().equals(Set.of("patched:can-simulator-policy-a9")),
                     "Exact A9 simulator policy dependency required");
         }
 
@@ -273,8 +269,7 @@ final class RecipesQinggan09 {
             Map<String, Object> metadata, Map<String, Object> constants, Recipes.Target target)
             throws Exception {
         require(
-                target.profile().equals("free-09-chinese-20260106-6.0.3")
-                        && target.uses()
+                target.uses()
                                 .keySet()
                                 .equals(Set.of("original:PlatSepolicy", "original:VendorSepolicy"))
                         && constants.equals(Map.of("KIND", "can-early-policy"))
@@ -423,8 +418,7 @@ final class RecipesQinggan09 {
             Map<String, Object> metadata, Map<String, Object> constants, Recipes.Target target)
             throws Exception {
         require(
-                target.profile().equals("free-09-chinese-20260106-6.0.3")
-                        && target.uses().isEmpty()
+                target.uses().isEmpty()
                         && constants.equals(Map.of("KIND", "can-early-file-contexts"))
                         && Json.list(metadata.get("calls")).isEmpty(),
                 "Exact A9 early file context recipe required");
@@ -460,8 +454,7 @@ final class RecipesQinggan09 {
             Map<String, Object> metadata, Map<String, Object> constants, Recipes.Target target)
             throws Exception {
         require(
-                target.profile().equals("free-09-chinese-20260106-6.0.3")
-                        && target.uses().isEmpty()
+                target.uses().isEmpty()
                         && constants.equals(Map.of("KIND", "can-early-property-contexts"))
                         && Json.list(metadata.get("calls")).isEmpty(),
                 "Exact A9 early property recipe required");
@@ -488,8 +481,7 @@ final class RecipesQinggan09 {
             Map<String, Object> metadata, Map<String, Object> constants, Recipes.Target target)
             throws Exception {
         require(
-                target.profile().equals("free-09-chinese-20260106-6.0.3")
-                        && target.uses()
+                target.uses()
                                 .keySet()
                                 .equals(Set.of("original:PlatSepolicy", "original:VendorSepolicy"))
                         && constants.equals(Map.of("KIND", "can-simulator-policy"))
@@ -568,8 +560,7 @@ final class RecipesQinggan09 {
             Map<String, Object> metadata, Map<String, Object> constants, Recipes.Target target)
             throws Exception {
         require(
-                target.profile().equals("free-09-chinese-20260106-6.0.3")
-                        && target.uses().isEmpty()
+                target.uses().isEmpty()
                         && constants.equals(Map.of("KIND", "can-simulator-file-contexts"))
                         && Json.list(metadata.get("calls")).isEmpty(),
                 "Exact A9 simulator context recipe required");
@@ -625,8 +616,7 @@ final class RecipesQinggan09 {
             Map<String, Object> metadata, Map<String, Object> constants, Recipes.Target target)
             throws Exception {
         require(
-                target.profile().equals(Api28UsbPlayerGuard.PROFILE)
-                        && target.api() == 28
+                target.api() == 28
                         && target.abi().equals("arm64-v8a")
                         && target.originalSha256().equals(Api28UsbPlayerGuard.PIN)
                         && constants.isEmpty()

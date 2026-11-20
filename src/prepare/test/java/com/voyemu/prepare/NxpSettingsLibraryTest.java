@@ -9,7 +9,7 @@ import java.util.Set;
  */
 public final class NxpSettingsLibraryTest {
     public static void main(String[] args) {
-        String pin = NxpSettingsLibrary.PIN, profile = NxpSettingsLibrary.PROFILE;
+        String pin = NxpSettingsLibrary.PIN, profile = TestProfiles.SYNTHETIC;
 
         checkExactDonors(profile, pin);
         Set<String> all = new HashSet<>(NxpSettingsLibrary.RUNTIME_TYPES);
@@ -49,20 +49,12 @@ public final class NxpSettingsLibraryTest {
 
     static void checkExactDonors(String profile, String pin) {
         if (!NxpSettingsLibrary.selected(
-                profile,
-                28,
-                pin,
-                "VoyemuNxpSettingsRuntime.jar",
-                NxpSettingsLibrary.RUNTIME_TYPES)) {
+                28, pin, "VoyemuNxpSettingsRuntime.jar", NxpSettingsLibrary.RUNTIME_TYPES)) {
             throw new AssertionError("exact runtime donor rejected");
         }
 
         if (!NxpSettingsLibrary.selected(
-                profile,
-                28,
-                pin,
-                "VoyemuNxpSettingsManagers.jar",
-                NxpSettingsLibrary.MANAGER_TYPES)) {
+                28, pin, "VoyemuNxpSettingsManagers.jar", NxpSettingsLibrary.MANAGER_TYPES)) {
             throw new AssertionError("exact managers donor rejected");
         }
 
@@ -109,7 +101,7 @@ public final class NxpSettingsLibraryTest {
                             "component:systemui-runtime-"
                                     + names[i].toLowerCase(java.util.Locale.ROOT);
 
-            if (!NxpSettingsLibrary.selected(profile, 28, pin, output, types)
+            if (!NxpSettingsLibrary.selected(28, pin, output, types)
                     || !NxpSettingsLibrary.slot(profile, 28, reference, types)) {
                 throw new AssertionError("exact SystemUI closure rejected");
             }
@@ -117,11 +109,10 @@ public final class NxpSettingsLibraryTest {
             var omitted = new HashSet<>(types);
             omitted.remove(omitted.iterator().next());
 
-            if (NxpSettingsLibrary.selected(profile, 28, pin, output, omitted)
+            if (NxpSettingsLibrary.selected(28, pin, output, omitted)
                     || NxpSettingsLibrary.slot(profile, 28, reference, omitted)
-                    || NxpSettingsLibrary.selected(profile, 30, pin, output, types)
-                    || NxpSettingsLibrary.selected("another-profile", 28, pin, output, types)
-                    || NxpSettingsLibrary.selected(profile, 28, "0".repeat(64), output, types)) {
+                    || NxpSettingsLibrary.selected(30, pin, output, types)
+                    || NxpSettingsLibrary.selected(28, "0".repeat(64), output, types)) {
                 throw new AssertionError("SystemUI finite closure scope bypass");
             }
         }
@@ -139,73 +130,41 @@ public final class NxpSettingsLibraryTest {
         boolean bypassed = false;
         bypassed |=
                 NxpSettingsLibrary.selected(
-                        "another-profile",
-                        28,
-                        pin,
-                        "VoyemuNxpSettingsRuntime.jar",
-                        NxpSettingsLibrary.RUNTIME_TYPES);
+                        29, pin, "VoyemuNxpSettingsRuntime.jar", NxpSettingsLibrary.RUNTIME_TYPES);
         bypassed |=
                 NxpSettingsLibrary.selected(
-                        profile,
-                        29,
-                        pin,
-                        "VoyemuNxpSettingsRuntime.jar",
-                        NxpSettingsLibrary.RUNTIME_TYPES);
-        bypassed |=
-                NxpSettingsLibrary.selected(
-                        profile,
                         28,
                         "0".repeat(64),
                         "VoyemuNxpSettingsRuntime.jar",
                         NxpSettingsLibrary.RUNTIME_TYPES);
         bypassed |=
-                NxpSettingsLibrary.selected(
-                        profile, 28, pin, "other.jar", NxpSettingsLibrary.RUNTIME_TYPES);
-        bypassed |=
-                NxpSettingsLibrary.selected(
-                        profile, 28, pin, "VoyemuNxpSettingsRuntime.jar", missing);
-        bypassed |=
-                NxpSettingsLibrary.selected(
-                        profile, 28, pin, "VoyemuNxpSettingsManagers.jar", extra);
+                NxpSettingsLibrary.selected(28, pin, "other.jar", NxpSettingsLibrary.RUNTIME_TYPES);
+        bypassed |= NxpSettingsLibrary.selected(28, pin, "VoyemuNxpSettingsRuntime.jar", missing);
+        bypassed |= NxpSettingsLibrary.selected(28, pin, "VoyemuNxpSettingsManagers.jar", extra);
         // Inverse: runtime types must never be accepted under the managers output name and vice
         // versa.
         bypassed |=
-                NxpSettingsLibrary.selected(
-                        profile, 28, pin, "VoyemuNxpSettingsManagers.jar", swappedOut);
+                NxpSettingsLibrary.selected(28, pin, "VoyemuNxpSettingsManagers.jar", swappedOut);
         bypassed |=
                 NxpSettingsLibrary.selected(
-                        profile,
-                        28,
-                        pin,
-                        "VoyemuNxpSettingsRuntime.jar",
-                        NxpSettingsLibrary.MANAGER_TYPES);
+                        28, pin, "VoyemuNxpSettingsRuntime.jar", NxpSettingsLibrary.MANAGER_TYPES);
         // The media donor scope must never select a settings donor slot.
         bypassed |=
                 NxpSettingsLibrary.selected(
-                        profile,
                         28,
                         NxpMediaLibrary.PIN,
                         "VoyemuNxpSettingsRuntime.jar",
                         NxpMediaLibrary.TYPES);
         bypassed |=
                 NxpMediaLibrary.selected(
-                        profile,
-                        28,
-                        pin,
-                        "VoyemuNxpSettingsRuntime.jar",
-                        NxpSettingsLibrary.RUNTIME_TYPES);
+                        28, pin, "VoyemuNxpSettingsRuntime.jar", NxpSettingsLibrary.RUNTIME_TYPES);
         var logRiding = new HashSet<>(NxpSettingsLibrary.MANAGER_TYPES);
         logRiding.add("Lcom/qinggan/util/Log;");
         bypassed |=
-                NxpSettingsLibrary.selected(
-                        profile, 28, pin, "VoyemuNxpSettingsManagers.jar", logRiding);
+                NxpSettingsLibrary.selected(28, pin, "VoyemuNxpSettingsManagers.jar", logRiding);
         bypassed |=
                 NxpMediaLibrary.selected(
-                        profile,
-                        28,
-                        pin,
-                        "VoyemuNxpMediaCallbacks.jar",
-                        NxpSettingsLibrary.RUNTIME_TYPES);
+                        28, pin, "VoyemuNxpMediaCallbacks.jar", NxpSettingsLibrary.RUNTIME_TYPES);
 
         return bypassed;
     }

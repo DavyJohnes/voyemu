@@ -23,7 +23,6 @@ import java.util.zip.Adler32;
  * renderer.
  */
 final class Api28PhoneCallWindowGuard {
-    static final String PROFILE = "free-09-chinese-20260106-6.0.3";
     static final String APK_PIN =
             "d5a7417be79e2e4bfd70e643df85ae76e1a8a15332a345f126ccc5781f5ba8a3";
     static final String OWNER =
@@ -145,7 +144,7 @@ final class Api28PhoneCallWindowGuard {
     }
 
     static byte[] apply(String profile, int api, Path original, byte[] dex) throws Exception {
-        need(PROFILE.equals(profile) && api == 28 && APK_PIN.equals(FilesSupport.hash(original)));
+        need(api == 28 && APK_PIN.equals(FilesSupport.hash(original)));
         need(dex != null);
         byte[] output = rewrite(dex, false);
         need(Arrays.equals(dex, rewrite(output, true)));

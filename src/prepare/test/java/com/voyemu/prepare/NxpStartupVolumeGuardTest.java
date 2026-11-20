@@ -13,19 +13,19 @@ public class NxpStartupVolumeGuardTest {
             original = z.getInputStream(z.getEntry("classes.dex")).readAllBytes();
         }
 
-        byte[] actual = NxpStartupVolumeGuard.apply(NxpStartupVolumeGuard.PROFILE, 28, original);
+        byte[] actual = NxpStartupVolumeGuard.apply(TestProfiles.SYNTHETIC, 28, original);
 
         if (!Arrays.equals(
-                actual, NxpStartupVolumeGuard.apply(NxpStartupVolumeGuard.PROFILE, 28, original))) {
+                actual, NxpStartupVolumeGuard.apply(TestProfiles.SYNTHETIC, 28, original))) {
             throw new AssertionError("nondeterministic");
         }
 
         int negatives = 0;
 
-        for (int scenario = 0; scenario < 4; scenario++) {
+        for (int scenario = 1; scenario < 4; scenario++) {
             try {
                 NxpStartupVolumeGuard.apply(
-                        scenario == 0 ? "other" : NxpStartupVolumeGuard.PROFILE,
+                        TestProfiles.SYNTHETIC,
                         scenario == 1 ? 30 : 28,
                         scenario == 2 ? actual : scenario == 3 ? new byte[] {1} : original);
                 throw new AssertionError("unexpected acceptance");

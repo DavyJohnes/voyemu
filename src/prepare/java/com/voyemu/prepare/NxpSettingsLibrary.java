@@ -7,7 +7,6 @@ import java.util.Set;
  * bytes remain outside source.
  */
 final class NxpSettingsLibrary {
-    static final String PROFILE = "free-09-chinese-20221230-nxp-rc45";
     static final String PIN = "b3a79c9cb737b5c84256c98b9e00553467bc9fda43b975398a7284a0a9cac741";
 
     /**
@@ -266,7 +265,7 @@ final class NxpSettingsLibrary {
     }
 
     static boolean slot(String profile, int api, String reference, Set<String> types) {
-        if (!PROFILE.equals(profile) || api != 28) {
+        if (api != 28) {
             return false;
         }
 
@@ -281,8 +280,8 @@ final class NxpSettingsLibrary {
         };
     }
 
-    static boolean selected(String profile, int api, String pin, String output, Set<String> types) {
-        if (!(PROFILE.equals(profile) && api == 28 && PIN.equals(pin))) {
+    static boolean selected(int api, String pin, String output, Set<String> types) {
+        if (!(api == 28 && PIN.equals(pin))) {
             return false;
         }
 

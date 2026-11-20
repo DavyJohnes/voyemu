@@ -156,7 +156,7 @@ public final class PreparationMain {
             Map<String, Path> android,
             PinnedInput pinned)
             throws Exception {
-        if (Api28CodecNativeFile.selected(profile, request)) {
+        if (Api28CodecNativeFile.selected(profile)) {
             return Api28CodecNativeFile.outputs(request, profile, sourcePins, android, pinned);
         }
 

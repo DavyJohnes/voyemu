@@ -554,8 +554,7 @@ final class Recipes {
                 || name.equals("selinux-service-contexts-nxp.json")
                 || name.equals("selinux-hash-nxp.json")) {
             Failure.require(
-                    target.api() == 28
-                            && target.profile().equals("free-09-chinese-20221230-nxp-rc45"),
+                    target.api() == 28,
                     "PATCH_PROFILE",
                     "Exact NXP API28 canbus policy profile required",
                     5);

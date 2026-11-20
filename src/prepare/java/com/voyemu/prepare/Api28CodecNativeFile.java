@@ -8,8 +8,7 @@ import java.util.Map;
 
 /** One exact API28 codec output; no transform and no replacement of legacy Java file nodes. */
 final class Api28CodecNativeFile {
-    static final String PROFILE = "free-09-chinese-20260106-6.0.3",
-            ID = "ccodec-allocation-a9",
+    static final String ID = "ccodec-allocation-a9",
             TARGET = "/system/lib64/libstagefright_ccodec.so";
     static final String INPUT = "2262964922a876a51c3b5186f094afb136ce9daae0678f9820f11e86e058e353",
             OUTPUT = "11d1e2cb76995985aa319e08fca8a6286bc7c701ecb71ed5a7822b4816bce86f";
@@ -22,16 +21,13 @@ final class Api28CodecNativeFile {
         return Map.of("type", "file", "input", "android:" + TARGET, "steps", List.of(ID + ".json"));
     }
 
-    static boolean selected(ProfileRegistry.Profile profile, Map<String, Object> request) {
-        return PROFILE.equals(profile.referenceProfile())
-                && (Json.obj(profile.data(), "patches").containsKey(ID)
-                        || request.containsKey("native_files"));
+    static boolean selected(ProfileRegistry.Profile profile) {
+        return Json.obj(profile.data(), "patches").containsKey(ID);
     }
 
     static boolean accepts(ProfileRegistry.Profile profile, int api, String reference, Path file)
             throws Exception {
         return api == 28
-                && PROFILE.equals(profile.referenceProfile())
                 && reference.equals("patched:" + ID)
                 && node().equals(Json.obj(profile.data(), "patches").get(ID))
                 && Files.isRegularFile(file)
@@ -53,8 +49,7 @@ final class Api28CodecNativeFile {
         var base = Json.obj(profile.data(), "android");
 
         need(
-                PROFILE.equals(profile.referenceProfile())
-                        && "system-images;android-28;default;arm64-v8a".equals(base.get("package")),
+                "system-images;android-28;default;arm64-v8a".equals(base.get("package")),
                 "Exact A9 codec base/profile required");
         need(
                 node().equals(Json.obj(profile.data(), "patches").get(ID))
@@ -151,7 +146,7 @@ final class Api28CodecNativeFile {
         expectedOutput.put("input_sha256", INPUT);
         expectedOutput.put("output", ID + ".output");
         expectedOutput.put("output_sha256", output(profile));
-        expectedOutput.put("profile", PROFILE);
+        expectedOutput.put("profile", profile.referenceProfile());
         need(output.equals(expectedOutput), "Codec output scope differs");
         Path file = receiptFile.getParent().resolve(ID + ".output");
         pinned.verify(file, output(profile));

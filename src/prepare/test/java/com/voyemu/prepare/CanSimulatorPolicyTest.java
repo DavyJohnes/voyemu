@@ -13,7 +13,12 @@ public final class CanSimulatorPolicyTest {
                     java.nio.file.Files.readAllBytes(
                             java.nio.file.Path.of(System.getProperty("user.dir"))
                                     .resolve(
-                                            "profiles/free-09-chinese-20260106-6.0.3/patches/"
+                                            "profiles/"
+                                                    + TestProfiles.declaring(
+                                                            java.nio.file.Path.of(
+                                                                    System.getProperty("user.dir")),
+                                                            "can-simulator-policy-a9")
+                                                    + "/patches/"
                                                     + name)));
         } catch (Exception error) {
             throw new IllegalStateException(error);
@@ -22,7 +27,7 @@ public final class CanSimulatorPolicyTest {
 
     static final class Target implements Recipes.Target {
         final Path file, plat, vendor;
-        String profile = "free-09-chinese-20260106-6.0.3";
+        String profile = TestProfiles.SYNTHETIC;
         int api = 28;
 
         Target(Path f, Path p, Path v) {
@@ -135,9 +140,7 @@ public final class CanSimulatorPolicyTest {
             throw new AssertionError("baseline mismatch");
         }
 
-        t.profile = "other";
-        denied(t);
-        t.profile = "free-09-chinese-20260106-6.0.3";
+        t.profile = TestProfiles.SYNTHETIC;
         t.api = 30;
         denied(t);
         t.api = 28;

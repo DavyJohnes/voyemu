@@ -70,7 +70,8 @@ final class CameraRecipe {
                                                 "physicalRpm"))
                         && schema instanceof Number number
                         && number.doubleValue() == 1
-                        && "free-09-chinese-20260106-6.0.3".equals(value.get("profile"))
+                        && value.get("profile") instanceof String profile
+                        && !profile.isEmpty()
                         && ("none".equals(value.get("backend"))
                                 || "android-back-camera".equals(value.get("backend")))
                         && Boolean.FALSE.equals(value.get("physicalDms"))

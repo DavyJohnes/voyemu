@@ -141,8 +141,8 @@ public final class UsbPlayerArtifactPipelineTest {
                         Path.of(Json.str(signing, "certificate")),
                         Path.of(Json.str(platform, "file")));
         var profile =
-                new ProfileRegistry(root, Api28UsbPlayerGuard.PROFILE)
-                        .get(Api28UsbPlayerGuard.PROFILE);
+                new ProfileRegistry(root, TestProfiles.declaring(root, Api28UsbPlayerGuard.NAME))
+                        .get(TestProfiles.declaring(root, Api28UsbPlayerGuard.NAME));
         var artifacts =
                 new Artifacts(
                         profile,

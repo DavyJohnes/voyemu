@@ -38,8 +38,6 @@ import java.util.TreeMap;
  * Exact shared SDK API28 initialization patch for A9 and NXP; later volume operations remain stock.
  */
 final class NxpStartupVolumeGuard {
-    static final String A9 = "free-09-chinese-20260106-6.0.3";
-    static final String PROFILE = "free-09-chinese-20221230-nxp-rc45";
     static final String AUDIO = "Lcom/android/server/audio/AudioService;",
             STREAM = "Lcom/android/server/audio/AudioService$VolumeStreamState;",
             DEFAULTS = "voyemuZeroStartupDefaults",
@@ -399,7 +397,7 @@ final class NxpStartupVolumeGuard {
     }
 
     static byte[] apply(String profile, int api, byte[] original) throws Exception {
-        need((PROFILE.equals(profile) || A9.equals(profile)) && api == 28 && original != null);
+        need(api == 28 && original != null);
         var before = PassionServiceForegroundGuard.classes(original);
         var expected = transform(before, false);
         byte[] bytes =

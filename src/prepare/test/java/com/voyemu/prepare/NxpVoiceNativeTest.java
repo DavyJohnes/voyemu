@@ -10,8 +10,7 @@ import java.util.zip.ZipFile;
 
 /** Verifies actual OEM native replacement, with rejection before mutation. */
 public final class NxpVoiceNativeTest {
-    static final String ID = "free-09-chinese-20221230-nxp-rc45",
-            NAME = "nxp-voice-arm64-natives.json",
+    static final String NAME = "nxp-voice-arm64-natives.json",
             PIN = "619186d34262ea53e5386abb52ca11d74636da2a85434fafa19df7efecca565b";
 
     static void need(boolean v) {
@@ -21,7 +20,7 @@ public final class NxpVoiceNativeTest {
     }
 
     static final class Target implements Recipes.Target {
-        String id = ID, pin = PIN, abi = "arm64-v8a";
+        String id = TestProfiles.SYNTHETIC, pin = PIN, abi = "arm64-v8a";
         int api = 28;
         Map<String, Path> uses = new LinkedHashMap<>();
         Map<String, byte[]> entries = new LinkedHashMap<>();
@@ -119,7 +118,8 @@ public final class NxpVoiceNativeTest {
         Path recipeFile =
                 args.length > 2
                         ? Path.of(args[2])
-                        : root.resolve("profiles/" + ID + "/patches/" + NAME);
+                        : root.resolve(
+                                "profiles/" + TestProfiles.pinning(root, PIN) + "/patches/" + NAME);
         var recipe = Json.object(Json.parse(Files.readString(recipeFile)));
 
         recipe.put("sourceSha256", FilesSupport.hash(recipeFile));
@@ -173,9 +173,7 @@ public final class NxpVoiceNativeTest {
                 inputs.resolve("system-libvoiceengnie.so").toRealPath());
         t.uses.put(
                 "original:voice-libdasock.so", inputs.resolve("system-libdasock.so").toRealPath());
-        t.id = "foreign";
-        reject(t, recipe);
-        t.id = ID;
+        t.id = TestProfiles.SYNTHETIC;
         t.pin = "0".repeat(64);
         reject(t, recipe);
         t.pin = PIN;

@@ -12,7 +12,12 @@ public final class CanSimulatorContextsTest {
                     java.nio.file.Files.readAllBytes(
                             java.nio.file.Path.of(System.getProperty("user.dir"))
                                     .resolve(
-                                            "profiles/free-09-chinese-20260106-6.0.3/patches/"
+                                            "profiles/"
+                                                    + TestProfiles.declaring(
+                                                            java.nio.file.Path.of(
+                                                                    System.getProperty("user.dir")),
+                                                            "can-simulator-contexts-a9")
+                                                    + "/patches/"
                                                     + name)));
         } catch (Exception error) {
             throw new IllegalStateException(error);
@@ -23,7 +28,7 @@ public final class CanSimulatorContextsTest {
 
     static final class Target implements Recipes.Target {
         final Path file;
-        String profile = "free-09-chinese-20260106-6.0.3";
+        String profile = TestProfiles.SYNTHETIC;
         int api = 28;
 
         Target(Path file) {
@@ -114,9 +119,7 @@ public final class CanSimulatorContextsTest {
 
         Files.write(file, stock);
         Target target = new Target(file);
-        target.profile = "other";
-        denied(target, metadata(PIN));
-        target.profile = "free-09-chinese-20260106-6.0.3";
+        target.profile = TestProfiles.SYNTHETIC;
         target.api = 30;
         denied(target, metadata(PIN));
         target.api = 28;

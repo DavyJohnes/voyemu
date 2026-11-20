@@ -45,11 +45,15 @@ public final class Api28UsbPlayerGuardTest {
 
     public static void main(String[] args) throws Exception {
         Path root = Path.of(args[0]), work = Path.of(args[1]), platform = Path.of(args[2]);
-        Path profile = root.resolve("profiles/" + Api28UsbPlayerGuard.PROFILE),
+        Path
+                profile =
+                        root.resolve(
+                                "profiles/"
+                                        + TestProfiles.declaring(root, Api28UsbPlayerGuard.NAME)),
                 apk =
                         root.resolve(
                                 ".local/profiles/"
-                                        + Api28UsbPlayerGuard.PROFILE
+                                        + TestProfiles.declaring(root, Api28UsbPlayerGuard.NAME)
                                         + "/originals/QGMedia.apk");
         var data = Json.object(Json.parse(Files.readString(profile.resolve("profile.json"))));
         var steps = Json.list(Json.obj(Json.obj(data, "patches"), "QGMedia").get("steps"));
@@ -83,8 +87,7 @@ public final class Api28UsbPlayerGuardTest {
         }
 
         byte[] patched =
-                Api28UsbPlayerGuard.apply(
-                        Api28UsbPlayerGuard.PROFILE, 28, "arm64-v8a", apk, original);
+                Api28UsbPlayerGuard.apply(TestProfiles.SYNTHETIC, 28, "arm64-v8a", apk, original);
         var before = classes(original);
         var after = classes(patched);
         check(before.keySet().equals(after.keySet()), "class inventory differs");
@@ -113,16 +116,13 @@ public final class Api28UsbPlayerGuardTest {
             }
         }
 
-        reject(() -> Api28UsbPlayerGuard.apply("other", 28, "arm64-v8a", apk, original));
+        reject(() ->
+                Api28UsbPlayerGuard.apply(TestProfiles.SYNTHETIC, 30, "arm64-v8a", apk, original));
         reject(() ->
                 Api28UsbPlayerGuard.apply(
-                        Api28UsbPlayerGuard.PROFILE, 30, "arm64-v8a", apk, original));
+                        TestProfiles.SYNTHETIC, 28, "armeabi-v7a", apk, original));
         reject(() ->
-                Api28UsbPlayerGuard.apply(
-                        Api28UsbPlayerGuard.PROFILE, 28, "armeabi-v7a", apk, original));
-        reject(() ->
-                Api28UsbPlayerGuard.apply(
-                        Api28UsbPlayerGuard.PROFILE, 28, "arm64-v8a", apk, patched));
+                Api28UsbPlayerGuard.apply(TestProfiles.SYNTHETIC, 28, "arm64-v8a", apk, patched));
         var archive = new java.util.TreeMap<>(NativeCore.entries(apk));
         var decoded =
                 new DexClasses(
@@ -132,8 +132,7 @@ public final class Api28UsbPlayerGuardTest {
                                 .sorted()
                                 .toList(),
                         28);
-        Api28UsbPlayerGuard.adaptClasses(
-                Api28UsbPlayerGuard.PROFILE, 28, "arm64-v8a", apk, decoded);
+        Api28UsbPlayerGuard.adaptClasses(TestProfiles.SYNTHETIC, 28, "arm64-v8a", apk, decoded);
         var calls = new java.util.ArrayList<String>();
 
         for (var method : decoded.get(Api28UsbPlayerGuard.PLAYER + ";").getMethods()) {
@@ -159,11 +158,11 @@ public final class Api28UsbPlayerGuardTest {
                 "Player still calls throwing commons LogFactory stub");
         reject(() ->
                 Api28UsbPlayerGuard.adaptClasses(
-                        Api28UsbPlayerGuard.PROFILE, 28, "arm64-v8a", apk, decoded));
+                        TestProfiles.SYNTHETIC, 28, "arm64-v8a", apk, decoded));
         Path source = profile.resolve("patches/" + Api28UsbPlayerGuard.NAME + "/src");
         Path helper =
                 Api28UsbPlayerGuard.compileHelper(
-                        Api28UsbPlayerGuard.PROFILE,
+                        TestProfiles.SYNTHETIC,
                         28,
                         "arm64-v8a",
                         apk,

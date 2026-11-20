@@ -19,8 +19,7 @@ import java.util.Map;
  * views.
  */
 public final class NxpVoiceInitializationTest {
-    static final String ID = "free-09-chinese-20221230-nxp-rc45",
-            NAME = "nxp-settings-voice-initialization.json";
+    static final String NAME = "nxp-settings-voice-initialization.json";
     static final String PIN = "b3a79c9cb737b5c84256c98b9e00553467bc9fda43b975398a7284a0a9cac741";
     static final String TYPE = "Lcom/qinggan/app/setting/module/voice/presenter/VoicePresenter;",
             MANAGER = "Lcom/qinggan/speech/WakeupManager;";
@@ -37,7 +36,7 @@ public final class NxpVoiceInitializationTest {
     }
 
     static final class Target implements Recipes.Target {
-        String id = ID, pin = PIN;
+        String id = TestProfiles.SYNTHETIC, pin = PIN;
         int api = 28;
         final Path work;
         DexClasses classes;
@@ -178,13 +177,20 @@ public final class NxpVoiceInitializationTest {
 
         if (args.length == 2) {
             Path component =
-                    root.resolve("profiles/" + ID + "/components/framework-qgapi/component.json");
+                    root.resolve(
+                            "profiles/"
+                                    + TestProfiles.pinning(root, PIN)
+                                    + "/components/framework-qgapi/component.json");
             var donor = Json.obj(Json.object(Json.parse(Files.readString(component))), "donorDex");
             String handler = "com.qinggan.system.SystemPolicyManager$OnInitHandler";
             need(
                     Json.list(donor.get("classes")).contains(handler),
                     "QGAPI donor omits Voice SystemPolicyManager handler");
-            Path qgime = root.resolve(".local/profiles/" + ID + "/originals/qgime.apk");
+            Path qgime =
+                    root.resolve(
+                            ".local/profiles/"
+                                    + TestProfiles.pinning(root, PIN)
+                                    + "/originals/qgime.apk");
             NativeCore.pinned(qgime, Json.str(donor, "sha256"));
             var dex = DexFileFactory.loadDexContainer(qgime.toFile(), Opcodes.forApi(28));
             boolean found = false;
@@ -204,10 +210,15 @@ public final class NxpVoiceInitializationTest {
         Path recipeFile =
                 args.length > 2
                         ? Path.of(args[2])
-                        : root.resolve("profiles/" + ID + "/patches/" + NAME);
+                        : root.resolve(
+                                "profiles/" + TestProfiles.pinning(root, PIN) + "/patches/" + NAME);
         var recipe = Json.object(Json.parse(Files.readString(recipeFile)));
         recipe.put("sourceSha256", FilesSupport.hash(recipeFile));
-        Path apk = root.resolve(".local/profiles/" + ID + "/originals/setting.apk");
+        Path apk =
+                root.resolve(
+                        ".local/profiles/"
+                                + TestProfiles.pinning(root, PIN)
+                                + "/originals/setting.apk");
         NativeCore.pinned(apk, PIN);
         var container = DexFileFactory.loadDexContainer(apk.toFile(), Opcodes.forApi(28));
         DexFile owner = null;
@@ -235,9 +246,7 @@ public final class NxpVoiceInitializationTest {
                                 .sorted()
                                 .toList(),
                         28);
-        target.id = "free-09-chinese-20260106-6.0.3";
-        reject(target, recipe);
-        target.id = ID;
+        target.id = TestProfiles.SYNTHETIC;
         target.pin = "0".repeat(64);
         reject(target, recipe);
         target.pin = PIN;
@@ -289,7 +298,10 @@ public final class NxpVoiceInitializationTest {
                     Json.object(
                             Json.parse(
                                     Files.readString(
-                                            root.resolve("profiles/" + ID + "/profile.json"))));
+                                            root.resolve(
+                                                    "profiles/"
+                                                            + TestProfiles.pinning(root, PIN)
+                                                            + "/profile.json"))));
             need(
                     Json.list(Json.obj(Json.obj(profile, "patches"), "Setting").get("steps"))
                             .contains(NAME),

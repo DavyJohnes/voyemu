@@ -13,7 +13,12 @@ public final class CanEarlyPropertyTest {
                     java.nio.file.Files.readAllBytes(
                             java.nio.file.Path.of(System.getProperty("user.dir"))
                                     .resolve(
-                                            "profiles/free-09-chinese-20260106-6.0.3/patches/"
+                                            "profiles/"
+                                                    + TestProfiles.declaring(
+                                                            java.nio.file.Path.of(
+                                                                    System.getProperty("user.dir")),
+                                                            "can-early-property-contexts-a9")
+                                                    + "/patches/"
                                                     + name)));
         } catch (Exception error) {
             throw new IllegalStateException(error);
@@ -22,7 +27,7 @@ public final class CanEarlyPropertyTest {
 
     static class T implements Recipes.Target {
         Path file;
-        String profile = "free-09-chinese-20260106-6.0.3";
+        String profile = TestProfiles.SYNTHETIC;
         int api = 28;
 
         T(Path f) {
@@ -119,9 +124,7 @@ public final class CanEarlyPropertyTest {
                 "selinux-property-contexts-a9.json",
                 Map.of("constants", Map.of("ENTRIES", entries), "calls", List.of()),
                 t);
-        t.profile = "other";
-        denied(t);
-        t.profile = "free-09-chinese-20260106-6.0.3";
+        t.profile = TestProfiles.SYNTHETIC;
         t.api = 30;
         denied(t);
         t.api = 28;

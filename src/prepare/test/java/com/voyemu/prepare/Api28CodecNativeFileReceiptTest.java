@@ -24,9 +24,8 @@ public final class Api28CodecNativeFileReceiptTest {
         Path root = Path.of(args[0]).toRealPath(),
                 draft = Path.of(args[1]).toRealPath(),
                 extraction = Path.of(args[2]).toRealPath();
-        var profile =
-                new ProfileRegistry(root, Api28CodecNativeFile.PROFILE)
-                        .get(Api28CodecNativeFile.PROFILE);
+        String id = TestProfiles.declaring(root, Api28CodecNativeFile.ID);
+        var profile = new ProfileRegistry(root, id).get(id);
         Path original = extraction.resolve("system/lib64/libstagefright_ccodec.so"),
                 receipt = draft.resolve("receipt.json"),
                 output = draft.resolve(Api28CodecNativeFile.ID + ".output");

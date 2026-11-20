@@ -43,15 +43,24 @@ final class DexOperations {
 
     static Donor donor(Path apk, Map<String, Object> recipe, Path output, int api, String profile)
             throws Exception {
+        return donor(apk, recipe, output, api, profile, false);
+    }
+
+    /**
+     * Exact keeps only the declared classes, as API 28 donor libraries declare every nested class;
+     * otherwise the nested classes of each declared class follow it.
+     */
+    static Donor donor(
+            Path apk,
+            Map<String, Object> recipe,
+            Path output,
+            int api,
+            String profile,
+            boolean exact)
+            throws Exception {
         Storage.directory(output);
         DexFile dex = dex(apk, Json.str(recipe, "dex"), api);
         Set<String> roots = new TreeSet<>();
-        boolean exact =
-                switch (profile) {
-                    case "free-09-chinese-20221230-nxp-rc45", "free-09-chinese-20260106-6.0.3" ->
-                            true;
-                    default -> false;
-                };
 
         for (Object name : Json.list(recipe.get("classes"))) {
             Failure.require(
@@ -182,16 +191,15 @@ final class DexOperations {
         Failure.require(
                 !roots.isEmpty()
                         && (roots.size() <= 64
-                                || NxpQgapiLibrary.selected(
-                                        profile, api, pin, outputName, expected)),
+                                || NxpQgapiLibrary.selected(api, pin, outputName, expected)),
                 "DONOR_SPEC_INVALID",
                 "Finite donor class allowlist required",
                 2);
         Failure.require(
                 api == 30
-                        || NxpMediaLibrary.selected(profile, api, pin, outputName, expected)
-                        || NxpSettingsLibrary.selected(profile, api, pin, outputName, expected)
-                        || NxpQgapiLibrary.selected(profile, api, pin, outputName, expected),
+                        || NxpMediaLibrary.selected(api, pin, outputName, expected)
+                        || NxpSettingsLibrary.selected(api, pin, outputName, expected)
+                        || NxpQgapiLibrary.selected(api, pin, outputName, expected),
                 "DONOR_API_UNSUPPORTED",
                 "Pinned donor library API and owner scope differ",
                 3);
@@ -202,7 +210,7 @@ final class DexOperations {
                 "Fresh donor library output required",
                 2);
         Storage.directory(work);
-        Donor selected = donor(original, recipe, work.resolve("donor"), api, profile);
+        Donor selected = donor(original, recipe, work.resolve("donor"), api, profile, api == 28);
         Failure.require(
                 selected.descriptors().equals(expected),
                 "DONOR_ALLOWLIST_MISMATCH",
