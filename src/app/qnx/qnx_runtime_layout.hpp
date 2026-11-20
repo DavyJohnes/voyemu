@@ -93,6 +93,7 @@ inline QnxRuntimeLayout qnx_runtime_layout(std::string_view profile, const Json 
     // The hardware adapter of the metadata selects the layout; the profile id selects nothing.
     const auto adapter = metadata.value("hardware_adapter", std::string("sa8155-qinggan09"));
     auto layout = qnx_runtime_layout(adapter);
+
     layout.profile = profile;
     const bool older = adapter == "sa8155-qinggan11-611",
                free = adapter == "sa8155-qinggan11-731" || older;

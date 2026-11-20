@@ -958,6 +958,7 @@ static Json publish_machine_qnx_impl(const std::filesystem::path &root, std::str
                                      const std::filesystem::path &explicit_seed = {}) {
     // The replacement adapter decides: persistent storage, or an MCU projection otherwise.
     const auto requested = qnx_portable_layout(profile, replacement);
+
     need((persistent ? !requested.persistence.is_null() : !requested.projection.is_null()) &&
                  machine.valid_for(profile) && sha256_text(expected_manifest_sha),
          "accepted QNX upgrade adapter required");
