@@ -173,8 +173,8 @@ final class BluetoothPeerComponent {
         return out;
     }
 
-    // Each peer source is the shared one or one of a component of the selected profile itself, as
-    // Free 6.11.1 declares its own adapter and subscription.
+    // Each peer source is the shared one or one of a component of the selected profile itself, for
+    // a profile that declares its own adapter and subscription.
     private static void checkSources(
             ProfileRegistry.Profile profile, Map<String, Object> files, Set<String> own) {
         for (String file : own) {
