@@ -4,8 +4,10 @@
 #endif
 #include <cassert>
 #include <chrono>
+#include <cstdlib>
 #include <fstream>
 #include <iostream>
+#include <iterator>
 #include <stdexcept>
 #include <thread>
 #ifdef _WIN32
@@ -334,6 +336,72 @@ void console_free_child_tests(const std::filesystem::path &executable) {
 
     std::filesystem::remove_all(directory);
 }
+
+// The child appends to an existing log through the inherited handle, native and MSYS alike.
+void child_output_tests(const std::filesystem::path &self) {
+    const auto directory = std::filesystem::canonical(std::filesystem::temp_directory_path()) /
+                           ("voyemu-child-output-test-" + random_token());
+
+    if (!std::filesystem::create_directory(directory)) {
+        throw std::runtime_error("child output test directory unexpectedly exists");
+    }
+
+    auto finished = [](ChildProcess child) {
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+
+        while (child.alive() && std::chrono::steady_clock::now() < deadline) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+
+        assert(!child.alive() && child.exit_code() == 0);
+    };
+    auto contents = [](const std::filesystem::path &path) {
+        std::ifstream file(path, std::ios::binary);
+
+        return std::string((std::istreambuf_iterator<char>(file)),
+                           std::istreambuf_iterator<char>());
+    };
+    ProcessSpec spec;
+    spec.directory = directory;
+    spec.output = directory / "native.log";
+    {
+        std::ofstream file(spec.output, std::ios::binary);
+        file << "seed\n";
+    }
+    spec.executable = self;
+    spec.arguments = {"--capture-exit"};
+    finished(ChildProcess::launch(spec));
+    assert(contents(spec.output) == "seed\ncaptured");
+    std::filesystem::path sh;
+    const char *program_files = std::getenv("ProgramFiles");
+
+    if (program_files) {
+        const auto candidate = std::filesystem::path(program_files) / "Git" / "usr" / "bin" /
+                               "sh.exe";
+
+        if (std::filesystem::is_regular_file(candidate)) {
+            sh = candidate;
+        }
+    }
+
+    if (sh.empty()) {
+        std::cout
+                << "SKIP MSYS child output: no Git for Windows sh.exe under %ProgramFiles%\\Git\n";
+    } else {
+        spec.output = directory / "msys.log";
+        {
+            std::ofstream file(spec.output, std::ios::binary);
+            file << "seed\n";
+        }
+        spec.executable = sh;
+        spec.arguments = {"-c", "echo msys; echo error >&2"};
+        finished(ChildProcess::launch(spec));
+        assert(contents(spec.output) == "seed\nmsys\nerror\n");
+        std::cout << "MSYS child appended stdout and stderr to the inherited log\n";
+    }
+
+    std::filesystem::remove_all(directory);
+}
 #endif
 
 bool capture_bounds_tests(const std::filesystem::path &self) {
@@ -436,6 +504,9 @@ int main(int argc, char **argv) try {
         return sanitized_child(argv[2]);
     }
 
+#ifdef _WIN32
+    child_output_tests(std::filesystem::absolute(argv[0]));
+#endif
     sanitized_process_tests(std::filesystem::absolute(argv[0]));
 
     if (!capture_bounds_tests(std::filesystem::absolute(argv[0]))) {

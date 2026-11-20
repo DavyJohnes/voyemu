@@ -369,15 +369,8 @@ Json install_qnx_host_windows_source(const std::filesystem::path &root, bool off
     auto script = [&](const std::string &bytes, const std::filesystem::path &cwd,
                       int timeout = 120000) {
         const auto file = stage / ("command-" + std::to_string(step) + ".sh");
-        // MSYS treats an inherited append-only log handle as read-only, so a streamed step reopens
-        // its log, the one run() names next, from the shell.
-        const auto streamed =
-                timeout > 300000
-                        ? "exec >>" + shell(posix(stage / (std::to_string(step + 1) + ".log"))) +
-                                  " 2>&1\n"
-                        : std::string{};
-        save(file, "#!/bin/sh\n" + streamed + "set -eu\nexport PATH=" +
-                           shell(posix(msys / "usr/bin")) + ":/usr/bin:/bin\n" + bytes + "\n");
+        save(file, "#!/bin/sh\nset -eu\nexport PATH=" + shell(posix(msys / "usr/bin")) +
+                           ":/usr/bin:/bin\n" + bytes + "\n");
 
         return run(bash, {"--noprofile", "--norc", posix(file)}, cwd, env, timeout);
     };

@@ -37,4 +37,21 @@ FileUse file_use(const std::filesystem::path &path) {
 
     return FileUse::unused;
 }
+
+void *child_output_handle(const std::filesystem::path &path) {
+    SECURITY_ATTRIBUTES security{sizeof security, nullptr, TRUE};
+    const auto file = CreateFileW(path.c_str(), GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
+                                  &security, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+
+    if (file == INVALID_HANDLE_VALUE) {
+        throw VoyemuError("PROCESS_LOG", "cannot open output");
+    }
+
+    if (!SetFilePointerEx(file, LARGE_INTEGER{}, nullptr, FILE_END)) {
+        CloseHandle(file);
+        throw VoyemuError("PROCESS_LOG", "cannot position output");
+    }
+
+    return file;
+}
 } // namespace voyemu::os

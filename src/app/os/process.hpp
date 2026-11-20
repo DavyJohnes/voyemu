@@ -22,7 +22,12 @@ enum class FileUse {
 };
 FileUse file_use(const std::filesystem::path &path);
 
-#ifndef _WIN32
+#ifdef _WIN32
+// Inheritable HANDLE positioned at the end of path, created when absent, for a child's standard
+// output and error. It carries FILE_WRITE_DATA because MSYS and Cygwin children treat an
+// append-only handle as read-only. Throws PROCESS_LOG when path cannot be opened.
+void *child_output_handle(const std::filesystem::path &path);
+#else
 // The process environment block; Windows callers use the wide environment API.
 char **environment();
 

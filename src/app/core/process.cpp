@@ -723,14 +723,7 @@ ChildProcess ChildProcess::launch(const ProcessSpec &spec) {
     }
 #endif
 #ifdef _WIN32
-    SECURITY_ATTRIBUTES security{sizeof security, nullptr, TRUE};
-    HANDLE file = CreateFileW(spec.output.c_str(), FILE_APPEND_DATA,
-                              FILE_SHARE_READ | FILE_SHARE_WRITE, &security, OPEN_ALWAYS,
-                              FILE_ATTRIBUTE_NORMAL, nullptr);
-
-    if (file == INVALID_HANDLE_VALUE) {
-        throw VoyemuError("PROCESS_LOG", "cannot open output");
-    }
+    HANDLE file = os::child_output_handle(spec.output);
 
     try {
         child.impl_.reset(launch_native(spec, file));
