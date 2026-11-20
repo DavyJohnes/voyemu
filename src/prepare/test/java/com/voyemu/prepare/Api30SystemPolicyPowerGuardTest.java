@@ -791,7 +791,7 @@ public final class Api30SystemPolicyPowerGuardTest {
         retained(canonicalBefore, after, apk, false, true);
         rejected(step, 29, pin, before, apk, "SYSTEMPOLICY_CONTRACT");
         rejected(step, 30, "0".repeat(64), before, apk, "SYSTEMPOLICY_CONTRACT");
-        rejected("unknown", 30, pin, before, apk, "SYSTEMPOLICY_CONTRACT");
+        rejected(Map.of(), 30, pin, before, apk, "SYSTEMPOLICY_CONTRACT");
         var changed = SystemPolicyHardwareTest.classes(apk, 30);
         changed.edit(
                 List.of(
