@@ -44,31 +44,11 @@ import java.util.TreeMap;
 final class NetworkGuard {
     static final String NAME = "api30-network";
     static final String API28_RECIPE = "systemservice-network.json";
-    private static final Map<String, Variant> VARIANTS =
-            Map.of(
-                    "free-09-chinese-20260106-6.0.3",
-                    new Variant(
-                            28, "2a62d362cf27bc85a713a0785f5ec426c31a52b19b42c6ce54e55f3e71de5655"),
-                    "free-11-chinese-20250710-6.11.1",
-                    new Variant(
-                            30, "a53b1d5e52f25d0bb5fb8e84b743f59ef05114b861b8f30f1ada1cbd86215e7b"),
-                    "free-11-chinese-20260731-7.3.1",
-                    new Variant(
-                            30,
-                            "3b38818c46903a3786df70793712c2d2d043cfb516279b49fa412acf4a1e9c9c"));
     static final String OWNER = "Lcom/qinggan/systemservice/displaymanager/DisplayManagerImpl;";
     static final String RECEIVER =
             "Lcom/qinggan/systemservice/displaymanager/DisplayManagerImpl$13;";
     static final String QUERY =
             "Landroid/net/ConnectivityManager;->getNetworkInfo(I)Landroid/net/NetworkInfo;";
-
-    private record Variant(int api, String pin) {}
-
-    static List<String> pins(String profile) {
-        var variant = VARIANTS.get(profile);
-
-        return variant == null ? List.of() : List.of(variant.pin());
-    }
 
     private static void require(boolean value) {
         Failure.require(
@@ -193,13 +173,11 @@ final class NetworkGuard {
         require(queries == 2);
     }
 
-    static void validate(String profile, int api, Path original, byte[] dex) throws Exception {
-        var variant = VARIANTS.get(profile);
-
+    static void validate(Map<String, Object> constants, int api, Path original, byte[] dex)
+            throws Exception {
         require(
-                variant != null
-                        && api == variant.api()
-                        && FilesSupport.hash(original).equals(variant.pin()));
+                (api == 28 || api == 30)
+                        && StepConstants.admits(constants, FilesSupport.hash(original)));
         require(dex != null);
         validateDefinitions(type(dex, api, OWNER), type(dex, api, RECEIVER));
     }
@@ -441,10 +419,9 @@ final class NetworkGuard {
     }
 
     /** Applies the same nullable boundary inside the API28 method-edit pipeline. */
-    static void apply(String profile, int api, String originalSha256, DexClasses classes) {
-        var variant = VARIANTS.get(profile);
-
-        require(variant != null && api == variant.api() && originalSha256.equals(variant.pin()));
+    static void apply(
+            Map<String, Object> constants, int api, String originalSha256, DexClasses classes) {
+        require(api == 28 && StepConstants.admits(constants, originalSha256));
         require(classes.entry(OWNER) != null && classes.entry(RECEIVER) != null);
         var selected = new TreeMap<String, ClassDef>();
         selected.put(OWNER, classes.get(OWNER));
@@ -457,8 +434,9 @@ final class NetworkGuard {
         }
     }
 
-    static byte[] apply(String profile, int api, Path original, byte[] dex) throws Exception {
-        validate(profile, api, original, dex);
+    static byte[] apply(Map<String, Object> constants, int api, Path original, byte[] dex)
+            throws Exception {
+        validate(constants, api, original, dex);
         var classes = new TreeMap<String, ClassDef>();
 
         for (ClassDef type : new DexBackedDexFile(Opcodes.forApi(api), dex).getClasses()) {
@@ -491,7 +469,7 @@ final class NetworkGuard {
             }
         }
 
-        require(FilesSupport.hash(original).equals(VARIANTS.get(profile).pin()));
+        require(StepConstants.admits(constants, FilesSupport.hash(original)));
 
         return output;
     }

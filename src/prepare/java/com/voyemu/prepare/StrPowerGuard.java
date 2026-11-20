@@ -22,22 +22,6 @@ import java.util.TreeMap;
 // A desktop without automotive CarService has no STR power lifecycle; preserve the genuine typed
 // path.
 final class StrPowerGuard {
-    record Variant(String pin) {}
-
-    static final Map<String, Variant> VARIANTS =
-            Map.of(
-                    "free-11-chinese-20250710-6.11.1",
-                    new Variant("6a902c0458c68b66317fa666f7ee783d38d028392a3c114d1ae3675bdedc2c03"),
-                    "free-11-chinese-20260731-7.3.1",
-                    new Variant(
-                            "6f96bbeb58bf915b0a2d60817082cdca3523e3a2d00c144544cb92b4e5be6870"));
-
-    static List<String> pins(String profile) {
-        var variant = VARIANTS.get(profile);
-
-        return variant == null ? List.of() : List.of(variant.pin());
-    }
-
     static final String NAME = "api30-str-power";
     static final String OWNER = "Lcom/qinggan/setting/str/StrStateManager;",
             MANAGER = "Landroid/car/hardware/power/CarPowerManager;";
@@ -80,11 +64,9 @@ final class StrPowerGuard {
         return selected;
     }
 
-    static void validate(String profile, int api, Path original, byte[] dex) throws Exception {
-        require(
-                VARIANTS.containsKey(profile)
-                        && api == 30
-                        && FilesSupport.hash(original).equals(VARIANTS.get(profile).pin()));
+    static void validate(Map<String, Object> constants, int api, Path original, byte[] dex)
+            throws Exception {
+        require(api == 30 && StepConstants.admits(constants, FilesSupport.hash(original)));
         require(dex != null);
         method(dex);
     }
@@ -124,8 +106,9 @@ final class StrPowerGuard {
                 body);
     }
 
-    static byte[] apply(String profile, int api, Path original, byte[] dex) throws Exception {
-        validate(profile, api, original, dex);
+    static byte[] apply(Map<String, Object> constants, int api, Path original, byte[] dex)
+            throws Exception {
+        validate(constants, api, original, dex);
         var classes = new TreeMap<String, ClassDef>();
 
         for (ClassDef type : new DexBackedDexFile(Opcodes.forApi(30), dex).getClasses()) {
@@ -185,7 +168,7 @@ final class StrPowerGuard {
             }
         }
 
-        require(FilesSupport.hash(original).equals(VARIANTS.get(profile).pin()));
+        require(StepConstants.admits(constants, FilesSupport.hash(original)));
 
         return output;
     }

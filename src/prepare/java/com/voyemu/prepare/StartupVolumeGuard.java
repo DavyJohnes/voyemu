@@ -59,20 +59,6 @@ import java.util.TreeMap;
 final class StartupVolumeGuard {
     static final String NAME = "api30-startup-volume";
 
-    /**
-     * Pin of services.jar; shared selects the clean rewrite shared with Passion, otherwise the
-     * pinned transform of this class with its own serialization checks.
-     */
-    record Variant(String pin, boolean shared) {}
-
-    static final Map<String, Variant> VARIANTS =
-            Map.of(
-                    "free-11-chinese-20250710-6.11.1",
-                    new Variant(
-                            "c6992cdc2a3e23d5aeb6ab77e7a7f6889cfcf5c262c6ed86825e6fcbf601681d",
-                            true),
-                    "free-11-chinese-20260731-7.3.1",
-                    new Variant(Api30SecondaryNavigationPolicy.PIN, false));
     static final String AUDIO = "Lcom/android/server/audio/AudioService;",
             STREAM = AUDIO.substring(0, AUDIO.length() - 1) + "$VolumeStreamState;",
             GROUP = AUDIO.substring(0, AUDIO.length() - 1) + "$VolumeGroupState;";
@@ -521,35 +507,34 @@ final class StartupVolumeGuard {
         return out;
     }
 
-    static List<String> pins(String profile) {
-        var variant = VARIANTS.get(profile);
-
-        return variant == null ? List.of() : List.of(variant.pin());
-    }
-
-    static void validate(String profile, int api, Path original, byte[] dex) throws Exception {
-        var variant = VARIANTS.get(profile);
-
-        if (variant == null || !variant.shared()) {
-            validateOriginal(profile, api, original, dex);
+    /**
+     * The step constant startup_volume_shared selects the clean rewrite shared with Passion,
+     * otherwise the pinned transform of this class with its own serialization checks.
+     */
+    static void validate(Map<String, Object> constants, int api, Path original, byte[] dex)
+            throws Exception {
+        if (!StepConstants.flag(constants, "startup_volume_shared")) {
+            validateOriginal(constants, api, original, dex);
 
             return;
         }
 
-        need(api == 30 && dex != null && variant.pin().equals(FilesSupport.hash(original)));
+        need(
+                api == 30
+                        && dex != null
+                        && StepConstants.admits(constants, FilesSupport.hash(original)));
         rewriter().validate(PassionServiceForegroundGuard.classes(dex));
     }
 
-    static void validateOriginal(String profile, int api, Path original, byte[] dex)
+    static void validateOriginal(Map<String, Object> constants, int api, Path original, byte[] dex)
             throws Exception {
-        var variant = VARIANTS.get(profile);
-
-        need(variant != null && api == 30 && variant.pin().equals(FilesSupport.hash(original)));
+        need(api == 30 && StepConstants.admits(constants, FilesSupport.hash(original)));
         transform(PassionServiceForegroundGuard.classes(dex), false);
     }
 
-    // Callers verify their own profile and DEX pins first, so the Passion and 6.11.1 services.jar
-    // reuse the identical pinned instruction sequence (streams to minimum, groups to zero).
+    // Callers verify their own DEX pins first, so every services.jar whose step selects the shared
+    // rewrite reuses the identical pinned instruction sequence (streams to minimum, groups to
+    // zero).
     static Rewriter rewriter() {
         return new Rewriter();
     }
@@ -879,17 +864,15 @@ final class StartupVolumeGuard {
         }
     }
 
-    static byte[] apply(String profile, int api, Path original, byte[] predecessor)
+    static byte[] apply(Map<String, Object> constants, int api, Path original, byte[] predecessor)
             throws Exception {
-        var variant = VARIANTS.get(profile);
-
-        if (variant != null && variant.shared()) {
-            validate(profile, api, original, predecessor);
+        if (StepConstants.flag(constants, "startup_volume_shared")) {
+            validate(constants, api, original, predecessor);
 
             return rewriter().applyBytes(PassionServiceForegroundGuard.classes(predecessor));
         }
 
-        need(variant != null && api == 30 && variant.pin().equals(FilesSupport.hash(original)));
+        need(api == 30 && StepConstants.admits(constants, FilesSupport.hash(original)));
         var before = PassionServiceForegroundGuard.classes(predecessor);
         var expected = transform(before, false);
         byte[] output =

@@ -223,7 +223,7 @@ public final class HiboardTopGestureGuardTest {
         int resolved = symbols(before, HiboardTopGestureGuard.classes(helper));
         byte[] output =
                 HiboardTopGestureGuard.apply(
-                        HiboardTopGestureGuard.PROFILE, 30, original, predecessor, helper);
+                        TestProfiles.SYNTHETIC, 30, original, predecessor, helper);
         var after = HiboardTopGestureGuard.classes(output);
         int changed = 0;
 
@@ -280,27 +280,19 @@ public final class HiboardTopGestureGuardTest {
                 "Exact single call, original registers and branch offsets");
         reject(() ->
                 HiboardTopGestureGuard.apply(
-                        "passion-11-russian-20260403-2.1.4.80", 30, original, predecessor, helper));
+                        TestProfiles.SYNTHETIC, 28, original, predecessor, helper));
+        reject(() ->
+                HiboardTopGestureGuard.apply(TestProfiles.SYNTHETIC, 30, original, clean, helper));
         reject(() ->
                 HiboardTopGestureGuard.apply(
-                        "free-09-chinese-20260106-6.0.3", 30, original, predecessor, helper));
+                        TestProfiles.SYNTHETIC, 30, original, predecessor, output));
         reject(() ->
-                HiboardTopGestureGuard.apply(
-                        HiboardTopGestureGuard.PROFILE, 28, original, predecessor, helper));
-        reject(() ->
-                HiboardTopGestureGuard.apply(
-                        HiboardTopGestureGuard.PROFILE, 30, original, clean, helper));
-        reject(() ->
-                HiboardTopGestureGuard.apply(
-                        HiboardTopGestureGuard.PROFILE, 30, original, predecessor, output));
-        reject(() ->
-                HiboardTopGestureGuard.apply(
-                        HiboardTopGestureGuard.PROFILE, 30, original, output, helper));
+                HiboardTopGestureGuard.apply(TestProfiles.SYNTHETIC, 30, original, output, helper));
         Path wrong = destination.resolve("wrong.jar");
         Files.writeString(wrong, "wrong source");
         reject(() ->
                 HiboardTopGestureGuard.apply(
-                        HiboardTopGestureGuard.PROFILE, 30, wrong, predecessor, helper));
+                        TestProfiles.SYNTHETIC, 30, wrong, predecessor, helper));
 
         for (int mode = 0; mode < 3; mode++) {
             var m = mutate(old, mode);

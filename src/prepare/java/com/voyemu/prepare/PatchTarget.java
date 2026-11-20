@@ -248,12 +248,7 @@ final class PatchTarget implements Recipes.Target {
         if (apply) {
             entries.put(
                     "classes.dex",
-                    AudioPolicyGuard.apply(
-                            profile.referenceProfile(),
-                            api,
-                            abi,
-                            input,
-                            entries.get("classes.dex")));
+                    AudioPolicyGuard.apply(constants, api, abi, input, entries.get("classes.dex")));
             entries.remove("lib/armeabi/libqg_audio_jni.so");
             Path output =
                     GuestJava.dex(
@@ -262,8 +257,7 @@ final class PatchTarget implements Recipes.Target {
                             dir.resolve("audio-helper-java"));
             added.addAll(FilesSupport.tree(output).values());
         } else {
-            AudioPolicyGuard.validate(
-                    profile.referenceProfile(), api, abi, input, entries.get("classes.dex"));
+            AudioPolicyGuard.validate(constants, api, abi, input, entries.get("classes.dex"));
         }
     }
 
@@ -273,14 +267,10 @@ final class PatchTarget implements Recipes.Target {
             entries.put(
                     "classes.dex",
                     AudioPolicyConsumerGuard.apply(
-                            profile.referenceProfile(),
-                            api,
-                            abi,
-                            input,
-                            entries.get("classes.dex")));
+                            constants, api, abi, input, entries.get("classes.dex")));
         } else {
             AudioPolicyConsumerGuard.validate(
-                    profile.referenceProfile(), api, abi, input, entries.get("classes.dex"));
+                    constants, api, abi, input, entries.get("classes.dex"));
         }
     }
 
@@ -685,24 +675,23 @@ final class PatchTarget implements Recipes.Target {
             entries.put(
                     "classes.dex",
                     SettingsVoiceMuteGuard.apply(
-                            profile.referenceProfile(), api, input, entries.get("classes.dex")));
+                            constants, api, input, entries.get("classes.dex")));
         } else if (planValidation) {
             SettingsVoiceMuteGuard.validateOriginalChain(
-                    profile.referenceProfile(), api, input, entries.get("classes.dex"));
+                    constants, api, input, entries.get("classes.dex"));
         } else {
-            SettingsVoiceMuteGuard.validate(
-                    profile.referenceProfile(), api, input, entries.get("classes.dex"));
+            SettingsVoiceMuteGuard.validate(constants, api, input, entries.get("classes.dex"));
         }
     }
 
     @Override
     public void guardSettingsVoiceClone(boolean apply) throws Exception {
-        boolean soundBalance = SettingsVoiceCloneGuard.soundBalance(profile.referenceProfile());
+        boolean soundBalance = SettingsVoiceCloneGuard.soundBalance(constants);
 
         if (apply) {
             byte[] dex =
                     SettingsVoiceCloneGuard.apply(
-                            profile.referenceProfile(), api, input, entries.get("classes.dex"));
+                            constants, api, input, entries.get("classes.dex"));
 
             if (!soundBalance) {
                 entries.put("classes.dex", dex);
@@ -710,8 +699,7 @@ final class PatchTarget implements Recipes.Target {
                 return;
             }
 
-            entries.put(
-                    "classes.dex", SoundBalanceGuard.apply(profile.referenceProfile(), api, dex));
+            entries.put("classes.dex", SoundBalanceGuard.apply(api, dex));
             entries.put(
                     "AndroidManifest.xml",
                     SettingsManifest.apply(
@@ -720,14 +708,13 @@ final class PatchTarget implements Recipes.Target {
                             input,
                             entries.get("AndroidManifest.xml")));
         } else {
-            SettingsVoiceCloneGuard.validate(
-                    profile.referenceProfile(), api, input, entries.get("classes.dex"));
+            SettingsVoiceCloneGuard.validate(constants, api, input, entries.get("classes.dex"));
 
             if (!soundBalance) {
                 return;
             }
 
-            SoundBalanceGuard.validate(profile.referenceProfile(), api, entries.get("classes.dex"));
+            SoundBalanceGuard.validate(api, entries.get("classes.dex"));
 
             if (planValidation) {
                 SettingsManifest.validateOriginal(
@@ -744,11 +731,9 @@ final class PatchTarget implements Recipes.Target {
         if (apply) {
             entries.put(
                     "classes2.dex",
-                    StrPowerGuard.apply(
-                            profile.referenceProfile(), api, input, entries.get("classes2.dex")));
+                    StrPowerGuard.apply(constants, api, input, entries.get("classes2.dex")));
         } else {
-            StrPowerGuard.validate(
-                    profile.referenceProfile(), api, input, entries.get("classes2.dex"));
+            StrPowerGuard.validate(constants, api, input, entries.get("classes2.dex"));
         }
     }
 
@@ -1406,11 +1391,9 @@ final class PatchTarget implements Recipes.Target {
         if (apply) {
             entries.put(
                     "classes.dex",
-                    StartupVolumeGuard.apply(
-                            profile.referenceProfile(), api, input, entries.get("classes.dex")));
+                    StartupVolumeGuard.apply(constants, api, input, entries.get("classes.dex")));
         } else {
-            StartupVolumeGuard.validate(
-                    profile.referenceProfile(), api, input, entries.get("classes.dex"));
+            StartupVolumeGuard.validate(constants, api, input, entries.get("classes.dex"));
         }
     }
 
@@ -1419,11 +1402,9 @@ final class PatchTarget implements Recipes.Target {
         if (apply) {
             entries.put(
                     "classes.dex",
-                    KeyManagerGuard.apply(
-                            profile.referenceProfile(), api, input, entries.get("classes.dex")));
+                    KeyManagerGuard.apply(constants, api, input, entries.get("classes.dex")));
         } else {
-            KeyManagerGuard.validate(
-                    profile.referenceProfile(), api, input, entries.get("classes.dex"));
+            KeyManagerGuard.validate(constants, api, input, entries.get("classes.dex"));
         }
     }
 
@@ -1436,7 +1417,7 @@ final class PatchTarget implements Recipes.Target {
                         .toList();
         DexClasses classes = new DexClasses(entries, names, api);
 
-        SystemPolicyHardwareGuard.apply(profile.referenceProfile(), api, originalSha256(), classes);
+        SystemPolicyHardwareGuard.apply(constants, api, originalSha256(), classes);
 
         if (apply) {
             classes.write(entries);
@@ -1449,9 +1430,9 @@ final class PatchTarget implements Recipes.Target {
             entries.put(
                     "classes.dex",
                     KeyManagerIngressGuard.apply(
-                            profile.referenceProfile(), api, input, entries.get("classes.dex")));
+                            constants, api, input, entries.get("classes.dex")));
         } else {
-            KeyManagerIngressGuard.validateOriginal(profile.referenceProfile(), api, input);
+            KeyManagerIngressGuard.validateOriginal(constants, api, input);
         }
     }
 
@@ -1460,11 +1441,9 @@ final class PatchTarget implements Recipes.Target {
         if (apply) {
             entries.put(
                     "classes.dex",
-                    NetworkGuard.apply(
-                            profile.referenceProfile(), api, input, entries.get("classes.dex")));
+                    NetworkGuard.apply(constants, api, input, entries.get("classes.dex")));
         } else {
-            NetworkGuard.validate(
-                    profile.referenceProfile(), api, input, entries.get("classes.dex"));
+            NetworkGuard.validate(constants, api, input, entries.get("classes.dex"));
         }
     }
 

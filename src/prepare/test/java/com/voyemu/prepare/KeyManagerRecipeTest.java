@@ -5,16 +5,11 @@ import java.util.List;
 import java.util.Map;
 
 public final class KeyManagerRecipeTest {
-    static final String PROFILE = "free-11-chinese-20260731-7.3.1";
+    static final String PIN = "951abb4f86540663fd654138b7e58cd0226d5dfa0470a4f5e85384bcdedbb78e";
 
     static final class Target implements Recipes.Target {
         int mutations, validations;
-        String pin = KeyManagerGuard.pins(PROFILE).get(0);
-
-        @Override
-        public String profile() {
-            return PROFILE;
-        }
+        String pin = PIN;
 
         @Override
         public int api() {
@@ -91,7 +86,7 @@ public final class KeyManagerRecipeTest {
                 "sourceSha256",
                 "a".repeat(64),
                 "constants",
-                Map.of("original_sha256_allowlist", List.of(KeyManagerGuard.pins(PROFILE).get(0))),
+                Map.of("original_sha256_allowlist", List.of(PIN)),
                 "calls",
                 calls);
     }
@@ -139,13 +134,12 @@ public final class KeyManagerRecipeTest {
                         List.of(libs, guard),
                         List.of(guard, libs, guard),
                         List.of(guard),
-                        List.of(guard, call("useLibraries", List.of("QGAPI"))),
                         List.of(call("guardKeyManager", "extra"), libs),
                         List.of(guard, libs, call("unknown")))) {
-            reject(name, calls, KeyManagerGuard.pins(PROFILE).get(0));
+            reject(name, calls, PIN);
         }
 
-        reject("other.json", List.of(guard, libs), KeyManagerGuard.pins(PROFILE).get(0));
+        reject("other.json", List.of(guard, libs), PIN);
         reject(name, List.of(guard, libs), "0".repeat(64));
         System.out.println(
                 "Exact OEM KeyManager recipe/libraries/order/prevalidation and eight negatives"

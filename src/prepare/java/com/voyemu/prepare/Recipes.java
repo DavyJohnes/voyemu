@@ -587,10 +587,16 @@ final class Recipes {
                     RecipesNxp.systemPolicyHardware(name, metadata, constants, target);
             case "systemservice-network.json" ->
                     NetworkGuard.apply(
-                            target.profile(), target.api(), target.originalSha256(), target.dex());
+                            target.constants(),
+                            target.api(),
+                            target.originalSha256(),
+                            target.dex());
             case "systempolicy-hardware.json" ->
                     SystemPolicyHardwareGuard.apply(
-                            target.profile(), target.api(), target.originalSha256(), target.dex());
+                            target.constants(),
+                            target.api(),
+                            target.originalSha256(),
+                            target.dex());
             case "nxp-settings-voice-initialization.json" ->
                     RecipesNxp.settingsVoiceInitialization(name, metadata, constants, target);
             case "nxp-phone-provider.json" -> RecipesNxp.phoneProvider(target);

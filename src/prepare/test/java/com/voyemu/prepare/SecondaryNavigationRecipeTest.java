@@ -20,7 +20,8 @@ public final class SecondaryNavigationRecipeTest {
 
         Files.createDirectory(stage);
         String step = SecondaryNavigationGuard.NAME + ".json";
-        Path recipe = root.resolve("profiles/" + SecondaryNavigationGuard.PROFILE);
+        String id = TestProfiles.declaring(root, SecondaryNavigationGuard.NAME);
+        Path recipe = root.resolve("profiles/" + id);
         var metadata = Json.object(Json.parse(Files.readString(recipe.resolve("patches/" + step))));
         metadata.put("sourceSha256", FilesSupport.hash(recipe.resolve("patches/" + step)));
         var data = Json.object(Json.parse(Files.readString(recipe.resolve("profile.json"))));
@@ -48,9 +49,7 @@ public final class SecondaryNavigationRecipeTest {
                         null,
                         null,
                         platform);
-        var profile =
-                new ProfileRegistry.Profile(
-                        SecondaryNavigationGuard.PROFILE, "test", data, "", recipe);
+        var profile = new ProfileRegistry.Profile(id, "test", data, "", recipe);
         int[] reads = {0};
         var artifacts =
                 new Artifacts(

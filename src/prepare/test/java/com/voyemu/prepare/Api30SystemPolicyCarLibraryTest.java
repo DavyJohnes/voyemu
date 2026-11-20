@@ -117,7 +117,8 @@ public final class Api30SystemPolicyCarLibraryTest {
         public void guardSystemPolicyHardware(boolean apply) {
             if (apply) {
                 guards++;
-                SystemPolicyHardwareGuard.apply(profile, 30, pin, classes);
+                SystemPolicyHardwareGuard.apply(
+                        Map.of(StepConstants.PINS, List.of(pin)), 30, pin, classes);
             }
         }
     }
@@ -430,13 +431,10 @@ public final class Api30SystemPolicyCarLibraryTest {
                                 Files.readString(
                                         root.resolve("profiles/" + profile + "/profile.json"))));
         var originals = Json.obj(definition, "original");
-        String pin = SystemPolicyHardwareGuard.PINS.get(profile);
+        String pin = Json.str(Json.obj(originals, "SystemPolicy"), "sha256");
         Map<String, byte[]> archive = new TreeMap<>(NativeCore.entries(policy));
 
         NativeCore.pinned(policy, pin);
-        need(
-                pin.equals(Json.str(Json.obj(originals, "SystemPolicy"), "sha256")),
-                profile + ": SystemPolicy pin differs from the profile");
         var patch = Json.obj(Json.obj(definition, "patches"), "SystemPolicy");
         need(
                 "original:SystemPolicy".equals(patch.get("input"))

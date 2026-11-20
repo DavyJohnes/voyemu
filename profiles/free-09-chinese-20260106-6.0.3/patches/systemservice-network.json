@@ -2,5 +2,9 @@
   "schema": 1,
   "api": 28,
   "calls": [],
-  "constants": {}
+  "constants": {
+    "original_sha256_allowlist": [
+      "2a62d362cf27bc85a713a0785f5ec426c31a52b19b42c6ce54e55f3e71de5655"
+    ]
+  }
 }

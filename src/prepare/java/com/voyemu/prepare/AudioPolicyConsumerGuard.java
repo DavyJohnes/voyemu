@@ -36,22 +36,6 @@ import java.util.TreeMap;
 final class AudioPolicyConsumerGuard {
     static final String ABI = "arm64-v8a";
 
-    /**
-     * Pin of the AudioPolicy input; relocate selects the hidden API correction that may grow the
-     * DEX before its map list, otherwise rows are corrected in place.
-     */
-    record Variant(String jarPin, boolean relocate) {}
-
-    static final Map<String, Variant> VARIANTS =
-            Map.of(
-                    "free-11-chinese-20250710-6.11.1",
-                    new Variant(
-                            "e46d3e5db0cf932cd3a39654a2f95620f2668ada8fb32b904c1684f936eca510",
-                            true),
-                    "free-11-chinese-20260731-7.3.1",
-                    new Variant(
-                            "c178682be164be4872697dbb5accdc6ea28446941b6d681ddb736f2fdb627c07",
-                            false));
     static final String OWNER = "Lcom/qinggan/audiopolicy/AudioPolicyManager;",
             SERVICE = "Lcom/qinggan/audiopolicy/IAudioPolicyService;";
     static final String REMOTE = "Landroid/os/RemoteException;",
@@ -305,21 +289,12 @@ final class AudioPolicyConsumerGuard {
         return out;
     }
 
-    static List<String> pins(String profile) {
-        var variant = VARIANTS.get(profile);
-
-        return variant == null ? List.of() : List.of(variant.jarPin());
-    }
-
-    static void validate(String profile, int api, String abi, Path jar, byte[] dex)
+    static void validate(Map<String, Object> constants, int api, String abi, Path jar, byte[] dex)
             throws Exception {
-        var variant = VARIANTS.get(profile);
-
         require(
-                variant != null
-                        && api == 30
+                api == 30
                         && ABI.equals(abi)
-                        && variant.jarPin().equals(FilesSupport.hash(jar))
+                        && StepConstants.admits(constants, FilesSupport.hash(jar))
                         && dex != null);
         transform(classes(dex), false);
     }
@@ -678,16 +653,20 @@ final class AudioPolicyConsumerGuard {
         }
     }
 
-    static byte[] apply(String profile, int api, String abi, Path jar, byte[] dex)
+    /**
+     * The step constant audio_consumer_relocate selects the hidden API correction that may grow the
+     * DEX before its map list; otherwise rows are corrected in place.
+     */
+    static byte[] apply(Map<String, Object> constants, int api, String abi, Path jar, byte[] dex)
             throws Exception {
-        validate(profile, api, abi, jar, dex);
+        validate(constants, api, abi, jar, dex);
         var before = classes(dex);
         var expected = transform(before, false);
         var output =
                 FrameworkDexMaterializer.serialize(
                         new ImmutableDexFile(Opcodes.forApi(30), expected.values()));
 
-        if (VARIANTS.get(profile).relocate()) {
+        if (StepConstants.flag(constants, "audio_consumer_relocate")) {
             output = relocateWriterHiddenApiClassOffsets(output, expected.keySet());
             verifyHiddenApiLayout(output);
             var actual = classes(output);

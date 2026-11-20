@@ -26,8 +26,7 @@ import java.util.TreeMap;
 
 /** Preserve the OEM disconnected/error path when this unavailable audio operation throws. */
 final class SettingsVoiceMuteGuard {
-    static final String PROFILE = "free-11-chinese-20250710-6.11.1",
-            NAME = "api30-settings-voice-mute";
+    static final String NAME = "api30-settings-voice-mute";
     static final String APK = "6a902c0458c68b66317fa666f7ee783d38d028392a3c114d1ae3675bdedc2c03";
     static final String OWNER = "Lcom/qinggan/audiopolicy/AudioPolicyManager;",
             REMOTE = "Landroid/os/RemoteException;",
@@ -227,28 +226,25 @@ final class SettingsVoiceMuteGuard {
         return result;
     }
 
-    static void validate(String profile, int api, Path apk, byte[] dex) throws Exception {
-        need(
-                PROFILE.equals(profile)
-                        && api == 30
-                        && APK.equals(FilesSupport.hash(apk))
-                        && dex != null);
+    static void validate(Map<String, Object> constants, int api, Path apk, byte[] dex)
+            throws Exception {
+        need(api == 30 && APK.equals(FilesSupport.hash(apk)) && dex != null);
         transform(classes(dex), false);
     }
 
-    static void validateOriginalChain(String profile, int api, Path apk, byte[] raw)
+    static void validateOriginalChain(Map<String, Object> constants, int api, Path apk, byte[] raw)
             throws Exception {
         need(
-                PROFILE.equals(profile)
-                        && api == 30
+                api == 30
                         && APK.equals(FilesSupport.hash(apk))
                         && raw != null
                         && Arrays.equals(raw, original(apk)));
-        validate(profile, api, apk, SettingsVoiceCloneGuard.apply(profile, api, apk, raw));
+        validate(constants, api, apk, SettingsVoiceCloneGuard.apply(constants, api, apk, raw));
     }
 
-    static byte[] apply(String profile, int api, Path apk, byte[] dex) throws Exception {
-        validate(profile, api, apk, dex);
+    static byte[] apply(Map<String, Object> constants, int api, Path apk, byte[] dex)
+            throws Exception {
+        validate(constants, api, apk, dex);
         var before = classes(dex);
         var expected = transform(before, false);
         byte[] output =

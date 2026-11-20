@@ -118,12 +118,14 @@ public final class AudioPolicyConsumerGuardTest {
                         b.getRegisterCount(), list, ts, b.getDebugItems()));
     }
 
-    // Arguments: PROFILE QGAPI_JAR WRONG_JAR.
+    // Arguments: PROFILE QGAPI_JAR WRONG_JAR, run from the repository root; the profile argument
+    // only labels the run, the constants come from the step that admits QGAPI_JAR.
     public static void main(String[] arguments) throws Exception {
-        String profile = arguments[0];
         String[] a = Arrays.copyOfRange(arguments, 1, arguments.length);
-        boolean relocate = AudioPolicyConsumerGuard.VARIANTS.get(profile).relocate();
         Path jar = Path.of(a[0]);
+        Map<String, Object> step =
+                TestProfiles.constants(Path.of("").toAbsolutePath(), "api30-audio-consumer", jar);
+        boolean relocate = StepConstants.flag(step, "audio_consumer_relocate");
         byte[] before;
 
         try (var z = new ZipFile(jar.toFile())) {
@@ -215,8 +217,7 @@ public final class AudioPolicyConsumerGuardTest {
                         + cl.getInt(correctedHidden + 4 + 4 * ci)
                         + "; per-class payload preserved/reordered; SHA1/Adler32 verified");
         byte[] after =
-                AudioPolicyConsumerGuard.apply(
-                        profile, 30, AudioPolicyConsumerGuard.ABI, jar, before);
+                AudioPolicyConsumerGuard.apply(step, 30, AudioPolicyConsumerGuard.ABI, jar, before);
         AudioPolicyConsumerGuard.verifyHiddenApiLayout(after);
         byte[] bad = raw.clone();
         reject(() -> AudioPolicyConsumerGuard.verifyHiddenApiLayout(bad));
@@ -225,7 +226,7 @@ public final class AudioPolicyConsumerGuardTest {
         MethodChanges changes = countChangedMethods(original, actual);
         int changed = changes.changed(), unchanged = changes.unchanged();
         checkGuardScope(actual, changed);
-        checkRejectedInputs(profile, a, jar, before, after, original);
+        checkRejectedInputs(step, a, jar, before, after, original);
         System.out.println(
                 "PASS original uncovered UOE RED; exact 17 UOE joins + 18 Throwable.getMessage"
                         + " owner substitutions GREEN; isNaviMix propagates UOE; changedMethods="
@@ -606,7 +607,7 @@ public final class AudioPolicyConsumerGuardTest {
     }
 
     static void checkRejectedInputs(
-            String profile,
+            Map<String, Object> step,
             String[] a,
             Path jar,
             byte[] before,
@@ -615,20 +616,24 @@ public final class AudioPolicyConsumerGuardTest {
             throws Exception {
         reject(() ->
                 AudioPolicyConsumerGuard.validate(
-                        "other", 30, AudioPolicyConsumerGuard.ABI, jar, before));
+                        Map.of(StepConstants.PINS, List.of("0".repeat(64))),
+                        30,
+                        AudioPolicyConsumerGuard.ABI,
+                        jar,
+                        before));
         reject(() ->
                 AudioPolicyConsumerGuard.validate(
-                        profile, 34, AudioPolicyConsumerGuard.ABI, jar, before));
-        reject(() -> AudioPolicyConsumerGuard.validate(profile, 30, "x86_64", jar, before));
+                        step, 34, AudioPolicyConsumerGuard.ABI, jar, before));
+        reject(() -> AudioPolicyConsumerGuard.validate(step, 30, "x86_64", jar, before));
         reject(() ->
                 AudioPolicyConsumerGuard.validate(
-                        profile, 30, AudioPolicyConsumerGuard.ABI, jar, null));
+                        step, 30, AudioPolicyConsumerGuard.ABI, jar, null));
         reject(() ->
                 AudioPolicyConsumerGuard.validate(
-                        profile, 30, AudioPolicyConsumerGuard.ABI, jar, after));
+                        step, 30, AudioPolicyConsumerGuard.ABI, jar, after));
         reject(() ->
                 AudioPolicyConsumerGuard.validate(
-                        profile, 30, AudioPolicyConsumerGuard.ABI, Path.of(a[1]), before));
+                        step, 30, AudioPolicyConsumerGuard.ABI, Path.of(a[1]), before));
 
         for (int k = 0; k < 4; k++) {
             int mode = k;

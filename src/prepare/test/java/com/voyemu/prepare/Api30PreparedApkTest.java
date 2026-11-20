@@ -87,10 +87,29 @@ public final class Api30PreparedApkTest {
                                 false)));
     }
 
+    /** Constants of the declared step NAME.json of the profile. */
+    private static Map<String, Object> constants(ProfileRegistry.Profile profile, String name)
+            throws Exception {
+        return Json.obj(
+                Json.object(
+                        Json.parse(
+                                new String(
+                                        ProfileRegistry.bytes(
+                                                profile,
+                                                profile.resourcePrefix()
+                                                        + "patches/"
+                                                        + name
+                                                        + ".json"),
+                                        java.nio.charset.StandardCharsets.UTF_8))),
+                "constants");
+    }
+
     private static Map<String, String> originalPins() {
         Map<String, String> originalPins =
                 Map.ofEntries(
-                        Map.entry("AudioPolicy", AudioPolicyGuard.pins(PROFILE).get(0)),
+                        Map.entry(
+                                "AudioPolicy",
+                                "2152a99acdbee41626c6b661fe6509dd2c9487d3cad6a66aad6320bbb00cc039"),
                         Map.entry(
                                 "Launcher",
                                 "b3287150827e7fa51072bcbcba257539101cda8433c5f9d3a95f4ca905abd567"),
@@ -552,7 +571,8 @@ public final class Api30PreparedApkTest {
         }
 
         if (name.equals("AudioPolicy") && entry.equals("classes.dex")) {
-            return AudioPolicyGuard.apply(profile.id(), 30, "arm64-v8a", input, expected);
+            return AudioPolicyGuard.apply(
+                    constants(profile, "api30-audio-policy"), 30, "arm64-v8a", input, expected);
         }
 
         if (entry.equals("AndroidManifest.xml") && !name.equals("AudioPolicy")) {
@@ -589,8 +609,12 @@ public final class Api30PreparedApkTest {
         }
 
         if (name.equals("KeyManagerService") && entry.equals("classes.dex")) {
-            expected = KeyManagerGuard.apply(profile.id(), 30, input, expected);
-            expected = KeyManagerIngressGuard.apply(profile.id(), 30, input, expected);
+            expected =
+                    KeyManagerGuard.apply(
+                            constants(profile, KeyManagerGuard.NAME), 30, input, expected);
+            expected =
+                    KeyManagerIngressGuard.apply(
+                            constants(profile, KeyManagerIngressGuard.NAME), 30, input, expected);
 
             return expected;
         }
@@ -641,18 +665,18 @@ public final class Api30PreparedApkTest {
         }
 
         if (name.equals("SystemService") && entry.equals("classes.dex")) {
-            return NetworkGuard.apply(profile.id(), 30, input, expected);
+            return NetworkGuard.apply(constants(profile, NetworkGuard.NAME), 30, input, expected);
         }
 
         if (name.equals("Setting") && entry.equals("classes.dex")) {
             return SoundBalanceGuard.apply(
-                    profile.id(),
                     30,
-                    SettingsVoiceCloneGuard.apply(profile.id(), 30, input, expected));
+                    SettingsVoiceCloneGuard.apply(
+                            constants(profile, SettingsVoiceCloneGuard.NAME), 30, input, expected));
         }
 
         if (name.equals("Setting") && entry.equals("classes2.dex")) {
-            return StrPowerGuard.apply(profile.id(), 30, input, expected);
+            return StrPowerGuard.apply(constants(profile, StrPowerGuard.NAME), 30, input, expected);
         }
 
         return null;
@@ -706,8 +730,7 @@ public final class Api30PreparedApkTest {
                                 + Json.str(qgapiSpec, "file"));
 
         if (!Json.str(qgapiSpec, "file").equals("framework/QGAPI.jar")
-                || !FilesSupport.hash(qgapiInput)
-                        .equals(AudioPolicyConsumerGuard.pins(PROFILE).get(0))) {
+                || !FilesSupport.hash(qgapiInput).equals(Json.str(qgapiSpec, "sha256"))) {
             throw new AssertionError("Exact immutable QGAPI source required");
         }
 
@@ -722,7 +745,11 @@ public final class Api30PreparedApkTest {
             byte[] expected =
                     e.getKey().equals("classes.dex")
                             ? AudioPolicyConsumerGuard.apply(
-                                    profile.id(), 30, "arm64-v8a", qgapiInput, e.getValue())
+                                    constants(profile, "api30-audio-consumer"),
+                                    30,
+                                    "arm64-v8a",
+                                    qgapiInput,
+                                    e.getValue())
                             : e.getValue();
 
             if (!Arrays.equals(expected, qgapiAfter.get(e.getKey()))) {
@@ -730,7 +757,7 @@ public final class Api30PreparedApkTest {
             }
         }
 
-        if (!FilesSupport.hash(qgapiInput).equals(AudioPolicyConsumerGuard.pins(PROFILE).get(0))) {
+        if (!FilesSupport.hash(qgapiInput).equals(Json.str(qgapiSpec, "sha256"))) {
             throw new AssertionError("QGAPI original modified");
         }
     }

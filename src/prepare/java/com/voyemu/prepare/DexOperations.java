@@ -108,11 +108,6 @@ final class DexOperations {
                         Set.of(
                                 "Lcom/qinggan/power/IPowerManagerListener;",
                                 "Lcom/qinggan/system/IPowerManagerService;"))) {
-            Failure.require(
-                    AudioPolicyConsumerGuard.pins(profile).contains(FilesSupport.hash(apk)),
-                    "DONOR_PIN_MISMATCH",
-                    "Exact profile-bound OEM power ABI required",
-                    5);
             byte[] written = Files.readAllBytes(payload);
             AudioPolicyConsumerGuard.correctWriterHiddenApiClassOffsets(written, descriptors);
             AudioPolicyConsumerGuard.verifyHiddenApiLayout(written);

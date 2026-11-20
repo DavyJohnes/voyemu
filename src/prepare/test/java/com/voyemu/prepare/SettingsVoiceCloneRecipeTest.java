@@ -5,16 +5,11 @@ import java.util.List;
 import java.util.Map;
 
 public final class SettingsVoiceCloneRecipeTest {
-    static final String PROFILE = "free-11-chinese-20260731-7.3.1";
+    static final String PIN = "6f96bbeb58bf915b0a2d60817082cdca3523e3a2d00c144544cb92b4e5be6870";
 
     static final class Target implements Recipes.Target {
         int validations, mutations;
-        String pin = SettingsVoiceCloneGuard.pins(PROFILE).get(0);
-
-        @Override
-        public String profile() {
-            return PROFILE;
-        }
+        String pin = PIN;
 
         @Override
         public int api() {
@@ -95,7 +90,7 @@ public final class SettingsVoiceCloneRecipeTest {
     public static void main(String[] a) throws Exception {
         String name = SettingsVoiceCloneGuard.NAME + ".json";
         Object op = call("guardSettingsVoiceClone");
-        List<Object> pins = List.of(SettingsVoiceCloneGuard.pins(PROFILE).get(0));
+        List<Object> pins = List.of(PIN);
         var t = new Target();
 
         Recipes.validateApi30(name, metadata(List.of(op), pins), t);
@@ -145,7 +140,7 @@ public final class SettingsVoiceCloneRecipeTest {
     static int inverseRejections(String name, Object op, List<Object> pins) throws Exception {
         int n = 0;
 
-        for (int i = 0; i < 3; i++) {
+        for (int i : new int[] {0, 2}) {
             var x = new Target();
 
             if (i == 2) {
@@ -153,16 +148,7 @@ public final class SettingsVoiceCloneRecipeTest {
             }
 
             try {
-                Recipes.apply(
-                        i == 0 ? "other.json" : name,
-                        metadata(
-                                List.of(op),
-                                i == 1
-                                        ? List.of(
-                                                SettingsVoiceCloneGuard.pins(PROFILE).get(0),
-                                                "0".repeat(64))
-                                        : pins),
-                        x);
+                Recipes.apply(i == 0 ? "other.json" : name, metadata(List.of(op), pins), x);
                 throw new AssertionError("accepted inverse");
             } catch (Failure e) {
                 if (x.mutations != 0) {

@@ -19,6 +19,7 @@ import org.jf.dexlib2.immutable.reference.ImmutableMethodReference;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.TreeMap;
 import java.util.zip.ZipFile;
 
@@ -173,13 +174,12 @@ final class KeyManagerIngressGuard {
         return new ImmutableDexFile(Opcodes.forApi(30), output.values());
     }
 
-    static byte[] validateOriginal(String profile, int api, Path original) throws Exception {
+    static byte[] validateOriginal(Map<String, Object> constants, int api, Path original)
+            throws Exception {
         require(
-                KeyManagerGuard.VARIANTS.containsKey(profile)
-                        && api == 30
+                api == 30
                         && original != null
-                        && FilesSupport.hash(original)
-                                .equals(KeyManagerGuard.VARIANTS.get(profile).pin()));
+                        && StepConstants.admits(constants, FilesSupport.hash(original)));
         byte[] source;
 
         try (var zip = new ZipFile(original.toFile())) {
@@ -194,8 +194,9 @@ final class KeyManagerIngressGuard {
         return source;
     }
 
-    static byte[] apply(String profile, int api, Path original, byte[] current) throws Exception {
-        validateOriginal(profile, api, original);
+    static byte[] apply(Map<String, Object> constants, int api, Path original, byte[] current)
+            throws Exception {
+        validateOriginal(constants, api, original);
         require(current != null);
         var before = new DexBackedDexFile(Opcodes.forApi(30), current);
         byte[] output = FrameworkDexMaterializer.serialize(rewrite(before, false));
@@ -217,7 +218,7 @@ final class KeyManagerIngressGuard {
                                                     names.get(type.getType()))));
         }
 
-        require(FilesSupport.hash(original).equals(KeyManagerGuard.VARIANTS.get(profile).pin()));
+        require(StepConstants.admits(constants, FilesSupport.hash(original)));
 
         return output;
     }

@@ -19,8 +19,9 @@ import java.util.Map;
 
 /** Real owner-Dex regressions preserve both nullable queries and connectivity broadcasts. */
 public final class Api30NetworkNullGuardTest {
-    static final String PROFILE = "free-11-chinese-20260731-7.3.1";
     static final String PIN = "3b38818c46903a3786df70793712c2d2d043cfb516279b49fa412acf4a1e9c9c";
+    static final Map<String, Object> STEP = Map.of(StepConstants.PINS, List.of(PIN)),
+            FOREIGN = Map.of(StepConstants.PINS, List.of("0".repeat(64)));
     static final String OWNER = "Lcom/qinggan/systemservice/displaymanager/DisplayManagerImpl;";
     static final String QUERY =
             "Landroid/net/ConnectivityManager;->getNetworkInfo(I)Landroid/net/NetworkInfo;";
@@ -323,7 +324,10 @@ public final class Api30NetworkNullGuardTest {
         check(args.length == 1 || args.length == 2, "ROOT [PREPARED_SYSTEM_SERVICE_APK]");
         Path root = Path.of(args[0]).toRealPath(),
                 original =
-                        root.resolve(".local/profiles/" + PROFILE + "/originals/SystemService.apk");
+                        root.resolve(
+                                ".local/profiles/"
+                                        + TestProfiles.pinning(root, PIN)
+                                        + "/originals/SystemService.apk");
         check(
                 FilesSupport.hash(original).equals(PIN),
                 "exact original A11 SystemService owner pin");
@@ -333,7 +337,7 @@ public final class Api30NetworkNullGuardTest {
             before = zip.getInputStream(zip.getEntry("classes.dex")).readAllBytes();
         }
 
-        byte[] patched = NetworkGuard.apply(PROFILE, 30, original, before);
+        byte[] patched = NetworkGuard.apply(STEP, 30, original, before);
         verify(
                 method(original),
                 method(
@@ -346,16 +350,17 @@ public final class Api30NetworkNullGuardTest {
                 receiver(
                         new org.jf.dexlib2.dexbacked.DexBackedDexFile(
                                 org.jf.dexlib2.Opcodes.forApi(30), patched)));
-        reject(() -> NetworkGuard.validate("other-profile", 30, original, before));
-        reject(() -> NetworkGuard.validate(PROFILE, 28, original, before));
-        reject(() -> NetworkGuard.validate(PROFILE, 30, original, null));
-        reject(() -> NetworkGuard.validate(PROFILE, 30, original, patched));
+        reject(() -> NetworkGuard.validate(FOREIGN, 30, original, before));
+        reject(() -> NetworkGuard.validate(STEP, 30, original, null));
+        reject(() -> NetworkGuard.validate(STEP, 30, original, patched));
         reject(() ->
                 NetworkGuard.validate(
-                        PROFILE,
+                        STEP,
                         30,
                         root.resolve(
-                                ".local/profiles/" + PROFILE + "/originals/framework/QGAPI.jar"),
+                                ".local/profiles/"
+                                        + TestProfiles.pinning(root, PIN)
+                                        + "/originals/framework/QGAPI.jar"),
                         before));
 
         if (args.length == 2) {

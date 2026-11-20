@@ -112,8 +112,8 @@ final class SoundBalanceGuard {
                         && ((OneRegisterInstruction) x.get(3)).getRegisterA() == 0);
     }
 
-    static void validate(String profile, int api, byte[] dex) {
-        check("free-11-chinese-20260731-7.3.1".equals(profile) && api == 30 && dex != null);
+    static void validate(int api, byte[] dex) {
+        check(api == 30 && dex != null);
         int count = 0;
 
         for (var c : new DexBackedDexFile(Opcodes.forApi(30), dex).getClasses()) {
@@ -128,8 +128,8 @@ final class SoundBalanceGuard {
         check(count == 1);
     }
 
-    static byte[] apply(String profile, int api, byte[] dex) throws Exception {
-        validate(profile, api, dex);
+    static byte[] apply(int api, byte[] dex) throws Exception {
+        validate(api, dex);
         var all = new TreeMap<String, ClassDef>();
         int count = 0;
 

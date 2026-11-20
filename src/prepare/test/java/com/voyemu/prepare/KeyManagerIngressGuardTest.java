@@ -16,13 +16,17 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.zip.ZipFile;
 
 /**
  * Actual pinned DEX and all-class inverse; own JVM dispatch tests cover authentication separately.
  */
 public final class KeyManagerIngressGuardTest {
-    static final String PROFILE = "free-11-chinese-20260731-7.3.1";
+    static final Map<String, Object> STEP =
+            Map.of(
+                    StepConstants.PINS,
+                    List.of("951abb4f86540663fd654138b7e58cd0226d5dfa0470a4f5e85384bcdedbb78e"));
 
     private interface Action {
         void run() throws Exception;
@@ -118,12 +122,10 @@ public final class KeyManagerIngressGuardTest {
             original = zip.getInputStream(zip.getEntry("classes.dex")).readAllBytes();
         }
 
-        byte[] predecessor = KeyManagerGuard.apply(PROFILE, 30, owner, original);
+        byte[] predecessor = KeyManagerGuard.apply(STEP, 30, owner, original);
         boolean legacy = args.length == 3 && args[2].equals("--legacy");
         byte[] output =
-                legacy
-                        ? predecessor
-                        : KeyManagerIngressGuard.apply(PROFILE, 30, owner, predecessor);
+                legacy ? predecessor : KeyManagerIngressGuard.apply(STEP, 30, owner, predecessor);
         check(
                 calls(output, "Lcom/voyemu/input/FreeWheelIngress;->route") == 1,
                 "actual original/legacy tx7 has zero ingress bridge (RED)");
@@ -179,14 +181,11 @@ public final class KeyManagerIngressGuardTest {
                                 false),
                         false));
         denied(() -> KeyManagerIngressGuard.validateMethod(selected(output), false));
-        denied(() ->
-                KeyManagerIngressGuard.apply(
-                        "passion-11-russian-20260403-2.1.4.80", 30, owner, predecessor));
-        denied(() -> KeyManagerIngressGuard.apply(PROFILE, 28, owner, predecessor));
-        denied(() -> KeyManagerIngressGuard.apply(PROFILE, 30, owner, output));
+        denied(() -> KeyManagerIngressGuard.apply(STEP, 28, owner, predecessor));
+        denied(() -> KeyManagerIngressGuard.apply(STEP, 30, owner, output));
         Path bad = out.resolve("foreign.apk");
         Files.writeString(bad, "foreign");
-        denied(() -> KeyManagerIngressGuard.apply(PROFILE, 30, bad, predecessor));
+        denied(() -> KeyManagerIngressGuard.apply(STEP, 30, bad, predecessor));
         Files.write(out.resolve("classes.dex"), output);
         System.out.println(
                 "Pinned actual original legacy RED -> one tx7 35c ingress GREEN; all-class inverse,"

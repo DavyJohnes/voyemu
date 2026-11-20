@@ -479,8 +479,7 @@ public final class PassionStatusBarInsetsPolicyTest {
             raw = zip.getInputStream(zip.getEntry("classes2.dex")).readAllBytes();
         }
 
-        byte[] free =
-                SecondaryNavigationGuard.apply(SecondaryNavigationGuard.PROFILE, 30, input, raw);
+        byte[] free = SecondaryNavigationGuard.apply(TestProfiles.SYNTHETIC, 30, input, raw);
         check(!secondary(dex(free), 1, true).status(), "Original secondary status capability RED");
 
         if (args.length > 2 && args[2].equals("--red")) {

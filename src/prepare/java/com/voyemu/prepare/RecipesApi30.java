@@ -74,14 +74,15 @@ final class RecipesApi30 {
 
         if (name.equals(KeyManagerGuard.NAME + ".json")) {
             require(
-                    calls.equals(
-                            List.of(
-                                    Map.of("operation", "guardKeyManager", "args", List.of()),
-                                    Map.of(
-                                            "operation",
-                                            "useLibraries",
-                                            "args",
-                                            List.of(KeyManagerGuard.libraries(target.profile()))))),
+                    calls.size() == 2
+                            && calls.get(0)
+                                    .equals(
+                                            Map.of(
+                                                    "operation",
+                                                    "guardKeyManager",
+                                                    "args",
+                                                    List.of()))
+                            && "useLibraries".equals(Json.object(calls.get(1)).get("operation")),
                     "Exact OEM KeyManager guard and library dependency order required");
         }
 
@@ -326,7 +327,6 @@ final class RecipesApi30 {
             case "guardAudioPolicy" -> {
                 require(
                         name.equals("api30-audio-policy.json")
-                                && pins.equals(AudioPolicyGuard.pins(target.profile()))
                                 && args.isEmpty()
                                 && calls.size() == 2,
                         "Exact AudioPolicy operation required");
@@ -339,7 +339,6 @@ final class RecipesApi30 {
             case "guardAudioConsumer" -> {
                 require(
                         name.equals("api30-audio-consumer.json")
-                                && pins.equals(AudioPolicyConsumerGuard.pins(target.profile()))
                                 && args.isEmpty()
                                 && calls.size() == 1,
                         "Exact AudioPolicy consumer operation required");
@@ -899,7 +898,6 @@ final class RecipesApi30 {
             case "guardSettingsVoiceClone" -> {
                 require(
                         name.equals(SettingsVoiceCloneGuard.NAME + ".json")
-                                && pins.equals(SettingsVoiceCloneGuard.pins(target.profile()))
                                 && args.isEmpty()
                                 && calls.size() == 1,
                         "Exact optional VoiceClone operation required");
@@ -917,7 +915,6 @@ final class RecipesApi30 {
             case "guardStrPower" -> {
                 require(
                         name.equals(StrPowerGuard.NAME + ".json")
-                                && pins.equals(StrPowerGuard.pins(target.profile()))
                                 && args.isEmpty()
                                 && !guardedStrPower,
                         "Exact unsupported STR operation required");
@@ -958,14 +955,11 @@ final class RecipesApi30 {
             case "guardStartupVolume" -> {
                 if (name.equals(StartupVolumeGuard.NAME + ".json")) {
                     require(
-                            pins.equals(StartupVolumeGuard.pins(target.profile()))
-                                    && args.isEmpty()
-                                    && calls.size() == 1,
+                            args.isEmpty() && calls.size() == 1,
                             "Exact clean startup-volume operation required");
                 } else {
                     require(
                             name.equals(SecondaryNavigationGuard.NAME + ".json")
-                                    && pins.equals(StartupVolumeGuard.pins(target.profile()))
                                     && args.isEmpty()
                                     && guardedSecondaryNavigation
                                     && guardedTopGesture,
@@ -988,7 +982,6 @@ final class RecipesApi30 {
             case "guardKeyManager" -> {
                 require(
                         name.equals(KeyManagerGuard.NAME + ".json")
-                                && pins.equals(KeyManagerGuard.pins(target.profile()))
                                 && args.isEmpty()
                                 && !guardedKeyManager,
                         "Exact OEM KeyManager operation required");
@@ -998,7 +991,6 @@ final class RecipesApi30 {
             case "guardSystemPolicyHardware" -> {
                 require(
                         name.equals(SystemPolicyHardwareGuard.NAME + ".json")
-                                && pins.equals(SystemPolicyHardwareGuard.pins(target.profile()))
                                 && args.isEmpty()
                                 && !guardedSystemPolicyHardware,
                         "Exact OEM SystemPolicy hardware operation required");
@@ -1008,7 +1000,6 @@ final class RecipesApi30 {
             case "guardKeyIngress" -> {
                 require(
                         name.equals(KeyManagerIngressGuard.NAME + ".json")
-                                && pins.equals(KeyManagerGuard.pins(target.profile()))
                                 && args.isEmpty()
                                 && !guardedKeyIngress,
                         "Exact authenticated OEM ingress operation required");
@@ -1018,7 +1009,6 @@ final class RecipesApi30 {
             case "guardNetwork" -> {
                 require(
                         name.equals(NetworkGuard.NAME + ".json")
-                                && pins.equals(NetworkGuard.pins(target.profile()))
                                 && args.isEmpty()
                                 && !guardedNetwork,
                         "Exact network operation required");

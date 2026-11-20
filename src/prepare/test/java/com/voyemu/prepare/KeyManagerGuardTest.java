@@ -6,11 +6,16 @@ import org.jf.dexlib2.iface.instruction.ReferenceInstruction;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
+import java.util.Map;
 import java.util.zip.ZipFile;
 
 /** Exact actual OEM changes, with inverse preservation of every class performed by the guard. */
 public final class KeyManagerGuardTest {
-    static final String PROFILE = "free-11-chinese-20260731-7.3.1";
+    static final Map<String, Object> STEP =
+            Map.of(
+                    StepConstants.PINS,
+                    List.of("951abb4f86540663fd654138b7e58cd0226d5dfa0470a4f5e85384bcdedbb78e"));
 
     private interface Action {
         void run() throws Exception;
@@ -62,7 +67,7 @@ public final class KeyManagerGuardTest {
         }
 
         check(originalHelpers == 0, "original has no adapted bridge");
-        byte[] after = KeyManagerGuard.apply(PROFILE, 30, owner, before);
+        byte[] after = KeyManagerGuard.apply(STEP, 30, owner, before);
         int helperCalls = 0, cancelCalls = 0;
 
         for (var type : new DexBackedDexFile(Opcodes.forApi(30), after).getClasses()) {
@@ -86,15 +91,12 @@ public final class KeyManagerGuardTest {
         }
 
         check(helperCalls == 4 && cancelCalls == 1, "exact audio4+cancel1 static bridge sites");
-        denied(() -> KeyManagerGuard.apply("free-09-chinese-20260106-6.0.3", 30, owner, before));
-        denied(() ->
-                KeyManagerGuard.apply("passion-11-russian-20260403-2.1.4.80", 30, owner, before));
-        denied(() -> KeyManagerGuard.apply(PROFILE, 28, owner, before));
-        denied(() -> KeyManagerGuard.apply(PROFILE, 30, owner, after));
-        denied(() -> KeyManagerGuard.apply(PROFILE, 30, owner, null));
+        denied(() -> KeyManagerGuard.apply(STEP, 28, owner, before));
+        denied(() -> KeyManagerGuard.apply(STEP, 30, owner, after));
+        denied(() -> KeyManagerGuard.apply(STEP, 30, owner, null));
         Path foreign = stage.resolve("foreign.apk");
         Files.writeString(foreign, "foreign");
-        denied(() -> KeyManagerGuard.apply(PROFILE, 30, foreign, before));
+        denied(() -> KeyManagerGuard.apply(STEP, 30, foreign, before));
         Files.write(stage.resolve("classes.dex"), after);
         System.out.println(
                 "Actual Free KeyManager nine reference changes + all-class inverse + six"

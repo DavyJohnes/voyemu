@@ -26,32 +26,6 @@ import java.util.TreeMap;
 final class KeyManagerGuard {
     static final String NAME = "api30-keymanager";
 
-    /** Pin of the KeyManager input and the shared libraries its recipe declares. */
-    record Variant(String pin, List<String> libraries) {}
-
-    static final Map<String, Variant> VARIANTS =
-            Map.of(
-                    "free-11-chinese-20250710-6.11.1",
-                    new Variant(
-                            "511eaafefe567e5c08f5683ba86aab043dffbfc21efab9e00cdf4cd8caf67505",
-                            List.of("QGAPI", "QGMOD", "VoyemuFreeWheel")),
-                    "free-11-chinese-20260731-7.3.1",
-                    new Variant(
-                            "951abb4f86540663fd654138b7e58cd0226d5dfa0470a4f5e85384bcdedbb78e",
-                            List.of("QGAPI", "QGMOD", "QGVehicle", "VoyemuFreeWheel")));
-
-    static List<String> pins(String profile) {
-        var variant = VARIANTS.get(profile);
-
-        return variant == null ? List.of() : List.of(variant.pin());
-    }
-
-    static List<String> libraries(String profile) {
-        var variant = VARIANTS.get(profile);
-
-        return variant == null ? List.of() : variant.libraries();
-    }
-
     static final String VOLUME = "Lcom/qinggan/keymanager/service/sinks/KtVolumeAdjust;";
     static final String READER = "Lcom/qinggan/keymanager/service/engine/KeyManagerReader;";
     private static final String POLICY = "Lcom/qinggan/audiopolicy/AudioPolicyManager;";
@@ -282,12 +256,12 @@ final class KeyManagerGuard {
         return new ImmutableDexFile(Opcodes.forApi(30), output.values());
     }
 
-    static void validate(String profile, int api, Path original, byte[] dex) throws Exception {
+    static void validate(Map<String, Object> constants, int api, Path original, byte[] dex)
+            throws Exception {
         require(
-                VARIANTS.containsKey(profile)
-                        && api == 30
+                api == 30
                         && original != null
-                        && FilesSupport.hash(original).equals(VARIANTS.get(profile).pin())
+                        && StepConstants.admits(constants, FilesSupport.hash(original))
                         && dex != null);
         var source = new DexBackedDexFile(Opcodes.forApi(30), dex);
         int fields = 0;
@@ -312,8 +286,9 @@ final class KeyManagerGuard {
         rewrite(source, false);
     }
 
-    static byte[] apply(String profile, int api, Path original, byte[] dex) throws Exception {
-        validate(profile, api, original, dex);
+    static byte[] apply(Map<String, Object> constants, int api, Path original, byte[] dex)
+            throws Exception {
+        validate(constants, api, original, dex);
         var before = new DexBackedDexFile(Opcodes.forApi(30), dex);
         byte[] bytes = FrameworkDexMaterializer.serialize(rewrite(before, false));
         var normalized = rewrite(new DexBackedDexFile(Opcodes.forApi(30), bytes), true);

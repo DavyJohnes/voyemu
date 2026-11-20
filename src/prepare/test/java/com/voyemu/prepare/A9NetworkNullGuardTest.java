@@ -12,13 +12,15 @@ import org.jf.dexlib2.iface.instruction.formats.Instruction35c;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
 
 /** Executes the real A9 query's nullable transport branches and preserves its receiver logic. */
 public final class A9NetworkNullGuardTest {
-    static final String PROFILE = "free-09-chinese-20260106-6.0.3";
     static final String PIN = "2a62d362cf27bc85a713a0785f5ec426c31a52b19b42c6ce54e55f3e71de5655";
+    static final Map<String, Object> STEP = Map.of(StepConstants.PINS, List.of(PIN)),
+            FOREIGN = Map.of(StepConstants.PINS, List.of("0".repeat(64)));
 
     private static void check(boolean value, String message) {
         if (!value) {
@@ -130,7 +132,11 @@ public final class A9NetworkNullGuardTest {
 
     public static void main(String[] args) throws Exception {
         Path root = Path.of(args[0]).toRealPath();
-        Path original = root.resolve(".local/profiles/" + PROFILE + "/originals/SystemService.apk");
+        Path original =
+                root.resolve(
+                        ".local/profiles/"
+                                + TestProfiles.pinning(root, PIN)
+                                + "/originals/SystemService.apk");
 
         check(FilesSupport.hash(original).equals(PIN), "Exact original A9 SystemService");
         var archive = new TreeMap<>(NativeCore.entries(original));
@@ -145,7 +151,7 @@ public final class A9NetworkNullGuardTest {
         }
 
         check(reproduced, "Original absent-Ethernet crash reproduced");
-        byte[] after = NetworkGuard.apply(PROFILE, 28, original, before);
+        byte[] after = NetworkGuard.apply(STEP, 28, original, before);
         Method patchedQuery = NetworkGuardTest.method(dex(after));
         NetworkGuardTest.verify(originalQuery, patchedQuery);
         NetworkGuardTest.verifyReceiver(
@@ -163,16 +169,15 @@ public final class A9NetworkNullGuardTest {
             }
         }
 
-        NetworkGuardTest.reject(() -> NetworkGuard.validate(PROFILE, 30, original, before));
-        NetworkGuardTest.reject(() -> NetworkGuard.validate("other-profile", 28, original, before));
-        NetworkGuardTest.reject(() -> NetworkGuard.validate(PROFILE, 28, original, after));
-        NetworkGuardTest.reject(() -> NetworkGuard.validate(PROFILE, 28, original, null));
+        NetworkGuardTest.reject(() -> NetworkGuard.validate(FOREIGN, 28, original, before));
+        NetworkGuardTest.reject(() -> NetworkGuard.validate(STEP, 28, original, after));
+        NetworkGuardTest.reject(() -> NetworkGuard.validate(STEP, 28, original, null));
         var classes = new DexClasses(archive, List.of("classes.dex"), 28);
-        NetworkGuard.apply(PROFILE, 28, PIN, classes);
+        NetworkGuard.apply(STEP, 28, PIN, classes);
         classes.write(archive);
         NetworkGuardTest.verify(
                 originalQuery, NetworkGuardTest.method(dex(archive.get("classes.dex"))));
-        NetworkGuardTest.reject(() -> NetworkGuard.apply(PROFILE, 28, PIN, classes));
+        NetworkGuardTest.reject(() -> NetworkGuard.apply(STEP, 28, PIN, classes));
         check(FilesSupport.hash(original).equals(PIN), "Original input unchanged");
         System.out.println(
                 "A9 original null Ethernet crash reproduced; nine nullable transport states, real"

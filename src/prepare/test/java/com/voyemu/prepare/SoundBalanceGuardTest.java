@@ -18,8 +18,6 @@ import java.util.Objects;
 import java.util.TreeMap;
 
 public final class SoundBalanceGuardTest {
-    static final String PROFILE = "free-11-chinese-20260731-7.3.1";
-
     static void check(boolean x, String m) {
         if (!x) {
             throw new AssertionError(m);
@@ -141,7 +139,7 @@ public final class SoundBalanceGuardTest {
         }
 
         check(red, "original must reproduce crash");
-        byte[] after = SoundBalanceGuard.apply(PROFILE, 30, before);
+        byte[] after = SoundBalanceGuard.apply(30, before);
         check(run(method(after), null) == null, "null");
         check(run(method(after), new int[0]) == null, "empty");
         check(run(method(after), new int[] {9}) == null, "short");
@@ -198,7 +196,7 @@ public final class SoundBalanceGuardTest {
         boolean rejected = false;
 
         try {
-            SoundBalanceGuard.apply(PROFILE, 30, after);
+            SoundBalanceGuard.apply(30, after);
         } catch (Failure e) {
             rejected = true;
         }

@@ -39,34 +39,12 @@ final class SettingsVoiceCloneGuard {
     static final String NAME = "api30-settings-voice-clone";
 
     /**
-     * Pin of the Setting input; boundary selects the instruction-boundary check; soundBalance adds
-     * the sound balance guard and the versionCode manifest step to the same patch.
+     * The step constant settings_voice_clone_boundary selects the instruction-boundary check;
+     * sound_balance adds the sound balance guard and the versionCode manifest step to the same
+     * patch.
      */
-    record Variant(String apk, boolean boundary, boolean soundBalance) {}
-
-    static final Map<String, Variant> VARIANTS =
-            Map.of(
-                    "free-11-chinese-20250710-6.11.1",
-                    new Variant(
-                            "6a902c0458c68b66317fa666f7ee783d38d028392a3c114d1ae3675bdedc2c03",
-                            true,
-                            false),
-                    "free-11-chinese-20260731-7.3.1",
-                    new Variant(
-                            "6f96bbeb58bf915b0a2d60817082cdca3523e3a2d00c144544cb92b4e5be6870",
-                            false,
-                            true));
-
-    static List<String> pins(String profile) {
-        var variant = VARIANTS.get(profile);
-
-        return variant == null ? List.of() : List.of(variant.apk());
-    }
-
-    static boolean soundBalance(String profile) {
-        var variant = VARIANTS.get(profile);
-
-        return variant != null && variant.soundBalance();
+    static boolean soundBalance(Map<String, Object> constants) {
+        return StepConstants.flag(constants, "sound_balance");
     }
 
     static String hash(byte[] b) throws Exception {
@@ -253,13 +231,13 @@ final class SettingsVoiceCloneGuard {
         }
     }
 
-    static void validate(String profile, int api, Path apk, byte[] dex) throws Exception {
-        var variant = VARIANTS.get(profile);
+    static void validate(Map<String, Object> constants, int api, Path apk, byte[] dex)
+            throws Exception {
+        boolean boundary = StepConstants.flag(constants, "settings_voice_clone_boundary");
 
         check(
-                variant != null
-                        && api == 30
-                        && hash(Files.readAllBytes(apk)).equals(variant.apk())
+                api == 30
+                        && StepConstants.admits(constants, hash(Files.readAllBytes(apk)))
                         && dex != null);
         int count = 0;
 
@@ -271,7 +249,7 @@ final class SettingsVoiceCloneGuard {
                                     && m.getAccessFlags() == 2
                                     && m.getImplementation().getTryBlocks().isEmpty());
 
-                    if (variant.boundary()) {
+                    if (boundary) {
                         insertion(m);
                     }
 
@@ -283,10 +261,10 @@ final class SettingsVoiceCloneGuard {
         check(count == 2);
     }
 
-    static byte[] apply(String profile, int api, Path apk, byte[] dex) throws Exception {
-        validate(profile, api, apk, dex);
-        var variant = VARIANTS.get(profile);
-        check(api == 30 && hash(Files.readAllBytes(apk)).equals(variant.apk()));
+    static byte[] apply(Map<String, Object> constants, int api, Path apk, byte[] dex)
+            throws Exception {
+        validate(constants, api, apk, dex);
+        check(api == 30 && StepConstants.admits(constants, hash(Files.readAllBytes(apk))));
         var all = new TreeMap<String, ClassDef>();
         int n = 0;
 

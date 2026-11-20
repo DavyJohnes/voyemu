@@ -31,7 +31,19 @@ import java.util.TreeMap;
 import java.util.zip.ZipFile;
 
 public class SettingsVoiceCloneGuardTest {
-    static final String PROFILE = "free-11-chinese-20260731-7.3.1";
+    static final Map<String, Object>
+            STEP = step("6f96bbeb58bf915b0a2d60817082cdca3523e3a2d00c144544cb92b4e5be6870"),
+            FOREIGN = step("0".repeat(64));
+
+    static Map<String, Object> step(String pin) {
+        return Map.of(
+                StepConstants.PINS,
+                List.of(pin),
+                "settings_voice_clone_boundary",
+                false,
+                "sound_balance",
+                true);
+    }
 
     static void check(boolean b, String s) {
         if (!b) {
@@ -396,7 +408,7 @@ public class SettingsVoiceCloneGuardTest {
         }
 
         check(red, "original absent must RED");
-        byte[] after = SettingsVoiceCloneGuard.apply(PROFILE, 30, apk, before);
+        byte[] after = SettingsVoiceCloneGuard.apply(STEP, 30, apk, before);
         State no = new State(false);
         run(method(after, "initVoiceClone"), no, null);
         hidden(no);
@@ -516,7 +528,7 @@ public class SettingsVoiceCloneGuardTest {
             try {
                 byte[] x = before.clone();
                 SettingsVoiceCloneGuard.apply(
-                        i == 0 ? "bad" : PROFILE,
+                        i == 0 ? FOREIGN : STEP,
                         i == 1 ? 29 : 30,
                         i == 2 ? apk.resolveSibling("SystemService.apk") : apk,
                         x);

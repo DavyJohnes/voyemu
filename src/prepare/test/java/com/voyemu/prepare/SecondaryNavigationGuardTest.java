@@ -84,28 +84,14 @@ public final class SecondaryNavigationGuardTest {
 
         site(original, false);
         byte[] patched =
-                SecondaryNavigationGuard.apply(
-                        SecondaryNavigationGuard.PROFILE, 30, input, original);
+                SecondaryNavigationGuard.apply(TestProfiles.SYNTHETIC, 30, input, original);
         site(patched, true);
-        denied(() ->
-                SecondaryNavigationGuard.apply(
-                        "passion-11-russian-20260403-2.1.4.80", 30, input, original));
-        denied(() ->
-                SecondaryNavigationGuard.apply(
-                        "free-09-chinese-20260106-6.0.3", 30, input, original));
-        denied(() ->
-                SecondaryNavigationGuard.apply(
-                        SecondaryNavigationGuard.PROFILE, 28, input, original));
-        denied(() ->
-                SecondaryNavigationGuard.apply(
-                        SecondaryNavigationGuard.PROFILE, 30, input, patched));
-        denied(() ->
-                SecondaryNavigationGuard.apply(SecondaryNavigationGuard.PROFILE, 30, input, null));
+        denied(() -> SecondaryNavigationGuard.apply(TestProfiles.SYNTHETIC, 28, input, original));
+        denied(() -> SecondaryNavigationGuard.apply(TestProfiles.SYNTHETIC, 30, input, patched));
+        denied(() -> SecondaryNavigationGuard.apply(TestProfiles.SYNTHETIC, 30, input, null));
         Path foreign = out.resolve("foreign.jar");
         Files.writeString(foreign, "foreign");
-        denied(() ->
-                SecondaryNavigationGuard.apply(
-                        SecondaryNavigationGuard.PROFILE, 30, foreign, original));
+        denied(() -> SecondaryNavigationGuard.apply(TestProfiles.SYNTHETIC, 30, foreign, original));
         Files.write(out.resolve("classes2.dex"), patched);
         System.out.println(
                 "Exact clean API30 secondary MOVE_RESULT→CONST_4 only; all-class inverse and seven"

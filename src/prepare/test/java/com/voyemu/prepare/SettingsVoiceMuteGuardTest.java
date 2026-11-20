@@ -13,6 +13,9 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 
 public final class SettingsVoiceMuteGuardTest {
+    static final String OTHER_PIN =
+            "6f96bbeb58bf915b0a2d60817082cdca3523e3a2d00c144544cb92b4e5be6870";
+
     interface Check {
         void run() throws Exception;
     }
@@ -122,17 +125,19 @@ public final class SettingsVoiceMuteGuardTest {
         Path apk =
                 root.resolve(
                         ".local/profiles/"
-                                + SettingsVoiceMuteGuard.PROFILE
+                                + TestProfiles.pinning(root, SettingsVoiceMuteGuard.APK)
                                 + "/originals/Setting.apk");
         Path other =
                 root.resolve(
-                        ".local/profiles/free-11-chinese-20260731-7.3.1/originals/Setting.apk");
+                        ".local/profiles/"
+                                + TestProfiles.pinning(root, OTHER_PIN)
+                                + "/originals/Setting.apk");
         byte[] raw = NativeCore.entries(apk).get("classes.dex");
-        String profile = SettingsVoiceMuteGuard.PROFILE;
+        var step = TestProfiles.constants(root, SettingsVoiceMuteGuard.NAME, apk);
 
-        SettingsVoiceMuteGuard.validateOriginalChain(profile, 30, apk, raw);
-        byte[] predecessor = SettingsVoiceCloneGuard.apply(profile, 30, apk, raw);
-        byte[] output = SettingsVoiceMuteGuard.apply(profile, 30, apk, predecessor);
+        SettingsVoiceMuteGuard.validateOriginalChain(step, 30, apk, raw);
+        byte[] predecessor = SettingsVoiceCloneGuard.apply(step, 30, apk, raw);
+        byte[] output = SettingsVoiceMuteGuard.apply(step, 30, apk, predecessor);
         Method before = target(predecessor), after = target(output);
         need(
                 catches(before, SettingsVoiceMuteGuard.REMOTE, 8)
@@ -152,10 +157,7 @@ public final class SettingsVoiceMuteGuardTest {
                 FrameworkDexMaterializer.semantic(target(predecessor))
                         .equals(FrameworkDexMaterializer.semantic(target(bad))),
                 "unrelated fixture changed target");
-        reject(() -> SettingsVoiceMuteGuard.apply(profile, 30, other, predecessor));
-        reject(() ->
-                SettingsVoiceMuteGuard.apply(
-                        "free-11-chinese-20260731-7.3.1", 30, apk, predecessor));
-        reject(() -> SettingsVoiceMuteGuard.apply(profile, 30, apk, output));
+        reject(() -> SettingsVoiceMuteGuard.apply(step, 30, other, predecessor));
+        reject(() -> SettingsVoiceMuteGuard.apply(step, 30, apk, output));
     }
 }

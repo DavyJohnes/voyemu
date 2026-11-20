@@ -35,23 +35,8 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
-/**
- * Private exact-input prototype; no materializer recipe or VARIANTS.get(profile).apk() publication.
- */
+/** Private exact-input prototype; the declared step admits the original by its pin. */
 final class AudioPolicyGuard {
-    static final Map<String, String> VARIANTS =
-            Map.of(
-                    "free-11-chinese-20250710-6.11.1",
-                    "83fe6f4fd7a02135fb84e02ef8298cefa42365e970f0760a3b90a60de9582aac",
-                    "free-11-chinese-20260731-7.3.1",
-                    "2152a99acdbee41626c6b661fe6509dd2c9487d3cad6a66aad6320bbb00cc039");
-
-    static List<String> pins(String profile) {
-        var apk = VARIANTS.get(profile);
-
-        return apk == null ? List.of() : List.of(apk);
-    }
-
     static final String SERVICE = "Lcom/qinggan/audiopolicy/service/OSAudioPolicyService;",
             STUB = "Lcom/qinggan/audiopolicy/service/OSAudioPolicyService$1;",
             HELPER = "Lcom/voyemu/oem/audio/OemAudioPolicy;",
@@ -316,14 +301,13 @@ final class AudioPolicyGuard {
         return with(m, 7 + n, code);
     }
 
-    static void validate(String profile, int api, String abi, Path apk, byte[] dex)
+    static void validate(Map<String, Object> constants, int api, String abi, Path apk, byte[] dex)
             throws Exception {
         require(
-                VARIANTS.containsKey(profile)
-                        && api == 30
+                api == 30
                         && abi.equals("arm64-v8a")
                         && dex != null
-                        && FilesSupport.hash(apk).equals(VARIANTS.get(profile)));
+                        && StepConstants.admits(constants, FilesSupport.hash(apk)));
         transform(classes(dex), null);
     }
 
@@ -381,9 +365,9 @@ final class AudioPolicyGuard {
         }
     }
 
-    static byte[] apply(String profile, int api, String abi, Path apk, byte[] dex)
+    static byte[] apply(Map<String, Object> constants, int api, String abi, Path apk, byte[] dex)
             throws Exception {
-        validate(profile, api, abi, apk, dex);
+        validate(constants, api, abi, apk, dex);
         var before = classes(dex);
         var expected = transform(before, null);
         byte[] result =
@@ -403,7 +387,7 @@ final class AudioPolicyGuard {
         }
 
         equal(before, transform(actual, originals));
-        require(FilesSupport.hash(apk).equals(VARIANTS.get(profile)));
+        require(StepConstants.admits(constants, FilesSupport.hash(apk)));
 
         return result;
     }

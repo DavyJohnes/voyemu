@@ -137,9 +137,27 @@ public final class StartupVolumeGuardTest {
         check(reloaded.get(2) == 7); // no constructor rerun on ordinary settings reload
     }
 
-    // Arguments: PROFILE SERVICES_JAR STAGE.
+    /**
+     * Constants of the step of the profile directory that reaches the startup-volume guard: its own
+     * step, otherwise the clean secondary navigation step; run from the repository root.
+     */
+    static Map<String, Object> constants(String directory) throws Exception {
+        Path patches = Path.of("profiles", directory, "patches");
+        Path step = patches.resolve(StartupVolumeGuard.NAME + ".json");
+
+        if (!Files.isRegularFile(step)) {
+            step = patches.resolve(SecondaryNavigationGuard.NAME + ".json");
+        }
+
+        return Json.obj(Json.object(Json.parse(Files.readString(step))), "constants");
+    }
+
+    // Arguments: PROFILE_DIRECTORY SERVICES_JAR STAGE.
     public static void main(String[] args) throws Exception {
-        String profile = args[0];
+        Map<String, Object> step = constants(args[0]);
+        var foreign = new java.util.HashMap<String, Object>(step);
+
+        foreign.put(StepConstants.PINS, List.of("0".repeat(64)));
         Path original = Path.of(args[1]), stage = Path.of(args[2]);
 
         Files.createDirectories(stage);
@@ -149,9 +167,9 @@ public final class StartupVolumeGuardTest {
             dex = z.getInputStream(z.getEntry("classes.dex")).readAllBytes();
         }
 
-        StartupVolumeGuard.validate(profile, 30, original, dex);
-        byte[] after = StartupVolumeGuard.apply(profile, 30, original, dex);
-        check(Arrays.equals(after, StartupVolumeGuard.apply(profile, 30, original, dex)));
+        StartupVolumeGuard.validate(step, 30, original, dex);
+        byte[] after = StartupVolumeGuard.apply(step, 30, original, dex);
+        check(Arrays.equals(after, StartupVolumeGuard.apply(step, 30, original, dex)));
         check(
                 NativeCore.hash(after)
                         .equals(
@@ -204,12 +222,12 @@ public final class StartupVolumeGuardTest {
 
         checkOriginalMinimums(before);
         // All later set/adjust/get-valid-index methods and maximum-volume data stay stock.
-        reject(() -> StartupVolumeGuard.apply("foreign", 30, original, dex));
-        reject(() -> StartupVolumeGuard.apply(profile, 29, original, dex));
-        reject(() -> StartupVolumeGuard.apply(profile, 30, original, after));
+        reject(() -> StartupVolumeGuard.apply(foreign, 30, original, dex));
+        reject(() -> StartupVolumeGuard.apply(step, 29, original, dex));
+        reject(() -> StartupVolumeGuard.apply(step, 30, original, after));
         Path wrong = stage.resolve("wrong.jar");
         Files.write(wrong, new byte[] {1});
-        reject(() -> StartupVolumeGuard.apply(profile, 30, wrong, dex));
+        reject(() -> StartupVolumeGuard.apply(step, 30, wrong, dex));
         var missing = new TreeMap<String, ClassDef>(before);
         missing.remove(StartupVolumeGuard.STREAM);
         reject(() -> StartupVolumeGuard.transform(missing, false));

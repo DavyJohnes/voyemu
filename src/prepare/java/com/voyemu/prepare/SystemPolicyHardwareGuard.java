@@ -27,16 +27,6 @@ final class SystemPolicyHardwareGuard {
             "invoke-static {}, Landroid/bluetooth/BluetoothAdapter;->getDefaultAdapter()"
                     + "Landroid/bluetooth/BluetoothAdapter;";
 
-    /** Pin of the SystemPolicy-release original of each Free profile. */
-    static final Map<String, String> PINS =
-            Map.of(
-                    "free-09-chinese-20260106-6.0.3",
-                    "6c223315e64d14f9f1c715c42474257df772ce218e40094cf91b1cb012b2fadc",
-                    "free-11-chinese-20250710-6.11.1",
-                    "02749c34c515b8dd2ecdb6f5030762c292bc47fc3b79214d7965cb5cf56226eb",
-                    "free-11-chinese-20260731-7.3.1",
-                    "a81710fcbb382d9a1c449b240c2dc40aebc3d2e3cc309339ec1be3c5fbb2de00");
-
     /**
      * PolicyManager.<init> jumps over the BluetoothPolicy construction to the Build.PRODUCT check
      * that follows it; startChargingService returns before it builds the service intent.
@@ -78,18 +68,10 @@ final class SystemPolicyHardwareGuard {
 
     private SystemPolicyHardwareGuard() {}
 
-    static List<String> pins(String profile) {
-        String pin = PINS.get(profile);
-
-        return pin == null ? List.of() : List.of(pin);
-    }
-
-    /** Applies both guards to the classes of the exact SystemPolicy original of the profile. */
-    static void apply(String profile, int api, String original, DexClasses classes) {
+    /** Applies both guards to the classes of the SystemPolicy original the step admits. */
+    static void apply(Map<String, Object> constants, int api, String original, DexClasses classes) {
         Failure.require(
-                PINS.containsKey(profile)
-                        && PINS.get(profile).equals(original)
-                        && api == (profile.startsWith("free-09-") ? 28 : 30),
+                StepConstants.admits(constants, original) && (api == 28 || api == 30),
                 "SYSTEMPOLICY_CONTRACT",
                 "Exact Free SystemPolicy APK/profile/API required",
                 5);

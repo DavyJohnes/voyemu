@@ -25,8 +25,7 @@ import java.util.TreeMap;
  * Inactive Free A11 7.3.1 adapter, applied only after the existing exact clean navigation adapter.
  */
 final class HiboardTopGestureGuard {
-    static final String PROFILE = "free-11-chinese-20260731-7.3.1",
-            PIN = "c6992cdc2a3e23d5aeb6ab77e7a7f6889cfcf5c262c6ed86825e6fcbf601681d";
+    static final String PIN = "c6992cdc2a3e23d5aeb6ab77e7a7f6889cfcf5c262c6ed86825e6fcbf601681d";
     static final String POLICY = "Lcom/android/server/wm/DisplayPolicy;",
             OWNER = "Lcom/android/server/wm/DisplayPolicy$2;",
             HELPER = "Lcom/android/server/wm/HiboardTopGesture;";
@@ -166,7 +165,7 @@ final class HiboardTopGestureGuard {
 
     static void validateOriginal(String profile, int api, Path original, Path source)
             throws Exception {
-        require(PROFILE.equals(profile) && api == 30 && FilesSupport.hash(original).equals(PIN));
+        require(api == 30 && FilesSupport.hash(original).equals(PIN));
 
         try (var jar = new java.util.zip.ZipFile(original.toFile())) {
             require(jar.getEntry("classes2.dex") != null);
@@ -194,8 +193,7 @@ final class HiboardTopGestureGuard {
     static byte[] apply(String profile, int api, Path original, byte[] predecessor, byte[] helper)
             throws Exception {
         require(
-                PROFILE.equals(profile)
-                        && api == 30
+                api == 30
                         && FilesSupport.hash(original).equals(PIN)
                         && predecessor != null
                         && helper != null);

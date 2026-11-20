@@ -20,11 +20,6 @@ import java.util.zip.ZipFile;
 import java.util.zip.ZipOutputStream;
 
 public final class AudioPolicyGuardTest {
-    /**
-     * The AudioPolicy interface of this profile is read from QGAPI; other profiles pass AIDL Smali.
-     */
-    static final String QGAPI_INTERFACE = "free-11-chinese-20250710-6.11.1";
-
     interface Action {
         void run() throws Exception;
     }
@@ -55,24 +50,30 @@ public final class AudioPolicyGuardTest {
 
     public static void main(String[] arguments) throws Exception {
         long start = System.nanoTime();
-        String profile = arguments[0];
+        // The first argument names the profile for the runner; the guard reads only step data.
         String[] args = Arrays.copyOfRange(arguments, 1, arguments.length);
         Path apk = Path.of(args[0]), stage = Path.of(args[1]);
+        Map<String, Object> step =
+                args.length == 5
+                        ? Json.obj(
+                                Json.object(Json.parse(Files.readString(Path.of(args[4])))),
+                                "constants")
+                        : Map.of(StepConstants.PINS, List.of(FilesSupport.hash(apk)));
         byte[] dex;
 
         try (var z = new ZipFile(apk.toFile())) {
             dex = z.getInputStream(z.getEntry("classes.dex")).readAllBytes();
         }
 
-        byte[] after = AudioPolicyGuard.apply(profile, 30, "arm64-v8a", apk, dex);
+        byte[] after = AudioPolicyGuard.apply(step, 30, "arm64-v8a", apk, dex);
         var original = AudioPolicyGuard.classes(dex);
         var actual = AudioPolicyGuard.classes(after);
         int delegates = 0, boxed = 0;
         Set<String> sourceInterface = new TreeSet<>(), delegated = new TreeSet<>();
 
-        if (profile.equals(QGAPI_INTERFACE)) {
+        // A QGAPI JAR carries the AudioPolicy interface; otherwise its AIDL Smali is given.
+        if (args[3].endsWith(".jar")) {
             Path qgapi = Path.of(args[3]);
-            check(AudioPolicyConsumerGuard.pins(profile).contains(FilesSupport.hash(qgapi)));
             ClassDef iface = null;
 
             for (var type : DexOperations.dex(qgapi, "classes.dex", 30).getClasses()) {
@@ -106,8 +107,8 @@ public final class AudioPolicyGuardTest {
 
         check(delegates == 116 && sourceInterface.equals(delegated));
         checkPreservedOwners(original, actual);
-        checkRejectedApplies(args, apk, dex, profile);
-        check(Arrays.equals(after, AudioPolicyGuard.apply(profile, 30, "arm64-v8a", apk, dex)));
+        checkRejectedApplies(args, apk, dex, step);
+        check(Arrays.equals(after, AudioPolicyGuard.apply(step, 30, "arm64-v8a", apk, dex)));
         Files.write(stage.resolve("guarded-classes.dex"), after);
         var afterPins = new TreeMap<String, String>();
 
@@ -118,7 +119,7 @@ public final class AudioPolicyGuardTest {
         Files.writeString(
                 stage.resolve("transformed-class-pins.json"), Json.write(afterPins) + "\n");
         checkManifestProof(args, apk, stage, after);
-        check(FilesSupport.hash(apk).equals(AudioPolicyGuard.pins(profile).get(0)));
+        check(StepConstants.admits(step, FilesSupport.hash(apk)));
         var receipt = new TreeMap<String, Object>();
         receipt.put("delegatedInterfaceMethods", delegates);
         receipt.put("boxedArguments", boxed);
@@ -228,13 +229,19 @@ public final class AudioPolicyGuardTest {
         }
     }
 
-    static void checkRejectedApplies(String[] args, Path apk, byte[] dex, String profile)
+    static void checkRejectedApplies(String[] args, Path apk, byte[] dex, Map<String, Object> step)
             throws Exception {
-        reject(() -> AudioPolicyGuard.apply("wrong", 30, "arm64-v8a", apk, dex));
-        reject(() -> AudioPolicyGuard.apply(profile, 29, "arm64-v8a", apk, dex));
-        reject(() -> AudioPolicyGuard.apply(profile, 30, "x86_64", apk, dex));
-        reject(() -> AudioPolicyGuard.apply(profile, 30, "arm64", apk, dex));
-        reject(() -> AudioPolicyGuard.apply(profile, 30, "arm64-v8a", Path.of(args[2]), dex));
+        reject(() ->
+                AudioPolicyGuard.apply(
+                        Map.of(StepConstants.PINS, List.of("0".repeat(64))),
+                        30,
+                        "arm64-v8a",
+                        apk,
+                        dex));
+        reject(() -> AudioPolicyGuard.apply(step, 29, "arm64-v8a", apk, dex));
+        reject(() -> AudioPolicyGuard.apply(step, 30, "x86_64", apk, dex));
+        reject(() -> AudioPolicyGuard.apply(step, 30, "arm64", apk, dex));
+        reject(() -> AudioPolicyGuard.apply(step, 30, "arm64-v8a", Path.of(args[2]), dex));
     }
 
     static void checkManifestProof(String[] args, Path apk, Path stage, byte[] after)

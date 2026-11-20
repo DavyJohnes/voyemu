@@ -42,8 +42,15 @@ public final class Api30SystemPolicyPowerGuardTest {
     static final String INIT = OWNER + "->initPowerMgr()V";
     static final String SERVICE_CHECK =
             "Landroid/os/ServiceManager;->checkService(Ljava/lang/String;)Landroid/os/IBinder;";
-    static final List<String> PROFILES =
-            List.of("free-11-chinese-20250710-6.11.1", "free-11-chinese-20260731-7.3.1");
+
+    /** Pins of the API30 SystemPolicy originals. */
+    static final List<String> PINS =
+            List.of(
+                    "02749c34c515b8dd2ecdb6f5030762c292bc47fc3b79214d7965cb5cf56226eb",
+                    "a81710fcbb382d9a1c449b240c2dc40aebc3d2e3cc309339ec1be3c5fbb2de00");
+
+    static final String API28_PIN =
+            "6c223315e64d14f9f1c715c42474257df772ce218e40094cf91b1cb012b2fadc";
 
     static void check(boolean value, String message) {
         if (!value) {
@@ -676,13 +683,18 @@ public final class Api30SystemPolicyPowerGuardTest {
     }
 
     static void rejected(
-            String profile, int api, String pin, DexClasses classes, Path apk, String code)
+            Map<String, Object> step,
+            int api,
+            String pin,
+            DexClasses classes,
+            Path apk,
+            String code)
             throws Exception {
         var before = inventory(classes, apk);
         boolean failed = false;
 
         try {
-            SystemPolicyHardwareGuard.apply(profile, api, pin, classes);
+            SystemPolicyHardwareGuard.apply(step, api, pin, classes);
         } catch (Failure expected) {
             check(expected.code.equals(code), "precise contract failure: " + expected.code);
             failed = true;
@@ -759,23 +771,26 @@ public final class Api30SystemPolicyPowerGuardTest {
                         virtual));
     }
 
-    static void checkProfile(Path root, String profile) throws Exception {
+    static void checkProfile(Path root, String pin) throws Exception {
         Path apk =
-                root.resolve(".local/profiles/" + profile + "/originals/SystemPolicy-release.apk");
-        String pin = SystemPolicyHardwareGuard.PINS.get(profile);
+                root.resolve(
+                        ".local/profiles/"
+                                + TestProfiles.pinning(root, pin)
+                                + "/originals/SystemPolicy-release.apk");
+        Map<String, Object> step = Map.of(StepConstants.PINS, List.of(pin));
 
         NativeCore.pinned(apk, pin);
         var before = SystemPolicyHardwareTest.classes(apk, 30);
         var after = SystemPolicyHardwareTest.classes(apk, 30);
-        SystemPolicyHardwareGuard.apply(profile, 30, pin, after);
+        SystemPolicyHardwareGuard.apply(step, 30, pin, after);
         retained(before, after, apk, false);
         var canonicalBefore = reread(before, apk, 30);
         after = reread(after, apk, 30);
         chargingFlow(canonicalBefore, after);
         flow(canonicalBefore, after);
         retained(canonicalBefore, after, apk, false, true);
-        rejected(profile, 28, pin, before, apk, "SYSTEMPOLICY_CONTRACT");
-        rejected(profile, 30, "0".repeat(64), before, apk, "SYSTEMPOLICY_CONTRACT");
+        rejected(step, 29, pin, before, apk, "SYSTEMPOLICY_CONTRACT");
+        rejected(step, 30, "0".repeat(64), before, apk, "SYSTEMPOLICY_CONTRACT");
         rejected("unknown", 30, pin, before, apk, "SYSTEMPOLICY_CONTRACT");
         var changed = SystemPolicyHardwareTest.classes(apk, 30);
         changed.edit(
@@ -787,10 +802,10 @@ public final class Api30SystemPolicyPowerGuardTest {
                                         DexEdits.Edit.replace(
                                                 List.of("const-string v1, \"power\""),
                                                 List.of("const-string v1, \"other\""))))));
-        rejected(profile, 30, pin, changed, apk, "SYSTEMPOLICY_POWER_CONTRACT");
+        rejected(step, 30, pin, changed, apk, "SYSTEMPOLICY_POWER_CONTRACT");
         changed = SystemPolicyHardwareTest.classes(apk, 30);
         changed.edit(List.of(new DexEdits.MethodEdit(INIT, 7, List.of())));
-        rejected(profile, 30, pin, changed, apk, "SYSTEMPOLICY_POWER_CONTRACT");
+        rejected(step, 30, pin, changed, apk, "SYSTEMPOLICY_POWER_CONTRACT");
         changed = SystemPolicyHardwareTest.classes(apk, 30);
         changed.edit(
                 List.of(
@@ -800,7 +815,7 @@ public final class Api30SystemPolicyPowerGuardTest {
                                 List.of(
                                         DexEdits.Edit.replace(
                                                 List.of("return-void"), List.of("nop"))))));
-        rejected(profile, 30, pin, changed, apk, "SYSTEMPOLICY_POWER_CONTRACT");
+        rejected(step, 30, pin, changed, apk, "SYSTEMPOLICY_POWER_CONTRACT");
         changed = SystemPolicyHardwareTest.classes(apk, 30);
         Method target = method(changed, OWNER, "initPowerMgr");
         var code = target.getImplementation();
@@ -813,7 +828,7 @@ public final class Api30SystemPolicyPowerGuardTest {
                                 new ImmutableTryBlock(
                                         0, 2, List.of(new ImmutableExceptionHandler(null, 0)))),
                         code.getDebugItems()));
-        rejected(profile, 30, pin, changed, apk, "SYSTEMPOLICY_POWER_CONTRACT");
+        rejected(step, 30, pin, changed, apk, "SYSTEMPOLICY_POWER_CONTRACT");
         String charging = SystemPolicyHardwareGuard.SERVICE + "->startChargingService()V";
 
         for (var edit :
@@ -836,7 +851,7 @@ public final class Api30SystemPolicyPowerGuardTest {
                                                 List.of("return-void"), List.of("nop")))))) {
             changed = SystemPolicyHardwareTest.classes(apk, 30);
             changed.edit(List.of(edit));
-            rejected(profile, 30, pin, changed, apk, "SYSTEMPOLICY_POWER_CONTRACT");
+            rejected(step, 30, pin, changed, apk, "SYSTEMPOLICY_POWER_CONTRACT");
         }
 
         changed = SystemPolicyHardwareTest.classes(apk, 30);
@@ -854,28 +869,30 @@ public final class Api30SystemPolicyPowerGuardTest {
                                 new ImmutableTryBlock(
                                         0, 2, List.of(new ImmutableExceptionHandler(null, 0)))),
                         code.getDebugItems()));
-        rejected(profile, 30, pin, changed, apk, "SYSTEMPOLICY_POWER_CONTRACT");
-        rejected(profile, 30, pin, after, apk, "SYSTEMPOLICY_POWER_CONTRACT");
+        rejected(step, 30, pin, changed, apk, "SYSTEMPOLICY_POWER_CONTRACT");
+        rejected(step, 30, pin, after, apk, "SYSTEMPOLICY_POWER_CONTRACT");
         System.out.println(
-                profile + ": absent/present/failing-manager/state6/retained/negative passed");
+                pin + ": absent/present/failing-manager/state6/retained/negative passed");
     }
 
     public static void main(String[] args) throws Exception {
-        check(args.length == 1 || args.length == 2, "ROOT [PROFILE]");
+        check(args.length == 1 || args.length == 2, "ROOT [SYSTEMPOLICY_PIN]");
         encodingNormalization();
         Path root = Path.of(args[0]).toRealPath();
 
-        for (String profile : args.length == 2 ? List.of(args[1]) : PROFILES) {
-            checkProfile(root, profile);
+        for (String pin : args.length == 2 ? List.of(args[1]) : PINS) {
+            checkProfile(root, pin);
         }
 
-        String profile = "free-09-chinese-20260106-6.0.3";
         Path apk =
-                root.resolve(".local/profiles/" + profile + "/originals/SystemPolicy-release.apk");
+                root.resolve(
+                        ".local/profiles/"
+                                + TestProfiles.pinning(root, API28_PIN)
+                                + "/originals/SystemPolicy-release.apk");
         var before = SystemPolicyHardwareTest.classes(apk, 28);
         var after = SystemPolicyHardwareTest.classes(apk, 28);
         SystemPolicyHardwareGuard.apply(
-                profile, 28, SystemPolicyHardwareGuard.PINS.get(profile), after);
+                Map.of(StepConstants.PINS, List.of(API28_PIN)), 28, API28_PIN, after);
         retained(before, after, apk, true);
         var canonicalBefore = reread(before, apk, 28);
         after = reread(after, apk, 28);

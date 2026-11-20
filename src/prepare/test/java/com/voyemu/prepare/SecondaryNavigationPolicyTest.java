@@ -38,7 +38,10 @@ public final class SecondaryNavigationPolicyTest {
 
         Files.createDirectory(out);
         Path freeFile =
-                root.resolve("profiles/" + SecondaryNavigationGuard.PROFILE + "/profile.json");
+                root.resolve(
+                        "profiles/"
+                                + TestProfiles.declaring(root, SecondaryNavigationGuard.NAME)
+                                + "/profile.json");
         Path passionFile =
                 root.resolve(
                         "profiles/"
@@ -56,7 +59,7 @@ public final class SecondaryNavigationPolicyTest {
             dex = zip.getInputStream(zip.getEntry("classes2.dex")).readAllBytes();
         }
 
-        byte[] a = SecondaryNavigationGuard.apply(SecondaryNavigationGuard.PROFILE, 30, input, dex);
+        byte[] a = SecondaryNavigationGuard.apply(TestProfiles.SYNTHETIC, 30, input, dex);
         byte[] b = PassionSecondaryNavigationGuard.apply(TestProfiles.SYNTHETIC, 30, input, dex);
         check(
                 !Arrays.equals(a, b),
@@ -122,16 +125,12 @@ public final class SecondaryNavigationPolicyTest {
                 "OEM right sidebar recipe altered");
         System.out.println(
                 "Free exact baseline retained; explicit Passion status capability; real resolver"
-                    + " and eleven negatives; profiles/right-sidebar untouched; no runtime claim");
+                        + " and API/reapply/null negatives; profiles/right-sidebar untouched; no"
+                        + " runtime claim");
     }
 
     private static void rejectForeignBindings(Path input, byte[] dex, byte[] b) throws Exception {
-        denied(() -> SecondaryNavigationGuard.apply(TestProfiles.SYNTHETIC, 30, input, dex));
-        denied(() ->
-                PassionSecondaryNavigationGuard.apply(
-                        SecondaryNavigationGuard.PROFILE, 30, input, dex));
         denied(() -> PassionSecondaryNavigationGuard.apply(TestProfiles.SYNTHETIC, 28, input, dex));
-        denied(() -> PassionSecondaryNavigationGuard.apply("unknown", 30, input, dex));
         denied(() -> PassionSecondaryNavigationGuard.apply(TestProfiles.SYNTHETIC, 30, input, b));
         denied(() ->
                 PassionSecondaryNavigationGuard.apply(TestProfiles.SYNTHETIC, 30, input, null));

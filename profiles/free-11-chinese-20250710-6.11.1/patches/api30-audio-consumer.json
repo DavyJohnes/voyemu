@@ -4,7 +4,8 @@
   "constants": {
     "original_sha256_allowlist": [
       "e46d3e5db0cf932cd3a39654a2f95620f2668ada8fb32b904c1684f936eca510"
-    ]
+    ],
+    "audio_consumer_relocate": true
   },
   "calls": [
     {

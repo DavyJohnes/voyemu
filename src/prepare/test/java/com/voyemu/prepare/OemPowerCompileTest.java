@@ -16,8 +16,6 @@ import java.util.TreeSet;
 
 /** Compile the real power implementation against only pinned OEM donor signatures. */
 public final class OemPowerCompileTest {
-    static final String PROFILE = "free-11-chinese-20260731-7.3.1";
-
     static void check(boolean ok) {
         if (!ok) {
             throw new AssertionError();
@@ -38,7 +36,7 @@ public final class OemPowerCompileTest {
                         Json.obj(config, "donorDex"),
                         work.resolve("donor"),
                         30,
-                        PROFILE);
+                        "");
         check(donor.descriptors().size() == 8);
         AudioPolicyConsumerGuard.verifyHiddenApiLayout(Files.readAllBytes(donor.dex()));
         var original =

@@ -379,7 +379,7 @@ final class Artifacts {
     private List<GuestJava.Unit> helperUnits() throws Exception {
         List<GuestJava.Unit> helpers = new ArrayList<>();
 
-        if (AudioPolicyGuard.VARIANTS.containsKey(profile.referenceProfile())) {
+        if (patches.containsKey("api30-audio-policy.json")) {
             helpers.add(new GuestJava.Unit(AudioPolicyGuard.helperSource(), api));
         }
 
@@ -734,13 +734,23 @@ final class Artifacts {
                                             Set.of(
                                                     "com.qinggan.power.IPowerManagerListener",
                                                     "com.qinggan.system.IPowerManagerService"));
-            donor =
-                    DexOperations.donor(
-                            resolve("original:" + Json.str(spec, "original")),
-                            spec,
-                            dir.resolve("donor"),
-                            api,
-                            powerDonor ? profile.referenceProfile() : "");
+            Path original = resolve("original:" + Json.str(spec, "original"));
+            Failure.require(
+                    !powerDonor
+                            || FilesSupport.hash(original)
+                                    .equals(
+                                            Json.str(
+                                                    Json.object(
+                                                            Json.obj(profile.data(), "original")
+                                                                    .get(
+                                                                            Json.str(
+                                                                                    spec,
+                                                                                    "original"))),
+                                                    "sha256")),
+                    "DONOR_PIN_MISMATCH",
+                    "Exact profile-bound OEM power ABI required",
+                    5);
+            donor = DexOperations.donor(original, spec, dir.resolve("donor"), api, "");
             entries.put("classes.dex", Files.readAllBytes(donor.dex()));
         }
 

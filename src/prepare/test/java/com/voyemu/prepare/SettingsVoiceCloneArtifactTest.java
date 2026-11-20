@@ -122,10 +122,16 @@ public final class SettingsVoiceCloneArtifactTest {
                                 before.get("AndroidManifest.xml"),
                                 List.of("QGAPI", "QGMOD", "QGVehicle"))));
         before.put(
-                "classes2.dex", StrPowerGuard.apply(id, 30, original, before.get("classes2.dex")));
+                "classes2.dex",
+                StrPowerGuard.apply(
+                        Json.obj(Json.object(patchData.get("api30-str-power.json")), "constants"),
+                        30,
+                        original,
+                        before.get("classes2.dex")));
         before.put(
                 "classes.dex",
-                SettingsVoiceCloneGuard.apply(id, 30, original, before.get("classes.dex")));
+                SettingsVoiceCloneGuard.apply(
+                        Json.obj(metadata, "constants"), 30, original, before.get("classes.dex")));
         var after = new TreeMap<>(NativeCore.entries(apk));
         after.keySet().removeIf(DexOperations::signatureEntry);
         check(before.keySet().equals(after.keySet()), "APK entries inventory");

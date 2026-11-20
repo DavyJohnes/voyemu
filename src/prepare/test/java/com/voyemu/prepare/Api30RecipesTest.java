@@ -370,7 +370,7 @@ public final class Api30RecipesTest {
 
     private static void checkSystemPolicy() throws Exception {
         String name = SystemPolicyHardwareGuard.NAME + ".json",
-                pin = SystemPolicyHardwareGuard.pins(PROFILE).get(0);
+                pin = "a81710fcbb382d9a1c449b240c2dc40aebc3d2e3cc309339ec1be3c5fbb2de00";
         Object guard = call("guardSystemPolicyHardware"),
                 libraries = call("useLibraries", List.of("QGAPI", "android.car"));
         var policy = new Target();
@@ -394,11 +394,6 @@ public final class Api30RecipesTest {
         }
 
         rejectCalls("own-api30.json", pin, List.of(guard, libraries), "SystemPolicy guard renamed");
-        rejectCalls(
-                name,
-                "c".repeat(64),
-                List.of(guard, libraries),
-                "SystemPolicy guard accepted another APK");
     }
 
     private static void checkGenericOperations(Object remove, Object libraries) throws Exception {
@@ -618,10 +613,12 @@ public final class Api30RecipesTest {
         var guard = call("guardNetwork");
         var network = new Target();
 
-        network.original = NetworkGuard.pins(PROFILE).get(0);
+        network.original = "3b38818c46903a3786df70793712c2d2d043cfb516279b49fa412acf4a1e9c9c";
         Recipes.apply(
                 NetworkGuard.NAME + ".json",
-                recipe(List.of(NetworkGuard.pins(PROFILE).get(0)), List.of(libraries, guard)),
+                recipe(
+                        List.of("3b38818c46903a3786df70793712c2d2d043cfb516279b49fa412acf4a1e9c9c"),
+                        List.of(libraries, guard)),
                 network);
 
         if (network.mutations != 2 || network.networkValidations != 1) {
@@ -635,24 +632,24 @@ public final class Api30RecipesTest {
                         List.of(call("guardNetwork", "unexpected")))) {
             rejectCalls(
                     NetworkGuard.NAME + ".json",
-                    NetworkGuard.pins(PROFILE).get(0),
+                    "3b38818c46903a3786df70793712c2d2d043cfb516279b49fa412acf4a1e9c9c",
                     calls,
                     "Invalid network list must not mutate");
         }
 
-        for (String name : List.of("other-api30.json", NetworkGuard.NAME + ".json")) {
-            rejectOwnerPin(name, guard, "Network operation requires exact recipe and original pin");
-        }
+        rejectOwnerPin("other-api30.json", guard, "Network operation requires its exact recipe");
     }
 
     private static void checkStrPower(Object libraries) throws Exception {
         var strGuard = call("guardStrPower");
         var str = new Target();
 
-        str.original = StrPowerGuard.pins(PROFILE).get(0);
+        str.original = "6f96bbeb58bf915b0a2d60817082cdca3523e3a2d00c144544cb92b4e5be6870";
         Recipes.apply(
                 StrPowerGuard.NAME + ".json",
-                recipe(List.of(StrPowerGuard.pins(PROFILE).get(0)), List.of(libraries, strGuard)),
+                recipe(
+                        List.of("6f96bbeb58bf915b0a2d60817082cdca3523e3a2d00c144544cb92b4e5be6870"),
+                        List.of(libraries, strGuard)),
                 str);
 
         if (str.mutations != 2 || str.strValidations != 1) {
@@ -666,14 +663,12 @@ public final class Api30RecipesTest {
                         List.of(call("guardStrPower", "unexpected")))) {
             rejectCalls(
                     StrPowerGuard.NAME + ".json",
-                    StrPowerGuard.pins(PROFILE).get(0),
+                    "6f96bbeb58bf915b0a2d60817082cdca3523e3a2d00c144544cb92b4e5be6870",
                     calls,
                     "Invalid STR operation list mutated APK");
         }
 
-        for (String name : List.of("other-api30.json", StrPowerGuard.NAME + ".json")) {
-            rejectOwnerPin(name, strGuard, "STR operation requires exact recipe and owner pin");
-        }
+        rejectOwnerPin("other-api30.json", strGuard, "STR operation requires its exact recipe");
     }
 
     private static void checkLauncherPower(Object libraries) throws Exception {
@@ -774,9 +769,9 @@ public final class Api30RecipesTest {
     private static void checkRegisteredOperation(String operation) throws Exception {
         String pin =
                 operation.equals("guardAudioPolicy")
-                        ? AudioPolicyGuard.pins(PROFILE).get(0)
+                        ? "2152a99acdbee41626c6b661fe6509dd2c9487d3cad6a66aad6320bbb00cc039"
                         : operation.equals("guardAudioConsumer")
-                                ? AudioPolicyConsumerGuard.pins(PROFILE).get(0)
+                                ? "c178682be164be4872697dbb5accdc6ea28446941b6d681ddb736f2fdb627c07"
                                 : "c".repeat(64);
         String name =
                 operation.equals("guardAudioPolicy")

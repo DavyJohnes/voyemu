@@ -1,11 +1,30 @@
 package com.voyemu.prepare;
 
 import java.nio.file.Path;
+import java.util.List;
+import java.util.Map;
 import java.util.zip.ZipFile;
 
 public class SettingsVoiceCloneBranchTest {
-    static final String PROFILE = "free-11-chinese-20250710-6.11.1",
-            OTHER = "free-11-chinese-20260731-7.3.1";
+    static final Map<String, Object>
+            STEP =
+                    Map.of(
+                            StepConstants.PINS,
+                            List.of(
+                                    "6a902c0458c68b66317fa666f7ee783d38d028392a3c114d1ae3675bdedc2c03"),
+                            "settings_voice_clone_boundary",
+                            true,
+                            "sound_balance",
+                            false),
+            OTHER_STEP =
+                    Map.of(
+                            StepConstants.PINS,
+                            List.of(
+                                    "6f96bbeb58bf915b0a2d60817082cdca3523e3a2d00c144544cb92b4e5be6870"),
+                            "settings_voice_clone_boundary",
+                            false,
+                            "sound_balance",
+                            true);
 
     interface Checked {
         void run() throws Exception;
@@ -74,11 +93,11 @@ public class SettingsVoiceCloneBranchTest {
         Path apk = Path.of(args[0]), other = Path.of(args[1]);
         byte[] d = dex(apk, "classes.dex");
 
-        SettingsVoiceCloneGuard.validate(PROFILE, 30, apk, d);
-        denied(() -> SettingsVoiceCloneGuard.validate(OTHER, 30, apk, d));
-        denied(() -> SettingsVoiceCloneGuard.validate(PROFILE, 30, other, d));
-        byte[] out = SettingsVoiceCloneGuard.apply(PROFILE, 30, apk, d);
-        denied(() -> SettingsVoiceCloneGuard.validate(PROFILE, 30, apk, out));
+        SettingsVoiceCloneGuard.validate(STEP, 30, apk, d);
+        denied(() -> SettingsVoiceCloneGuard.validate(OTHER_STEP, 30, apk, d));
+        denied(() -> SettingsVoiceCloneGuard.validate(STEP, 30, other, d));
+        byte[] out = SettingsVoiceCloneGuard.apply(STEP, 30, apk, d);
+        denied(() -> SettingsVoiceCloneGuard.validate(STEP, 30, apk, out));
 
         for (String name : new String[] {"initVoiceClone", "showView"}) {
             var ins = instructions(method(out, SettingsVoiceCloneGuard.OWNER, name));

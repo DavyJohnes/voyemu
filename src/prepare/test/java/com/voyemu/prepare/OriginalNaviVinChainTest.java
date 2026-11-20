@@ -30,7 +30,13 @@ public final class OriginalNaviVinChainTest {
         String profile = "free-11-chinese-20260731-7.3.1";
         OriginalNaviVinGuard.validateInput(profile, 30, "arm64-v8a", jar, original);
         byte[] predecessor =
-                AudioPolicyConsumerGuard.apply(profile, 30, "arm64-v8a", jar, original);
+                AudioPolicyConsumerGuard.apply(
+                        TestProfiles.constants(
+                                Path.of("").toAbsolutePath(), "api30-audio-consumer", jar),
+                        30,
+                        "arm64-v8a",
+                        jar,
+                        original);
         OriginalNaviVinGuard.validateInput(profile, 30, "arm64-v8a", jar, predecessor);
         Map<String, List<String>> members = new HashMap<>();
         List<String> before = new ArrayList<>(), after = new ArrayList<>();

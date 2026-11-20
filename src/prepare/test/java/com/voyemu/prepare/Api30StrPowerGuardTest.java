@@ -18,7 +18,9 @@ import java.util.Map;
 
 /** Actual owner-Dex STR boundary; this does not implement or accept automotive power support. */
 public final class Api30StrPowerGuardTest {
-    static final String PROFILE = "free-11-chinese-20260731-7.3.1";
+    static final String PIN = "6f96bbeb58bf915b0a2d60817082cdca3523e3a2d00c144544cb92b4e5be6870";
+    static final Map<String, Object> STEP = Map.of(StepConstants.PINS, List.of(PIN)),
+            FOREIGN = Map.of(StepConstants.PINS, List.of("0".repeat(64)));
 
     static void check(boolean value, String message) {
         if (!value) {
@@ -158,10 +160,12 @@ public final class Api30StrPowerGuardTest {
     public static void main(String[] args) throws Exception {
         check(args.length == 1 || args.length == 2, "ROOT [--original|PREPARED_SETTING_APK]");
         Path root = Path.of(args[0]).toRealPath();
-        Path original = root.resolve(".local/profiles/" + PROFILE + "/originals/Setting.apk");
-        check(
-                FilesSupport.hash(original).equals(StrPowerGuard.pins(PROFILE).get(0)),
-                "exact Setting owner pin");
+        Path original =
+                root.resolve(
+                        ".local/profiles/"
+                                + TestProfiles.pinning(root, PIN)
+                                + "/originals/Setting.apk");
+        check(FilesSupport.hash(original).equals(PIN), "exact Setting owner pin");
         byte[] before;
 
         try (var zip = new java.util.zip.ZipFile(original.toFile())) {
@@ -176,18 +180,21 @@ public final class Api30StrPowerGuardTest {
             return;
         }
 
-        byte[] after = StrPowerGuard.apply(PROFILE, 30, original, before);
+        byte[] after = StrPowerGuard.apply(STEP, 30, original, before);
         verify(
                 method(new DexBackedDexFile(Opcodes.forApi(30), before)),
                 method(new DexBackedDexFile(Opcodes.forApi(30), after)));
-        reject(() -> StrPowerGuard.validate("other", 30, original, before));
-        reject(() -> StrPowerGuard.validate(PROFILE, 28, original, before));
-        reject(() -> StrPowerGuard.validate(PROFILE, 30, original, null));
+        reject(() -> StrPowerGuard.validate(FOREIGN, 30, original, before));
+        reject(() -> StrPowerGuard.validate(STEP, 28, original, before));
+        reject(() -> StrPowerGuard.validate(STEP, 30, original, null));
         reject(() ->
                 StrPowerGuard.validate(
-                        PROFILE,
+                        STEP,
                         30,
-                        root.resolve(".local/profiles/" + PROFILE + "/originals/SystemService.apk"),
+                        root.resolve(
+                                ".local/profiles/"
+                                        + TestProfiles.pinning(root, PIN)
+                                        + "/originals/SystemService.apk"),
                         before));
 
         if (args.length == 2) {
@@ -196,9 +203,7 @@ public final class Api30StrPowerGuardTest {
                     method(DexOperations.dex(Path.of(args[1]), "classes2.dex", 30)));
         }
 
-        check(
-                FilesSupport.hash(original).equals(StrPowerGuard.pins(PROFILE).get(0)),
-                "original unchanged");
+        check(FilesSupport.hash(original).equals(PIN), "original unchanged");
         System.out.println(
                 Json.write(
                         Map.of(

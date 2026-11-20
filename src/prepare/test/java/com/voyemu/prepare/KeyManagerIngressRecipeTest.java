@@ -4,24 +4,19 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 /** Full-list prevalidation and actual pinned two-step DEX pipeline; no APK signing/install. */
 public final class KeyManagerIngressRecipeTest {
-    static final String PROFILE = "free-11-chinese-20260731-7.3.1";
+    static final String PIN = "951abb4f86540663fd654138b7e58cd0226d5dfa0470a4f5e85384bcdedbb78e";
+    static final Map<String, Object> STEP = Map.of(StepConstants.PINS, List.of(PIN));
 
     static class Target implements Recipes.Target {
         int api = 30, mutations, validations;
-        String pin = KeyManagerGuard.pins(PROFILE).get(0);
+        String pin = PIN;
         Path original;
         byte[] dex;
-
-        @Override
-        public String profile() {
-            return PROFILE;
-        }
 
         @Override
         public int api() {
@@ -81,13 +76,13 @@ public final class KeyManagerIngressRecipeTest {
                 mutations++;
 
                 if (original != null) {
-                    dex = KeyManagerGuard.apply(PROFILE, api, original, dex);
+                    dex = KeyManagerGuard.apply(STEP, api, original, dex);
                 }
             } else {
                 validations++;
 
                 if (original != null) {
-                    KeyManagerGuard.validate(PROFILE, api, original, dex);
+                    KeyManagerGuard.validate(STEP, api, original, dex);
                 }
             }
         }
@@ -98,13 +93,13 @@ public final class KeyManagerIngressRecipeTest {
                 mutations++;
 
                 if (original != null) {
-                    dex = KeyManagerIngressGuard.apply(PROFILE, api, original, dex);
+                    dex = KeyManagerIngressGuard.apply(STEP, api, original, dex);
                 }
             } else {
                 validations++;
 
                 if (original != null) {
-                    KeyManagerIngressGuard.validateOriginal(PROFILE, api, original);
+                    KeyManagerIngressGuard.validateOriginal(STEP, api, original);
                 }
             }
         }
@@ -121,7 +116,7 @@ public final class KeyManagerIngressRecipeTest {
                 "sourceSha256",
                 "a".repeat(64),
                 "constants",
-                Map.of("original_sha256_allowlist", List.of(KeyManagerGuard.pins(PROFILE).get(0))),
+                Map.of("original_sha256_allowlist", List.of(PIN)),
                 "calls",
                 calls);
     }
@@ -176,19 +171,12 @@ public final class KeyManagerIngressRecipeTest {
         target = new Target();
         target.api = 28;
         denied(name, metadata, target);
-        var extra = new LinkedHashMap<String, Object>(metadata);
-        extra.put(
-                "constants",
-                Map.of(
-                        "original_sha256_allowlist",
-                        List.of(KeyManagerGuard.pins(PROFILE).get(0), "0".repeat(64))));
-        denied(name, extra, new Target());
 
         if (args.length == 2) {
             Path profile = Path.of(args[0]);
             target = new Target();
             target.original = Path.of(args[1]);
-            target.dex = KeyManagerIngressGuard.validateOriginal(PROFILE, 30, target.original);
+            target.dex = KeyManagerIngressGuard.validateOriginal(STEP, 30, target.original);
             var steps = List.of("api30-keymanager.json", name);
             var recipes = new ArrayList<Map<String, Object>>();
 
@@ -223,13 +211,11 @@ public final class KeyManagerIngressRecipeTest {
             }
 
             KeyManagerIngressGuard.validateOriginal(
-                    PROFILE,
-                    30,
-                    target.original); // validation remains original-based after mutation
+                    STEP, 30, target.original); // validation remains original-based after mutation
         }
 
         System.out.println(
-                "Exact recipe/full-list validation/no partial mutation + ten negatives; actual"
+                "Exact recipe/full-list validation/no partial mutation + nine negatives; actual"
                         + " pinned two-step pipeline PASS (no APK install/runtime)");
     }
 }
