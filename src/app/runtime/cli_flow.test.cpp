@@ -604,8 +604,7 @@ int main(int argc, char **argv) try {
             require(denied, "linked machine directory accepted");
             std::filesystem::remove(linked);
             std::filesystem::remove_all(root / "outside machines");
-            require(help.output.find("fetch PROFILE --source=FILE") !=
-                                    std::string::npos &&
+            require(help.output.find("fetch PROFILE --source=FILE") != std::string::npos &&
                             help.output.find("fetch PROFILE --source=adb --serial SERIAL") !=
                                     std::string::npos &&
                             help.output.find("--update") == std::string::npos &&
