@@ -387,6 +387,12 @@ int main(int argc, char **argv) try {
         }
 
         if (internal) {
+            // The internal start has no default profile; the fixture machine runs the catalog one.
+            if (command == "_start" &&
+                std::find(args.begin(), args.end(), "--profile") == args.end()) {
+                args.insert(args.end(), {"--profile", qinggan09_profile()});
+            }
+
             args.insert(args.end(), {"--root", root.string()});
         } else {
             // Human text assertions read English regardless of the host locale.
