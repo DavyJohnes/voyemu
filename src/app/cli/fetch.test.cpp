@@ -2,6 +2,7 @@
 #include "deps.hpp"
 #include "fetch_internal.hpp"
 #include "fetch_segmented.hpp"
+#include "os/https.hpp"
 #include "process.hpp"
 #include "profile_catalog.hpp"
 #include "profile_originals.hpp"
@@ -1860,8 +1861,7 @@ int main(int argc, char **argv) {
             const auto installed = root / ".local/toolchains/downloads/development-kernel" /
                                    (sha256_bytes(kernel) + ".blob");
             const DownloadTransport missing = [](const DownloadPin &, const DownloadSink &) {
-                throw std::runtime_error("DOWNLOAD_HTTP: successful complete HTTPS response "
-                                         "required: The requested URL returned error: 404");
+                throw os::HttpsFailure(os::HttpsFailure::Kind::status, 404, "fixture");
             };
             const auto failure = [&](bool offline_mode, const DownloadTransport &transport) {
                 try {
@@ -1875,7 +1875,15 @@ int main(int argc, char **argv) {
             check(failure(false, missing).starts_with("DEVELOPMENT_KERNEL_ASSET_MISSING:") &&
                           !std::filesystem::exists(installed),
                   "missing kernel asset is an error");
-            check(failure(true, {}).starts_with("DEVELOPMENT_KERNEL_ASSET_MISSING:"),
+            // Without a network the console names the unreachable host, not a missing asset.
+            check(failure(false,
+                          [](const DownloadPin &, const DownloadSink &) {
+                              throw os::HttpsFailure(os::HttpsFailure::Kind::unreachable, 0,
+                                                     "fixture");
+                          }).starts_with("DOWNLOAD_HTTP:") &&
+                          !std::filesystem::exists(installed),
+                  "unreachable kernel host reported as a missing asset");
+            check(failure(true, {}).starts_with("DOWNLOAD_OFFLINE:"),
                   "offline fetch without the kernel asset is an error");
             check(failure(false,
                           [](const DownloadPin &, const DownloadSink &sink) {

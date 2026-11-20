@@ -1535,16 +1535,13 @@ std::filesystem::path install_development_kernel(const std::filesystem::path &ro
                                offline, reserve, transport)
                 .file;
     } catch (const std::runtime_error &error) {
-        const auto code = message_code(error.what());
-
-        // An asset that is not published or not reachable names the release it needs.
-        if (code == "DOWNLOAD_HTTP" || code == "DOWNLOAD_TIMEOUT" || code == "DOWNLOAD_LIBRARY" ||
-            code == "DOWNLOAD_OFFLINE") {
-            throw VoyemuError("DEVELOPMENT_KERNEL_ASSET_MISSING",
-                              "published release asset " + pin.url + " required: " + error.what());
+        // An asset that is not published names the release it needs; a network failure stays.
+        if (!download_unpublished(error)) {
+            throw;
         }
 
-        throw;
+        throw VoyemuError("DEVELOPMENT_KERNEL_ASSET_MISSING",
+                          "published release asset " + pin.url + " required: " + error.what());
     }
 }
 

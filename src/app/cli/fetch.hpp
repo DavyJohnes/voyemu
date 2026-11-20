@@ -25,7 +25,7 @@ Json import_owner_profile_inputs(const std::filesystem::path &root, std::string_
                                  std::uint64_t reserve_bytes = 20ULL << 30);
 // Downloads the development kernel of descriptor, android.development_kernel of profile.json: the
 // CI-built release asset pinned by URL and SHA-256, verified into portable_development_kernel_file,
-// which it returns. An asset that cannot be downloaded is DEVELOPMENT_KERNEL_ASSET_MISSING.
+// which it returns. An unpublished asset, HTTP 404, is DEVELOPMENT_KERNEL_ASSET_MISSING.
 std::filesystem::path install_development_kernel(const std::filesystem::path &root,
                                                  const Json &descriptor, bool offline,
                                                  std::uint64_t reserve_bytes,
