@@ -255,7 +255,7 @@ public final class Api30ViewObservationTest {
         check(
                 Api30ViewObservation.source(selected, component)
                         .equals(root.resolve(Json.str(component, "api30ViewObservation"))));
-        checkRejectedSources(root, output, owner, selected, component);
+        checkRejectedSources(output, owner, selected, component);
 
         boolean originalNavi = Json.obj(profile, "patches").containsKey("original-navi-framework");
         String installedBridge =
@@ -303,7 +303,6 @@ public final class Api30ViewObservationTest {
     }
 
     private static void checkRejectedSources(
-            Path root,
             Path output,
             String owner,
             ProfileRegistry.Profile selected,
@@ -379,14 +378,11 @@ public final class Api30ViewObservationTest {
         corruptedJarBytes[corruptedJarBytes.length - 1] ^= 1;
         Files.write(corruptedJar, corruptedJarBytes);
 
-        {
-            try {
-                Api30ViewObservation.build(
-                        TestProfiles.SYNTHETIC, 30, corruptedJar, helper, output);
-                throw new AssertionError();
-            } catch (Failure expected) {
-                // Rejection is the expected outcome.
-            }
+        try {
+            Api30ViewObservation.build(TestProfiles.SYNTHETIC, 30, corruptedJar, helper, output);
+            throw new AssertionError();
+        } catch (Failure expected) {
+            // Rejection is the expected outcome.
         }
     }
 
@@ -522,27 +518,19 @@ public final class Api30ViewObservationTest {
 
     private static void checkRejectedOwners(Path original, Path helper, Path output)
             throws Exception {
-        {
-            try {
-                Api30ViewObservation.build(TestProfiles.SYNTHETIC, 28, original, helper, output);
-                throw new AssertionError();
-            } catch (Failure expected) {
-                // Rejection is the expected outcome.
-            }
+        try {
+            Api30ViewObservation.build(TestProfiles.SYNTHETIC, 28, original, helper, output);
+            throw new AssertionError();
+        } catch (Failure expected) {
+            // Rejection is the expected outcome.
         }
 
-        {
-            try {
-                Api30ViewObservation.build(
-                        TestProfiles.SYNTHETIC,
-                        30,
-                        output,
-                        helper,
-                        output.resolveSibling("twice.jar"));
-                throw new AssertionError();
-            } catch (Failure expected) {
-                // Rejection is the expected outcome.
-            }
+        try {
+            Api30ViewObservation.build(
+                    TestProfiles.SYNTHETIC, 30, output, helper, output.resolveSibling("twice.jar"));
+            throw new AssertionError();
+        } catch (Failure expected) {
+            // Rejection is the expected outcome.
         }
     }
 }
