@@ -7,6 +7,7 @@
 #include "ext4_image.hpp"
 #include "fetch_internal.hpp"
 #include "fetch_segmented.hpp"
+#include "fetch_snapshot.hpp"
 #include "os/fs.hpp"
 #include "owner_update_archive.hpp"
 #include "portable_runtime.hpp"
@@ -1550,6 +1551,16 @@ Json import_owner_profile_inputs(const std::filesystem::path &root, std::string_
     if (!valid_profile_name(profile) || !root.is_absolute() ||
         std::filesystem::canonical(root) != root) {
         throw VoyemuError("FETCH_ROOT", "canonical root and safe profile required");
+    }
+
+    {
+        const auto source = root / "profiles" / std::string(profile) / "profile.json";
+
+        if (read_private_json(source, 512 * 1024)
+                    .value("acquisition", Json::object())
+                    .value("format", std::string{}) == "pinned-snapshot-raw-images") {
+            return import_snapshot_profile_inputs(root, profile, update, reserve);
+        }
     }
 
     if (profile == "free-11-chinese-20260731-7.3.1" ||

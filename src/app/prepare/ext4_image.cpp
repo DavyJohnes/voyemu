@@ -453,7 +453,9 @@ Json extract_pinned_ext4_files(const std::filesystem::path &image, const std::st
                 {"ee0c8241b7293b9cd9f936f622c556ac11ab3f92a0f60733e92dca1c1610f5c4",
                  "cd5f85c02e10b4ed99691251caf73b137fb7a152186fad3057578f1c0317dd92", 425993577},
                 {"c602475a9890bbe725a75ede7c8f667635fc1be69f9db65cae22e752c28fa3cd",
-                 "f37a53f1397678af472a87d89d903ba8f6ed6ac892d83ae3117b57bbe3b21360", 426096627}};
+                 "f37a53f1397678af472a87d89d903ba8f6ed6ac892d83ae3117b57bbe3b21360", 426096627},
+                {"563f613c13c104f129a3b996b32328f0751a08626f2ca5847d14695dc39f2456",
+                 "8f76a02085fe03eb0292c22453977ff407fa9e6a491a9d6a13af3cfbdaee1784", 396876814}};
         const auto vehicle = std::find_if(std::begin(vehicles), std::end(vehicles),
                                           [&](const Vehicle &item) {
                                               return item.image == pin;
