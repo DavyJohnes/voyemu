@@ -82,6 +82,32 @@ std::filesystem::path open_file(const std::filesystem::path &directory, std::str
     return path;
 }
 
+std::size_t terminal_columns(std::string_view text) {
+    std::size_t columns = 0;
+
+    for (std::size_t i = 0; i < text.size();) {
+        const auto lead = static_cast<unsigned char>(text[i]);
+        const std::size_t length = lead < 0x80 ? 1 : lead < 0xE0 ? 2 : lead < 0xF0 ? 3 : 4;
+        char32_t code = length == 1 ? lead : lead & (0x7F >> length);
+
+        for (std::size_t j = 1; j < length && i + j < text.size(); ++j) {
+            code = (code << 6) | (static_cast<unsigned char>(text[i + j]) & 0x3F);
+        }
+
+        columns += (code >= 0x1100 && code <= 0x115F) || (code >= 0x2E80 && code <= 0xA4CF) ||
+                                   (code >= 0xAC00 && code <= 0xD7A3) ||
+                                   (code >= 0xF900 && code <= 0xFAFF) ||
+                                   (code >= 0xFE30 && code <= 0xFE4F) ||
+                                   (code >= 0xFF00 && code <= 0xFF60) ||
+                                   (code >= 0xFFE0 && code <= 0xFFE6) || code >= 0x20000
+                           ? 2
+                           : 1;
+        i += length;
+    }
+
+    return columns;
+}
+
 void console_line(std::string_view text, bool live) {
     std::lock_guard lock(console);
 
@@ -94,9 +120,7 @@ void console_line(std::string_view text, bool live) {
         return;
     }
 
-    const auto width = static_cast<std::size_t>(std::count_if(text.begin(), text.end(), [](char c) {
-        return (static_cast<unsigned char>(c) & 0xC0) != 0x80;
-    }));
+    const auto width = terminal_columns(text);
 
     if (live_width) {
         std::cerr << '\r' << text << std::string(width < live_width ? live_width - width : 0, ' ');

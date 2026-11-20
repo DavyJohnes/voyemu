@@ -74,6 +74,15 @@ int main() try {
     human_console(false);
     std::cerr.rdbuf(prior);
     assert(console.str() == "12.0 MiB\r9 MiB   \rDone \n1 MiB\nfetch: inputs verified\n2 MiB\n");
+    // Chinese ideographs take two terminal columns each, so a shorter live line covers them all.
+    std::ostringstream wide;
+    prior = std::cerr.rdbuf(wide.rdbuf());
+    console_line("\u4e0b\u8f7d 12 MiB", true);
+    console_line("9 MiB", true);
+    console_line({}, false);
+    std::cerr.rdbuf(prior);
+    assert(terminal_columns("\u4e0b\u8f7d 12 MiB") == 11 &&
+           wide.str() == "\u4e0b\u8f7d 12 MiB\r9 MiB      \n");
     // try_write() records like write() but drops an invalid record instead of throwing.
     using JsonTryWrite = void (*)(Level, std::string_view, std::string_view, Json) noexcept;
     using FieldTryWrite = void (*)(Level, std::string_view, std::string_view, std::string_view,

@@ -1,5 +1,6 @@
 #pragma once
 #include "model.hpp"
+#include <cstddef>
 #include <filesystem>
 #include <string_view>
 namespace voyemu::logging {
@@ -19,6 +20,8 @@ void verbose(bool enabled);
 // newest 20 log files of directory; write() appends every later record to it as one JSON line,
 // debug records included. Returns its path.
 std::filesystem::path open_file(const std::filesystem::path &directory, std::string_view command);
+// The terminal columns of UTF-8 text: CJK ideographs and fullwidth forms take two columns.
+std::size_t terminal_columns(std::string_view text);
 // Writes one console line to stderr. A live line is replaced in place by the next console line or
 // ended by the next log line; empty text only ends a live line.
 void console_line(std::string_view text, bool live);

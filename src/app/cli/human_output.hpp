@@ -1,5 +1,6 @@
 #pragma once
 #include "cli_messages.hpp"
+#include "logging.hpp"
 #include "model.hpp"
 #include "progress.hpp"
 #include <filesystem>
@@ -43,29 +44,9 @@ inline bool reports_interruption(bool interrupted, const std::exception &error) 
     return interrupted && message_code(error.what()) != "PROCESS_STOP";
 }
 
-// Pads to a terminal column width: CJK ideographs and fullwidth forms take two columns.
+// Pads to a terminal column width.
 inline std::string pad_columns(std::string_view text, std::size_t width) {
-    std::size_t columns = 0;
-
-    for (std::size_t i = 0; i < text.size();) {
-        const auto lead = static_cast<unsigned char>(text[i]);
-        const std::size_t length = lead < 0x80 ? 1 : lead < 0xE0 ? 2 : lead < 0xF0 ? 3 : 4;
-        char32_t code = length == 1 ? lead : lead & (0x7F >> length);
-
-        for (std::size_t j = 1; j < length && i + j < text.size(); ++j) {
-            code = (code << 6) | (static_cast<unsigned char>(text[i + j]) & 0x3F);
-        }
-
-        columns += (code >= 0x1100 && code <= 0x115F) || (code >= 0x2E80 && code <= 0xA4CF) ||
-                                   (code >= 0xAC00 && code <= 0xD7A3) ||
-                                   (code >= 0xF900 && code <= 0xFAFF) ||
-                                   (code >= 0xFE30 && code <= 0xFE4F) ||
-                                   (code >= 0xFF00 && code <= 0xFF60) ||
-                                   (code >= 0xFFE0 && code <= 0xFFE6) || code >= 0x20000
-                           ? 2
-                           : 1;
-        i += length;
-    }
+    const auto columns = logging::terminal_columns(text);
 
     return std::string(text) + std::string(columns < width ? width - columns : 1, ' ');
 }
