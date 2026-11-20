@@ -1,5 +1,8 @@
 {
   "schema": 1,
+  "title": "Free 6.0.3",
+  "platform": "qinggan09",
+  "board": "8155",
   "wheel": {
     "assets": "profiles/common/wheels/free-2021",
     "androidRoutes": "src/app/android-wheel-routes.json"

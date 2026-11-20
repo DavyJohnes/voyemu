@@ -17,6 +17,8 @@ A profile is the authoring directory `profiles/<profile>/`. Its name encodes the
 
 The `status` field of `profile.json` is `ready` when the multimedia is supported and `incomplete` while the OEM inputs of the profile are still being collected: then `fetch PROFILE --source=adb --serial SERIAL` reads them as `capture.json` lists. The `status` field of `profile-qnx.json` is `incomplete` while the cluster is experimental. The support of each published profile is listed in [profiles](../profiles/index.md).
 
+The `title` field of `profile.json` names the profile in text for people, for example `Free 7.3.1`. `platform` is `qinggan09` or `qinggan11` for the Android 9 or Android 11 generation of the [Free/Dreamer platform](../GLOSSARY.md), or `passion` for Passion. `board` names the multimedia board: `8155` for Qualcomm SA8155 or `nxp` for NXP i.MX 8QuadMax. Voyemu rejects a published profile without these fields or with another value.
+
 Shared parts live outside the profiles: `profiles/common/` holds common components, fonts, icons and steering-wheel artwork, and `profiles/common-qinggan-09/` and `profiles/common-qinggan-11/` hold the development kernel recipes of each Android generation.
 
 OEM inputs never enter the repository. The user imports them into `.local/profiles/<profile>/`, and the profile records only their names, sizes and SHA-256.

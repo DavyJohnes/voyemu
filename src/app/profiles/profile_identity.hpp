@@ -4,6 +4,65 @@
 #include <string_view>
 
 namespace voyemu {
+// The platform and board a profile declares in profile.json; behavior follows them, not the id.
+enum class ProfilePlatform {
+    qinggan09,
+    qinggan11,
+    passion
+};
+// "8155" is the Qualcomm SA8155 board, "nxp" the NXP i.MX 8QuadMax board.
+enum class ProfileBoard {
+    sa8155,
+    nxp
+};
+
+inline ProfilePlatform profile_platform(const Json &definition) {
+    const auto value = definition.is_object() && definition.contains("platform")
+                               ? definition.at("platform")
+                               : Json();
+
+    if (value == "qinggan09") {
+        return ProfilePlatform::qinggan09;
+    }
+
+    if (value == "qinggan11") {
+        return ProfilePlatform::qinggan11;
+    }
+
+    if (value == "passion") {
+        return ProfilePlatform::passion;
+    }
+
+    throw VoyemuError("PROFILE_INVALID",
+                      "profile platform must be qinggan09, qinggan11 or passion");
+}
+
+inline ProfileBoard profile_board(const Json &definition) {
+    const auto value = definition.is_object() && definition.contains("board")
+                               ? definition.at("board")
+                               : Json();
+
+    if (value == "8155") {
+        return ProfileBoard::sa8155;
+    }
+
+    if (value == "nxp") {
+        return ProfileBoard::nxp;
+    }
+
+    throw VoyemuError("PROFILE_INVALID", "profile board must be 8155 or nxp");
+}
+
+// The name of the profile in human text, such as "Free 7.3.1".
+inline std::string profile_title(const Json &definition) {
+    if (!definition.is_object() || !definition.contains("title") ||
+        !definition.at("title").is_string() || definition.at("title").get<std::string>().empty()) {
+        throw VoyemuError("PROFILE_INVALID", "profile title must be a nonempty string");
+    }
+
+    return definition.at("title").get<std::string>();
+}
+
 // Logical identity owns selection and state; the embedded reference selects guest adapters.
 inline std::string runtime_profile_reference(const Json &definition,
                                              std::string_view verified_profile = {}) {

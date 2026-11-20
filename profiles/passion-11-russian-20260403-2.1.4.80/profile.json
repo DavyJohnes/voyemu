@@ -1,6 +1,9 @@
 {
   "schema": 1,
   "id": "passion-11-russian-20260403-2.1.4.80",
+  "title": "Passion 2.1.4.80",
+  "platform": "passion",
+  "board": "8155",
   "status": "ready",
   "identity": {
     "marketingModel": "Voyah Passion",

@@ -10,8 +10,19 @@ namespace voyemu {
 #include "profile_catalog.inc"
 
 const Json &embedded_profile_catalog() {
-    static const Json catalog = Json::parse(std::begin(embedded_catalog_json),
-                                            std::end(embedded_catalog_json));
+    static const Json catalog = [] {
+        auto parsed = Json::parse(std::begin(embedded_catalog_json),
+                                  std::end(embedded_catalog_json));
+
+        for (const auto &record : parsed) {
+            const auto &definition = record.at("definition");
+            (void)profile_platform(definition);
+            (void)profile_board(definition);
+            (void)profile_title(definition);
+        }
+
+        return parsed;
+    }();
 
     return catalog;
 }
@@ -34,6 +45,32 @@ std::vector<std::string> embedded_profile_names() {
     }
 
     return result;
+}
+
+std::vector<std::string> embedded_profile_names(ProfilePlatform platform, ProfileBoard board) {
+    std::vector<std::string> result;
+
+    for (const auto &record : embedded_profile_catalog()) {
+        const auto &definition = record.at("definition");
+
+        if (profile_platform(definition) == platform && profile_board(definition) == board) {
+            result.push_back(record.at("id").get<std::string>());
+        }
+    }
+
+    return result;
+}
+
+bool embedded_profile_declares(std::string_view id, ProfilePlatform platform, ProfileBoard board) {
+    for (const auto &record : embedded_profile_catalog()) {
+        if (record.at("id") == id) {
+            const auto &definition = record.at("definition");
+
+            return profile_platform(definition) == platform && profile_board(definition) == board;
+        }
+    }
+
+    return false;
 }
 
 Json declared_patch_plan(const Json &definition) {

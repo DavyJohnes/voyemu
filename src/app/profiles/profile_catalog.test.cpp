@@ -20,8 +20,7 @@ static void check(bool v, const char *text) {
 }
 
 static Json normalized_profile_pair(Json base, Json copy) {
-    check(!base.contains("title") && !base.contains("local") && !base.contains("capture"),
-          "base identity is not canonical");
+    check(!base.contains("local") && !base.contains("capture"), "base identity is not canonical");
     check(copy.contains("id") && copy.at("id").is_string() && copy.contains("title") &&
                   copy.at("title").is_string() && copy.value("local", false),
           "copy identity missing");
@@ -35,6 +34,8 @@ static Json normalized_profile_pair(Json base, Json copy) {
               "base identity differs from copy reference");
         base.erase("id");
     }
+
+    base.erase("title");
 
     for (const auto *key : {"id", "title", "local", "capture"}) {
         copy.erase(key);
@@ -119,6 +120,60 @@ static void verify_profile_pair_unit() {
     }
 
     check(denied, "mismatching canonical base id accepted");
+}
+
+static void verify_profile_properties() {
+    const auto rejected = [](const Json &definition, auto read) {
+        try {
+            (void)read(definition);
+        } catch (const VoyemuError &error) {
+            return error.code() == "PROFILE_INVALID";
+        }
+
+        return false;
+    };
+    const auto platform = [](const Json &definition) {
+        return profile_platform(definition);
+    };
+    const auto board = [](const Json &definition) {
+        return profile_board(definition);
+    };
+    const auto title = [](const Json &definition) {
+        return profile_title(definition);
+    };
+    const Json synthetic = {{"id", "synthetic-profile"},
+                            {"title", "Synthetic 1.0"},
+                            {"platform", "qinggan11"},
+                            {"board", "8155"}};
+
+    check(profile_platform(synthetic) == ProfilePlatform::qinggan11 &&
+                  profile_board(synthetic) == ProfileBoard::sa8155 &&
+                  profile_title(synthetic) == "Synthetic 1.0",
+          "declared platform, board and title are read");
+    check(profile_platform(Json{{"platform", "qinggan09"}}) == ProfilePlatform::qinggan09 &&
+                  profile_platform(Json{{"platform", "passion"}}) == ProfilePlatform::passion &&
+                  profile_board(Json{{"board", "nxp"}}) == ProfileBoard::nxp,
+          "every platform and board value is read");
+
+    for (const auto &value : Json::array({"qinggan10", "QINGGAN11", "", 11, nullptr})) {
+        auto changed = synthetic;
+        changed["platform"] = value;
+        check(rejected(changed, platform), "unknown platform rejected");
+        changed = synthetic;
+        changed["board"] = value;
+        check(rejected(changed, board), "unknown board rejected");
+    }
+
+    for (const auto *field : {"platform", "board", "title"}) {
+        auto missing = synthetic;
+        missing.erase(field);
+        check(rejected(missing, platform) || rejected(missing, board) || rejected(missing, title),
+              "missing property rejected");
+    }
+
+    check(rejected(Json{{"title", ""}}, title) && rejected(Json{{"title", 1}}, title) &&
+                  rejected(Json::array(), platform),
+          "empty or malformed title and definition rejected");
 }
 
 static void verify_can_model_binding() {
@@ -433,6 +488,7 @@ static void verify_qinggan11_view_graph(const std::filesystem::path &profiles) {
 int main(int argc, char **argv) {
     try {
         verify_profile_pair_unit();
+        verify_profile_properties();
         verify_can_model_binding();
 
         if (argc == 4 && std::string_view(argv[1]) == "--profile-parity") {
@@ -472,7 +528,23 @@ int main(int argc, char **argv) {
                           sha256_file(std::filesystem::path(argv[1]) / id / "profile.json"),
                   "embedded profile matches exact source bytes");
             check(embedded_profile(id) == item, "lookup returns complete definition");
+            const auto &definition = item.at("definition");
+            const auto platform = profile_platform(definition);
+            const auto board = profile_board(definition);
+            check(!profile_title(definition).empty(), "bundled profile has a title");
+            const auto same = embedded_profile_names(platform, board);
+            check(std::find(same.begin(), same.end(), id) != same.end() &&
+                          embedded_profile_declares(id, platform, board) &&
+                          !embedded_profile_declares(id, platform,
+                                                     board == ProfileBoard::nxp
+                                                             ? ProfileBoard::sa8155
+                                                             : ProfileBoard::nxp),
+                  "catalog selects profiles by their declared platform and board");
         }
+
+        check(!embedded_profile_declares("synthetic-local-copy", ProfilePlatform::qinggan09,
+                                         ProfileBoard::sa8155),
+              "an id outside the catalog declares nothing");
 
         const std::string passion_id = "passion-11-russian-20260403-2.1.4.80";
 
@@ -2089,21 +2161,20 @@ int main(int argc, char **argv) {
                               Json::array({Json::array({"QGAPI", "QGMOD", "QGVehicle"})}) &&
                       recipe.at("constants").at("original_sha256_allowlist").size() == 7,
               "A11 recipe cannot inherit guessed API28 code offsets");
+        const auto qinggan09 =
+                embedded_profile_names(ProfilePlatform::qinggan09, ProfileBoard::sa8155).at(0);
         const auto fresh = select_vehicle_startup(
                 VehicleStartup::fresh,
-                embedded_profile(default_profile_name).at("definition").at("initial_state"),
-                nullptr);
+                embedded_profile(qinggan09).at("definition").at("initial_state"), nullptr);
         check(fresh.at("raw_oem").at("aeb_sts") == 1 && fresh.at("raw_oem").at("cfg_aeb") == 1,
               "fresh first-vehicle fixture keeps AEB configured and selects the verified no-OFF input");
         check(initial_state().at("raw_oem").at("aeb_sts") == 0,
               "profile display fixture must not change the recovered raw protocol defaults");
         check(declared_patch_plan(Json::object()).at("patches").empty(),
               "profiles without patch operations have an empty plan");
-        auto plan = declared_patch_plan(embedded_profile(default_profile_name).at("definition"));
-        check(plan.at("patches").size() == embedded_profile(default_profile_name)
-                                                   .at("definition")
-                                                   .at("patches")
-                                                   .size() &&
+        auto plan = declared_patch_plan(embedded_profile(qinggan09).at("definition"));
+        check(plan.at("patches").size() ==
+                              embedded_profile(qinggan09).at("definition").at("patches").size() &&
                       !plan.at("executable").get<bool>(),
               "real profile declares all patches without pretending to implement preparation");
         unsigned native_recipes = 0;
@@ -2118,7 +2189,7 @@ int main(int argc, char **argv) {
 
         check(native_recipes == 12,
               "first vehicle exposes twelve native pinned-file recipes including guarded codec allocation");
-        auto android11 = embedded_profile(default_profile_name).at("definition");
+        auto android11 = embedded_profile(qinggan09).at("definition");
         android11["android"]["package"] = "system-images;android-30;default;arm64-v8a";
         const auto android11_plan = declared_patch_plan(android11);
 

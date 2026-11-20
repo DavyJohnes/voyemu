@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /** Immutable compiled-in definitions; mutable owner receipts live in Storage. */
 final class ProfileRegistry {
@@ -17,8 +18,59 @@ final class ProfileRegistry {
             Map<String, Object> data,
             String resourcePrefix,
             Path sourceRoot) {
+        private static final Set<String> PLATFORMS = Set.of("qinggan09", "qinggan11", "passion");
+        private static final Set<String> BOARDS = Set.of("8155", "nxp");
+
+        /** A definition that declares platform or board declares both valid; a title is valid. */
+        Profile {
+            if (data.containsKey("platform") || data.containsKey("board")) {
+                declared(data, "platform", PLATFORMS);
+                declared(data, "board", BOARDS);
+            }
+
+            if (data.containsKey("title")) {
+                title(data);
+            }
+        }
+
         Profile(String id, String revision, Map<String, Object> data, String resourcePrefix) {
             this(id, revision, data, resourcePrefix, null);
+        }
+
+        /** qinggan09, qinggan11 or passion; behavior follows it, not the id. */
+        String platform() {
+            return declared(data, "platform", PLATFORMS);
+        }
+
+        /** 8155 for the Qualcomm SA8155 board or nxp for the NXP i.MX 8QuadMax board. */
+        String board() {
+            return declared(data, "board", BOARDS);
+        }
+
+        /** The name of the profile in human text, such as "Free 7.3.1". */
+        String title() {
+            return title(data);
+        }
+
+        // The compact constructor validates its parameter before the fields are assigned.
+        private static String title(Map<String, Object> data) {
+            Failure.require(
+                    data.get("title") instanceof String text && !text.isEmpty(),
+                    "PROFILE_INVALID",
+                    "Profile title must be a nonempty string",
+                    2);
+
+            return (String) data.get("title");
+        }
+
+        private static String declared(Map<String, Object> data, String field, Set<String> values) {
+            Failure.require(
+                    data.get(field) instanceof String value && values.contains(value),
+                    "PROFILE_INVALID",
+                    "Profile " + field + " must be one of " + new java.util.TreeSet<>(values),
+                    2);
+
+            return (String) data.get(field);
         }
 
         String referenceProfile() {

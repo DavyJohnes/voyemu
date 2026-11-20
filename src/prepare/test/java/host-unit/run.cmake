@@ -20,7 +20,8 @@ set(ROOT_TESTS
 set(PLAIN_TESTS
     SdkJavaCliClosureTest Api30OriginalNaviNativeSelectionTest Api30ReceiptTest CameraRecipeTest DexEditsTest
     HiboardRecipeTest OriginalNaviRecipesTest MultiDisplayStartupTest
-    PassionMusicInsetsRecipeTest RecipesTest StorageJsonTest VdexQuickeningTest ViewDumpPatchTest)
+    PassionMusicInsetsRecipeTest ProfilePropertiesTest RecipesTest StorageJsonTest VdexQuickeningTest
+    ViewDumpPatchTest)
 # Classes that take a fresh writable directory as their only argument.
 set(WORK_TESTS ComponentSourcesTest KernelSourceTest ProfileRegistryIsolationTest RecipeCompletenessTest)
 string(RANDOM LENGTH 16 ALPHABET 0123456789abcdef TOKEN)
