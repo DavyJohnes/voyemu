@@ -176,27 +176,33 @@ bool first_report(const std::filesystem::path &file) {
 
 // The console error of a transfer failure: an unreachable host, a stalled transfer or an HTTP
 // status; the code stays DOWNLOAD_HTTP.
-cli::LocalizedError network_error(const os::HttpsFailure &failure, const DownloadPin &pin,
-                                  const std::string &host) {
+DownloadHttpError network_error(const os::HttpsFailure &failure, const DownloadPin &pin,
+                                const std::string &host) {
     auto arguments = progress::named(download_names(pin));
 
     arguments["host"] = host;
 
     if (failure.kind == os::HttpsFailure::Kind::unreachable) {
-        return {"DOWNLOAD_HTTP", "error.network_unreachable", arguments};
+        return {"error.network_unreachable", arguments, 0};
     }
 
     if (failure.kind == os::HttpsFailure::Kind::stalled) {
         arguments["seconds"] = "60";
 
-        return {"DOWNLOAD_HTTP", "error.network_stalled", arguments};
+        return {"error.network_stalled", arguments, 0};
     }
 
     arguments["status"] = std::to_string(failure.status);
 
-    return {"DOWNLOAD_HTTP", "error.network_http", arguments};
+    return {"error.network_http", arguments, failure.status};
 }
 } // namespace
+
+bool download_unpublished(const std::exception &error) {
+    const auto *failure = dynamic_cast<const DownloadHttpError *>(&error);
+
+    return failure && failure->status() == 404;
+}
 
 std::string download_name(const DownloadPin &pin) {
     return pin.name.empty() ? progress::url_file(pin.url) : pin.name;

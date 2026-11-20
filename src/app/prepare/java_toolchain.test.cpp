@@ -1,5 +1,6 @@
 #include "java_toolchain.hpp"
 #include "error.hpp"
+#include "os/https.hpp"
 #include "process.hpp"
 #include "project_files.hpp"
 #include "quickboot.hpp"
@@ -112,7 +113,7 @@ void helper_installation_checks(const std::filesystem::path &scratch) {
         });
     };
     const DownloadTransport missing = [](const DownloadPin &, const DownloadSink &) {
-        throw std::runtime_error("DOWNLOAD_HTTP: successful complete HTTPS response required");
+        throw os::HttpsFailure(os::HttpsFailure::Kind::status, 404, "fixture");
     };
     const auto recipe = [&](const std::filesystem::path &, const std::filesystem::path &output) {
         ++built;
@@ -311,7 +312,7 @@ void installed_helper_checks(const std::filesystem::path &source_root) {
     std::filesystem::remove_all(root / ".local/toolchains/java-helper");
     std::filesystem::remove_all(root / ".local/toolchains/downloads");
     const DownloadTransport missing = [](const DownloadPin &, const DownloadSink &) {
-        throw std::runtime_error("DOWNLOAD_HTTP: fixture missing release");
+        throw os::HttpsFailure(os::HttpsFailure::Kind::status, 404, "fixture");
     };
     bool rejected = false;
     try {
@@ -326,6 +327,22 @@ void installed_helper_checks(const std::filesystem::path &source_root) {
     }
 
     check(rejected && builds == 0);
+    const DownloadTransport unreachable = [](const DownloadPin &, const DownloadSink &) {
+        throw os::HttpsFailure(os::HttpsFailure::Kind::unreachable, 0, "fixture");
+    };
+    bool network = false;
+    try {
+        install_java_helper(
+                root, pin, false, 0, unreachable,
+                [&](const auto &, const auto &) {
+                    ++builds;
+                },
+                false);
+    } catch (const std::exception &error) {
+        network = std::string(error.what()).starts_with("DOWNLOAD_HTTP: no connection");
+    }
+
+    check(network && builds == 0);
     std::filesystem::remove_all(root);
     std::cout << "PASS pinned helper installed/reused with or without checkout, no JDK/recipe\n";
 }
@@ -348,7 +365,7 @@ void selection_checks(const std::filesystem::path &scratch, const std::filesyste
         return std::string();
     };
     const DownloadTransport missing = [](const DownloadPin &, const DownloadSink &) {
-        throw std::runtime_error("DOWNLOAD_HTTP: successful complete HTTPS response required");
+        throw os::HttpsFailure(os::HttpsFailure::Kind::status, 404, "fixture");
     };
     const auto &runtime = embedded_toolchain_manifest().at("javaRuntime");
 #ifdef _WIN32

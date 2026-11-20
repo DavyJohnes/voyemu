@@ -126,10 +126,8 @@ install_java_runtime(const std::filesystem::path &root, const Json &pins, bool o
     } catch (const std::runtime_error &error) {
         const std::string message = error.what();
 
-        // Only an asset that is not published or not reachable falls back; other failures stay.
-        if (offline ||
-            !(message.starts_with("DOWNLOAD_HTTP:") || message.starts_with("DOWNLOAD_TIMEOUT:") ||
-              message.starts_with("DOWNLOAD_LIBRARY:"))) {
+        // Only an asset that is not published falls back; a network failure stays an error.
+        if (offline || !download_unpublished(error)) {
             throw;
         }
 

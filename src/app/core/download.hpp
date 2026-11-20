@@ -5,6 +5,7 @@
 #include <functional>
 #include <string>
 #include <string_view>
+#include <utility>
 namespace voyemu {
 enum class DownloadEncoding {
     raw,
@@ -25,6 +26,24 @@ struct DownloadPin {
 std::string download_name(const DownloadPin &);
 // The progress arguments that name a download: name, and label and version when it has a label.
 progress::Arguments download_names(const DownloadPin &);
+// The DOWNLOAD_HTTP console error of a failed transfer that keeps the HTTP status of the final
+// response, 0 when the host was not reached or the transfer stalled.
+class DownloadHttpError : public cli::LocalizedError {
+public:
+    DownloadHttpError(std::string key, cli::MessageArguments arguments, long status)
+        : cli::LocalizedError("DOWNLOAD_HTTP", std::move(key), std::move(arguments)),
+          status_(status) {}
+
+    [[nodiscard]] long status() const noexcept {
+        return status_;
+    }
+
+private:
+    long status_;
+};
+// Whether a failed download means that its asset is not published, HTTP 404; only then may a
+// caller build the asset from its recipe, while a network failure stays an error.
+bool download_unpublished(const std::exception &error);
 struct DownloadedBlob {
     std::filesystem::path file;
     std::uint64_t bytes{};

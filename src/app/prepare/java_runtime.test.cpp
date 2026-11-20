@@ -1,5 +1,6 @@
 #include "java_runtime.hpp"
 #include "e2fs_helper.hpp"
+#include "os/https.hpp"
 #include <fstream>
 #include <iostream>
 #include <memory>
@@ -56,8 +57,14 @@ std::string failure(const std::function<void()> &action) {
     return {};
 }
 
+// A release asset that is not published yet: HTTP 404.
 void missing(const DownloadPin &, const DownloadSink &) {
-    throw std::runtime_error("DOWNLOAD_HTTP: successful complete HTTPS response required");
+    throw os::HttpsFailure(os::HttpsFailure::Kind::status, 404, "fixture");
+}
+
+// A host without network.
+void unreachable(const DownloadPin &, const DownloadSink &) {
+    throw os::HttpsFailure(os::HttpsFailure::Kind::unreachable, 0, "fixture");
 }
 } // namespace
 
@@ -108,6 +115,10 @@ int main(int argc, char **) {
               "an unpublished asset without the recipe JDK names the missing asset");
         check(!std::filesystem::exists(unpublished / ".local/toolchains/java-runtime" / sha),
               "nothing is installed for a missing asset");
+        check(failure([&] {
+                  install_java_runtime(unpublished, pins, false, 0, unreachable);
+              }).starts_with("DOWNLOAD_HTTP: no connection"),
+              "a network failure is an error, not a missing asset");
         std::cout << "PASS missing asset\n";
 
         const auto downloaded = scratch / "downloaded";

@@ -36,10 +36,9 @@ std::filesystem::path install_android_java(const std::filesystem::path &root, co
     } catch (const std::runtime_error &error) {
         const std::string message = error.what();
 
-        // Only an asset that is not published, not reachable or not cached offline falls back.
-        if (!(message.starts_with("DOWNLOAD_HTTP:") || message.starts_with("DOWNLOAD_TIMEOUT:") ||
-              message.starts_with("DOWNLOAD_LIBRARY:") ||
-              message.starts_with("DOWNLOAD_OFFLINE:"))) {
+        // Only an asset that is not published or not cached offline falls back; a network failure
+        // stays an error.
+        if (!download_unpublished(error) && !message.starts_with("DOWNLOAD_OFFLINE:")) {
             throw;
         }
 

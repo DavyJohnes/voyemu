@@ -1,5 +1,6 @@
 #include "e2fs_helper.hpp"
 #include "deps.hpp"
+#include "os/https.hpp"
 #include <fstream>
 #include <functional>
 #include <iostream>
@@ -35,9 +36,14 @@ std::string failure(const std::function<void()> &action) {
     return {};
 }
 
-// A release asset that is not published yet.
+// A release asset that is not published yet: HTTP 404.
 void missing(const DownloadPin &, const DownloadSink &) {
-    throw std::runtime_error("DOWNLOAD_HTTP: successful complete HTTPS response required");
+    throw os::HttpsFailure(os::HttpsFailure::Kind::status, 404, "fixture");
+}
+
+// A host without network.
+void unreachable(const DownloadPin &, const DownloadSink &) {
+    throw os::HttpsFailure(os::HttpsFailure::Kind::unreachable, 0, "fixture");
 }
 } // namespace
 
@@ -147,6 +153,12 @@ int main(int argc, char **argv) {
                           build(bytes));
               }).starts_with("DOWNLOAD_"),
               "changed download does not fall back to the recipe");
+        check(failure([&] {
+                  install_e2fs_helper(scratch, fixture, "a9-offline-labels", false, 0, unreachable,
+                                      build(bytes));
+              }).starts_with("DOWNLOAD_HTTP: no connection") &&
+                      !std::filesystem::exists(helper),
+              "a network failure does not fall back to the recipe");
         check(install_e2fs_helper(scratch, fixture, "a9-offline-labels", false, 0, missing,
                                   build(bytes)) == helper &&
                       text(helper) == bytes,

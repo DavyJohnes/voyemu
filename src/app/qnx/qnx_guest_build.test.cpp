@@ -1,5 +1,6 @@
 #include "qnx_guest_build.hpp"
 #include "error.hpp"
+#include "os/https.hpp"
 #include "process.hpp"
 #include "qnx_imagefs.hpp"
 #include "qnx_link_interface.hpp"
@@ -374,7 +375,10 @@ int main(int argc, char **argv) {
         }
 
         const DownloadTransport missing = [](const DownloadPin &, const DownloadSink &) {
-            throw std::runtime_error("DOWNLOAD_HTTP: 404");
+            throw os::HttpsFailure(os::HttpsFailure::Kind::status, 404, "fixture");
+        };
+        const DownloadTransport unreachable = [](const DownloadPin &, const DownloadSink &) {
+            throw os::HttpsFailure(os::HttpsFailure::Kind::unreachable, 0, "fixture");
         };
         const auto build = [&](const std::string &suffix) {
             return [&, suffix](const std::filesystem::path &job) {
@@ -397,6 +401,11 @@ int main(int argc, char **argv) {
         check(!std::filesystem::exists(scratch / ".local/toolchains/qnx-guest") ||
                       std::filesystem::is_empty(scratch / ".local/toolchains/qnx-guest"),
               "rejected recipe output installs nothing");
+        check(failure([&] {
+                  install_qnx_guest_modules(scratch, QnxGuestAdapter::qinggan09, fixture, false,
+                                            unreachable, build(""));
+              }).starts_with("DOWNLOAD_HTTP: no connection"),
+              "a network failure does not fall back to the recipe");
         const auto installed = install_qnx_guest_modules(scratch, QnxGuestAdapter::qinggan09,
                                                          fixture, false, missing, build(""));
         check(installed.parent_path() == scratch / ".local/toolchains/qnx-guest" &&

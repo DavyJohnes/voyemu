@@ -1,4 +1,5 @@
 #include "android_java.hpp"
+#include "os/https.hpp"
 #include "process.hpp"
 #include <iostream>
 using namespace voyemu;
@@ -10,8 +11,14 @@ void check(bool value, const char *message) {
     }
 }
 
+// A release asset that is not published yet: HTTP 404.
 void missing(const DownloadPin &, const DownloadSink &) {
-    throw std::runtime_error("DOWNLOAD_HTTP: successful complete HTTPS response required");
+    throw os::HttpsFailure(os::HttpsFailure::Kind::status, 404, "fixture");
+}
+
+// A host without network.
+void unreachable(const DownloadPin &, const DownloadSink &) {
+    throw os::HttpsFailure(os::HttpsFailure::Kind::unreachable, 0, "fixture");
 }
 } // namespace
 
@@ -49,6 +56,14 @@ int main(int argc, char **) {
               "an unpublished asset leaves the guest Java to the helper JDK");
         check(install_android_java(unpublished, pin, true, 0, missing).empty(),
               "an asset that is not cached offline leaves the guest Java to the helper JDK");
+        bool network = false;
+        try {
+            install_android_java(unpublished, pin, false, 0, unreachable);
+        } catch (const std::exception &error) {
+            network = std::string_view(error.what()).starts_with("DOWNLOAD_HTTP: no connection");
+        }
+
+        check(network, "a network failure is an error, not a build from source");
         std::cout << "PASS unpublished\n";
 
         const auto downloaded = scratch / "downloaded";

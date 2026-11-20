@@ -709,10 +709,8 @@ install_qnx_guest_modules(const std::filesystem::path &root, QnxGuestAdapter ada
     } catch (const std::runtime_error &error) {
         const std::string message = error.what();
 
-        // Only assets that are not published or not reachable fall back; other failures stay.
-        if (offline ||
-            !(message.starts_with("DOWNLOAD_HTTP:") || message.starts_with("DOWNLOAD_TIMEOUT:") ||
-              message.starts_with("DOWNLOAD_LIBRARY:"))) {
+        // Only assets that are not published fall back; a network failure stays an error.
+        if (offline || !download_unpublished(error)) {
             throw;
         }
 
