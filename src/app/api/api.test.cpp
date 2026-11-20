@@ -3479,7 +3479,9 @@ int main(int argc, char **argv) try {
         std::filesystem::remove_all(selected.parent_path());
     }
     {
-        const auto external = root / ".local/build/tmp/external-machine";
+        // A selected seed is lexically normal, with backslashes on Windows, so the expected paths
+        // are normalized too.
+        const auto external = (root / ".local/build/tmp/external-machine").lexically_normal();
         write_private_json(external / "runtime.json",
                            {{"schema", 1}, {"kind", "portable-guest-runtime"}, {"profile", name}});
         api::Api owner_api(root, std::filesystem::canonical(argv[0]));
@@ -3541,7 +3543,7 @@ int main(int argc, char **argv) try {
                mismatch.at("error").at("code") == "MACHINE_IDENTITY_UNKNOWN" &&
                mismatch.at("error").at("outcome") == "unknown" &&
                mismatch.at("error").at("details").at("session").at("id") == id);
-        const auto canonical = root / "machines" / name;
+        const auto canonical = (root / "machines" / name).lexically_normal();
         assert(!std::filesystem::exists(canonical / "runtime.json"));
         write_private_json(canonical / "runtime.json",
                            {{"schema", 1}, {"kind", "portable-guest-runtime"}, {"profile", name}});
