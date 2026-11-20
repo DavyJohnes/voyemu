@@ -7,13 +7,14 @@
 #include <winhttp.h>
 
 #include <array>
-#include <chrono>
+#include <cwchar>
 #include <stdexcept>
 
 namespace voyemu::os {
 // WinHTTP with the system certificate store and proxy settings.
 void https_get(const std::string &url, const std::vector<std::string> &headers,
-               const std::function<void(std::string_view)> &sink) {
+               const std::function<void(std::string_view)> &sink,
+               const std::function<void(std::uint64_t)> &length) {
     auto wide = [](const std::string &text) {
         const auto n = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, text.data(),
                                            static_cast<int>(text.size()), nullptr, 0);
@@ -124,14 +125,19 @@ void https_get(const std::string &url, const std::vector<std::string> &headers,
         throw VoyemuError("DOWNLOAD_HTTP", "successful complete response required");
     }
 
-    const auto started = std::chrono::steady_clock::now();
+    std::array<wchar_t, 32> size{};
+    bytes = static_cast<DWORD>(sizeof size - sizeof(wchar_t));
+
+    if (length && WinHttpQueryHeaders(request.value, WINHTTP_QUERY_CONTENT_LENGTH,
+                                      WINHTTP_HEADER_NAME_BY_INDEX, size.data(), &bytes,
+                                      WINHTTP_NO_HEADER_INDEX)) {
+        length(std::wcstoull(size.data(), nullptr, 10));
+    }
+
+    // The 60-second receive timeout of the session bounds each read, not the whole transfer.
     std::array<char, 65536> buffer{};
 
     for (;;) {
-        if (std::chrono::steady_clock::now() - started > std::chrono::seconds(600)) {
-            throw VoyemuError("DOWNLOAD_TIMEOUT", "response deadline exceeded");
-        }
-
         DWORD count = 0;
 
         if (!WinHttpReadData(request.value, buffer.data(), static_cast<DWORD>(buffer.size()),

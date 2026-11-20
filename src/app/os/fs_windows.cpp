@@ -124,4 +124,10 @@ bool reparse_point(const std::filesystem::path &path) {
 bool foreign_owner(const std::filesystem::path &) {
     return false;
 }
+
+bool error_terminal() {
+    DWORD mode = 0;
+
+    return GetConsoleMode(GetStdHandle(STD_ERROR_HANDLE), &mode) != 0;
+}
 } // namespace voyemu::os

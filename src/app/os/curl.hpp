@@ -27,5 +27,6 @@ const Curl &load_curl(const std::string &library);
 void curl_https_get(const Curl &curl, const std::string &url,
                     const std::vector<std::string> &headers,
                     const std::function<void(std::string_view)> &sink,
-                    const std::filesystem::path &trust = {});
+                    const std::filesystem::path &trust = {},
+                    const std::function<void(std::uint64_t)> &length = {});
 } // namespace voyemu::os

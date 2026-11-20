@@ -45,6 +45,22 @@ int main() try {
     const auto split = captured.str().find('\n');
     assert(captured.str().substr(0, split) == "fetch: inputs verified; files=2");
     assert(Json::parse(captured.str().substr(split + 1)).at("message") == "retained JSON");
+    // A live line is replaced in place, padded over its longer predecessor; a log line or empty
+    // text ends it.
+    std::ostringstream console;
+    prior = std::cerr.rdbuf(console.rdbuf());
+    human_console(true);
+    console_line("12.0 MiB", true);
+    console_line("9 MiB", true);
+    console_line("Done", false);
+    console_line("1 MiB", true);
+    write(Level::info, "fetch", "inputs verified");
+    console_line("2 MiB", true);
+    console_line({}, false);
+    console_line({}, false);
+    human_console(false);
+    std::cerr.rdbuf(prior);
+    assert(console.str() == "12.0 MiB\r9 MiB   \rDone \n1 MiB\nfetch: inputs verified\n2 MiB\n");
     std::cout << "native canonical DEBUG/INFO/ERROR JSONL record guards passed\n";
 } catch (const std::exception &error) {
     std::cerr << error.what() << '\n';

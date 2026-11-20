@@ -1,5 +1,6 @@
 #include "java_toolchain.hpp"
 #include "check.hpp"
+#include "disk_space.hpp"
 #include "e2fs_helper.hpp"
 #include "error.hpp"
 #include "java_runtime.hpp"
@@ -369,11 +370,12 @@ Json verify_helper(const std::filesystem::path &root, const std::filesystem::pat
     return receipt;
 }
 
-// Puts one JAR of a pinned Android SDK archive into the Java SDK of the project unless it is there.
+// Puts one JAR of the pinned Android SDK archive product into the Java SDK of the project unless it
+// is there.
 void install_sdk_jar(const std::filesystem::path &root, const Json &archive,
-                     const std::string &entry, bool exact_name, const std::filesystem::path &target,
-                     const std::string &sha256, bool offline, std::uint64_t reserve,
-                     const DownloadTransport &transport) {
+                     const std::string &product, const std::string &entry, bool exact_name,
+                     const std::filesystem::path &target, const std::string &sha256, bool offline,
+                     std::uint64_t reserve, const DownloadTransport &transport) {
     if (std::filesystem::exists(std::filesystem::symlink_status(target))) {
         need(java_toolchain_input_sha256(target) == sha256, "existing Java SDK JAR differs");
 
@@ -381,11 +383,11 @@ void install_sdk_jar(const std::filesystem::path &root, const Json &archive,
     }
 
     const auto archive_sha = archive.at("sha256").get<std::string>();
-    const auto file =
-            download_pinned({archive.at("url").get<std::string>(), archive_sha, 3ULL << 30},
-                            root / ".local/toolchains/downloads/native", offline, reserve,
-                            transport)
-                    .file;
+    const auto file = download_pinned({archive.at("url").get<std::string>(), archive_sha,
+                                       3ULL << 30, DownloadEncoding::raw, product},
+                                      root / ".local/toolchains/downloads/native", offline, reserve,
+                                      transport)
+                              .file;
     std::string selected;
     std::uint64_t bytes = 0;
 
@@ -429,14 +431,16 @@ void install_java_sdk(const std::filesystem::path &root, bool offline, std::uint
     const auto java_sdk = root / ".local/toolchains/java-sdk";
 
     for (const auto &name : {"d8", "apksigner"}) {
-        install_sdk_jar(root, archives.at("buildTools"), std::string("lib/") + name + ".jar", false,
+        install_sdk_jar(root, archives.at("buildTools"), "Android SDK Build-Tools 36.1.0",
+                        std::string("lib/") + name + ".jar", false,
                         java_sdk / "build-tools/36.1.0/lib" / (std::string(name) + ".jar"),
                         tools.at("libraries").at(name).at("sha256").get<std::string>(), offline,
                         reserve, transport);
     }
 
     const auto platform = java_sdk / "platforms/android-34/android.jar";
-    install_sdk_jar(root, archives.at("platform"), "android-34/android.jar", true, platform,
+    install_sdk_jar(root, archives.at("platform"), "Android SDK Platform 34",
+                    "android-34/android.jar", true, platform,
                     sdk.at("platformJar").at("sha256").get<std::string>(), offline, reserve,
                     transport);
     need(sdk.at("platformJar").at("bytes") == std::filesystem::file_size(platform),
@@ -702,11 +706,15 @@ std::filesystem::path install_java_helper(
 
         if (!inputs.contains("sources")) {
             try {
-                const auto asset =
-                        download_pinned({pin.at("url").get<std::string>(), sha, 128ULL << 20},
-                                        root / ".local/toolchains/downloads/java-helper", offline,
-                                        reserve, transport)
-                                .file;
+                const auto asset = download_pinned({pin.at("url").get<std::string>(),
+                                                    sha,
+                                                    128ULL << 20,
+                                                    DownloadEncoding::raw,
+                                                    {},
+                                                    "java_helper"},
+                                                   root / ".local/toolchains/downloads/java-helper",
+                                                   offline, reserve, transport)
+                                           .file;
                 extract_java_helper(root, asset, sha, output, reserve);
                 downloaded = true;
             } catch (const std::runtime_error &error) {
@@ -802,9 +810,9 @@ JavaPreparationToolchain ensure_java_preparation_tools(const std::filesystem::pa
     const bool reused =
             std::filesystem::exists(root / ".local/toolchains/java-helper" / fingerprint);
 
-    need(reserve <= std::numeric_limits<std::uint64_t>::max() - (512ULL << 20) &&
-                 (reused || std::filesystem::space(root).available >= reserve + (512ULL << 20)),
-         "disk reserve for Java toolchain");
+    if (!reused) {
+        require_disk_space("JAVA_TOOLCHAIN", root, 512ULL << 20, reserve);
+    }
     install_java_sdk(root, offline, reserve, {});
     const auto folder = install_java_helper(
             root, embedded_toolchain_manifest().at("javaHelper"), offline, reserve, {},

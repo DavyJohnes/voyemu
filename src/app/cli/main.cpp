@@ -44,6 +44,7 @@ int main(int argc, char **argv) {
 
         if (!args.private_start && args.command != "test" && args.command != "_supervise") {
             voyemu::logging::human_console(true);
+            voyemu::progress::console(language, voyemu::os::error_terminal());
         }
 
         const auto public_command = args.command;
@@ -51,6 +52,7 @@ int main(int argc, char **argv) {
             if (args.private_start) {
                 std::cout << value.dump(2) << '\n';
             } else {
+                voyemu::progress::separate();
                 std::cout << voyemu::human_cli_output(public_command, value, args.profile,
                                                       args.machine_path, args.verbose, language);
             }

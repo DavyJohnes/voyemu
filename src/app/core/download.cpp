@@ -1,9 +1,10 @@
 #include "download.hpp"
 #include "check.hpp"
-#include "logging.hpp"
+#include "disk_space.hpp"
 #include "model.hpp"
 #include "os/https.hpp"
 #include "process.hpp"
+#include "progress.hpp"
 #include "quickboot.hpp"
 #include <algorithm>
 #include <cerrno>
@@ -137,7 +138,8 @@ std::string decode_base64(std::string_view source, std::size_t maximum) {
     return output;
 }
 
-void https(const DownloadPin &pin, const DownloadSink &sink) {
+void https(const DownloadPin &pin, const DownloadSink &sink,
+           const std::function<void(std::uint64_t)> &length) {
     std::vector<std::string> headers;
 
     // Public Homebrew OCI blobs accept an anonymous marker, never user credentials.
@@ -145,9 +147,24 @@ void https(const DownloadPin &pin, const DownloadSink &sink) {
         headers.emplace_back("Authorization: Bearer QQ==");
     }
 
-    os::https_get(pin.url, headers, sink);
+    os::https_get(pin.url, headers, sink, length);
 }
 } // namespace
+
+std::string download_name(const DownloadPin &pin) {
+    return pin.name.empty() ? progress::url_file(pin.url) : pin.name;
+}
+
+progress::Arguments download_names(const DownloadPin &pin) {
+    progress::Arguments names{{"name", download_name(pin)}};
+
+    if (!pin.label.empty()) {
+        names["label"] = pin.label;
+        names["version"] = pin.version;
+    }
+
+    return names;
+}
 
 DownloadedBlob download_pinned(const DownloadPin &pin, const std::filesystem::path &cache,
                                bool offline, std::uint64_t reserve,
@@ -162,6 +179,8 @@ DownloadedBlob download_pinned(const DownloadPin &pin, const std::filesystem::pa
     const auto destination = cache / (pin.sha256 + ".blob");
 
     if (std::filesystem::exists(destination) || std::filesystem::is_symlink(destination)) {
+        progress::report("download_cached", download_names(pin));
+
         return {destination, verify(destination, pin), true};
     }
 
@@ -169,9 +188,7 @@ DownloadedBlob download_pinned(const DownloadPin &pin, const std::filesystem::pa
         throw VoyemuError("DOWNLOAD_OFFLINE", "pinned cache file missing");
     }
 
-    if (std::filesystem::space(cache).available < reserve) {
-        throw VoyemuError("DOWNLOAD_SPACE", "reserve unavailable");
-    }
+    require_disk_space("DOWNLOAD_SPACE", cache, 0, reserve);
 
     const auto temporary = cache / (".part-" + random_token());
 #ifdef _WIN32
@@ -234,13 +251,17 @@ DownloadedBlob download_pinned(const DownloadPin &pin, const std::filesystem::pa
                                           ? pin.maximum_bytes * 2 + 16
                                           : pin.maximum_bytes;
     std::uint64_t received = 0;
+    const auto host = progress::url_host(pin.url);
+    auto context = download_names(pin);
+    context["host"] = host;
+    progress::Meter meter("download", context);
     const DownloadSink sink = [&](std::string_view bytes) {
         if (bytes.size() > maximum_received - received) {
             throw VoyemuError("DOWNLOAD_BOUND", "response exceeds declared maximum");
         }
 
         if (std::filesystem::space(cache).available < reserve) {
-            throw VoyemuError("DOWNLOAD_SPACE", "reserve reached");
+            require_disk_space("DOWNLOAD_SPACE", cache, 0, reserve);
         }
 
         if (std::fwrite(bytes.data(), 1, bytes.size(), stream) != bytes.size()) {
@@ -248,6 +269,7 @@ DownloadedBlob download_pinned(const DownloadPin &pin, const std::filesystem::pa
         }
 
         received += bytes.size();
+        meter.advance(bytes.size());
     };
 
     // A server that refuses the request for now gets six more attempts after its Retry-After delay,
@@ -257,7 +279,11 @@ DownloadedBlob download_pinned(const DownloadPin &pin, const std::filesystem::pa
             if (transport) {
                 transport(pin, sink);
             } else {
-                https(pin, sink);
+                // A response that announces its size must fit beside the reserve before it arrives.
+                https(pin, sink, [&](std::uint64_t total) {
+                    require_disk_space("DOWNLOAD_SPACE", cache, total, reserve);
+                    meter.length(total);
+                });
             }
 
             break;
@@ -269,11 +295,12 @@ DownloadedBlob download_pinned(const DownloadPin &pin, const std::filesystem::pa
             const auto delay = busy.retry_after_seconds >= 0
                                        ? std::min<long long>(busy.retry_after_seconds, 300)
                                        : 1LL << attempt;
-            logging::write(logging::Level::info, "download", "server busy, retrying",
-                           {{"url", pin.url},
-                            {"status", busy.status},
-                            {"attempt", attempt},
-                            {"delay_seconds", delay}});
+            progress::report("download_retry",
+                             {{"host", host},
+                              {"status", std::to_string(busy.status)},
+                              {"attempt", std::to_string(attempt)},
+                              {"delay", progress::duration_text(static_cast<std::uint64_t>(delay),
+                                                                progress::language())}});
             std::this_thread::sleep_for(std::chrono::seconds(delay));
         }
     }
@@ -326,6 +353,7 @@ DownloadedBlob download_pinned(const DownloadPin &pin, const std::filesystem::pa
 
     cleanup.stream = nullptr;
     const auto bytes = verify(temporary, pin);
+    meter.finish();
 #ifdef _WIN32
     if (!MoveFileW(temporary.c_str(), destination.c_str())) {
         throw VoyemuError("DOWNLOAD_PUBLISH", "fresh cache destination required");

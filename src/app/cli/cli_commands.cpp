@@ -51,20 +51,56 @@ int list_command(const Arguments &args, const Emit &emit) {
     return 0;
 }
 
+namespace {
+// The free space that deps and fetch keep beyond what each download or extraction needs; build
+// keeps the larger reserve of machine preparation.
+constexpr std::uint64_t preparation_margin = 2ULL << 30;
+} // namespace
+
 int fetch_command(const Arguments &args, const Emit &emit) {
     emit(voyemu::fetch_native_inputs(args.root, args.profile, args.offline, args.serial,
-                                     20ULL << 30, args.jdk, args.update));
+                                     preparation_margin, args.jdk, args.update));
 
     return 0;
 }
 
 int deps_command(const Arguments &args, const Emit &emit) {
-    auto result = voyemu::install_native_dependencies(args.root, args.offline);
+    // Each step starts a block of console lines and ends with one line: already installed when the
+    // step reported nothing, installed after its downloads and extractions.
+    const auto step = [](std::string_view name, const auto &work, bool new_block = true) {
+        if (new_block) {
+            progress::block();
+        }
+
+        const auto before = progress::reported();
+        auto value = work();
+        progress::report(std::string(name) +
+                         (progress::reported() == before ? "_cached" : "_installed"));
+
+        return value;
+    };
+
+    // Hashing every file of an installed SDK takes seconds.
+    progress::block();
+
+    if (std::filesystem::exists(args.root / ".local/toolchains/native-sdk")) {
+        progress::report("sdk_verify");
+    }
+
+    auto result = step(
+            "sdk",
+            [&] {
+                return voyemu::install_native_dependencies(args.root, args.offline,
+                                                           preparation_margin);
+            },
+            false);
 
     // While the QNX engine of this host can be neither downloaded nor taken from the cache, deps
     // reports it unavailable and machines run without the cluster.
     try {
-        result["qnx_host"] = voyemu::install_qnx_host(args.root, args.offline);
+        result["qnx_host"] = step("qnx_host", [&] {
+            return voyemu::install_qnx_host(args.root, args.offline, preparation_margin);
+        });
     } catch (const std::runtime_error &error) {
         if (!std::string_view(error.what()).starts_with("QNX_HOST_ASSET_MISSING:")) {
             throw;
@@ -75,17 +111,21 @@ int deps_command(const Arguments &args, const Emit &emit) {
 
     if (voyemu::portable_runtime_available(args.root, args.profile,
                                            voyemu::machine_identity(args.profile, {}))) {
-        result["guest_base"] = voyemu::prepare_portable_base(args.root, args.profile, args.offline);
+        result["guest_base"] = step("guest_base", [&] {
+            return voyemu::prepare_portable_base(args.root, args.profile, args.offline,
+                                                 preparation_margin);
+        });
     }
 
     // The Java runtime of preparation; while its asset is neither published nor cached and no
     // recipe JDK links it, deps reports it unavailable.
     try {
-        result["java_runtime"] = voyemu::install_java_runtime(
-                                         args.root,
-                                         voyemu::embedded_toolchain_manifest().at("javaRuntime"),
-                                         args.offline, 20ULL << 30)
-                                         .string();
+        result["java_runtime"] =
+                step("java_runtime", [&] {
+                    return voyemu::install_java_runtime(
+                            args.root, voyemu::embedded_toolchain_manifest().at("javaRuntime"),
+                            args.offline, preparation_margin);
+                }).string();
     } catch (const std::runtime_error &error) {
         const std::string_view message = error.what();
 
@@ -101,7 +141,10 @@ int deps_command(const Arguments &args, const Emit &emit) {
     // can be neither downloaded nor built, deps reports preparation unavailable.
     try {
         result["java_preparation"] =
-                voyemu::ensure_java_preparation_tools(args.root, args.jdk, args.offline).receipt;
+                step("java_tools", [&] {
+                    return voyemu::ensure_java_preparation_tools(args.root, args.jdk, args.offline,
+                                                                 preparation_margin);
+                }).receipt;
         result["preparation_tools_ready"] = true;
     } catch (const std::exception &error) {
         const std::string_view message = error.what();
@@ -118,9 +161,18 @@ int deps_command(const Arguments &args, const Emit &emit) {
 
     // The CI-built guest Java and UI observer that build reads; while that asset cannot be
     // downloaded, build compiles them on a JDK.
+    progress::block();
+    const auto reported = progress::reported();
     const auto guest_java = voyemu::install_android_java(
             args.root, voyemu::embedded_toolchain_manifest().at("androidJava"), args.offline,
-            20ULL << 30);
+            preparation_margin);
+
+    // Without the asset install_android_java reported that build compiles the guest Java.
+    if (!guest_java.empty()) {
+        progress::report(progress::reported() == reported ? "guest_java_cached"
+                                                          : "guest_java_installed");
+    }
+
     result["android_java"] = guest_java.empty() ? Json{{"status", "unavailable"}}
                                                 : Json(guest_java.string());
     emit(result);

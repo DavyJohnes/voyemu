@@ -265,6 +265,21 @@ int main(int argc, char **argv) {
         check(get(server, "/ok", {}, trust) == Server::body(), "trusted HTTPS body differs");
         check(get(server, "/redirect-https", {}, trust) == Server::body(),
               "HTTPS redirect not followed");
+        // The size of the final response arrives before its body.
+        std::uint64_t announced = 0;
+        std::string order;
+        os::curl_https_get(
+                os::curl(), server.url("/redirect-https"), {},
+                [&](std::string_view) {
+                    order += order.ends_with('B') ? "" : "B";
+                },
+                trust,
+                [&](std::uint64_t total) {
+                    announced = total;
+                    order += 'L';
+                });
+        check(announced == Server::body().size() && order == "LB",
+              "response size not announced before the body");
         check(get(server, "/authorized", {"Authorization: Bearer QQ=="}, trust) == Server::body(),
               "request header not sent");
         check(get(server, "/missing", {}, trust).starts_with("!DOWNLOAD_HTTP:"),

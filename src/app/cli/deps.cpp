@@ -4,6 +4,7 @@
 #include "os/fs.hpp"
 #include "os/platform.hpp"
 #include "process.hpp"
+#include "progress.hpp"
 #include "quickboot.hpp"
 #include "sdk_archive.hpp"
 #include <algorithm>
@@ -359,27 +360,31 @@ std::vector<NativeDependency> native_dependencies(std::string_view host) {
                     ? pins.at("emulatorByArch").at(std::string(host.substr(host.find('/') + 1)))
                     : pins.at("emulator");
     const std::string suffix = windows ? ".exe" : "";
-    auto pin = [](const Json &value) {
+    auto pin = [](const Json &value, const std::string &product, const Json &version) {
         return DownloadPin{value.at("url").get<std::string>(),
-                           value.at("sha256").get<std::string>(), 3ULL << 30};
+                           value.at("sha256").get<std::string>(), 3ULL << 30, DownloadEncoding::raw,
+                           product + " " + version.get<std::string>()};
     };
 
     return {{"platform-tools",
              sdk.at("platformTools"),
-             pin(pins.at("platformTools")),
+             pin(pins.at("platformTools"), "Android SDK Platform-Tools", sdk.at("platformTools")),
              {"adb" + suffix}},
-            {"emulator", sdk.at("emulator"), pin(emulator), {"emulator" + suffix}},
+            {"emulator",
+             sdk.at("emulator"),
+             pin(emulator, "Android Emulator", sdk.at("emulator")),
+             {"emulator" + suffix}},
             {"build-tools/" + sdk.at("buildTools").get<std::string>(),
              sdk.at("buildTools"),
-             pin(pins.at("buildTools")),
+             pin(pins.at("buildTools"), "Android SDK Build-Tools", sdk.at("buildTools")),
              {"aapt2" + suffix, "zipalign" + suffix}},
             {"ndk/" + native.at("ndk").get<std::string>(),
              native.at("ndk"),
-             pin(pins.at("ndk")),
+             pin(pins.at("ndk"), "Android NDK", native.at("ndk")),
              {"toolchains/llvm/prebuilt/" + std::string(ndk_host->second) + "/bin/clang" + suffix}},
             {"cmake/" + native.at("cmake").get<std::string>(),
              native.at("cmake"),
-             pin(pins.at("cmake")),
+             pin(pins.at("cmake"), "CMake", native.at("cmake")),
              {"bin/cmake" + suffix, "bin/ninja" + suffix}}};
 }
 
@@ -1214,6 +1219,7 @@ Json install_native_dependencies(const std::filesystem::path &root, bool offline
                               .file;
         }
 
+        progress::report("extract", download_names(component.pin));
         const auto extraction = extract_sdk_archive(archive, component.pin.sha256,
                                                     staging / component.target, reserve, 8ULL << 30,
                                                     !component.target.starts_with("cmake/"));

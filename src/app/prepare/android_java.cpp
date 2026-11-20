@@ -2,6 +2,7 @@
 #include "error.hpp"
 #include "logging.hpp"
 #include "process.hpp"
+#include "progress.hpp"
 namespace voyemu {
 std::filesystem::path install_android_java(const std::filesystem::path &root, const Json &pin,
                                            bool offline, std::uint64_t reserve,
@@ -23,7 +24,12 @@ std::filesystem::path install_android_java(const std::filesystem::path &root, co
     std::filesystem::path blob;
 
     try {
-        blob = download_pinned({pin.at("url").get<std::string>(), sha, 256ULL << 20},
+        blob = download_pinned({pin.at("url").get<std::string>(),
+                                sha,
+                                256ULL << 20,
+                                DownloadEncoding::raw,
+                                {},
+                                "guest_java"},
                                root / ".local/toolchains/downloads/android-java", offline, reserve,
                                transport)
                        .file;
@@ -37,8 +43,9 @@ std::filesystem::path install_android_java(const std::filesystem::path &root, co
             throw;
         }
 
-        logging::write(logging::Level::info, "prepare", "guest Java compiled by the helper JDK",
+        logging::write(logging::Level::debug, "prepare", "guest Java download failed",
                        {{"sha256", sha}, {"download", message}});
+        progress::report("guest_java_build");
 
         return {};
     }
@@ -54,7 +61,6 @@ std::filesystem::path install_android_java(const std::filesystem::path &root, co
     }
 
     std::filesystem::rename(temporary, archive);
-    logging::write(logging::Level::info, "prepare", "guest Java downloaded", {{"sha256", sha}});
 
     return archive;
 }

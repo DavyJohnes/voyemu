@@ -4,6 +4,7 @@
 #include "error.hpp"
 #include "model.hpp"
 #include "process.hpp"
+#include "progress.hpp"
 #include "zip_archive.hpp"
 #include <algorithm>
 #include <filesystem>
@@ -65,16 +66,25 @@ inline std::string qnx_host_source_info(const std::string &host) {
 }
 
 // Downloads the pinned engine asset, a ZIP of the installed engine files, and extracts its regular
-// members into the fresh directory destination. The caller checks the files against its recipe.
+// members into the fresh directory destination. The caller checks the files against its recipe;
+// version names the engine on the console.
 inline void extract_prebuilt_qnx_host(const std::filesystem::path &root, const Json &pin,
                                       const std::filesystem::path &destination, bool offline,
-                                      std::uint64_t reserve, const std::string &host) {
+                                      std::uint64_t reserve, const std::string &host,
+                                      const std::string &version = {}) {
     const auto info = qnx_host_source_info(host);
     const auto sha = pin.at("sha256").get<std::string>();
-    const auto archive = download_pinned({pin.at("url").get<std::string>(), sha, 512ULL << 20},
-                                         root / ".local/toolchains/downloads/qnx-host", offline,
-                                         reserve)
+    const DownloadPin download{pin.at("url").get<std::string>(),
+                               sha,
+                               512ULL << 20,
+                               DownloadEncoding::raw,
+                               {},
+                               "qnx_host",
+                               version};
+    const auto archive = download_pinned(download, root / ".local/toolchains/downloads/qnx-host",
+                                         offline, reserve)
                                  .file;
+    progress::report("extract", download_names(download));
 
     if (std::filesystem::exists(std::filesystem::symlink_status(destination))) {
         throw VoyemuError("QNX_HOST", "prebuilt engine destination exists");
@@ -175,7 +185,8 @@ inline Json install_prebuilt_qnx_host(const std::filesystem::path &root, const J
         }
     } owned{stage};
     extract_prebuilt_qnx_host(root, prebuilt, stage, offline, reserve,
-                              host == "macos" ? "macos-arm64" : "linux-x64");
+                              host == "macos" ? "macos-arm64" : "linux-x64",
+                              component.value("version", std::string{}));
     auto receipt = verify(stage, false);
     std::filesystem::permissions(stage / "qemu-system-aarch64",
                                  std::filesystem::perms::owner_all |

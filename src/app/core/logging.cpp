@@ -1,5 +1,6 @@
 #include "logging.hpp"
 #include "error.hpp"
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <cstdlib>
@@ -11,10 +12,45 @@
 namespace voyemu::logging {
 namespace {
 std::atomic<bool> human_output = false;
-}
+std::mutex console;
+// The code points of the live line on the console, 0 without one.
+std::size_t live_width = 0;
+} // namespace
 
 void human_console(bool enabled) {
     human_output = enabled;
+}
+
+void console_line(std::string_view text, bool live) {
+    std::lock_guard lock(console);
+
+    if (text.empty() && !live) {
+        if (live_width) {
+            std::cerr << '\n';
+            live_width = 0;
+        }
+
+        return;
+    }
+
+    const auto width = static_cast<std::size_t>(std::count_if(text.begin(), text.end(), [](char c) {
+        return (static_cast<unsigned char>(c) & 0xC0) != 0x80;
+    }));
+
+    if (live_width) {
+        std::cerr << '\r' << text << std::string(width < live_width ? live_width - width : 0, ' ');
+    } else {
+        std::cerr << text;
+    }
+
+    live_width = live ? width : 0;
+    std::cerr << (live ? "" : "\n") << std::flush;
+}
+
+void console_blank() {
+    std::lock_guard lock(console);
+    std::cerr << (live_width ? "\n\n" : "\n") << std::flush;
+    live_width = 0;
 }
 
 Json record(Level level, std::string_view component, std::string_view message, Json fields) {
@@ -58,11 +94,15 @@ void write(Level level, std::string_view component, std::string_view message, Js
         return;
     }
 
-    static std::mutex mutex;
-    std::lock_guard lock(mutex);
+    std::lock_guard lock(console);
     const auto entry = record(level, component, message, std::move(fields));
 
     if (human_output) {
+        if (live_width) {
+            std::cerr << '\n';
+            live_width = 0;
+        }
+
         std::cerr << component << ": " << message;
 
         for (const auto &[key, value] : entry.at("fields").items()) {

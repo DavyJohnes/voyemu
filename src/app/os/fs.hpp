@@ -64,6 +64,8 @@ bool reparse_point(const std::filesystem::path &path);
 // Whether path belongs to another user than the effective one; false on Windows, whose callers
 // check the owner on an open handle.
 bool foreign_owner(const std::filesystem::path &path);
+// Whether the standard error stream of this process is an interactive terminal.
+bool error_terminal();
 
 // True for the volume root of an absolute path: / on POSIX, a drive root such as C:\ or a UNC share
 // root such as \\server\share on Windows. Ancestor walks over an absolute path stop there without

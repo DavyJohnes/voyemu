@@ -93,4 +93,8 @@ bool foreign_owner(const std::filesystem::path &path) {
 
     return ::stat(path.c_str(), &status) != 0 || status.st_uid != ::geteuid();
 }
+
+bool error_terminal() {
+    return ::isatty(STDERR_FILENO) == 1;
+}
 } // namespace voyemu::os

@@ -1,5 +1,6 @@
 #include "zip_archive.hpp"
 #include "check.hpp"
+#include "disk_space.hpp"
 #include "model.hpp"
 #include "os/fs.hpp"
 #include "process.hpp"
@@ -571,9 +572,7 @@ void extract_pinned_zip_members(const std::filesystem::path &source, const std::
 
     const auto parent = output.parent_path();
 
-    if (std::filesystem::space(parent).available < reserve_bytes + output_bytes) {
-        throw VoyemuError("ZIP_SPACE", "reserve plus output required");
-    }
+    require_disk_space("ZIP_SPACE", parent, output_bytes, reserve_bytes);
 
     const auto layout = zip_layout(source);
     std::map<std::string, const ZipMember *> index;
@@ -646,7 +645,7 @@ void extract_pinned_zip_members(const std::filesystem::path &source, const std::
                     }
 
                     if (std::filesystem::space(parent).available < reserve_bytes) {
-                        throw VoyemuError("ZIP_SPACE", "disk reserve reached");
+                        require_disk_space("ZIP_SPACE", parent, 0, reserve_bytes);
                     }
                 },
                 progress);
@@ -749,11 +748,7 @@ void extract_pinned_zip_tree(const std::filesystem::path &source, const std::str
             throw VoyemuError("ZIP_OUTPUT", "unique fresh absolute output required");
         }
 
-        const auto available = std::filesystem::space(item.output.parent_path()).available;
-
-        if (available < reserve_bytes || available - reserve_bytes < total) {
-            throw VoyemuError("ZIP_SPACE", "reserve plus output required");
-        }
+        require_disk_space("ZIP_SPACE", item.output.parent_path(), total, reserve_bytes);
     }
 
     std::ifstream input(source, std::ios::binary);
@@ -817,7 +812,8 @@ void extract_pinned_zip_tree(const std::filesystem::path &source, const std::str
 
                     if (std::filesystem::space(item.output.parent_path()).available <
                         reserve_bytes) {
-                        throw VoyemuError("ZIP_SPACE", "disk reserve reached");
+                        require_disk_space("ZIP_SPACE", item.output.parent_path(), 0,
+                                           reserve_bytes);
                     }
                 },
                 progress);
@@ -916,10 +912,7 @@ std::string rewrite_pinned_zip(const std::filesystem::path &source, const std::s
         existing = existing.parent_path();
     }
 
-    if (reserve_bytes > std::numeric_limits<std::uint64_t>::max() - peak ||
-        std::filesystem::space(existing).available < reserve_bytes + peak) {
-        throw VoyemuError("ZIP_SPACE", "reserve plus planned output required");
-    }
+    require_disk_space("ZIP_SPACE", existing, peak, reserve_bytes);
 
 #ifdef __APPLE__
     ensure_private_directory(destination.parent_path());

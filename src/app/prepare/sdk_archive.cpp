@@ -1,5 +1,6 @@
 #include "sdk_archive.hpp"
 #include "check.hpp"
+#include "disk_space.hpp"
 #include "error.hpp"
 #include "os/fs.hpp"
 #include "process.hpp"
@@ -290,18 +291,25 @@ Json extract_sdk_archive(const std::filesystem::path &file, const std::string &p
 
 #ifdef __APPLE__
     const auto entries = inventory(file, maximum, strip_root);
-    std::uint64_t bytes = 0;
+    std::uint64_t bytes = 0, expanded = 0;
     unsigned count = 0, omitted = 0;
-    auto ancestor = destination.parent_path();
 
-    while (!std::filesystem::exists(ancestor)) {
-        ancestor = ancestor.parent_path();
+    // Links become copies of their final target and take its size, as below.
+    for (const auto &[name, item] : entries) {
+        if (item.omitted || item.directory) {
+            continue;
+        }
+
+        auto target = name;
+
+        while (!entries.at(target).link.empty()) {
+            target = entries.at(target).link;
+        }
+
+        expanded += entries.at(target).bytes;
     }
 
-    if (reserve > std::numeric_limits<std::uint64_t>::max() - maximum ||
-        std::filesystem::space(ancestor).available < reserve + maximum) {
-        throw VoyemuError("SDK_SPACE", "reserve plus maximum extraction required");
-    }
+    require_disk_space("SDK_SPACE", destination.parent_path(), expanded, reserve);
 
     ensure_private_directory(destination.parent_path());
 
@@ -448,7 +456,7 @@ Json extract_sdk_archive(const std::filesystem::path &file, const std::string &p
             written += size;
 
             if (std::filesystem::space(destination).available < reserve) {
-                throw VoyemuError("SDK_SPACE", "reserve reached");
+                require_disk_space("SDK_SPACE", destination, 0, reserve);
             }
         }
 
@@ -601,16 +609,7 @@ Json extract_sdk_archive(const std::filesystem::path &file, const std::string &p
         copies.emplace_back(destination / target, destination / name);
     }
 
-    auto ancestor = destination.parent_path();
-
-    while (!std::filesystem::exists(ancestor)) {
-        ancestor = ancestor.parent_path();
-    }
-
-    if (reserve > std::numeric_limits<std::uint64_t>::max() - expanded ||
-        std::filesystem::space(ancestor).available < reserve + expanded) {
-        throw VoyemuError("SDK_SPACE", "reserve plus complete extraction required");
-    }
+    require_disk_space("SDK_SPACE", destination.parent_path(), expanded, reserve);
 
     ensure_private_directory(destination.parent_path());
 

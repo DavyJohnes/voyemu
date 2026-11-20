@@ -10,6 +10,7 @@
 #include "passion_presentation.hpp"
 #include "process.hpp"
 #include "program_modes.hpp"
+#include "progress.hpp"
 #include "qinggan11_startup.hpp"
 #include "session_recovery.hpp"
 #include <atomic>

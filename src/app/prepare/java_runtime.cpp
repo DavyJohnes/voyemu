@@ -1,5 +1,6 @@
 #include "java_runtime.hpp"
 #include "e2fs_helper.hpp"
+#include "progress.hpp"
 #include "project_files.hpp"
 #include "sdk_archive.hpp"
 namespace voyemu {
@@ -108,15 +109,20 @@ install_java_runtime(const std::filesystem::path &root, const Json &pins, bool o
             std::filesystem::remove_all(path, ignored);
         }
     } owned{job};
+    const DownloadPin download{pin.at("url").get<std::string>(),
+                               sha,
+                               256ULL << 20,
+                               DownloadEncoding::raw,
+                               asset,
+                               "java_runtime",
+                               pins.value("version", std::string{})};
+    const auto names = download_names(download);
     std::filesystem::path archive;
 
     try {
-        archive = download_pinned({pin.at("url").get<std::string>(), sha, 256ULL << 20},
-                                  root / ".local/toolchains/downloads/java-runtime", offline,
-                                  reserve, transport)
+        archive = download_pinned(download, root / ".local/toolchains/downloads/java-runtime",
+                                  offline, reserve, transport)
                           .file;
-        logging::write(logging::Level::info, "prepare", "java runtime downloaded",
-                       {{"host", host}, {"sha256", sha}});
     } catch (const std::runtime_error &error) {
         const std::string message = error.what();
 
@@ -127,8 +133,9 @@ install_java_runtime(const std::filesystem::path &root, const Json &pins, bool o
             throw;
         }
 
-        logging::write(logging::Level::info, "prepare", "java runtime linked from the recipe",
+        logging::write(logging::Level::debug, "prepare", "java runtime download failed",
                        {{"host", host}, {"sha256", sha}, {"download", message}});
+        progress::report("recipe", names);
         ensure_private_directory(job);
 
         if (build) {
@@ -147,6 +154,7 @@ install_java_runtime(const std::filesystem::path &root, const Json &pins, bool o
     const auto staging = cache / (".part-" + random_token());
 
     try {
+        progress::report("extract", names);
         extract_sdk_archive(archive, sha, staging, reserve, 1ULL << 30, true);
 
         if (!std::filesystem::is_regular_file(std::filesystem::symlink_status(

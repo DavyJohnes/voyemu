@@ -2,10 +2,12 @@
 #include "model.hpp"
 #include "os/https.hpp"
 #include "process.hpp"
+#include "progress.hpp"
 #include <cassert>
 #include <exception>
 #include <fstream>
 #include <iostream>
+#include <limits>
 
 int main(int argc, char **argv) try {
     using namespace voyemu;
@@ -169,6 +171,24 @@ int main(int argc, char **argv) try {
         download_pinned(pin, root / "cache", false, 0, transport);
     });
     assert(requests == 1);
+    // A fresh download reports its start and its verified end, a cached file one line.
+    auto lines = progress::reported();
+    download_pinned(pin, root / "reported", false, 0, transport);
+    assert(progress::reported() == lines + 2 && requests == 2);
+    lines = progress::reported();
+    download_pinned(pin, root / "reported", false, 0, transport);
+    assert(progress::reported() == lines + 1 && requests == 2);
+    // A volume without the reserve fails before the request and names its free space.
+    bool spaceless = false;
+    try {
+        download_pinned(pin, root / "space", false, std::numeric_limits<std::uint64_t>::max() / 4,
+                        transport);
+    } catch (const cli::LocalizedError &error) {
+        spaceless = std::string(error.what())
+                            .ends_with("on the volume of " + (root / "space").string() +
+                                       " or move Voyemu to another disk.");
+    }
+    assert(spaceless && requests == 2);
     std::cout << "pinned native download/cache; bounds, pin failure and owned partial cleanup\n";
 } catch (const std::exception &error) {
     std::cerr << error.what() << '\n';

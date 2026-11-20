@@ -105,7 +105,7 @@ install_e2fs_helper(const std::filesystem::path &root, const Json &helpers, cons
                                           reserve, transport)
                                   .file;
         std::filesystem::copy_file(blob, temporary);
-        logging::write(logging::Level::info, "prepare", "e2fs helper downloaded",
+        logging::write(logging::Level::debug, "prepare", "e2fs helper downloaded",
                        {{"helper", name}, {"sha256", sha}});
     } catch (const std::runtime_error &error) {
         const std::string message = error.what();

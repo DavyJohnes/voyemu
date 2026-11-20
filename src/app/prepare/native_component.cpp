@@ -734,7 +734,7 @@ install_native_component(const std::filesystem::path &root, const std::string &p
                                               offline, 0, transport)
                                       .file;
             std::filesystem::copy_file(blob, temporary);
-            logging::write(logging::Level::info, "prepare", "native component downloaded",
+            logging::write(logging::Level::debug, "prepare", "native component downloaded",
                            {{"component", key}, {"sha256", sha}});
         } catch (const std::runtime_error &error) {
             const std::string message = error.what();

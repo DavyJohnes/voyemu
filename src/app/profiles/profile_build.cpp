@@ -704,7 +704,7 @@ Json profile_source_graphics_bindings(const std::filesystem::path &root, const J
 }
 
 Json prepare_portable_base(const std::filesystem::path &root, std::string_view profile,
-                           bool offline) {
+                           bool offline, std::uint64_t reserve) {
     root_profile(root, profile);
     const auto definition = read_private_json(authoring_definition(root, profile), 1 << 20),
                descriptor = definition.at("android");
@@ -721,7 +721,7 @@ Json prepare_portable_base(const std::filesystem::path &root, std::string_view p
             archive = legacy;
         } else {
             archive = download_pinned({descriptor.at("url").get<std::string>(), pin, 3ULL << 30},
-                                      root / ".local/toolchains/downloads/native", offline)
+                                      root / ".local/toolchains/downloads/native", offline, reserve)
                               .file;
         }
 

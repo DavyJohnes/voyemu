@@ -9,7 +9,7 @@ Json profile_source_graphics_bindings(const std::filesystem::path &root, const J
                                       const std::filesystem::path &current_program);
 // Public boot dependencies for an imported prepared guest; no owner originals required.
 Json prepare_portable_base(const std::filesystem::path &root, std::string_view profile,
-                           bool offline = false);
+                           bool offline = false, std::uint64_t reserve = 20ULL << 30);
 // Read-only genuine Free A11 7.3.1 QNX closure reuse; original acceptance remains immutable.
 Json validate_accepted_qnx_reuse(const std::filesystem::path &root, std::string_view profile,
                                  const std::filesystem::path &receipt, const std::string &sha256,

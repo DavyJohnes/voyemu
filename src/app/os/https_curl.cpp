@@ -11,18 +11,21 @@ namespace {
 constexpr int curl_ok = 0;
 constexpr long curl_global_default = 3, curl_protocol_https = 2;
 constexpr int option_write_data = 10001, option_url = 10002, option_error_buffer = 10010,
-              option_write_function = 20011, option_timeout = 13, option_user_agent = 10018,
-              option_http_header = 10023, option_fail_on_error = 45, option_follow_location = 52,
-              option_ca_info = 10065, option_max_redirects = 68, option_connect_timeout = 78,
-              option_no_signal = 99, option_protocols = 181, option_redirect_protocols = 182,
+              option_write_function = 20011, option_low_speed_limit = 19,
+              option_low_speed_time = 20, option_user_agent = 10018, option_http_header = 10023,
+              option_fail_on_error = 45, option_follow_location = 52, option_ca_info = 10065,
+              option_max_redirects = 68, option_connect_timeout = 78, option_no_signal = 99,
+              option_protocols = 181, option_redirect_protocols = 182,
               option_protocols_text = 10318, option_redirect_protocols_text = 10319,
-              info_response_code = 0x200002, info_retry_after = 0x600000 + 57;
+              info_response_code = 0x200002, info_content_length = 0x600000 + 15,
+              info_retry_after = 0x600000 + 57;
 } // namespace
 
 void curl_https_get(const Curl &curl, const std::string &url,
                     const std::vector<std::string> &headers,
                     const std::function<void(std::string_view)> &sink,
-                    const std::filesystem::path &trust) {
+                    const std::filesystem::path &trust,
+                    const std::function<void(std::uint64_t)> &length) {
     static std::once_flag initialized;
     static bool ready = false;
 
@@ -50,10 +53,14 @@ void curl_https_get(const Curl &curl, const std::string &url,
     }
 
     struct Output {
+        const Curl *curl;
+        void *client;
         const std::function<void(std::string_view)> *sink;
+        const std::function<void(std::uint64_t)> *length;
+        bool started;
         std::exception_ptr error;
     };
-    Output output{&sink, {}};
+    Output output{&curl, client.value, &sink, &length, false, {}};
     using Write = std::size_t (*)(char *, std::size_t, std::size_t, void *);
     Write callback = [](char *data, std::size_t size, std::size_t count,
                         void *opaque) noexcept -> std::size_t {
@@ -64,6 +71,19 @@ void curl_https_get(const Curl &curl, const std::string &url,
         }
 
         try {
+            // The write function receives only the body of the final response.
+            if (!result.started) {
+                result.started = true;
+                long long total = -1;
+
+                if (*result.length &&
+                    result.curl->easy_getinfo(result.client, info_content_length, &total) ==
+                            curl_ok &&
+                    total >= 0) {
+                    (*result.length)(static_cast<std::uint64_t>(total));
+                }
+            }
+
             const auto bytes = size * count;
             (*result.sink)({data, bytes});
 
@@ -106,8 +126,8 @@ void curl_https_get(const Curl &curl, const std::string &url,
     if (!protocols || set(option_url, url.c_str()) != curl_ok ||
         set(option_follow_location, 1L) != curl_ok || set(option_max_redirects, 5L) != curl_ok ||
         set(option_fail_on_error, 1L) != curl_ok || set(option_connect_timeout, 30L) != curl_ok ||
-        set(option_timeout, 3600L) != curl_ok || set(option_no_signal, 1L) != curl_ok ||
-        set(option_write_function, callback) != curl_ok ||
+        set(option_low_speed_limit, 1L) != curl_ok || set(option_low_speed_time, 60L) != curl_ok ||
+        set(option_no_signal, 1L) != curl_ok || set(option_write_function, callback) != curl_ok ||
         set(option_write_data, static_cast<void *>(&output)) != curl_ok ||
         set(option_user_agent, "Voyemu/1.0") != curl_ok ||
         set(option_error_buffer, static_cast<char *>(detail)) != curl_ok ||
@@ -146,7 +166,8 @@ void curl_https_get(const Curl &curl, const std::string &url,
 }
 
 void https_get(const std::string &url, const std::vector<std::string> &headers,
-               const std::function<void(std::string_view)> &sink) {
-    curl_https_get(curl(), url, headers, sink);
+               const std::function<void(std::string_view)> &sink,
+               const std::function<void(std::uint64_t)> &length) {
+    curl_https_get(curl(), url, headers, sink, {}, length);
 }
 } // namespace voyemu::os
