@@ -1175,8 +1175,8 @@ int main(int argc, char **argv) try {
                                    read_private_json(selected_machine / "runtime.json"));
                 const auto unprepared_status = run({"status", header_only.string()});
                 require(unprepared_status.exit_code == 4 &&
-                                logged_error(unprepared_status.output,
-                                             "STATE_EXTENT: invalid file"),
+                                unprepared_status.output.find("STATE_EXTENT: invalid file") !=
+                                        std::string::npos,
                         "header-only machine incorrectly reported pristine stopped: " +
                                 unprepared_status.output);
                 const auto pristine_status = run({"status"});
@@ -1840,8 +1840,13 @@ int main(int argc, char **argv) try {
 
                 for (const auto *command : {"status", "stop"}) {
                     const auto denied = run({command, wrong_machine.string()});
+                    // The read-only status keeps no log and shows the error in full.
                     require(denied.exit_code == 4 &&
-                                    logged_error(denied.output, "STATE_EXTENT: invalid file"),
+                                    (std::string_view(command) == "status"
+                                             ? denied.output.find("STATE_EXTENT: invalid file") !=
+                                                       std::string::npos
+                                             : logged_error(denied.output,
+                                                            "STATE_EXTENT: invalid file")),
                             "different machine scope did not reject its absent owner: " +
                                     denied.output);
                 }

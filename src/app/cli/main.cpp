@@ -86,10 +86,12 @@ int main(int argc, char **argv) {
             return voyemu::cli::test_command(args);
         }
 
-        // Every ordinary command with an installation keeps a log; check stays read-only and
-        // keeps none, so its records go nowhere and its errors are shown in full.
-        if (!args.private_start && args.command != "_supervise" && args.command != "check" &&
-            !args.root.empty()) {
+        // Commands that change state or run long keep a log; the read-only list, status and check
+        // create nothing, so their records go nowhere and their errors are shown in full.
+        if (!args.private_start && !args.root.empty() &&
+            (args.command == "deps" || args.command == "fetch" || args.command == "build" ||
+             args.command == "start" || args.command == "restart" || args.command == "stop" ||
+             args.command == "patch")) {
             log_file = voyemu::logging::open_file(args.root / ".local/build/logs", args.command);
             voyemu::logging::write(voyemu::logging::Level::info, "cli", "command.started",
                                    {{"command", args.command}, {"version", voyemu::version()}});

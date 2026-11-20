@@ -200,7 +200,7 @@ int main(int argc, char **argv) {
             }
         }
 
-        // Every ordinary command of an installation keeps a log, list included.
+        // The read-only list keeps no log.
         {
             ProcessSpec spec;
             spec.executable = installed;
@@ -211,16 +211,12 @@ int main(int argc, char **argv) {
 
             for (const auto &entry :
                  std::filesystem::directory_iterator(root / ".local/build/logs")) {
-                if (entry.path().filename().string().starts_with("list-")) {
-                    std::ifstream stream(entry.path());
-                    logged = std::string(std::istreambuf_iterator<char>(stream), {})
-                                     .find("\"command.started\"") != std::string::npos;
-                }
+                logged |= entry.path().filename().string().starts_with("list-");
             }
 
-            require(!listed.timed_out && listed.exit_code == 0 && logged &&
+            require(!listed.timed_out && listed.exit_code == 0 && !logged &&
                             !shows_records(listed.output),
-                    "list kept no log or printed records: " + listed.output);
+                    "list wrote a log or printed records: " + listed.output);
         }
 
         // JSON automation keeps its single JSON reply and writes no command log.

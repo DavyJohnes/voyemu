@@ -21,7 +21,7 @@ Ordinary commands print no records: their console shows only steps, progress, th
 
 ## Command log
 
-Every command except `check`, `help`, `--version` and `test` writes its records to a new file `.local/build/logs/<command>-<YYYYMMDD-HHMMSS>.log` with the local time of the start, one JSON record per line and debug records included; see [local roots](local-roots.md). The newest 20 log files stay, a new command removes older ones. A failed or interrupted command prints the path of its log on its last line, a successful one does not. An error without a localized text prints only its code and the path of the log, which keeps the full English message, the text to attach to a problem report. `check` only reads the installation and keeps no log, so it prints such an error in full.
+`deps`, `fetch`, `build`, `start`, `restart`, `stop` and `patch` write their records to a new file `.local/build/logs/<command>-<YYYYMMDD-HHMMSS>.log` with the local time of the start, one JSON record per line and debug records included; see [local roots](local-roots.md). The newest 20 log files stay, a new command removes older ones. A failed or interrupted command prints the path of its log on its last line, a successful one does not. An error without a localized text prints only its code and the path of the log, which keeps the full English message, the text to attach to a problem report. `list`, `status` and `check` only read the installation and keep no log, so they print such an error in full.
 
 `--verbose` on `deps`, `fetch`, `build`, `start` and `restart` also prints the `info` and `error` records on `stderr` as text: the component, the message and the simple fields as `key=value`.
 

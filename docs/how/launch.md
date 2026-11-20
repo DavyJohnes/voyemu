@@ -55,7 +55,7 @@ When a session stops and the disk has room, the supervisor saves the Android RAM
 
 ## Failures
 
-A failed command prints `Voyemu:` followed by `CODE: message` on `stderr` and exits with code `4`; see [errors](errors.md). Every command except `check` then also prints the path of its [command log](logs.md#command-log). Session logs stay in the session directory, see [logs](logs.md).
+A failed command prints `Voyemu:` followed by `CODE: message` on `stderr` and exits with code `4`; see [errors](errors.md). `start`, `restart`, `stop` and `patch` then also print the path of their [command log](logs.md#command-log). Session logs stay in the session directory, see [logs](logs.md).
 
 ## QNX frames over gRPC
 
