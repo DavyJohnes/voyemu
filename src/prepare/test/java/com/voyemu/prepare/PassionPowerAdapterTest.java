@@ -101,7 +101,7 @@ public final class PassionPowerAdapterTest {
                             work.resolve("absent"),
                             platform,
                             work.resolve("before"),
-                            "before.jar",
+                            "voyemu-mega.jar",
                             30);
             byte[] before = NativeCore.entries(baseline).get("classes.dex");
             var source = classes(before);

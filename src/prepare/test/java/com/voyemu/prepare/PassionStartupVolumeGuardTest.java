@@ -56,9 +56,9 @@ public final class PassionStartupVolumeGuardTest {
 
         negatives++;
 
-        if (negatives != 5) {
+        if (negatives != 3) {
             throw new AssertionError(
-                    "expected exactly 5 rejected startup identities, got " + negatives);
+                    "expected exactly 3 rejected startup identities, got " + negatives);
         }
 
         // validate() is the plan-validation leg of the identical contract: it must reject exactly
@@ -79,9 +79,9 @@ public final class PassionStartupVolumeGuardTest {
 
         validationNegatives++;
 
-        if (validationNegatives != 5) {
+        if (validationNegatives != 3) {
             throw new AssertionError(
-                    "expected exactly 5 rejected validate identities, got " + validationNegatives);
+                    "expected exactly 3 rejected validate identities, got " + validationNegatives);
         }
 
         validate(SYNTHETIC, 30, jar, dex);

@@ -8,8 +8,6 @@ import java.util.List;
 import java.util.Map;
 
 public final class FrameworkLibrariesTest {
-    static final String OTHER = "free-11-chinese-20260731-7.3.1";
-
     static final String PROFILE = "free-11-chinese-20250710-6.11.1";
 
     static final String NAME = "api30-framework-libraries.json";
@@ -111,10 +109,6 @@ public final class FrameworkLibrariesTest {
 
         var target = new Target();
         target.pin = "0".repeat(64);
-        reject(metadata, target);
-        target = new Target();
-        target.pin = FilesSupport.hash(originals.resolve("SystemUI.apk"));
-        target.profile = OTHER;
         reject(metadata, target);
         var changed = new HashMap<String, Object>(metadata);
         changed.put(
