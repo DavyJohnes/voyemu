@@ -53,4 +53,12 @@ cmake -P src/app/errorprone.cmake
 java src/dev/checks/CheckDocs.java
 ```
 
+## Profile id check
+
+`CheckProfileIds` searches `src/` and `.github/` for concrete profiles: behavior follows the properties of `profile.json`, not the profile name. It builds the forbidden strings from the catalog: the name of every `profiles/` directory except `common*`, the version after its date and its vehicle prefix in a `startsWith` or `starts_with` call. Pinned third-party code is excluded, and a short list inside the check permits named lines of pinned guest sources, each with its reason. It prints `file:line` for every line with a finding and the total, and exits with a non-zero code on any finding. Until `src/` names no profile, the check is not part of `lint` and counts the remaining findings; its own test on synthetic trees runs in CTest.
+
+```sh
+java src/dev/checks/CheckProfileIds.java
+```
+
 Tool paths default to the pins in `src/app/toolchain.json`; `VOYEMU_CLANG_FORMAT`, `VOYEMU_GOOGLE_JAVA_FORMAT` and `VOYEMU_CLANG_TIDY` select other binaries of the same version.

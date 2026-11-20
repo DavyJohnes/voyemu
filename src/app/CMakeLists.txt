@@ -578,6 +578,8 @@ if(BUILD_TESTING)
     voyemu_add_test(source_files LABELS host TIMEOUT 15 COMMAND ${CMAKE_COMMAND} "-DWORK=${CMAKE_CURRENT_BINARY_DIR}/source-files-test" -P "${CMAKE_CURRENT_SOURCE_DIR}/source_files.test.cmake")
     # The documentation checker runs on synthetic trees; lint runs it on docs/.
     voyemu_add_test(check_docs LABELS host TIMEOUT 120 COMMAND "${voyemu_jdk}/bin/java" "${voyemu_project_root}/src/dev/checks/test/CheckDocsTest.java" "${voyemu_project_root}/src/dev/checks/CheckDocs.java" "${voyemu_project_root}/.local/build/tmp/check-docs")
+    # The profile id checker runs on synthetic trees; it joins lint once src/ names no profile.
+    voyemu_add_test(check_profile_ids LABELS host TIMEOUT 120 COMMAND "${voyemu_jdk}/bin/java" "${voyemu_project_root}/src/dev/checks/test/CheckProfileIdsTest.java" "${voyemu_project_root}/src/dev/checks/CheckProfileIds.java" "${voyemu_project_root}/.local/build/tmp/check-profile-ids")
     foreach(GROUP qinggan09 qinggan11_611 qinggan11_731 passion)
         voyemu_add_test(prepare_java_oem_${GROUP} LABELS oem deps TIMEOUT 3600 COMMAND ${CMAKE_COMMAND} -DGROUP=${GROUP} "-DEXT4_IMAGE=$<TARGET_FILE:ext4_image_test>" -P "${CMAKE_CURRENT_SOURCE_DIR}/../prepare/test/java/oem/run.cmake")
     endforeach()
