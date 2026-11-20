@@ -32,6 +32,22 @@ int main(int argc, char **argv) {
         const auto installed = root / "voyemu";
 #endif
         std::filesystem::copy_file(std::filesystem::canonical(argv[1]), installed);
+        const auto run_unknown = [&](const char *command) {
+            ProcessSpec spec;
+            spec.executable = installed;
+            spec.arguments = {command, "nosuch", "--offline", "--lang=en"};
+            spec.directory = root;
+
+            return execute(spec, 15000);
+        };
+
+        // An unknown profile stops deps and build before any work, as it stops fetch.
+        for (const auto *command : {"deps", "fetch", "build"}) {
+            const auto unknown = run_unknown(command);
+            require(!unknown.timed_out && unknown.exit_code == 4 &&
+                            unknown.output.starts_with("Voyemu: PROFILE_NOT_FOUND:"),
+                    std::string(command) + " accepted an unknown profile: " + unknown.output);
+        }
 
         for (const auto *profile :
              {"free-11-chinese-20260731-7.3.1", "passion-11-russian-20260403-2.1.4.80"}) {

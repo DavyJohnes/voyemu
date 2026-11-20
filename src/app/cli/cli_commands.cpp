@@ -65,6 +65,11 @@ int fetch_command(const Arguments &args, const Emit &emit) {
 }
 
 int deps_command(const Arguments &args, const Emit &emit) {
+    // An unknown profile fails as in fetch, before any download.
+    if (!std::filesystem::exists(args.root / "profiles" / args.profile / "profile.json")) {
+        (void)voyemu::embedded_profile(args.profile);
+    }
+
     // Each step ends with one line: already installed when the step reported nothing, installed
     // after its downloads and extractions.
     progress::Steps steps;

@@ -1,5 +1,6 @@
 #include "ordinary_path.hpp"
 #include "profile_build_internal.hpp"
+#include "profile_catalog.hpp"
 #include "qnx_guest_build.hpp"
 
 namespace voyemu {
@@ -215,6 +216,12 @@ void root_profile(const std::filesystem::path &root, std::string_view profile) {
                  valid_profile_name(profile),
          "canonical root/profile required");
     const auto definition = authoring_definition(root, profile);
+
+    // An unknown profile fails as in fetch.
+    if (!std::filesystem::exists(definition) && !std::filesystem::is_symlink(definition)) {
+        (void)embedded_profile(profile);
+    }
+
     hash(definition, 1 << 20);
     const auto status = portable_profile_json(read_private_json_bytes(definition, 1 << 20))
                                 .value("status", std::string("ready"));
