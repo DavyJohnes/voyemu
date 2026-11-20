@@ -10,29 +10,39 @@ cd "$work"
 export GITHUB_REPOSITORY=voyemu/voyemu GITHUB_REF_TYPE=branch GITHUB_REF_NAME=main INPUT_KERNEL=qinggan-11
 export GITHUB_OUTPUT="$work/output"
 base=https://github.com/voyemu/voyemu-deps/releases/download/
-p09=free-09-chinese-20260106-6.0.3
-p11=free-11-chinese-20260731-7.3.1
-p611=free-11-chinese-20250710-6.11.1
+# Synthetic profiles: the selector reads the platform and the pins, never the names.
+p09=synthetic-09
+p11a=synthetic-11-first
+p11b=synthetic-11-second
+nxp=synthetic-09-nxp
+passion=synthetic-passion
 sha09=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 sha11=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 write_profile() {
     mkdir -p "profiles/$1"
-    jq -n --arg sha "$2" --arg url "$3" '{android:{development_kernel:{sha256:$sha,url:$url}}}' > "profiles/$1/profile.json"
+    jq -n --arg platform "$2" --arg sha "$3" --arg url "$4" '{platform:$platform,android:{development_kernel:{sha256:$sha,url:$url}}}' > "profiles/$1/profile.json"
+}
+# A profile of the platform without a development kernel is not selected.
+write_plain_profile() {
+    mkdir -p "profiles/$1"
+    jq -n --arg platform "$2" '{platform:$platform,android:{}}' > "profiles/$1/profile.json"
 }
 reset() {
     GITHUB_REF_TYPE=branch GITHUB_REF_NAME=main INPUT_KERNEL=qinggan-11
     mkdir -p src/app
     jq -n --arg base "$base" '{optionalTools:{kernelBuild:{releaseBase:$base}}}' > src/app/toolchain.json
-    write_profile "$p09" "$sha09" "${base}kernel-qinggan-09-aaaaaaaa/Image"
-    write_profile "$p11" "$sha11" "${base}kernel-qinggan-11-bbbbbbbb/Image"
-    write_profile "$p611" "$sha11" "${base}kernel-qinggan-11-bbbbbbbb/Image"
+    write_profile "$p09" qinggan09 "$sha09" "${base}kernel-qinggan-09-aaaaaaaa/Image"
+    write_profile "$p11a" qinggan11 "$sha11" "${base}kernel-qinggan-11-bbbbbbbb/Image"
+    write_profile "$p11b" qinggan11 "$sha11" "${base}kernel-qinggan-11-bbbbbbbb/Image"
+    write_plain_profile "$nxp" qinggan09
+    write_plain_profile "$passion" passion
     : > "$GITHUB_OUTPUT"
 }
 accept() {
     bash "$selector"
-    printf 'kernel=%s\nprofile=%s\nsha=%s\ntag=kernel-%s-%.8s\n' "$1" "$2" "$3" "$1" "$3" > expected
+    printf 'kernel=%s\nsha=%s\ntag=kernel-%s-%.8s\n' "$1" "$2" "$1" "$2" > expected
     cmp expected "$GITHUB_OUTPUT"
-    echo "PASS $4"
+    echo "PASS $3"
 }
 reject() {
     if bash "$selector" > rejected.log 2>&1; then
@@ -43,22 +53,22 @@ reject() {
     echo "PASS reject $1"
 }
 reset
-accept qinggan-11 "$p11" "$sha11" manual-11
+accept qinggan-11 "$sha11" manual-11
 reset
-write_profile "$p611" bbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa "${base}kernel-qinggan-11-bbbbbbbb/Image"
-reject 6.11.1-pin-drift
+write_profile "$p11b" qinggan11 bbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa "${base}kernel-qinggan-11-bbbbbbbb/Image"
+reject second-pin-drift
 reset
-write_profile "$p611" "$sha11" 'https://example.invalid/Image'
-reject 6.11.1-url-drift
+write_profile "$p11b" qinggan11 "$sha11" 'https://example.invalid/Image'
+reject second-url-drift
 reset
 INPUT_KERNEL=qinggan-09
-accept qinggan-09 "$p09" "$sha09" manual-09
+accept qinggan-09 "$sha09" manual-09
 reset
 GITHUB_REF_TYPE=tag GITHUB_REF_NAME=kernel-qinggan-11-bbbbbbbb INPUT_KERNEL=qinggan-09
-accept qinggan-11 "$p11" "$sha11" tag-overrides-input
+accept qinggan-11 "$sha11" tag-overrides-input
 reset
 GITHUB_REF_TYPE=tag GITHUB_REF_NAME=kernel-qinggan-09-aaaaaaaa
-accept qinggan-09 "$p09" "$sha09" tag-09
+accept qinggan-09 "$sha09" tag-09
 reset
 GITHUB_REF_TYPE=tag GITHUB_REF_NAME=kernel-qinggan-11-aaaaaaaa
 reject tag-pin-mismatch
@@ -69,23 +79,28 @@ reset
 INPUT_KERNEL=unknown
 reject unknown-kernel
 reset
-printf '{' > "profiles/$p611/profile.json"
+printf '{' > "profiles/$p11b/profile.json"
 reject malformed-manifest
 reset
-rm "profiles/$p611/profile.json"
-reject missing-manifest
+write_profile "$p11b" qinggan09 "$sha11" "${base}kernel-qinggan-11-bbbbbbbb/Image"
+INPUT_KERNEL=qinggan-09
+reject other-platform-pin
+reset
+write_plain_profile "$p11a" qinggan11
+write_plain_profile "$p11b" qinggan11
+reject no-platform-kernel
 for field in sha256 url; do
     reset
-    jq "del(.android.development_kernel.$field)" "profiles/$p611/profile.json" > changed
-    mv changed "profiles/$p611/profile.json"
+    jq "del(.android.development_kernel.$field)" "profiles/$p11b/profile.json" > changed
+    mv changed "profiles/$p11b/profile.json"
     reject "missing-$field"
 done
 reset
-write_profile "$p11" bbbbbbbb "${base}kernel-qinggan-11-bbbbbbbb/Image"
-write_profile "$p611" bbbbbbbb "${base}kernel-qinggan-11-bbbbbbbb/Image"
+write_profile "$p11a" qinggan11 bbbbbbbb "${base}kernel-qinggan-11-bbbbbbbb/Image"
+write_profile "$p11b" qinggan11 bbbbbbbb "${base}kernel-qinggan-11-bbbbbbbb/Image"
 reject malformed-sha256
 reset
-write_profile "$p09" "$sha09" 'https://example.invalid/Image'
+write_profile "$p09" qinggan09 "$sha09" 'https://example.invalid/Image'
 INPUT_KERNEL=qinggan-09
 reject 09-url-drift
 reset

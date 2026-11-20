@@ -8,10 +8,19 @@ else
     kernel=$INPUT_KERNEL
 fi
 case "$kernel" in
-    qinggan-09) profiles=(free-09-chinese-20260106-6.0.3) ;;
-    qinggan-11) profiles=(free-11-chinese-20260731-7.3.1 free-11-chinese-20250710-6.11.1) ;;
+    qinggan-09) platform=qinggan09 ;;
+    qinggan-11) platform=qinggan11 ;;
     *) echo "Unknown kernel $kernel" >&2; exit 1 ;;
 esac
+# Every profile of the platform that pins a development kernel must pin this one.
+profiles=()
+for definition in profiles/*/profile.json; do
+    pins=$(jq -r --arg platform "$platform" '.platform == $platform and (.android.development_kernel | type) == "object"' "$definition")
+    if [[ "$pins" == true ]]; then
+        profiles+=("$(basename "$(dirname "$definition")")")
+    fi
+done
+(( ${#profiles[@]} )) || { echo "No $platform profile pins a development kernel" >&2; exit 1; }
 base=$(jq -er '.optionalTools.kernelBuild.releaseBase | strings' src/app/toolchain.json)
 [[ "$base" == "https://github.com/voyemu/voyemu-deps/releases/download/" ]] || { echo "Invalid dependency release base: $base" >&2; exit 1; }
 sha=
@@ -32,7 +41,6 @@ if [[ "$GITHUB_REF_TYPE" == tag && "$GITHUB_REF_NAME" != "$tag" ]]; then
 fi
 {
     echo "kernel=$kernel"
-    echo "profile=${profiles[0]}"
     echo "sha=$sha"
     echo "tag=$tag"
 } >> "$GITHUB_OUTPUT"
