@@ -18,6 +18,8 @@ struct DownloadPin {
     // the catalog label of progress.name.<label> such as "qnx_host" with its version; neither means
     // the file name of the URL.
     std::string name, label, version;
+    // The console shows nothing of this download; its caller reports the phase it belongs to.
+    bool quiet = false;
 };
 // The console name of a download: its name or the file name of its URL.
 std::string download_name(const DownloadPin &);

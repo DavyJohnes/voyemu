@@ -42,6 +42,13 @@ int main() try {
         plain(human_cli_output(command, {{"ok", true}, {"with_cluster", true}}, "free-profile"));
     }
 
+    // fetch names the profile by its title and gives the next command.
+    assert(human_cli_output("fetch", {{"profile_name", "Free 7.3.1"}}, "free-profile") ==
+           "Free 7.3.1 originals are ready.\nNext: voyemu build free-profile\n");
+    assert(human_cli_output("fetch", {{"profile_name", "Free 7.3.1"}}, "free-profile", {}, false,
+                            cli::Language::russian) ==
+           "Оригиналы Free 7.3.1 готовы.\nДальше: voyemu build free-profile\n");
+
     const auto recovered = human_cli_output("status",
                                             {{"stopped", true},
                                              {"deliveries",

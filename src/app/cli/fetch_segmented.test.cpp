@@ -2,6 +2,7 @@
 #include "cli_messages.hpp"
 #include "os/platform.hpp"
 #include "process.hpp"
+#include "progress.hpp"
 #include "qinggan11_startup.hpp"
 #include "qnx_qinggan11.hpp"
 #include "quickboot.hpp"
@@ -10,6 +11,7 @@
 #include <fstream>
 #include <iostream>
 #include <map>
+#include <sstream>
 #ifdef _WIN32
 #include <windows.h>
 #else
@@ -21,6 +23,23 @@ static void check(bool value, const char *why) {
     if (!value) {
         throw std::runtime_error(why);
     }
+}
+
+// Whether text holds the lines in this order.
+static bool ordered(const std::string &text, const std::vector<std::string> &lines) {
+    std::size_t at = 0;
+
+    for (const auto &line : lines) {
+        at = text.find(line, at);
+
+        if (at == std::string::npos) {
+            return false;
+        }
+
+        at += line.size();
+    }
+
+    return true;
 }
 
 namespace {
@@ -329,7 +348,42 @@ int segmented_synthetic_import(const std::filesystem::path &project) {
     check(asked_for_deps && !std::filesystem::exists(root / ".local/profiles" / profile),
           "fetch without deps did not ask for voyemu deps");
     std::filesystem::rename(codec_away, codec);
-    const auto imported = import_segmented_profile_inputs(root, profile, update, 0);
+    // A missing archive names its path and the update it should be.
+    bool named_missing = false;
+    try {
+        import_segmented_profile_inputs(root, profile, root / "updat.zip", 0);
+    } catch (const cli::LocalizedError &error) {
+        named_missing = error.code() == "FETCH_UPDATE" &&
+                        error.render(cli::Language::english) ==
+                                "FETCH_UPDATE: file " + (root / "updat.zip").string() +
+                                        " not found.\nCheck the path to update.zip of the " +
+                                        profile + " update.";
+    }
+
+    check(named_missing, "a missing archive did not name its path");
+    // The console shows the import, the archive check, each image with its extracted files, the QNX
+    // images and the saved originals; a rerun checks the archive and the retained originals only.
+    std::ostringstream console;
+    auto *prior = std::cerr.rdbuf(console.rdbuf());
+    progress::console(cli::Language::english, false);
+    Json imported;
+    try {
+        imported = import_segmented_profile_inputs(root, profile, update, 0);
+    } catch (...) {
+        std::cerr.rdbuf(prior);
+        throw;
+    }
+
+    std::cerr.rdbuf(prior);
+    check(ordered(console.str(),
+                  {"Importing the " + profile + " update from " + update.string() + " (",
+                   "\n\nChecking the archive\n",
+                   "The archive matches the pinned " + profile + " update\n",
+                   "\n\nAndroid system image (", "\n  Files extracted: 3\n",
+                   "\n\nAndroid resc image (", "\n  Files extracted: 1\n", "\n\nQNX images (4)\n",
+                   "\n\nSaving the originals (",
+                   "\n\nOriginals saved: 4 Android files and 4 QNX images in "}),
+          ("fresh import lines differ: " + console.str()).c_str());
     check(!imported.contains("profile_sha256") && !imported.contains("qnx_profile_sha256"),
           "segmented fetch must not pin its authoring profiles");
     const auto own = root / ".local/profiles" / profile;
@@ -353,8 +407,26 @@ int segmented_synthetic_import(const std::filesystem::path &project) {
               "6.0.3 update QNX image differs");
     }
 
-    check(import_segmented_profile_inputs(root, profile, update, 0).at("cached") == true,
-          "retained 6.0.3 inputs were imported again");
+    console.str({});
+    prior = std::cerr.rdbuf(console.rdbuf());
+    Json rerun;
+    try {
+        rerun = import_segmented_profile_inputs(root, profile, update, 0);
+    } catch (...) {
+        std::cerr.rdbuf(prior);
+        throw;
+    }
+
+    std::cerr.rdbuf(prior);
+    check(rerun.at("cached") == true, "retained 6.0.3 inputs were imported again");
+    check(ordered(console.str(), {"Checking the archive\n",
+                                  "The archive matches the pinned " + profile + " update\n",
+                                  "\n\nChecking the " + profile + " originals (",
+                                  "\n" + profile +
+                                          " originals are already imported, SHA-256 "
+                                          "verified\n"}) &&
+                  console.str().find("Importing") == std::string::npos,
+          ("rerun lines differ: " + console.str()).c_str());
     // A profile that adds an original refreshes the retained cache with only the new file.
     const auto retained = cache_file_identity(own / "originals/One.apk");
     auto extended = definition;
@@ -372,15 +444,22 @@ int segmented_synthetic_import(const std::filesystem::path &project) {
           "an added 6.0.3 original did not refresh the retained cache");
     check(import_segmented_profile_inputs(root, profile, update, 0).at("cached") == true,
           "the refreshed 6.0.3 cache was imported again");
+    const auto pinned_bytes = std::filesystem::file_size(update);
     startup_fixture::zip(update, {{"foreign.bin", "foreign"}});
     bool denied = false;
     try {
         import_segmented_profile_inputs(root, profile, update, 0);
-    } catch (const std::exception &) {
-        denied = true;
+    } catch (const cli::LocalizedError &error) {
+        const auto text = error.render(cli::Language::english);
+        denied = error.code() == "FETCH_UPDATE" &&
+                 text.starts_with("FETCH_UPDATE: " + update.string() + " is not the " + profile +
+                                  " update: size ") &&
+                 text.find(" bytes), expected " + std::to_string(pinned_bytes) +
+                           " bytes.\nA full head unit update archive of version 6.0.3 "
+                           "(update.zip) is needed.") != std::string::npos;
     }
 
-    check(denied, "unpinned 6.0.3 owner archive accepted");
+    check(denied, "unpinned 6.0.3 owner archive accepted without naming the expected update");
 #ifdef _WIN32
     FreeLibrary(handle);
 #else

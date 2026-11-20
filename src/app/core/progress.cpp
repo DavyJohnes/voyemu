@@ -337,10 +337,14 @@ void Meter::advance(std::uint64_t bytes) {
 }
 
 void Meter::finish() {
+    finish(kind_ + "_done");
+}
+
+void Meter::finish(std::string_view key) {
     begin();
     finished_ = true;
     live_ = false;
-    output_(kind_ + "_done", rates(), false);
+    output_(key, rates(), false);
 }
 
 Arguments Meter::rates() const {

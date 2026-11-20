@@ -58,8 +58,12 @@ constexpr std::uint64_t preparation_margin = 2ULL << 30;
 } // namespace
 
 int fetch_command(const Arguments &args, const Emit &emit) {
-    emit(voyemu::fetch_native_inputs(args.root, args.profile, args.offline, args.serial,
-                                     preparation_margin, args.jdk, args.update));
+    auto result = voyemu::fetch_native_inputs(args.root, args.profile, args.offline, args.serial,
+                                              preparation_margin, args.jdk, args.update);
+
+    // The summary names the profile by its title.
+    result["profile_name"] = voyemu::profile_display_name(args.root, args.profile);
+    emit(result);
 
     return 0;
 }

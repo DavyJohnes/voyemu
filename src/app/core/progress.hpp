@@ -89,6 +89,8 @@ public:
     void length(std::uint64_t total);
     void advance(std::uint64_t bytes);
     void finish();
+    // Ends with the line key instead of <kind>_done, for an operation whose outcome names its end.
+    void finish(std::string_view key);
 
 private:
     void begin();

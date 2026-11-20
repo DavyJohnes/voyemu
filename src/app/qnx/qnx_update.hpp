@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <filesystem>
+#include <functional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -26,11 +27,13 @@ struct QnxUpdateSegment {
     std::uint64_t bytes{};
     unsigned index{};
 };
+// advance receives the byte count of each restored image block, for a progress meter.
 void restore_qnx_zero_base_segments(const std::vector<QnxUpdateSegment> &segments,
                                     std::uint64_t image_bytes, std::string_view image_sha256,
                                     const std::filesystem::path &library,
                                     std::string_view library_sha256,
-                                    const std::filesystem::path &fresh_output);
+                                    const std::filesystem::path &fresh_output,
+                                    const std::function<void(std::uint64_t)> &advance = {});
 std::string acquire_qnx_zero_base_segments(const std::vector<QnxUpdateSegment> &segments,
                                            std::uint64_t image_bytes, std::string_view image_md5,
                                            const std::filesystem::path &library,

@@ -233,7 +233,19 @@ int main(int argc, char **argv) {
             run(wrong, "bad-path");
         });
         check(!std::filesystem::exists(root / "bad-path"), "undeclared path before writes");
-        // A volume without the reserve fails with the disk space error before any output.
+        // Each imported image reaches the progress meter; a volume without the reserve fails with
+        // the disk space error before any output.
+        std::uint64_t imported = 0, declared = 0;
+
+        for (const auto &definition : definitions) {
+            declared += definition.at("bytes").get<std::uint64_t>();
+        }
+
+        import_qnx_update(archive, archive_pin, definitions, library, codec_pin, root / "progress",
+                          0, [&imported](std::uint64_t bytes) {
+                              imported += bytes;
+                          });
+        check(imported == declared, "QNX import reports its image bytes");
         bool short_space = false;
         try {
             import_qnx_update(archive, archive_pin, definitions, library, codec_pin, root / "space",

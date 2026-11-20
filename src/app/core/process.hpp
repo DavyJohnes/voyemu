@@ -69,6 +69,9 @@ ProcessResult execute_artifact_preparation(const ProcessSpec &spec, int timeout_
 std::string random_token();
 std::string sha256_bytes(std::string_view bytes);
 std::string sha256_file(const std::filesystem::path &path);
+// The same digest; advance receives the byte count of each block read, for a progress meter.
+std::string sha256_file(const std::filesystem::path &path,
+                        const std::function<void(std::uint64_t)> &advance);
 std::string sha256_file_range(const std::filesystem::path &path, std::uint64_t offset,
                               std::uint64_t bytes);
 std::string windows_quote(const std::string &argument);

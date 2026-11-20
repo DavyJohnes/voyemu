@@ -316,7 +316,8 @@ std::string md5(const std::filesystem::path &path) {
 std::string collect(const std::vector<QnxUpdateSegment> &segments, std::uint64_t image_bytes,
                     std::string_view image_sha256, std::string_view image_md5,
                     const std::filesystem::path &library, std::string_view library_sha256,
-                    const std::filesystem::path &output) {
+                    const std::filesystem::path &output,
+                    const std::function<void(std::uint64_t)> &advance = {}) {
     ordinary(output);
     need(!std::filesystem::exists(output) && std::filesystem::is_directory(output.parent_path()),
          "QNX_UPDATE_FRESH_OUTPUT");
@@ -383,6 +384,10 @@ std::string collect(const std::vector<QnxUpdateSegment> &segments, std::uint64_t
                 }
 
                 copied += count;
+
+                if (advance) {
+                    advance(static_cast<std::uint64_t>(count));
+                }
             }
         }
 
@@ -432,8 +437,9 @@ void restore_qnx_zero_base_segments(const std::vector<QnxUpdateSegment> &segment
                                     std::uint64_t bytes, std::string_view image_sha256,
                                     const std::filesystem::path &library,
                                     std::string_view library_sha256,
-                                    const std::filesystem::path &output) {
-    collect(segments, bytes, image_sha256, {}, library, library_sha256, output);
+                                    const std::filesystem::path &output,
+                                    const std::function<void(std::uint64_t)> &advance) {
+    collect(segments, bytes, image_sha256, {}, library, library_sha256, output, advance);
 }
 
 std::string acquire_qnx_zero_base_segments(const std::vector<QnxUpdateSegment> &segments,

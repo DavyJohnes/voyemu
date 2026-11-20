@@ -18,8 +18,12 @@
 #include "vehicle_capture.hpp"
 #include <algorithm>
 #include <cctype>
+#include <chrono>
 #include <fstream>
+#include <functional>
 #include <map>
+#include <memory>
+#include <optional>
 #include <regex>
 #include <set>
 #include <sstream>
@@ -74,8 +78,10 @@ void ordinary_ancestors(const std::filesystem::path &path) {
     }
 }
 
+// advance receives the byte count of each hashed block, for a progress meter.
 std::uint64_t verify_file(const std::filesystem::path &file, const std::string &sha,
-                          std::uint64_t maximum) {
+                          std::uint64_t maximum,
+                          const std::function<void(std::uint64_t)> &advance = {}) {
     ordinary_ancestors(file);
 
     if (!std::filesystem::is_regular_file(std::filesystem::symlink_status(file)) ||
@@ -85,7 +91,7 @@ std::uint64_t verify_file(const std::filesystem::path &file, const std::string &
 
     const auto epoch = cache_file_identity(file);
 
-    if (sha256_file(file) != sha) {
+    if (sha256_file(file, advance) != sha) {
         throw VoyemuError("FETCH_SHA", "input differs from declared profile SHA256");
     }
 
@@ -129,6 +135,22 @@ Json load_profile(const std::filesystem::path &root, std::string_view name) {
     }
 
     return embedded_profile(name).at("definition");
+}
+
+// The console version of an Android image descriptor: its release and API level, "11 (API 30)".
+std::string android_image_version(const Json &image) {
+    const auto package = image.value("package", std::string{});
+    const auto at = package.find(";android-");
+
+    if (at == std::string::npos) {
+        return {};
+    }
+
+    const auto api = package.substr(at + 9, package.find(';', at + 9) - at - 9);
+    static const std::map<std::string, std::string> releases{{"28", "9"}, {"30", "11"}};
+    const auto release = releases.find(api);
+
+    return release == releases.end() ? "API " + api : release->second + " (API " + api + ")";
 }
 
 std::string acquisition_identity(const Json &definition, const Json &qnx) {
@@ -275,12 +297,9 @@ Json fetch_nxp_update(const std::filesystem::path &root, std::string_view profil
         throw VoyemuError("FETCH_NXP", "exact retained owner archive declaration required");
     }
 
-    verify_file(archive, source.at("sha256").get<std::string>(),
-                source.at("bytes").get<std::uint64_t>());
-
-    if (std::filesystem::file_size(archive) != source.at("bytes").get<std::uint64_t>()) {
-        throw VoyemuError("FETCH_NXP", "owner archive extent differs");
-    }
+    ordinary_ancestors(archive);
+    verify_owner_archive(root, profile, archive, source.at("bytes").get<std::uint64_t>(),
+                         source.at("sha256").get<std::string>(), true, "FETCH_FILE", "FETCH_SHA");
 
     const auto archive_epoch = cache_file_identity(archive);
     const auto acquisition_plan = nxp_acquisition_plan(definition);
@@ -516,9 +535,9 @@ Json fetch_update(const std::filesystem::path &root, std::string_view profile,
 
     const auto archive_sha = pinned_sha(owner.at("sha256"));
 
-    if (verify_file(archive, archive_sha, 16ULL << 30) != owner.at("bytes").get<std::uint64_t>()) {
-        throw VoyemuError("FETCH_UPDATE", "owner archive extent differs");
-    }
+    ordinary_ancestors(archive);
+    verify_owner_archive(root, profile, archive, owner.at("bytes").get<std::uint64_t>(),
+                         archive_sha, true, "FETCH_FILE", "FETCH_SHA");
 
     const auto archive_identity = cache_file_identity(archive);
     const auto inputs = original_input_plan(definition);
@@ -1339,12 +1358,113 @@ void bind_owner_inputs(const std::filesystem::path &root, std::string_view profi
 }
 } // namespace fetch_detail
 
+std::string profile_display_name(const std::filesystem::path &root, std::string_view profile) {
+    try {
+        const auto title = load_profile(root, profile).value("title", std::string{});
+
+        if (!title.empty()) {
+            return title;
+        }
+    } catch (const std::exception &) { /* Ignored: a profile that cannot be read is named by id. */
+    }
+
+    return std::string(profile);
+}
+
+void verify_owner_archive(const std::filesystem::path &root, std::string_view profile,
+                          const std::filesystem::path &archive, std::uint64_t bytes,
+                          const std::string &sha256, bool announce, const char *missing_code,
+                          const char *mismatch_code) {
+    const auto name = profile_display_name(root, profile);
+    const auto status = std::filesystem::symlink_status(archive);
+
+    if (!std::filesystem::exists(status)) {
+        throw cli::LocalizedError(
+                missing_code, "error.archive_missing",
+                {{"path", archive.string()}, {"archive", "update.zip"}, {"profile_name", name}});
+    }
+
+    const std::uint64_t size =
+            std::filesystem::is_regular_file(status) ? std::filesystem::file_size(archive) : 0;
+
+    if (size != bytes) {
+        // The bundled profile whose pinned update has this size names the update it is.
+        std::string other;
+
+        for (const auto &record : embedded_profile_catalog()) {
+            const auto &definition = record.at("definition");
+            const auto id = record.at("id").get<std::string>();
+            const auto owner = definition.value("ownerUpdate", Json::object());
+            const auto device = definition.value("device", Json::object())
+                                        .value("sourceArchives", Json::object())
+                                        .value("update_zip", Json::object());
+
+            if (size && id != profile &&
+                (owner.value("bytes", std::uint64_t{0}) == size ||
+                 device.value("bytes", std::uint64_t{0}) == size)) {
+                other = id;
+                break;
+            }
+        }
+
+        const auto dash = profile.rfind('-');
+        throw cli::LocalizedError(
+                mismatch_code,
+                other.empty() ? "error.archive_foreign" : "error.archive_other_profile",
+                {{"path", archive.string()},
+                 {"profile_name", name},
+                 {"size", progress::size_text(size, progress::language())},
+                 {"bytes", std::to_string(size)},
+                 {"expected", std::to_string(bytes)},
+                 {"version",
+                  std::string(profile.substr(dash == std::string_view::npos ? 0 : dash + 1))},
+                 {"archive", "update.zip"},
+                 {"other", other}});
+    }
+
+    if (std::filesystem::hard_link_count(archive) != 1) {
+        throw VoyemuError(missing_code, "ordinary unlinked owner archive required");
+    }
+
+    if (announce) {
+        progress::block();
+        progress::report("fetch_archive",
+                         {{"profile_name", name},
+                          {"path", archive.string()},
+                          {"total", progress::size_text(size, progress::language())}});
+    }
+
+    progress::block();
+    progress::Meter meter("fetch_check", {{"profile_name", name}});
+    meter.length(bytes);
+    const auto epoch = cache_file_identity(archive);
+
+    if (sha256_file(archive, [&meter](std::uint64_t block) {
+            meter.advance(block);
+        }) != sha256) {
+        throw cli::LocalizedError(mismatch_code, "error.archive_changed",
+                                  {{"path", archive.string()}});
+    }
+
+    if (cache_file_identity(archive) != epoch) {
+        throw VoyemuError(mismatch_code, "owner archive changed during verification");
+    }
+
+    meter.finish();
+}
+
 std::filesystem::path install_development_kernel(const std::filesystem::path &root,
                                                  const Json &descriptor, bool offline,
                                                  std::uint64_t reserve,
                                                  const DownloadTransport &transport) {
-    const DownloadPin pin{descriptor.at("url").get<std::string>(),
-                          descriptor.at("sha256").get<std::string>(), 64ULL << 20};
+    DownloadPin pin{descriptor.at("url").get<std::string>(),
+                    descriptor.at("sha256").get<std::string>(), 64ULL << 20};
+    // The console names the kernel by the version of its release, "5.4.86".
+    const auto release =
+            descriptor.value("provenance", Json::object()).value("kernel_release", std::string{});
+
+    pin.label = "development_kernel";
+    pin.version = release.substr(0, release.find('-'));
 
     try {
         return download_pinned(pin,
@@ -1646,22 +1766,60 @@ Json fetch_native_inputs(const std::filesystem::path &root, std::string_view pro
     }
 
     const auto definition = load_profile(root, profile);
+    const auto profile_name = profile_display_name(root, profile);
     const auto inputs = original_input_plan(definition);
     const auto own_originals = root / ".local/profiles" / std::string(profile) / "originals";
     const auto originals = serial.empty() && update.empty()
                                    ? profile_originals_directory(root, profile)
                                    : own_originals;
+    // Hashing retained originals takes seconds, so it shows its bytes; an archive import of this
+    // run has just verified them.
+    const auto verifying = [&](const std::string &label,
+                               std::uint64_t bytes) -> std::unique_ptr<progress::Meter> {
+        if (!bytes || !imported.is_null()) {
+            return {};
+        }
+
+        progress::block();
+        auto meter = std::make_unique<progress::Meter>(
+                "verify", progress::Arguments{{"label", label}, {"version", profile_name}});
+        meter->length(bytes);
+
+        return meter;
+    };
+    const auto present_bytes = [](const std::filesystem::path &file) -> std::uint64_t {
+        return std::filesystem::is_regular_file(std::filesystem::symlink_status(file))
+                       ? std::filesystem::file_size(file)
+                       : 0;
+    };
+    std::uint64_t retained_bytes = 0;
+
+    for (const auto &input : inputs) {
+        retained_bytes += present_bytes(originals / input.file);
+    }
+
+    auto retained_meter = verifying("originals", retained_bytes);
     std::vector<OriginalInput> missing;
 
     for (const auto &input : inputs) {
         const auto file = originals / input.file;
 
         if (std::filesystem::exists(file) || std::filesystem::is_symlink(file)) {
-            verify_file(file, input.sha256, 1ULL << 30);
+            verify_file(file, input.sha256, 1ULL << 30, [&retained_meter](std::uint64_t block) {
+                if (retained_meter) {
+                    retained_meter->advance(block);
+                }
+            });
         } else {
             missing.push_back(input);
         }
     }
+
+    if (retained_meter && missing.empty()) {
+        retained_meter->finish();
+    }
+
+    retained_meter.reset();
 
     if (!missing.empty()) {
         if (originals != own_originals) {
@@ -1670,9 +1828,10 @@ Json fetch_native_inputs(const std::filesystem::path &root, std::string_view pro
         }
 
         if (serial.empty()) {
-            throw VoyemuError(
-                    "FETCH_MISSING",
-                    "retain pinned vehicle inputs or pass --source=adb --serial SERIAL for a physical device");
+            throw cli::LocalizedError("FETCH_MISSING", "error.originals_missing",
+                                      {{"profile_name", profile_name},
+                                       {"profile", std::string(profile)},
+                                       {"archive", "update.zip"}});
         }
 
         // The physical device is read with the adb that deps installed.
@@ -1786,8 +1945,10 @@ Json fetch_native_inputs(const std::filesystem::path &root, std::string_view pro
 
     const auto original_result = verify_original_inputs(root, profile, inputs);
     const auto &image = definition.at("android");
-    const DownloadPin image_pin{image.at("url").get<std::string>(), pinned_sha(image.at("sha256")),
-                                8ULL << 30};
+    DownloadPin image_pin{image.at("url").get<std::string>(), pinned_sha(image.at("sha256")),
+                          8ULL << 30};
+    image_pin.label = "android_image";
+    image_pin.version = android_image_version(image);
 
     if (!image_pin.url.starts_with("https://dl.google.com/android/repository/sys-img/android/")) {
         throw VoyemuError("FETCH_IMAGE", "pinned official non-GMS image required");
@@ -1803,7 +1964,25 @@ Json fetch_native_inputs(const std::filesystem::path &root, std::string_view pro
         verify_native_base_image(image, base);
         cached_base = true;
     } else if (std::filesystem::exists(retained) || std::filesystem::is_symlink(retained)) {
-        verify_file(retained, image_pin.sha256, image_pin.maximum_bytes);
+        std::optional<progress::Meter> meter;
+
+        if (const auto bytes = present_bytes(retained)) {
+            progress::block();
+            meter.emplace("verify", download_names(image_pin));
+            meter->length(bytes);
+        }
+
+        verify_file(retained, image_pin.sha256, image_pin.maximum_bytes,
+                    [&meter](std::uint64_t block) {
+                        if (meter) {
+                            meter->advance(block);
+                        }
+                    });
+
+        if (meter) {
+            meter->finish();
+        }
+
         archive = retained;
     } else {
         archive = download_pinned(image_pin, root / ".local/toolchains/downloads/native", offline,
@@ -1817,6 +1996,7 @@ Json fetch_native_inputs(const std::filesystem::path &root, std::string_view pro
         const auto &entry = embedded_toolchain_manifest().at("signing").at("platform").at(name);
         DownloadPin pin{entry.at("url").get<std::string>(), entry.at("sha256").get<std::string>(),
                         65536, DownloadEncoding::base64};
+        pin.label = std::string_view(name) == "key" ? "signing_key" : "signing_certificate";
         const auto file = download_pinned(pin, root / ".local/toolchains/downloads/native", offline,
                                           reserve);
         signing[name] = {{"file", file.file.string()}, {"sha256", pin.sha256}};
@@ -1854,20 +2034,37 @@ Json fetch_native_inputs(const std::filesystem::path &root, std::string_view pro
 
         const auto config = read_private_json(native_qnx, 128 * 1024);
         Json files = Json::array();
+        std::uint64_t qnx_bytes = 0;
+
+        for (const auto &item : config.at("originals")) {
+            qnx_bytes += present_bytes(qnx_originals_directory(root, profile) /
+                                       relative_path(item.at("file").get<std::string>()));
+        }
+
+        auto qnx_meter = verifying("qnx_originals", qnx_bytes);
 
         for (auto it = config.at("originals").begin(); it != config.at("originals").end(); ++it) {
             const auto name = relative_path(it.value().at("file").get<std::string>());
             const auto pin = pinned_sha(it.value().at("sha256"));
             const auto bytes = verify_file(qnx_originals_directory(root, profile) / name, pin,
-                                           4ULL << 30);
+                                           4ULL << 30, [&qnx_meter](std::uint64_t block) {
+                                               if (qnx_meter) {
+                                                   qnx_meter->advance(block);
+                                               }
+                                           });
             files.push_back({{"file", name}, {"bytes", bytes}, {"sha256", pin}});
+        }
+
+        if (qnx_meter) {
+            qnx_meter->finish();
         }
 
         result["qnx"] = {{"files", files}, {"verified", true}};
     }
 
     Json source_pins = Json::object();
-    std::size_t source_count = 0;
+    std::size_t source_count = 0, sources_downloaded = 0;
+    const auto sources_start = std::chrono::steady_clock::now();
     const auto components = definition.value("components", Json::object());
 
     for (auto it = components.begin(); it != components.end(); ++it) {
@@ -1924,9 +2121,17 @@ Json fetch_native_inputs(const std::filesystem::path &root, std::string_view pro
                                                       url.ends_with("?format=TEXT")
                                               ? DownloadEncoding::base64
                                               : DownloadEncoding::raw;
-                const auto blob = download_pinned({url, hash, maximum, encoding},
-                                                  root / ".local/toolchains/downloads/native",
-                                                  offline, reserve);
+
+                // One phase line stands for the hundreds of small source files of a profile.
+                if (!sources_downloaded++) {
+                    progress::block();
+                    progress::report("fetch_sources");
+                }
+
+                DownloadPin source_pin{url, hash, maximum, encoding};
+                source_pin.quiet = true;
+                const auto blob = download_pinned(
+                        source_pin, root / ".local/toolchains/downloads/native", offline, reserve);
 
                 if (archive && blob.bytes != maximum) {
                     throw VoyemuError("FETCH_COMPONENT",
@@ -1957,6 +2162,16 @@ Json fetch_native_inputs(const std::filesystem::path &root, std::string_view pro
                 throw VoyemuError("FETCH_COMPONENT", "external source count exceeds maximum");
             }
         }
+    }
+
+    if (sources_downloaded) {
+        const auto seconds = std::chrono::duration_cast<std::chrono::seconds>(
+                                     std::chrono::steady_clock::now() - sources_start)
+                                     .count();
+        progress::report("fetch_sources_done",
+                         {{"count", std::to_string(sources_downloaded)},
+                          {"time", progress::duration_text(static_cast<std::uint64_t>(seconds),
+                                                           progress::language())}});
     }
 
     result["external_sources"] = {{"files", source_count},

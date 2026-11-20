@@ -139,7 +139,7 @@ void selected_entry(const std::filesystem::path &file, const std::string &select
 Json import_qnx_update(const std::filesystem::path &file, std::string_view archive_sha256,
                        const Json &originals, const std::filesystem::path &codec,
                        std::string_view codec_sha256, const std::filesystem::path &output,
-                       std::uint64_t reserve) {
+                       std::uint64_t reserve, const std::function<void(std::uint64_t)> &advance) {
     ordinary(file);
     ordinary(output);
     need(sha256_text(archive_sha256) && originals.is_object() &&
@@ -319,7 +319,7 @@ Json import_qnx_update(const std::filesystem::path &file, std::string_view archi
             const auto bytes = definition.at("bytes").get<std::uint64_t>();
             const auto image_pin = definition.at("sha256").get<std::string>();
             restore_qnx_zero_base_segments(segments, bytes, image_pin, codec, codec_sha256,
-                                           output / item.key());
+                                           output / item.key(), advance);
 
             for (const auto &segment : segments) {
                 std::filesystem::remove(segment.patch);
@@ -373,6 +373,10 @@ Json import_qnx_update(const std::filesystem::path &file, std::string_view archi
             restore_qnx_zero_base_patch(patch, sha256_file(patch), bytes, image_pin, codec,
                                         codec_sha256, target);
             std::filesystem::remove(patch);
+        }
+
+        if (advance) {
+            advance(bytes);
         }
 
         records[item.key()] = {{"file", item.key()},

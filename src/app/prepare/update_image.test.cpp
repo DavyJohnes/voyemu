@@ -222,7 +222,14 @@ int main(int argc, char **argv) {
                                     root / "android-positive", 0);
         check(sha256_file(root / "android-positive/la_system.img") == sha256_bytes(source + source),
               "Android shares ordered segmented decoder");
-        // A volume without the reserve fails with the disk space error before any output.
+        // The restored bytes reach the progress meter; a volume without the reserve fails with the
+        // disk space error before any output.
+        std::uint64_t restored = 0;
+        import_android_update_image(archive, android_pin, android, library, codec_pin,
+                                    root / "android-progress", 0, [&restored](std::uint64_t bytes) {
+                                        restored += bytes;
+                                    });
+        check(restored == source.size() * 2, "segmented import reports its restored bytes");
         bool short_space = false;
         try {
             import_android_update_image(archive, android_pin, android, library, codec_pin,

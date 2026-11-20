@@ -8,13 +8,17 @@
 #include "os/fs.hpp"
 #include "os/platform.hpp"
 #include "process.hpp"
+#include "progress.hpp"
 #include "project_files.hpp"
 #include "qnx_qinggan11.hpp"
 #include "qnx_update_import.hpp"
 #include "quickboot.hpp"
 #include "update_image.hpp"
 #include "zip_archive.hpp"
+#include <chrono>
+#include <functional>
 #include <map>
+#include <memory>
 #include <set>
 #ifdef __APPLE__
 #include <stdio.h>
@@ -34,7 +38,9 @@ void ordinary(const std::filesystem::path &path) {
                   "linked path rejected");
 }
 
-bool matches(const std::filesystem::path &file, const std::string &pin, std::uint64_t bytes) {
+// advance receives the byte count of each hashed block, for a progress meter.
+bool matches(const std::filesystem::path &file, const std::string &pin, std::uint64_t bytes,
+             const std::function<void(std::uint64_t)> &advance = {}) {
     ordinary(file);
 
     if (!std::filesystem::exists(file)) {
@@ -45,7 +51,7 @@ bool matches(const std::filesystem::path &file, const std::string &pin, std::uin
                  std::filesystem::file_size(file) == bytes,
          "retained input extent/type differs");
     const auto epoch = cache_file_identity(file);
-    need(sha256_file(file) == pin && cache_file_identity(file) == epoch,
+    need(sha256_file(file, advance) == pin && cache_file_identity(file) == epoch,
          "retained input SHA differs");
 
     return true;
@@ -258,6 +264,8 @@ Json import_segmented_profile_inputs(const std::filesystem::path &root, std::str
 
     need(old || a9 || profile == "free-11-chinese-20260731-7.3.1", "exact profile required");
     ordinary(update);
+    const auto started = std::chrono::steady_clock::now();
+    const auto profile_name = profile_display_name(root, profile);
     const auto source = root / "profiles" / std::string(profile) / "profile.json",
                qsource = source.parent_path() / "profile-qnx.json";
     const auto profile_pin = sha256_file(source), qnx_pin = sha256_file(qsource);
@@ -269,11 +277,25 @@ Json import_segmented_profile_inputs(const std::filesystem::path &root, std::str
             a9    ? definition.at("ownerUpdate").at("sha256").get<std::string>()
             : old ? "ce6d1ffcd158c91383b61a44ea529bf54238512c520b436973fc0f6222047e42"
                   : "a1b0c8e26eec79dcd738c140070ec7f31792dbafd63006d8be113c2bbdec4220";
-    need(matches(update, archive_pin,
-                 a9    ? definition.at("ownerUpdate").at("bytes").get<std::uint64_t>()
-                 : old ? 4226266936ULL
-                       : 4137925521ULL),
-         "owner archive missing");
+    const auto destination = root / ".local/profiles" / std::string(profile);
+    ordinary(destination);
+    // An import that writes announces itself; a rerun checks the archive and the originals.
+    bool present = true;
+
+    for (const auto &record : plan.at("originals")) {
+        present = present && std::filesystem::exists(destination / "originals" /
+                                                     record.at("file").get<std::string>());
+    }
+
+    for (auto it = qnx.at("originals").begin(); it != qnx.at("originals").end(); ++it) {
+        present = present && std::filesystem::exists(destination / "qnx" / it.key());
+    }
+
+    verify_owner_archive(root, profile, update,
+                         a9    ? definition.at("ownerUpdate").at("bytes").get<std::uint64_t>()
+                         : old ? 4226266936ULL
+                               : 4137925521ULL,
+                         archive_pin, !present, "FETCH_UPDATE", "FETCH_UPDATE");
     const auto archive_epoch = cache_file_identity(update);
     const auto inventory = pinned_zip_inventory(update, archive_pin);
     std::set<std::string> names;
@@ -282,8 +304,6 @@ Json import_segmented_profile_inputs(const std::filesystem::path &root, std::str
         need(names.insert(entry.name).second, "duplicate ZIP member");
     }
 
-    const auto destination = root / ".local/profiles" / std::string(profile);
-    ordinary(destination);
     std::vector<Input> inputs;
     Json records = Json::array();
 
@@ -300,17 +320,49 @@ Json import_segmented_profile_inputs(const std::filesystem::path &root, std::str
     }
 
     need(!inputs.empty(), "originals required");
+    // Hashing the retained originals of a rerun takes seconds, so it shows its bytes.
+    const auto present_bytes = [](const std::filesystem::path &file) -> std::uint64_t {
+        return std::filesystem::is_regular_file(std::filesystem::symlink_status(file))
+                       ? std::filesystem::file_size(file)
+                       : 0;
+    };
+    std::uint64_t retained = 0;
+
+    for (const auto &input : inputs) {
+        retained += present_bytes(destination / "originals" / input.file);
+    }
+
+    for (auto it = qnx.at("originals").begin(); it != qnx.at("originals").end(); ++it) {
+        retained += present_bytes(destination / "qnx" / it.key());
+    }
+
+    std::unique_ptr<progress::Meter> checking;
+
+    if (retained) {
+        progress::block();
+        checking = std::make_unique<progress::Meter>(
+                "verify", progress::Arguments{{"label", "originals"},
+                                              {"version", profile_name},
+                                              {"profile_name", profile_name}});
+        checking->length(retained);
+    }
+
+    const auto checked = [&checking](std::uint64_t block) {
+        if (checking) {
+            checking->advance(block);
+        }
+    };
     bool cached = true;
 
     for (const auto &input : inputs) {
-        if (!matches(destination / "originals" / input.file, input.pin, input.bytes)) {
+        if (!matches(destination / "originals" / input.file, input.pin, input.bytes, checked)) {
             cached = false;
         }
     }
 
     for (auto it = qnx.at("originals").begin(); it != qnx.at("originals").end(); ++it) {
         if (!matches(destination / "qnx" / it.key(), it.value().at("sha256"),
-                     it.value().at("bytes"))) {
+                     it.value().at("bytes"), checked)) {
             cached = false;
         }
     }
@@ -334,8 +386,14 @@ Json import_segmented_profile_inputs(const std::filesystem::path &root, std::str
     if (cached) {
         unchanged();
 
+        if (checking) {
+            checking->finish("fetch_cached");
+        }
+
         return result;
     }
+
+    checking.reset();
 
     const auto host = std::string(os::dependency_system);
     const auto codec_spec = project_file_json(root, "src/app/toolchain.json", 256 * 1024)
@@ -382,9 +440,15 @@ Json import_segmented_profile_inputs(const std::filesystem::path &root, std::str
 
         const auto &image = recipe.at("images").at(name);
         const auto image_dir = stage / (std::string(name) + "-image");
+        progress::block();
+        progress::Meter unpacking("fetch_image", {{"image", std::string(name)}});
+        unpacking.length(image.at("bytes").get<std::uint64_t>());
         import_android_update_image(update, archive_pin,
                                     Json{{image.at("file").get<std::string>(), image}}, codec,
-                                    codec_spec.at("sha256").get<std::string>(), image_dir, reserve);
+                                    codec_spec.at("sha256").get<std::string>(), image_dir, reserve,
+                                    [&unpacking](std::uint64_t block) {
+                                        unpacking.advance(block);
+                                    });
         unsigned index = 0;
         std::size_t at = 0;
 
@@ -419,6 +483,7 @@ Json import_segmented_profile_inputs(const std::filesystem::path &root, std::str
         }
 
         std::filesystem::remove_all(image_dir);
+        progress::report("fetch_extracted", {{"count", std::to_string(missing.size())}});
     }
 
     bool missing_qnx = false;
@@ -430,8 +495,21 @@ Json import_segmented_profile_inputs(const std::filesystem::path &root, std::str
     }
 
     if (missing_qnx) {
+        std::uint64_t images = 0;
+
+        for (const auto &original : qnx.at("originals")) {
+            images += original.at("bytes").get<std::uint64_t>();
+        }
+
+        progress::block();
+        progress::Meter unpacking("fetch_qnx",
+                                  {{"count", std::to_string(qnx.at("originals").size())}});
+        unpacking.length(images);
         import_qnx_update(update, archive_pin, qnx.at("originals"), codec,
-                          codec_spec.at("sha256").get<std::string>(), stage / "qnx", reserve);
+                          codec_spec.at("sha256").get<std::string>(), stage / "qnx", reserve,
+                          [&unpacking](std::uint64_t block) {
+                              unpacking.advance(block);
+                          });
     }
 
     unchanged();
@@ -466,14 +544,31 @@ Json import_segmented_profile_inputs(const std::filesystem::path &root, std::str
             }
         }
 
+        std::uint64_t published = 0;
+
         for (const auto &input : inputs) {
-            need(matches(destination / "originals" / input.file, input.pin, input.bytes),
+            published += input.bytes;
+        }
+
+        for (const auto &original : qnx.at("originals")) {
+            published += original.at("bytes").get<std::uint64_t>();
+        }
+
+        progress::block();
+        progress::Meter saving("fetch_publish", {});
+        saving.length(published);
+        const auto saved = [&saving](std::uint64_t block) {
+            saving.advance(block);
+        };
+
+        for (const auto &input : inputs) {
+            need(matches(destination / "originals" / input.file, input.pin, input.bytes, saved),
                  "published original missing");
         }
 
         for (auto it = qnx.at("originals").begin(); it != qnx.at("originals").end(); ++it) {
             need(matches(destination / "qnx" / it.key(), it.value().at("sha256"),
-                         it.value().at("bytes")),
+                         it.value().at("bytes"), saved),
                  "published QNX original missing");
         }
 
@@ -491,6 +586,16 @@ Json import_segmented_profile_inputs(const std::filesystem::path &root, std::str
 
         throw;
     }
+
+    const auto seconds = std::chrono::duration_cast<std::chrono::seconds>(
+                                 std::chrono::steady_clock::now() - started)
+                                 .count();
+    progress::block();
+    progress::report("fetch_saved",
+                     {{"android", std::to_string(inputs.size())},
+                      {"qnx", std::to_string(qnx.at("originals").size())},
+                      {"time", progress::duration_text(static_cast<std::uint64_t>(seconds),
+                                                       progress::language())}});
 
     return result;
 }

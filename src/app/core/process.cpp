@@ -147,6 +147,11 @@ std::string sha256_bytes(std::string_view bytes) {
 }
 
 std::string sha256_file(const std::filesystem::path &path) {
+    return sha256_file(path, {});
+}
+
+std::string sha256_file(const std::filesystem::path &path,
+                        const std::function<void(std::uint64_t)> &advance) {
     if (std::filesystem::is_symlink(path) || !std::filesystem::is_regular_file(path)) {
         throw VoyemuError("PIN_PATH", "regular nonsymlink input required");
     }
@@ -164,6 +169,10 @@ std::string sha256_file(const std::filesystem::path &path) {
         interruption::check();
         file.read(buffer.data(), buffer.size());
         hash.update(buffer.data(), std::size_t(file.gcount()));
+
+        if (advance && file.gcount() > 0) {
+            advance(static_cast<std::uint64_t>(file.gcount()));
+        }
     }
 
     if (!file.eof()) {

@@ -13,6 +13,7 @@
 #include <chrono>
 #include <cstdio>
 #include <mutex>
+#include <optional>
 #include <set>
 #include <stdexcept>
 #include <thread>
@@ -225,7 +226,7 @@ DownloadedBlob download_pinned(const DownloadPin &pin, const std::filesystem::pa
     const auto destination = cache / (pin.sha256 + ".blob");
 
     if (std::filesystem::exists(destination) || std::filesystem::is_symlink(destination)) {
-        if (first_report(destination)) {
+        if (first_report(destination) && !pin.quiet) {
             progress::report("download_cached", download_names(pin));
         } else {
             logging::write(logging::Level::debug, "download", "cached file verified again",
@@ -306,7 +307,12 @@ DownloadedBlob download_pinned(const DownloadPin &pin, const std::filesystem::pa
     const auto host = progress::url_host(pin.url);
     auto context = download_names(pin);
     context["host"] = host;
-    progress::Meter meter("download", context);
+    std::optional<progress::Meter> meter;
+
+    if (!pin.quiet) {
+        meter.emplace("download", context);
+    }
+
     const DownloadSink sink = [&](std::string_view bytes) {
         interruption::check();
 
@@ -323,7 +329,10 @@ DownloadedBlob download_pinned(const DownloadPin &pin, const std::filesystem::pa
         }
 
         received += bytes.size();
-        meter.advance(bytes.size());
+
+        if (meter) {
+            meter->advance(bytes.size());
+        }
     };
 
     // A server that refuses the request for now gets six more attempts after its Retry-After delay,
@@ -336,7 +345,10 @@ DownloadedBlob download_pinned(const DownloadPin &pin, const std::filesystem::pa
                 // A response that announces its size must fit beside the reserve before it arrives.
                 https(pin, sink, [&](std::uint64_t total) {
                     require_disk_space("DOWNLOAD_SPACE", cache, total, reserve);
-                    meter.length(total);
+
+                    if (meter) {
+                        meter->length(total);
+                    }
                 });
             }
 
@@ -417,7 +429,10 @@ DownloadedBlob download_pinned(const DownloadPin &pin, const std::filesystem::pa
     cleanup.stream = nullptr;
     const auto bytes = verify(temporary, pin, true);
 
-    meter.finish();
+    if (meter) {
+        meter->finish();
+    }
+
     first_report(destination);
 #ifdef _WIN32
     if (!MoveFileW(temporary.c_str(), destination.c_str())) {

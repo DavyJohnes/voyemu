@@ -197,8 +197,12 @@ inline std::string human_cli_output(std::string_view command, const Json &result
         return out.str();
     }
 
+    // fetch names the profile by the profile_name that its command adds for the console.
     if (command == "fetch") {
-        return text("output.fetch", {{"profile", std::string(profile)}}) + "\n";
+        return text("output.fetch",
+                    {{"profile_name", result.value("profile_name", std::string(profile))}}) +
+               "\n" + text("output.next", {{"command", "voyemu build " + std::string(profile)}}) +
+               "\n";
     }
 
     if (command == "deps") {
