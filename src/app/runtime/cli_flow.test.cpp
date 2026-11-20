@@ -604,7 +604,7 @@ int main(int argc, char **argv) try {
             require(denied, "linked machine directory accepted");
             std::filesystem::remove(linked);
             std::filesystem::remove_all(root / "outside machines");
-            require(help.output.find("fetch PROFILE --source=/absolute/update.zip") !=
+            require(help.output.find("fetch PROFILE --source=FILE") !=
                                     std::string::npos &&
                             help.output.find("fetch PROFILE --source=adb --serial SERIAL") !=
                                     std::string::npos &&
@@ -616,7 +616,6 @@ int main(int argc, char **argv) try {
             const auto source = "--source=" + archive;
 
             for (const auto &options : std::vector<std::vector<std::string>>{
-                         {"fetch", "--source=relative.zip"},
                          {"check", source},
                          {"fetch", source, "--serial", "physical-fixture"},
                          {"fetch", source, source},

@@ -32,7 +32,7 @@ Voyemu работает на macOS 15+ с Apple Silicon, на Windows x64 и н�
 
 ```sh
 ./voyemu deps free-09-chinese-20260106-6.0.3
-./voyemu fetch free-09-chinese-20260106-6.0.3 --source=/absolute/path/update.zip
+./voyemu fetch free-09-chinese-20260106-6.0.3 --source=path/to/update.zip
 ./voyemu build free-09-chinese-20260106-6.0.3
 ./voyemu start machines/free-09-chinese-20260106-6.0.3
 ```

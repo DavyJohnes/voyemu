@@ -55,7 +55,7 @@ inline std::string cli_help(cli::Language language = cli::Language::english) {
     entries({{"list", "help.list", {}},
              {"deps [PROFILE]", "help.deps", {}},
              {"fetch PROFILE", "help.fetch", {}},
-             {"fetch PROFILE --source=/absolute/update.zip", "help.fetch_archive", {}},
+             {"fetch PROFILE --source=FILE", "help.fetch_archive", {}},
              {"fetch PROFILE --source=adb --serial SERIAL", "help.fetch_adb", {}},
              {"build PROFILE [MACHINE_PATH]", "help.build", {{"default", "machines/PROFILE"}}}});
     heading("help.subsystems");
@@ -68,12 +68,12 @@ inline std::string cli_help(cli::Language language = cli::Language::english) {
              {"--background", "help.background", {}},
              {"--resume", "help.resume", {}},
              {"--seconds 1..3600", "help.seconds", {}},
-             {"--provider ABS", "help.provider", {}}});
+             {"--provider FILE", "help.provider", {}}});
     note("help.launch_note", "  ");
     heading("help.preparation");
     note("help.preparation_note", "  ");
-    entries({{"--reuse-qnx ABS --reuse-qnx-sha256 SHA256", "help.reuse_qnx", {}},
-             {"--reuse-qnx-source ABS", "help.reuse_qnx_source", {}},
+    entries({{"--reuse-qnx FILE --reuse-qnx-sha256 SHA256", "help.reuse_qnx", {}},
+             {"--reuse-qnx-source PATH", "help.reuse_qnx_source", {}},
              {"--offline", "help.offline", {}},
              {"--jdk PATH", "help.jdk", {}}});
     heading("help.global");
@@ -92,7 +92,7 @@ inline std::string cli_help(cli::Language language = cli::Language::english) {
           "status machines/free-09-chinese-20260106-6.0.3",
           "build free-11-chinese-20260731-7.3.1 --cluster=off",
           "build free-11-chinese-20260731-7.3.1 machines/free-7.3.1-new --cluster=off",
-          "fetch free-11-chinese-20260731-7.3.1 --source=/absolute/update.zip",
+          "fetch free-11-chinese-20260731-7.3.1 --source=update.zip",
           "fetch free-11-chinese-20250710-6.11.1 --source=adb --serial SERIAL",
           "test --request request.json"}) {
         out += std::string("  voyemu ") + example + '\n';

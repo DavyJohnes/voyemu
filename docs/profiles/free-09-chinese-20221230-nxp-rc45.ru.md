@@ -14,11 +14,11 @@
 
 ## Оригиналы
 
-`fetch` импортирует закреплённый архив прошивки `update.zip` по абсолютному локальному пути и извлекает из него нужные файлы Android, среди них политики SELinux образов system и vendor. Подготовка берёт из обеих политик правила `su` машины Android, поэтому `su` ограничен так же, как в автомобиле. Машина подготавливается только с мультимедиа.
+`fetch` импортирует закреплённый архив прошивки `update.zip` по локальному пути и извлекает из него нужные файлы Android, среди них политики SELinux образов system и vendor. Подготовка берёт из обеих политик правила `su` машины Android, поэтому `su` ограничен так же, как в автомобиле. Машина подготавливается только с мультимедиа.
 
 ```sh
 ./voyemu deps free-09-chinese-20221230-nxp-rc45
-./voyemu fetch free-09-chinese-20221230-nxp-rc45 --source=/absolute/path/update.zip
+./voyemu fetch free-09-chinese-20221230-nxp-rc45 --source=path/to/update.zip
 ./voyemu build free-09-chinese-20221230-nxp-rc45 --cluster=off --multimedia=on
 ```
 

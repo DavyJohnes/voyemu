@@ -14,11 +14,11 @@ The Russian Voyah Passion firmware 2.1.4.80 of 3 April 2026 on Android 11. The m
 
 ## OEM inputs
 
-Import the pinned firmware archive `OIB_8155_H53Y3632802AW.zip` from an absolute local path; `fetch` reads the OTA package inside it and extracts the images it needs. Prepare the machine with the multimedia only.
+Import the pinned firmware archive `OIB_8155_H53Y3632802AW.zip` from a local path; `fetch` reads the OTA package inside it and extracts the images it needs. Prepare the machine with the multimedia only.
 
 ```sh
 ./voyemu deps passion-11-russian-20260403-2.1.4.80
-./voyemu fetch passion-11-russian-20260403-2.1.4.80 --source=/absolute/path/OIB_8155_H53Y3632802AW.zip
+./voyemu fetch passion-11-russian-20260403-2.1.4.80 --source=path/to/OIB_8155_H53Y3632802AW.zip
 ./voyemu build passion-11-russian-20260403-2.1.4.80 --cluster=off --multimedia=on
 ```
 

@@ -179,7 +179,7 @@ Json materialize_qnx_originals(const std::filesystem::path &root, std::string_vi
             if (!std::filesystem::exists(file)) {
                 throw VoyemuError(
                         "QNX_ORIGINALS_MISSING",
-                        "run voyemu fetch PROFILE --source=/absolute/OWNER_ZIP for the pinned Passion owner archive");
+                        "run voyemu fetch PROFILE --source=OWNER_ZIP for the pinned Passion owner archive");
             }
 
             const auto epoch = cache_file_identity(file);

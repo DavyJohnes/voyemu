@@ -42,7 +42,7 @@ Different machines run at the same time, each in its own session. Every start cl
 | `--background` | Keeps the window and audio in the background |
 | `--resume` | Restores the saved vehicle scenario instead of default vehicle values |
 | `--seconds 1..3600` | Bounds QNX execution time |
-| `--provider ABS` | Registers a provider manifest by absolute path, up to four |
+| `--provider FILE` | Registers a provider manifest, up to four; the path follows the [path rule](preparation.md) |
 | `--verbose` | Prints the session details after a successful `start` |
 
 ## Output language

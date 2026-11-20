@@ -4,11 +4,13 @@ Preparation turns a [profile](profiles-machines.md) and its OEM inputs into a ma
 
 ```sh
 ./voyemu deps free-09-chinese-20260106-6.0.3
-./voyemu fetch free-09-chinese-20260106-6.0.3 --source=/absolute/path/update.zip
+./voyemu fetch free-09-chinese-20260106-6.0.3 --source=path/to/update.zip
 ./voyemu build free-09-chinese-20260106-6.0.3
 ```
 
 Run the launcher from the installation root; on Windows the launcher is `voyemu.exe`. The installation root holds the launcher and `profiles/`; the default preparation path needs no `src/`, see [release](../dev/release.md#project-files). The launcher comes from a release archive or is built from source in the project root, see [build](../dev/build.md). Preparation of a QNX machine needs a launcher built with the graphics worker; the release archives have it.
+
+A file or directory path in an option, such as `--source=update.zip`, may be relative to the current directory or start with `~/` for the home directory; symbolic links in it are followed. Voyemu turns such a path into an absolute one before use.
 
 ## deps
 
@@ -29,7 +31,7 @@ While the `prebuilt` pin of the QNX engine is pending, `deps` builds the engine 
 | Form | Effect |
 | --- | --- |
 | `fetch PROFILE` | Verifies the inputs already retained for the profile |
-| `fetch PROFILE --source=/absolute/update.zip` | Imports a pinned firmware archive from an absolute local path |
+| `fetch PROFILE --source=FILE` | Imports a pinned firmware archive from a local path |
 | `fetch PROFILE --source=adb --serial SERIAL` | Reads the Android files declared in `original` of `profile.json` from a physical vehicle over authorized ADB; a profile with `status` `incomplete` reads them by `capture.json` |
 
 The archive and the files are checked against the sizes and SHA-256 in the profile before anything is published. Each [profile page](../profiles/index.md) names its input route and OEM file names. The launcher imports an archive itself, and an import from a vehicle uses the pinned SDK `adb`; the capture of an incomplete profile runs on the Java tools that `deps` installs.

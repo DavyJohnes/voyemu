@@ -28,6 +28,28 @@ struct Arguments {
     bool network = false, network_explicit = false;
 };
 
+// A path the user passes in an option: a leading ~/ starts at the home directory, a relative path
+// starts at the current directory, and links resolve, so later checks see the real absolute path.
+inline std::filesystem::path user_path(const std::string &value) {
+    std::filesystem::path path = value;
+
+    if (value.starts_with("~/")) {
+#ifdef _WIN32
+        const auto *home = _wgetenv(L"USERPROFILE");
+#else
+        const auto *home = std::getenv("HOME");
+#endif
+
+        if (!home || !*home || !std::filesystem::path(home).is_absolute()) {
+            throw LocalizedError("USER_HOME", "error.user_home");
+        }
+
+        path = std::filesystem::path(home) / value.substr(2);
+    }
+
+    return std::filesystem::weakly_canonical(std::filesystem::absolute(path));
+}
+
 inline Arguments parse(int argc, char **argv, const std::filesystem::path &executable) {
     Arguments result;
     std::string machine;
@@ -139,13 +161,10 @@ inline Arguments parse(int argc, char **argv, const std::filesystem::path &execu
 
             if (source == "adb") {
                 adb_source = true;
+            } else if (source.empty()) {
+                throw LocalizedError("CLI_ARGUMENT", "error.source_value");
             } else {
-                result.update = source;
-
-                if (!result.update.is_absolute() ||
-                    result.update.lexically_normal() != result.update) {
-                    throw LocalizedError("CLI_ARGUMENT", "error.source_value");
-                }
+                result.update = user_path(source);
             }
 
             continue;
@@ -175,22 +194,19 @@ inline Arguments parse(int argc, char **argv, const std::filesystem::path &execu
             result.profile = option;
             result.profile_explicit = true;
         } else if (option == "--provider") {
-            auto path = std::filesystem::path(next());
-
-            if (!path.is_absolute() || path.lexically_normal() != path ||
-                result.providers.size() >= 4) {
+            if (result.providers.size() >= 4) {
                 throw VoyemuError("PROVIDER_ARGUMENT", "invalid provider argument");
             }
 
-            result.providers.push_back(path);
+            result.providers.push_back(user_path(next()));
         } else if (option == "--reuse-qnx-source") {
-            result.reuse_qnx_source = next();
+            result.reuse_qnx_source = user_path(next());
         } else if (option == "--reuse-qnx") {
-            result.reuse_qnx = next();
+            result.reuse_qnx = user_path(next());
         } else if (option == "--reuse-qnx-sha256") {
             result.reuse_qnx_sha256 = next();
         } else if (option == "--jdk") {
-            result.jdk = next();
+            result.jdk = user_path(next());
         } else if (option == "--serial") {
             result.serial = next();
         } else if (option == "--verbose") {
@@ -200,7 +216,8 @@ inline Arguments parse(int argc, char **argv, const std::filesystem::path &execu
         } else if (option == "--background") {
             result.background = true;
         } else if (option == "--request") {
-            result.request_file = next();
+            const auto value = next();
+            result.request_file = value == "-" ? std::filesystem::path(value) : user_path(value);
         } else if (option == "--exclusive") {
             result.exclusive = true;
         } else if (option == "--refresh-host") {
@@ -347,12 +364,7 @@ inline Arguments parse(int argc, char **argv, const std::filesystem::path &execu
     if (!result.reuse_qnx.empty() || !result.reuse_qnx_sha256.empty() ||
         !result.reuse_qnx_source.empty()) {
         if (result.command != "build" || !result.cluster || !result.multimedia ||
-            result.reuse_qnx.empty() || !result.reuse_qnx.is_absolute() ||
-            result.reuse_qnx.lexically_normal() != result.reuse_qnx ||
-            !sha256_text(result.reuse_qnx_sha256) ||
-            (!result.reuse_qnx_source.empty() &&
-             (!result.reuse_qnx_source.is_absolute() ||
-              result.reuse_qnx_source.lexically_normal() != result.reuse_qnx_source))) {
+            result.reuse_qnx.empty() || !sha256_text(result.reuse_qnx_sha256)) {
             throw LocalizedError("CLI_ARGUMENT", "error.reuse_qnx");
         }
     }

@@ -1,6 +1,7 @@
 #include "cli_arguments.hpp"
 #include "help.hpp"
 #include <cassert>
+#include <cstdlib>
 #include <exception>
 #include <iostream>
 using namespace voyemu;
@@ -125,14 +126,62 @@ int main(int argc, char **argv) try {
     const auto device =
             parse({"fetch", default_profile_name, "--serial", "vehicle-123", "--source=adb"});
     assert(device.update.empty() && device.serial == "vehicle-123");
+    // A relative path starts at the current directory, ~/ at the home directory, and links
+    // resolve, so the archive reaches fetch as its real absolute path.
+    const auto fetched = [&](const std::string &value) {
+        return parse({"fetch", default_profile_name, "--source=" + value}).update;
+    };
+    const auto saved_directory = std::filesystem::current_path();
+    ensure_private_directory(root / "downloads");
+    std::filesystem::current_path(root / "downloads");
+    assert(fetched("owner update.zip") == root / "downloads/owner update.zip");
+    assert(fetched("../owner update.zip") == archive);
+    assert(fetched("nested/../owner.zip") == root / "downloads/owner.zip");
+    const auto relative_tools =
+            parse({"build", "free-11-chinese-20260731-7.3.1", "--reuse-qnx", "../acceptance.json",
+                   "--reuse-qnx-sha256", std::string(64, 'a'), "--jdk", "jdk"});
+    assert(relative_tools.reuse_qnx == root / "acceptance.json" &&
+           relative_tools.jdk == root / "downloads/jdk");
+    assert(parse({"start", machine.string(), "--provider", "provider.json"}).providers ==
+           std::vector<std::filesystem::path>{root / "downloads/provider.json"});
+    assert(parse({"test", "--request", "request.json"}).request_file ==
+                   root / "downloads/request.json" &&
+           parse({"test", "--request", "-"}).request_file == "-");
+    std::filesystem::current_path(saved_directory);
+#ifdef _WIN32
+    const char *home_variable = "USERPROFILE";
+#else
+    const char *home_variable = "HOME";
+#endif
+    const auto *saved_home = std::getenv(home_variable);
+    const std::string previous_home = saved_home ? saved_home : "";
+    const auto set_home = [&](const std::string &value) {
+#ifdef _WIN32
+        _putenv_s(home_variable, value.c_str());
+#else
+        setenv(home_variable, value.c_str(), 1);
+#endif
+    };
+    set_home(root.string());
+    assert(fetched("~/owner update.zip") == archive);
+    set_home("relative-home");
+    reject({"fetch", default_profile_name, "--source=~/owner update.zip"}, "USER_HOME:");
+    set_home(previous_home);
+    const auto real = root / "real";
+    ensure_private_directory(real);
+    write_private_json(real / "owner.zip", Json::object());
+    std::filesystem::create_directory_symlink(real, root / "linked");
+    assert(fetched((root / "linked/owner.zip").string()) == real / "owner.zip");
+    assert(fetched((root / "linked/absent.zip").string()) == real / "absent.zip");
+#ifndef _WIN32
+    std::filesystem::create_symlink(real / "owner.zip", root / "linked.zip");
+    assert(fetched((root / "linked.zip").string()) == real / "owner.zip");
+#endif
 
     for (const auto &options : std::vector<std::vector<std::string>>{
                  {"fetch", default_profile_name, "--source=adb"},
                  {"fetch", default_profile_name, "--source=adb", "--serial", ""},
                  {"fetch", default_profile_name, "--source="},
-                 {"fetch", default_profile_name, "--source=relative.zip"},
-                 {"fetch", default_profile_name,
-                  "--source=" + (root / "nested/../owner.zip").string()},
                  {"fetch", default_profile_name, "--source", "adb"},
                  {"fetch", default_profile_name, "--serial", "vehicle-123"},
                  {"fetch", default_profile_name, source, "--serial", "vehicle-123"},
@@ -217,9 +266,6 @@ int main(int argc, char **argv) try {
     reject({"build", default_profile_name, "--reuse-qnx-sha256", accepted_pin}, "CLI_ARGUMENT:");
     reject({"build", default_profile_name, "--cluster=off", "--reuse-qnx", accepted.string(),
             "--reuse-qnx-sha256", accepted_pin},
-           "CLI_ARGUMENT:");
-    reject({"build", default_profile_name, "--reuse-qnx", "relative.json", "--reuse-qnx-sha256",
-            accepted_pin},
            "CLI_ARGUMENT:");
     reject({"build", default_profile_name, "--reuse-qnx", accepted.string(), "--reuse-qnx-sha256",
             "wrong"},
