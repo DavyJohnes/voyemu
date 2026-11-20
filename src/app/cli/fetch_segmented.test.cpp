@@ -378,9 +378,9 @@ int segmented_synthetic_import(const std::filesystem::path &project) {
     check(ordered(console.str(),
                   {"Importing the " + profile + " update from " + update.string() + " (",
                    "\n\nChecking the archive\n",
-                   "The archive matches the pinned " + profile + " update\n",
-                   "\n\nAndroid system image (", "\n  Files extracted: 3\n",
-                   "\n\nAndroid resc image (", "\n  Files extracted: 1\n", "\n\nQNX images (4)\n",
+                   "The archive matches the pinned " + profile + " update",
+                   "\n\nAndroid system image (", "\n  Files extracted: 3",
+                   "\n\nAndroid resc image (", "\n  Files extracted: 1", "\n\nQNX images (4)",
                    "\n\nSaving the originals (",
                    "\n\nOriginals saved: 4 Android files and 4 QNX images in "}),
           ("fresh import lines differ: " + console.str()).c_str());
@@ -420,7 +420,7 @@ int segmented_synthetic_import(const std::filesystem::path &project) {
     std::cerr.rdbuf(prior);
     check(rerun.at("cached") == true, "retained 6.0.3 inputs were imported again");
     check(ordered(console.str(), {"Checking the archive\n",
-                                  "The archive matches the pinned " + profile + " update\n",
+                                  "The archive matches the pinned " + profile + " update",
                                   "\n\nChecking the " + profile + " originals (",
                                   "\n" + profile +
                                           " originals are already imported, SHA-256 "
