@@ -12,6 +12,9 @@ on:
             macos_only:
                 type: boolean
                 default: false
+            windows_only:
+                type: boolean
+                default: false
 
 permissions:
     contents: read
@@ -26,7 +29,7 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                host: ${{ fromJSON(inputs.macos_only && '["macos-arm64"]' || '["linux-x64","macos-arm64","windows-x64"]') }}
+                host: ${{ fromJSON(inputs.macos_only && '["macos-arm64"]' || inputs.windows_only && '["linux-x64","windows-x64"]' || '["linux-x64","macos-arm64","windows-x64"]') }}
         runs-on: ${{ matrix.host == 'macos-arm64' && 'macos-15' || matrix.host == 'windows-x64' && 'windows-2022' || 'ubuntu-24.04' }}
         timeout-minutes: 45
         defaults:
@@ -108,6 +111,7 @@ jobs:
             - run: cmake --build .local/build/tidy-windows --target tidy-check --parallel 4
 
     macos-native:
+        if: ${{ !inputs.windows_only }}
         name: macOS arm64 Release (Zig native, Command Line Tools SDK)
         runs-on: macos-15
         timeout-minutes: 30

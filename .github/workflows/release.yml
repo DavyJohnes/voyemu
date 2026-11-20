@@ -30,6 +30,7 @@ jobs:
         uses: ./.github/workflows/ci.yml
         with:
             macos_only: ${{ inputs.macos_only == true }}
+            windows_only: ${{ inputs.windows_only == true }}
 
     build:
         name: Build ${{ matrix.host }}
