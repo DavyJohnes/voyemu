@@ -943,7 +943,7 @@ if((APPLE OR VOYEMU_LINUX) AND BUILD_TESTING)
     set_tests_properties(can_cold_boundary PROPERTIES ENVIRONMENT "CC=${CMAKE_C_COMPILER}")
 endif()
 if(BUILD_TESTING)
-    set(api_tests api capture_png ui_tree capture_roi capture_age capture_geometry conditions event_journal admission can_observation can_guest can_model_observation watch source_registry provider_registry provider_process android_reboot full_restart can_restart_boundary ui_source system_observation pointer_drag input_fence tap_repeat ui_observer_shutdown ui_observer_diagnostics ui_observer_recovery android_stop_policy)
+    set(api_tests api api_error capture_png ui_tree capture_roi capture_age capture_geometry conditions event_journal admission can_observation can_guest can_model_observation watch source_registry provider_registry provider_process android_reboot full_restart can_restart_boundary ui_source system_observation pointer_drag input_fence tap_repeat ui_observer_shutdown ui_observer_diagnostics ui_observer_recovery android_stop_policy)
     if(VOYEMU_LINUX)
         # api and capture_png decode PNG frames with ImageIO.
         list(REMOVE_ITEM api_tests api capture_png)

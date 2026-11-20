@@ -5,10 +5,34 @@
 #include <nlohmann/json.hpp>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <vector>
 
 namespace voyemu {
 using Json = nlohmann::json;
+
+// The CODE of an exception: its own CODE, else FILESYSTEM, SYSTEM or JSON by the kind of a
+// standard filesystem, system or JSON exception, else empty.
+inline std::string_view failure_code(const std::exception &error) noexcept {
+    if (const auto code = message_code(error.what()); !code.empty()) {
+        return code;
+    }
+
+    if (dynamic_cast<const std::filesystem::filesystem_error *>(&error)) {
+        return "FILESYSTEM";
+    }
+
+    if (dynamic_cast<const std::system_error *>(&error)) {
+        return "SYSTEM";
+    }
+
+    if (dynamic_cast<const Json::exception *>(&error)) {
+        return "JSON";
+    }
+
+    return {};
+}
+
 bool valid_profile_name(std::string_view name);
 struct Field {
     std::uint32_t index;

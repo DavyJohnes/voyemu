@@ -44,9 +44,11 @@ A code that ends with `_UNKNOWN` means the effect of the operation is unknown: t
 | `TEST_OWNERSHIP` | The request changes a session without its ownership |
 | `REQUEST_CONFLICT` | The `request_id` was already used with different content |
 | `PROFILE_NOT_PREPARED` | The selected machine has no prepared launch configuration |
-| `INTERNAL_ERROR` | An unexpected failure without a code |
+| `FILESYSTEM` | A file operation failed; the message names the operation, the path and the reason given by the system |
+| `SYSTEM` | Another system call failed; the message gives its reason |
+| `INTERNAL_ERROR` | An unexpected failure without a code; the message keeps its text |
 
-Host code never hides a known failure behind `INTERNAL_ERROR`. Codes of other areas, such as `FETCH_MISSING` for missing OEM inputs or `CLI_COMMAND` for an unknown command, follow the same format.
+Host code never hides a known failure behind `INTERNAL_ERROR`. Malformed JSON that host code reads for itself gives `JSON` on the command line. Codes of other areas, such as `FETCH_MISSING` for missing OEM inputs or `CLI_COMMAND` for an unknown command, follow the same format.
 
 ## Command line
 

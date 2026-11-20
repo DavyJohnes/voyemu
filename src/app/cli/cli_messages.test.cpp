@@ -271,12 +271,55 @@ void errors() {
                           log.string() +
                           ". If the error persists, attach the log to a problem report.\n",
           "an uncatalogued error keeps its code and names the log");
-    check(human_cli_error(std::runtime_error("filesystem error: cannot create directories"),
-                          Language::russian, log) ==
-                  "Voyemu: INTERNAL_ERROR: операция не выполнена.\nПодробности в логе: " +
-                          log.string() +
-                          ". Если ошибка повторится, приложите лог к сообщению о проблеме.\n",
-          "an error without a code shows INTERNAL_ERROR");
+    // An exception without a code shows its kind and its cause, then the log.
+    const auto denied = std::make_error_code(std::errc::permission_denied);
+    const std::filesystem::path machine = "/machines/car";
+    check(human_cli_error(
+                  std::filesystem::filesystem_error("resize_file", machine / "qnx-ram.bin", denied),
+                  Language::russian, log) ==
+                  "Voyemu: FILESYSTEM: файловая операция не выполнена: resize_file " +
+                          (machine / "qnx-ram.bin").string() + ": " + denied.message() +
+                          ".\nПроверьте путь, права доступа и свободное место на томе, затем "
+                          "повторите команду.\nЛог: " +
+                          log.string() + "\n",
+          "a filesystem error names its operation, path and reason");
+    std::error_code missing;
+    std::filesystem::rename(machine / "absent-source", machine / "absent-target", missing);
+    try {
+        std::filesystem::rename(machine / "absent-source", machine / "absent-target");
+        check(false, "a missing rename source throws");
+    } catch (const std::filesystem::filesystem_error &error) {
+        check(human_cli_error(error, Language::english) ==
+                      "Voyemu: FILESYSTEM: a file operation failed: rename " +
+                              (machine / "absent-source").string() + ", " +
+                              (machine / "absent-target").string() + ": " + missing.message() +
+                              ".\nCheck the path, its permissions and the free space on its "
+                              "volume, then repeat the command.\n",
+              "a thrown filesystem error names its operation and both paths");
+    }
+    const std::system_error refused(std::make_error_code(std::errc::connection_refused), "connect");
+    check(human_cli_error(refused, Language::english, log) ==
+                  "Voyemu: SYSTEM: a system operation failed: " + std::string(refused.what()) +
+                          ".\nIf the error persists, attach the log to a problem report.\nLog: " +
+                          log.string() + "\n",
+          "a system error shows its reason");
+    try {
+        static_cast<void>(Json::parse("{\"schema\": }"));
+        check(false, "malformed JSON throws");
+    } catch (const Json::exception &error) {
+        const std::string text = error.what();
+        const auto rendered = human_cli_error(error, Language::chinese);
+        check(rendered.starts_with("Voyemu: JSON: 无法读取 JSON 数据：parse error at line 1") &&
+                      rendered.find("[json.exception.") == std::string::npos &&
+                      rendered.ends_with("。\n如果错误再次出现，请在问题报告中附上日志。\n"),
+              "a JSON error shows its parse position without the library prefix: " + rendered +
+                      " from " + text);
+    }
+    check(human_cli_error(std::logic_error("vector index out of range."), Language::russian, log) ==
+                  "Voyemu: INTERNAL_ERROR: непредвиденный сбой: vector index out of range.\nЕсли "
+                  "ошибка повторится, приложите лог к сообщению о проблеме.\nЛог: " +
+                          log.string() + "\n",
+          "another error without a code shows its text with INTERNAL_ERROR");
     check(human_cli_error(cli::LocalizedError("INTERRUPTED", "error.interrupted"),
                           Language::chinese,
                           log) == "Voyemu: INTERRUPTED: 命令已中断。\n日志：" + log.string() + "\n",

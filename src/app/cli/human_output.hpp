@@ -12,29 +12,105 @@ inline std::string human_cli_error(std::string_view message) {
     return "Voyemu: " + std::string(message) + "\n";
 }
 
-// A catalog error in language. With the log file of the command, its path follows; an error
-// outside the catalog shows only its CODE, INTERNAL_ERROR without one, and leaves its English text
-// to the log. Without a log file an error outside the catalog keeps its English "CODE: message".
+// A failure cause as the end of a catalog sentence: without the trailing period, spaces and line
+// breaks that Windows system messages carry.
+inline std::string failure_reason(std::string text) {
+    while (!text.empty() && (text.back() == '.' || text.back() == ' ' || text.back() == '\r' ||
+                             text.back() == '\n')) {
+        text.pop_back();
+    }
+
+    return text;
+}
+
+// The catalog text of an exception without a CODE, by its kind, with its cause; empty for an
+// exception with a CODE.
+inline std::string uncoded_failure(const std::exception &error, cli::Language language) {
+    const auto code = failure_code(error);
+    std::string_view text = error.what();
+
+    if (code == "FILESYSTEM") {
+        const auto &failure = static_cast<const std::filesystem::filesystem_error &>(error);
+        const auto reason = failure.code().message();
+        // what() is "filesystem error: OPERATION: REASON [PATH]...", libc++ prefixes OPERATION with
+        // "in ".
+        constexpr std::string_view prefix = "filesystem error: ";
+
+        if (text.starts_with(prefix)) {
+            text.remove_prefix(prefix.size());
+        }
+
+        auto end = text.find(": " + reason);
+
+        if (end == std::string_view::npos) {
+            end = text.find(": ");
+        }
+
+        auto operation = text.substr(0, end);
+
+        if (operation.starts_with("in ")) {
+            operation.remove_prefix(3);
+        }
+
+        auto path = failure.path1().string();
+
+        if (!failure.path2().empty()) {
+            path += ", " + failure.path2().string();
+        }
+
+        return "FILESYSTEM: " + cli::message(language, "error.filesystem",
+                                             {{"operation", std::string(operation)},
+                                              {"path", path},
+                                              {"reason", failure_reason(reason)}});
+    }
+
+    if (code == "SYSTEM") {
+        return "SYSTEM: " + cli::message(language, "error.system",
+                                         {{"reason", failure_reason(std::string(text))}});
+    }
+
+    if (code == "JSON") {
+        // nlohmann::json prefixes its message with "[json.exception.KIND.ID] ".
+        if (text.starts_with("[json.exception.") && text.find("] ") != std::string_view::npos) {
+            text.remove_prefix(text.find("] ") + 2);
+        }
+
+        return "JSON: " + cli::message(language, "error.json",
+                                       {{"reason", failure_reason(std::string(text))}});
+    }
+
+    if (code.empty()) {
+        return "INTERNAL_ERROR: " + cli::message(language, "error.internal",
+                                                 {{"reason", failure_reason(std::string(text))}});
+    }
+
+    return {};
+}
+
+// A catalog error in language. With the log file of the command, its path follows. An exception
+// without a CODE shows FILESYSTEM, SYSTEM or JSON by its kind, else INTERNAL_ERROR, with its cause.
+// Another error outside the catalog shows only its CODE with the log file and leaves its English
+// text to the log, or keeps its English "CODE: message" without a log file.
 inline std::string human_cli_error(const std::exception &error, cli::Language language,
                                    const std::filesystem::path &log = {}) {
     const auto *localized = dynamic_cast<const cli::LocalizedError *>(&error);
-
-    if (log.empty()) {
-        return human_cli_error(localized ? localized->render(language) : std::string(error.what()));
-    }
+    const auto log_line =
+            log.empty() ? std::string{}
+                        : cli::message(language, "error.log", {{"path", log.string()}}) + "\n";
 
     if (localized) {
-        return human_cli_error(localized->render(language)) +
-               cli::message(language, "error.log", {{"path", log.string()}}) + "\n";
+        return human_cli_error(localized->render(language)) + log_line;
     }
 
-    std::string code(message_code(error.what()));
-
-    if (code.empty()) {
-        code = "INTERNAL_ERROR";
+    if (const auto uncoded = uncoded_failure(error, language); !uncoded.empty()) {
+        return human_cli_error(uncoded) + log_line;
     }
 
-    return human_cli_error(code + ": " +
+    if (log.empty()) {
+        return human_cli_error(error.what());
+    }
+
+    return human_cli_error(std::string(message_code(error.what())) + ": " +
                            cli::message(language, "error.unexpected", {{"log", log.string()}}));
 }
 

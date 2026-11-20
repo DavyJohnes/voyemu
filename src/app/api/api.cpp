@@ -148,14 +148,15 @@ std::string terminal_outcome(const Json &response) {
 }
 
 Json error(const std::exception &exception) {
-    std::string message = exception.what(), code(message_code(message));
+    std::string message = exception.what(), code(failure_code(exception));
 
-    if (code.empty() && dynamic_cast<const Json::exception *>(&exception)) {
+    // A JSON exception reads the request or response shape here, which the client corrects; the
+    // other kinds keep their code and cause, as on the console.
+    if (code == "JSON") {
         code = "TEST_ARGUMENT";
         message = "Invalid JSON request or response shape";
     } else if (code.empty()) {
         code = "INTERNAL_ERROR";
-        message = "Unexpected host API failure";
     }
 
     if (message.size() > 1024) {
