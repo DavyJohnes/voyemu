@@ -588,7 +588,29 @@ int main(int argc, char **argv) try {
         wrong = refreshed;
         wrong["android_processes"]["sdk_identity"]["arguments_sha256"] = "changed-final-command";
         check(rejected(wrong, id, 1, self), "final SDK identity was rebound a second time");
+        write_private_json(directory / "session-owner.json", wrong);
+        try {
+            advance_android_launch_generation(directory, id, child.pid(), 1);
+            throw std::runtime_error("changed SDK command advanced generation");
+        } catch (const VoyemuError &error) {
+            check(std::string(error.what()).starts_with("ANDROID_PROCESS_IDENTITY_UNKNOWN:") &&
+                          read_private_json(directory / "session-owner.json") == wrong,
+                  "changed SDK command modified receipt");
+        }
+
         write_private_json(directory / "session-owner.json", refreshed);
+        auto advanced = refreshed;
+
+        for (const std::uint64_t generation : {1, 2}) {
+            advance_android_launch_generation(directory, id, child.pid(), generation);
+            advanced["android_processes"]["generation"] = generation + 1;
+            check(read_private_json(directory / "session-owner.json") == advanced,
+                  "guest reboot changed SDK launch authority metadata");
+            refresh_android_launch_identity(directory, id, child.pid(), generation + 1, launcher,
+                                            self);
+            check(rejected(advanced, id, generation, self), "old SDK generation was accepted");
+        }
+
         check(stop_orphaned_session(directory, id, (directory / "control.sock").string())
                                       .at("stopped") == true &&
                       !child.alive(),

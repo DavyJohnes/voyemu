@@ -8,6 +8,7 @@
 #include <csignal>
 #include <cstring>
 #include <fcntl.h>
+#include <limits>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/un.h>
@@ -312,11 +313,12 @@ Json android_launch_identity(std::int64_t pid) {
                  : Json::object();
 }
 
-void refresh_android_launch_identity(const std::filesystem::path &directory,
-                                     const std::string &session_id, std::int64_t pid,
-                                     std::uint64_t generation,
-                                     const std::filesystem::path &launcher,
-                                     const std::filesystem::path &backend) {
+static void update_android_launch_identity(const std::filesystem::path &directory,
+                                           const std::string &session_id, std::int64_t pid,
+                                           std::uint64_t generation,
+                                           const std::filesystem::path &launcher,
+                                           const std::filesystem::path &backend,
+                                           bool advance_generation) {
     const auto path = directory / "session-owner.json";
     auto owner = read_private_json(path, 16384);
     auto &processes = owner["android_processes"];
@@ -346,6 +348,18 @@ void refresh_android_launch_identity(const std::filesystem::path &directory,
 
     const auto &previous = processes.at("sdk_identity");
 
+    if (advance_generation) {
+        if (previous != identity || generation == std::numeric_limits<std::uint64_t>::max()) {
+            throw VoyemuError("ANDROID_PROCESS_IDENTITY_UNKNOWN",
+                              "SDK process changed before guest reboot generation advance");
+        }
+
+        processes["generation"] = generation + 1;
+        write_private_json(path, owner);
+
+        return;
+    }
+
     if (previous == identity) {
         return;
     }
@@ -363,6 +377,21 @@ void refresh_android_launch_identity(const std::filesystem::path &directory,
 
     processes["sdk_identity"] = identity;
     write_private_json(path, owner);
+}
+
+void refresh_android_launch_identity(const std::filesystem::path &directory,
+                                     const std::string &session_id, std::int64_t pid,
+                                     std::uint64_t generation,
+                                     const std::filesystem::path &launcher,
+                                     const std::filesystem::path &backend) {
+    update_android_launch_identity(directory, session_id, pid, generation, launcher, backend,
+                                   false);
+}
+
+void advance_android_launch_generation(const std::filesystem::path &directory,
+                                       const std::string &session_id, std::int64_t pid,
+                                       std::uint64_t generation) {
+    update_android_launch_identity(directory, session_id, pid, generation, {}, {}, true);
 }
 
 void await_session_resources(const std::filesystem::path &directory, Clock::time_point deadline) {

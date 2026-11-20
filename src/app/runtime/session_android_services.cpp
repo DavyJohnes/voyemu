@@ -432,8 +432,13 @@ void Session::bootstrap_android_transport() {
 
         clear_ui_observer_metadata(directory_, session_id_);
 
+#ifndef _WIN32
+        advance_android_launch_generation(directory_, session_id_, android_.pid(),
+                                          android_generation_);
+#endif
         reset_android_identity_for_new_boot();
         ++android_generation_;
+        android_transport_boot_ = std::move(verified_boot);
         android_transport_ready_ = false;
         android_transport_attempted_ = false;
         android_clock_observed_ = false;
@@ -470,9 +475,9 @@ void Session::bootstrap_android_transport() {
         deliveries_["android"]["generation"] = android_generation_;
         deliveries_["android"]["external_reboot"] = {
                 {"boot_id", boot_id}, {"source", "owned Linux boot identity change"}};
+    } else {
+        android_transport_boot_ = std::move(verified_boot);
     }
-
-    android_transport_boot_ = std::move(verified_boot);
 
     if (android_transport_ready_) {
         return;

@@ -69,6 +69,9 @@ void refresh_android_launch_identity(const std::filesystem::path &directory,
                                      std::uint64_t generation,
                                      const std::filesystem::path &launcher,
                                      const std::filesystem::path &backend);
+void advance_android_launch_generation(const std::filesystem::path &directory,
+                                       const std::string &session_id, std::int64_t pid,
+                                       std::uint64_t generation);
 // Completion fence after the supervisor released its session: no signal or descendant discovery.
 void await_session_resources(const std::filesystem::path &directory,
                              std::chrono::steady_clock::time_point deadline);
