@@ -87,23 +87,6 @@ public final class Api30PreparedApkTest {
                                 false)));
     }
 
-    /** Constants of the declared step NAME.json of the profile. */
-    private static Map<String, Object> constants(ProfileRegistry.Profile profile, String name)
-            throws Exception {
-        return Json.obj(
-                Json.object(
-                        Json.parse(
-                                new String(
-                                        ProfileRegistry.bytes(
-                                                profile,
-                                                profile.resourcePrefix()
-                                                        + "patches/"
-                                                        + name
-                                                        + ".json"),
-                                        java.nio.charset.StandardCharsets.UTF_8))),
-                "constants");
-    }
-
     private static Map<String, String> originalPins() {
         Map<String, String> originalPins =
                 Map.ofEntries(

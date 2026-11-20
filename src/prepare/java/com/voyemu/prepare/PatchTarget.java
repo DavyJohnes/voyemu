@@ -703,10 +703,7 @@ final class PatchTarget implements Recipes.Target {
             entries.put(
                     "AndroidManifest.xml",
                     SettingsManifest.apply(
-                            profile.referenceProfile(),
-                            api,
-                            input,
-                            entries.get("AndroidManifest.xml")));
+                            constants, api, input, entries.get("AndroidManifest.xml")));
         } else {
             SettingsVoiceCloneGuard.validate(constants, api, input, entries.get("classes.dex"));
 
@@ -718,10 +715,10 @@ final class PatchTarget implements Recipes.Target {
 
             if (planValidation) {
                 SettingsManifest.validateOriginal(
-                        profile.referenceProfile(), api, input, entries.get("AndroidManifest.xml"));
+                        constants, api, input, entries.get("AndroidManifest.xml"));
             } else {
                 SettingsManifest.validate(
-                        profile.referenceProfile(), api, input, entries.get("AndroidManifest.xml"));
+                        constants, api, input, entries.get("AndroidManifest.xml"));
             }
         }
     }
