@@ -384,7 +384,10 @@ Json upgrade_profile_qnx_at(const std::filesystem::path &root, std::string_view 
                             const std::filesystem::path &seed,
                             const std::filesystem::path &qnx_file, const std::string &qnx_pin,
                             const std::filesystem::path &payload_source) {
-    need(profile == "free-09-chinese-20260106-6.0.3", "explicit QNX boot upgrade requires Free A9");
+    need(read_private_json(root / "profiles" / std::string(profile) / "profile-qnx.json",
+                           128 * 1024)
+                 .contains("persistence"),
+         "explicit QNX boot upgrade requires persistent QNX storage");
     ordinary(seed);
     need(std::filesystem::is_directory(seed) && std::filesystem::canonical(seed) == seed,
          "canonical machine directory required");
