@@ -4,9 +4,9 @@
   "output": "Ivt8BluetoothAdapter.jar",
   "qinggan11PhonePeer": true,
   "sourceFiles": {
-    "src/Ivt8BTAdapter.java": "voyemu/profiles/free-11-chinese-20250710-6.11.1/components/bluetooth-611/src/Ivt8BTAdapter.java",
-    "src/SyntheticPhonePeer.java": "voyemu/profiles/free-09-chinese-20260106-6.0.3/components/bluetooth/src/SyntheticPhonePeer.java",
-    "src/PeerConfiguration.java": "voyemu/profiles/free-09-chinese-20260106-6.0.3/components/bluetooth/src/PeerConfiguration.java",
-    "src/PeerSubscription.java": "voyemu/profiles/free-11-chinese-20250710-6.11.1/components/bluetooth-611/src/PeerSubscription.java"
+    "src/Ivt8BTAdapter.java": "voyemu/profiles/common/components/bluetooth/src/Ivt8BTAdapter.java",
+    "src/SyntheticPhonePeer.java": "voyemu/profiles/common/components/bluetooth/src/SyntheticPhonePeer.java",
+    "src/PeerConfiguration.java": "voyemu/profiles/common/components/bluetooth/src/PeerConfiguration.java",
+    "src/PeerSubscription.java": "voyemu/profiles/common/components/bluetooth/src/PeerSubscription.java"
   }
 }
