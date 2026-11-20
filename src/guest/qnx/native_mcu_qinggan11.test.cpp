@@ -251,11 +251,27 @@ int main(int argc, char **argv) {
         const auto root = std::filesystem::canonical(argv[1]);
         const auto source = voyemu::read_private_json(
                 root / "src/guest/qnx/native_mcu_qinggan11.json", 256 * 1024);
-        const auto profile = voyemu::read_private_json(
-                root / "profiles/free-11-chinese-20260731-7.3.1/profile.json", 1024 * 1024);
-        const auto fresh = voyemu::select_vehicle_startup(voyemu::VehicleStartup::fresh,
-                                                          profile.at("initial_state"), nullptr);
-        assert(fresh.at("raw_oem").at("aeb_sts") == 1);
+        unsigned adapter_profiles = 0;
+
+        // Every profile of this hardware adapter starts fresh with AEB on.
+        for (const auto &entry : std::filesystem::directory_iterator(root / "profiles")) {
+            const auto definition = entry.path() / "profile-qnx.json";
+
+            if (!std::filesystem::is_regular_file(definition) ||
+                voyemu::read_private_json(definition, 128 * 1024).at("hardware_adapter") !=
+                        "sa8155-qinggan11-731") {
+                continue;
+            }
+
+            const auto profile = voyemu::read_private_json(entry.path() / "profile.json",
+                                                           1024 * 1024);
+            const auto fresh = voyemu::select_vehicle_startup(voyemu::VehicleStartup::fresh,
+                                                              profile.at("initial_state"), nullptr);
+            assert(fresh.at("raw_oem").at("aeb_sts") == 1);
+            ++adapter_profiles;
+        }
+
+        assert(adapter_profiles > 0);
         const auto generated = voyemu::qnx_qinggan11_mcu_layout(source);
         assert(generated.find("{1228,8,0U}") != std::string::npos);
         const auto initial = voyemu::initial_state().at("raw_oem");
@@ -728,7 +744,7 @@ int main(int argc, char **argv) {
         }
 
         std::cout
-                << "Free A11 7.3.1 genuine650 projection, 462 named fields, original-bit preservation, vehicle/wheel ACK/error guards passed\n";
+                << "qinggan11 adapter genuine650 projection, 462 named fields, original-bit preservation, vehicle/wheel ACK/error guards passed\n";
 
         return 0;
     } catch (const std::exception &e) {

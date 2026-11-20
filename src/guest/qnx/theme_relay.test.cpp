@@ -249,7 +249,7 @@ int main() try {
 
     assert(library_opens == opened && symbol_lookups == resolved);
     std::cout
-            << "Free A11 6.11.1 mode4 + skin13, pre-mutation contract, partial failures and no false ACK passed\n";
+            << "Older qinggan11 adapter mode4 + skin13, pre-mutation contract, partial failures and no false ACK passed\n";
 } catch (const std::exception &error) {
     std::cerr << error.what() << '\n';
 

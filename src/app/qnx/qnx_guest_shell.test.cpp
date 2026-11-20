@@ -274,14 +274,34 @@ echo end
         std::size_t slot;
         bool zero_padding;
     };
-    // Both A11 profiles install the same runtime.
-    const std::vector<Install> installs{
-            {"free-09-chinese-20260106-6.0.3", prepare_qnx_guest_shell(qinggan09), 24576, true},
-            {"free-11-chinese-20260731-7.3.1", prepare_qnx_guest_shell(qinggan11), 21210, false},
-            {"free-11-chinese-20250710-6.11.1", prepare_qnx_guest_shell(qinggan11), 21210, false},
-            {"passion-11-russian-20260403-2.1.4.80",
-             prepare_qnx_passion_11713_runtime(read(guest / "qnx-passion-runtime.sh")), 24576,
-             true}};
+    // Every profile with a QNX installs the runtime of its hardware adapter; both qinggan11
+    // adapters install the same runtime.
+    std::vector<Install> installs;
+
+    for (const auto &entry : std::filesystem::directory_iterator(root / "profiles")) {
+        const auto definition = entry.path() / "profile-qnx.json";
+
+        if (!std::filesystem::is_regular_file(definition)) {
+            continue;
+        }
+
+        const auto adapter =
+                read_private_json(definition, 128 * 1024).at("hardware_adapter").get<std::string>();
+        const auto profile = entry.path().filename().string();
+
+        if (adapter == "sa8155-qinggan09") {
+            installs.push_back({profile, prepare_qnx_guest_shell(qinggan09), 24576, true});
+        } else if (adapter == "sa8155-passion-21480") {
+            installs.push_back(
+                    {profile,
+                     prepare_qnx_passion_11713_runtime(read(guest / "qnx-passion-runtime.sh")),
+                     24576, true});
+        } else {
+            installs.push_back({profile, prepare_qnx_guest_shell(qinggan11), 21210, false});
+        }
+    }
+
+    need(!installs.empty(), "profiles with a QNX definition");
 
     for (const auto &install : installs) {
         const auto &bytes = install.bytes;

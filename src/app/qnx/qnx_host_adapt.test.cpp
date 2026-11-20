@@ -258,13 +258,13 @@ void qinggan11_boot_fixture(std::string_view script, std::string_view manager,
 
 int main(int argc, char **argv) {
     try {
-        if (argc == 7 && std::string_view(argv[1]) == "--qinggan11-611") {
+        if (argc == 7 && std::string_view(argv[1]) == "--qinggan11-older") {
             const auto a = dma_read(argv[2]), b = dma_read(argv[3]), stub = dma_read(argv[6]);
             const auto patched = qnx_qinggan11_developer_candidate(a, stub, std::string(64, '1'),
                                                                    std::string(64, '2'));
             dma_need(patched.size() == a.size() &&
                              adapt_qnx_qinggan11_symlinks(b).size() == b.size(),
-                     "6.11 host transforms");
+                     "older qinggan11 host transforms");
 
             bool rejected = false;
             try {
@@ -276,8 +276,8 @@ int main(int argc, char **argv) {
                 rejected = true;
             }
 
-            dma_need(rejected, "6.11 mutated host accepted");
-            std::cout << "6.11 host transformations and mutation guard passed\n";
+            dma_need(rejected, "older qinggan11 mutated host accepted");
+            std::cout << "older qinggan11 host transformations and mutation guard passed\n";
 
             return 0;
         }
@@ -585,10 +585,11 @@ int main(int argc, char **argv) {
             return 0;
         }
 
-        if (argc == 5 && std::string(argv[1]) == "--run") {
+        // --run ROOT PROFILE BUILT REFERENCE reads the fetched hyp_la.img of PROFILE.
+        if (argc == 6 && std::string(argv[1]) == "--run") {
             const auto root = std::filesystem::canonical(argv[2]),
-                       built = std::filesystem::canonical(argv[3]),
-                       reference = std::filesystem::canonical(argv[4]);
+                       built = std::filesystem::canonical(argv[4]),
+                       reference = std::filesystem::canonical(argv[5]);
             auto read = [](const std::filesystem::path &file) {
                 std::ifstream in(file, std::ios::binary);
 
@@ -598,8 +599,7 @@ int main(int argc, char **argv) {
 
                 return std::string((std::istreambuf_iterator<char>(in)), {});
             };
-            const auto hyp =
-                    read(root / ".local/profiles/free-09-chinese-20260106-6.0.3/qnx/hyp_la.img");
+            const auto hyp = read(root / ".local/profiles" / argv[3] / "qnx/hyp_la.img");
 
             if (sha256_bytes(hyp) !=
                 "0af64f396f7de8dafe3488f21ec7e4cd989b3d02d3de0412aec020fdb1424b89") {
