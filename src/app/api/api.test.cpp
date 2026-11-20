@@ -3103,23 +3103,45 @@ int main(int argc, char **argv) try {
 
 #ifdef _WIN32
     {
-        unsigned bounded_calls = 0;
+        // Status fences use control IPC; boot identity and the frame use the guest. Every call
+        // receives the remaining part of one caller budget, which never grows; the budget leaves
+        // room for host PNG encoding on slow runners.
+        unsigned control_calls = 0, guest_calls = 0;
+        int budget = 4000;
+        auto bounded_budget = [&](int timeout) {
+            assert(timeout > 0 && timeout <= budget);
+            budget = timeout;
+        };
         auto bounded_transport = shot_transport;
         bounded_transport.control = [&](const auto &endpoint, const Json &command, int timeout) {
-            ++bounded_calls;
-            assert(timeout > 0 && timeout <= 500 &&
-                   command.at("timeout_ms").get<unsigned>() <= static_cast<unsigned>(timeout));
+            ++control_calls;
+            bounded_budget(timeout);
+            assert(command.at("timeout_ms").get<unsigned>() <= static_cast<unsigned>(timeout));
 
             return transport.control(endpoint, command, timeout);
         };
+        auto bounded_guest = std::make_shared<api::ScriptedGuestAndroid>();
+        bounded_guest->identity = [&](int timeout) {
+            ++guest_calls;
+            bounded_budget(timeout);
+
+            return shot->identity(timeout);
+        };
+        bounded_guest->capture = [&](const std::string &epoch, unsigned display, int timeout) {
+            ++guest_calls;
+            bounded_budget(timeout);
+
+            return shot->capture(epoch, display, timeout);
+        };
+        bounded_transport.android = bounded_guest;
         api::Api bounded(root, "unused-cli", bounded_transport);
         auto short_capture = request("session.screenshot");
         short_capture["screen"] = "primary";
-        short_capture["timeout_ms"] = 500;
+        short_capture["timeout_ms"] = 4000;
         short_capture["artifact_dir"] = (root / ".local/build/tmp/bounded-control-budget").string();
         const auto response = bounded.call(short_capture);
         assert(response.at("ok") == true && response.at("result").at("accepted") == true &&
-               bounded_calls >= 4);
+               control_calls == 2 && guest_calls == 3);
     }
 #endif
     {
