@@ -4,7 +4,7 @@ public final class Api30OriginalNaviNativeSelectionTest {
     public static void main(String[] args) throws Exception {
         var original = Api30NativeFiles.forPlatform("qinggan11", true);
 
-        checkNodeGraph(Api30NativeFiles.QINGGAN11_ORIGINAL_NAVI_SPECS, original);
+        checkNodeGraph(Api30NativeFiles.forPlatform("qinggan11", false), original);
         checkNodeSteps();
 
         if (Api30NativeFiles.forPlatform("qinggan11", false).contains(original.get(2))) {
@@ -27,11 +27,23 @@ public final class Api30OriginalNaviNativeSelectionTest {
             java.util.List<Api30NativeFiles.Spec> common,
             java.util.List<Api30NativeFiles.Spec> original)
             throws Exception {
+        // The su read of mac_perms_file joins the early policy only with the MAC node.
+        var policyChain = java.util.Set.of("can-early-policy-api30", "selinux-hash-api30");
+
         if (original.size() != 9
-                || !common.equals(
-                        original.stream()
-                                .filter(spec -> !spec.id().equals("original-navi-mac"))
-                                .toList())) {
+                || !common.stream()
+                        .filter(spec -> !policyChain.contains(spec.id()))
+                        .toList()
+                        .equals(
+                                original.stream()
+                                        .filter(spec ->
+                                                !spec.id().equals("original-navi-mac")
+                                                        && !policyChain.contains(spec.id()))
+                                        .toList())
+                || common.size() != 8
+                || common.stream()
+                        .filter(spec -> policyChain.contains(spec.id()))
+                        .anyMatch(original::contains)) {
             throw new AssertionError("Exact 9-node original Navi graph required");
         }
 

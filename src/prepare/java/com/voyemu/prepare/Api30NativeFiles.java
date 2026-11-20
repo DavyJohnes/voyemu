@@ -77,31 +77,26 @@ final class Api30NativeFiles {
                             "391829e0167f44415e54ba64692ad410b1398b16263869beb22e427130eae766",
                             "7293ab8b5ff6f3890a7f60b158e6bf28c882896c755edf1e996c9231519c37de"));
 
+    private static final String
+            POLICY = "50e7563396d73b053a36a9022d31807121731ecc0ce51b695df65ec7d6838db6",
+            HASH = "2f158789774a59073cf85bf2c91272416b0da948eea037f9e13586187338f2c9";
+
+    /**
+     * The qinggan11 graph without the original Navi MAC node; its early policy omits the su read of
+     * mac_perms_file, which changes the policy and hash pins.
+     */
     static final List<Spec> QINGGAN11_SPECS =
             QINGGAN11_ORIGINAL_NAVI_SPECS.stream()
                     .filter(spec -> !spec.id().equals("original-navi-mac"))
-                    .toList();
-    static final String QINGGAN11_731 = "free-11-chinese-20260731-7.3.1";
-
-    static final List<Spec> QINGGAN11_611_SPECS =
-            QINGGAN11_SPECS.stream()
                     .map(spec ->
                             switch (spec.id()) {
-                                case "can-early-policy-api30" ->
-                                        new Spec(
-                                                spec.id(),
-                                                spec.target(),
-                                                spec.inputPin(),
-                                                "50e7563396d73b053a36a9022d31807121731ecc0ce51b695df65ec7d6838db6");
-                                case "selinux-hash-api30" ->
-                                        new Spec(
-                                                spec.id(),
-                                                spec.target(),
-                                                spec.inputPin(),
-                                                "2f158789774a59073cf85bf2c91272416b0da948eea037f9e13586187338f2c9");
+                                case "can-early-policy-api30" -> withOutput(spec, POLICY);
+                                case "selinux-hash-api30" -> withOutput(spec, HASH);
                                 default -> spec;
                             })
                     .toList();
+
+    static final String QINGGAN11_731 = "free-11-chinese-20260731-7.3.1";
 
     static final List<Spec> PASSION_SPECS =
             List.of(
@@ -162,20 +157,17 @@ final class Api30NativeFiles {
     }
 
     static List<Spec> forProfile(ProfileRegistry.Profile profile) {
-        var platform = profile.data().get("platform");
-        boolean originalNavi = Json.obj(profile.data(), "patches").containsKey("original-navi-mac");
-
-        if ("qinggan11".equals(platform)
-                && !originalNavi
-                && !QINGGAN11_731.equals(profile.referenceProfile())) {
-            return QINGGAN11_611_SPECS;
-        }
-
-        return forPlatform(platform, originalNavi);
+        return forPlatform(
+                profile.data().get("platform"),
+                Json.obj(profile.data(), "patches").containsKey("original-navi-mac"));
     }
 
     static final String MAPPING = "/system/etc/selinux/mapping/30.0.cil",
             MAPPING_PIN = "c14ab911584595a94e6783600371fed23cec1d56b8001383584a3192d028eb60";
+
+    private static Spec withOutput(Spec spec, String outputPin) {
+        return new Spec(spec.id(), spec.target(), spec.inputPin(), outputPin);
+    }
 
     private Api30NativeFiles() {}
 }
