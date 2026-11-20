@@ -29,6 +29,7 @@
 - Build Release only, without debug symbols; diagnose with debug-level logs.
 - Keep one shared implementation; platform code only in thin os/ backends.
 - Name concept first: GuestQnx, GuestAndroid.
+- Never name a concrete profile in src/: branch on profile groups or profile.json properties; tests use synthetic profile ids.
 - Keep tool configs in config/config-*, wired explicitly.
 - Before commit run format-check, tidy-check, checkstyle and errorprone-check; fix findings; suppress only with a reason comment.
 
@@ -38,8 +39,9 @@
 - Give authorized subagents end-to-end acceptance criteria; verify results and resume unfinished work after intermediate milestones.
 - Use a new aptly named subagent with separate context for each unrelated task; resume an existing subagent only for its own task.
 - Run bounded owned experiments in parallel only within a combined resource budget; never signal foreign runtimes.
+- Never use default build parallelism: pass `-j` at most available RAM / 1.5 GiB (and at most cores / 2), run builds and tests under `nice -n 10`, run heavy CTest serially; check `free -m` first.
 - Wait for owned processes by PID; never poll with `pgrep -f` or loops without a bound; never search above the working directory.
-- Parallel agents build only affected targets incrementally in the shared build directory under `flock .local/build/build.lock`, never full builds in private worktrees; one integration step runs the full build, CTest and checks after the batch.
+- Parallel code agents edit and commit in their own git worktrees under `.local/build/jobs/<task>/` without building; one build agent integrates their commits into main and alone builds affected targets incrementally in the shared build directory under `flock .local/build/build.lock`; one integration step runs the full build, CTest and checks after the batch.
 - Before external handoff, stop owned executors, release resources, and verify absence; resume handed work only after an explicit handoff back.
 - Launch test windows in the background without activating them.
 - Keep plans textual: dated plans and useful reports in plans/YYYY-MM-DD/YYYY-MM-DD-HH-MM-description.md; remove completed records without continuing value.
