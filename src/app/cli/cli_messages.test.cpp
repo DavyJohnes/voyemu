@@ -260,7 +260,7 @@ void errors() {
     // only its code and points to the log, which keeps its English text.
     const std::filesystem::path log = "/root/.local/build/logs/build-20261120-101512.log";
     check(human_cli_error(error, Language::russian, log) ==
-                  "Voyemu: CLI_ARGUMENT: неизвестный параметр --x\nЖурнал: " + log.string() + "\n",
+                  "Voyemu: CLI_ARGUMENT: неизвестный параметр --x\nЛог: " + log.string() + "\n",
           "a catalog error names the log");
     check(human_cli_error(std::runtime_error("PIN_PATH: retained input missing"), Language::english,
                           log) ==
@@ -270,9 +270,9 @@ void errors() {
           "an uncatalogued error keeps its code and names the log");
     check(human_cli_error(std::runtime_error("filesystem error: cannot create directories"),
                           Language::russian, log) ==
-                  "Voyemu: INTERNAL_ERROR: операция не выполнена.\nПодробности в журнале: " +
+                  "Voyemu: INTERNAL_ERROR: операция не выполнена.\nПодробности в логе: " +
                           log.string() +
-                          ". Если ошибка повторится, приложите журнал к сообщению о проблеме.\n",
+                          ". Если ошибка повторится, приложите лог к сообщению о проблеме.\n",
           "an error without a code shows INTERNAL_ERROR");
     check(human_cli_error(cli::LocalizedError("INTERRUPTED", "error.interrupted"),
                           Language::chinese,
