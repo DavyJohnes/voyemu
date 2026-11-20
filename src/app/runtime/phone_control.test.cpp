@@ -1,207 +1,121 @@
 #include "phone_control.hpp"
-#include "profile_catalog.hpp"
 #include <cassert>
 #include <exception>
 #include <iostream>
 using namespace voyemu;
 
-// The bundled Android 9 profile on the 8155 board, read from the catalog.
-static const std::string &qinggan09_profile() {
-    static const auto id =
-            embedded_profile_names(ProfilePlatform::qinggan09, ProfileBoard::sa8155).at(0);
-
-    return id;
+// A synthetic profile that declares the patch of one pinned OEM Bluetooth phone.
+static Json bluetooth_profile(std::string_view id, std::string_view sha256, const Json &steps) {
+    return {{"id", id},
+            {"original", {{"BluetoothPhone", {{"sha256", sha256}}}}},
+            {"patches",
+             {{"BluetoothPhone", {{"input", "original:BluetoothPhone"}, {"steps", steps}}}}}};
 }
 
 int main() try {
-    const Json prepared{
-            {"id", qinggan09_profile()},
-            {"original",
-             {{"BluetoothPhone",
-               {{"sha256", "d5a7417be79e2e4bfd70e643df85ae76e1a8a15332a345f126ccc5781f5ba8a3"}}}}},
-            {"patches",
-             {{"BluetoothPhone",
-               {{"input", "original:BluetoothPhone"},
-                {"steps", Json::array({"systemservice-framework.json", "add-qg-runtime.json",
-                                       "phone-provider.json"})}}}}}};
+    const std::string id = "synthetic-qinggan09-a";
+    const auto prepared = bluetooth_profile(
+            id, "d5a7417be79e2e4bfd70e643df85ae76e1a8a15332a345f126ccc5781f5ba8a3",
+            Json::array({"systemservice-framework.json", "add-qg-runtime.json",
+                         "phone-provider.json"}));
+    const auto capability = phone_adapter_for_profile(prepared);
+
+    assert(capability == synthetic_phone_adapter(id));
+    assert(capability == (Json{{"schema", 1},
+                               {"profile", id},
+                               {"authority", "com.voyemu.input.phone"},
+                               {"kind", "synthetic-oem-bt-peer-v1"}}));
     {
         auto raw = prepared;
         raw.erase("id");
         assert(phone_adapter_for_profile(raw).empty());
-        assert(phone_adapter_for_profile(raw, qinggan09_profile()) ==
-               synthetic_phone_adapter(qinggan09_profile()));
-        assert(phone_adapter_for_profile(raw, "free-11-chinese-20260731-7.3.1").empty());
+        assert(phone_adapter_for_profile(raw, id) == synthetic_phone_adapter(id));
+        assert(runtime_profile_reference(raw, id) == id);
     }
 
-    // NOTE: a real free-11 definition (referenceProfile A9 + qinggan11_731 patch steps) now yields
-    // the qinggan11_731 adapter; the raw-Copy assertion below refers to a definition with qinggan09
-    // steps.
-    assert(phone_adapter_for_profile(prepared, "free-11-chinese-20260731-7.3.1").empty());
+    // The declared patch and its pinned original decide; any profile id takes the same phone.
+    for (const char *other : {"synthetic-qinggan11-b", "synthetic-passion-c"}) {
+        auto renamed = prepared;
+        renamed["id"] = other;
+        assert(phone_adapter_for_profile(renamed) == synthetic_phone_adapter(other));
+    }
+
     {
         auto copy = prepared;
         copy["id"] = "independent-local-copy";
-        copy["capture"] = {{"profile", "independent-local-copy"},
-                           {"referenceProfile", qinggan09_profile()}};
-        assert(runtime_profile_reference(copy, "independent-local-copy") == qinggan09_profile());
+        copy["capture"] = {{"profile", "independent-local-copy"}, {"referenceProfile", id}};
+        assert(runtime_profile_reference(copy, "independent-local-copy") == id);
         assert(phone_adapter_for_profile(copy, "independent-local-copy") ==
-               synthetic_phone_adapter(qinggan09_profile()));
-        assert(phone_adapter_for_profile(copy, qinggan09_profile()).empty());
+               synthetic_phone_adapter(id));
+        assert(phone_adapter_for_profile(copy, id).empty());
         copy["capture"]["profile"] = "different-copy";
         assert(phone_adapter_for_profile(copy, "independent-local-copy").empty());
-        copy["capture"]["profile"] = "independent-local-copy";
-        copy["capture"]["referenceProfile"] = "unsupported-family";
-        assert(phone_adapter_for_profile(copy).empty());
-    }
-    {
-        auto raw = prepared;
-        raw.erase("id");
-        assert(runtime_profile_reference(raw, qinggan09_profile()) == qinggan09_profile());
-    }
-
-    {
-        const std::string id = "free-09-chinese-20221230-nxp-rc45";
-        Json nxp = {
-                {"id", id},
-                {"components", {{"bluetooth", "components/phone-bluetooth"}}},
-                {"original",
-                 {{"BluetoothPhone",
-                   {{"sha256",
-                     "55e7602d15f5d677a5ddeaaa44c0c04c355235c5322b51edefa3a6ef29636451"}}}}},
-                {"patches",
-                 {{"BluetoothPhone",
-                   {{"input", "original:BluetoothPhone"},
-                    {"steps", Json::array({"add-qg-runtime.json", "nxp-phone-provider.json"})}}}}}};
-        assert(synthetic_phone_supported({{"phone_adapter", phone_adapter_for_profile(nxp, id)}}));
-        auto wrong = nxp;
-        wrong["components"]["bluetooth"] = "components/bluetooth";
-        assert(phone_adapter_for_profile(wrong, id).empty());
-        wrong = nxp;
-        wrong["original"]["BluetoothPhone"]["sha256"] = std::string(64, 'a');
-        assert(phone_adapter_for_profile(wrong, id).empty());
-        wrong = nxp;
-        wrong["patches"]["BluetoothPhone"]["steps"] = Json::array({"phone-provider.json"});
-        assert(phone_adapter_for_profile(wrong, id).empty());
-        assert(phone_adapter_for_profile(nxp, qinggan09_profile()).empty());
-    }
-    const auto capability = phone_adapter_for_profile(prepared);
-    assert(capability == synthetic_phone_adapter(qinggan09_profile()));
-
-    for (const auto path : {"/moved/machines/renamed-a9",
-                            "/moved/machines/free-09-chinese-20260106-6.0.3-local-copy"}) {
-        assert(synthetic_phone_supported({{"machine", path}, {"phone_adapter", capability}}));
-    }
-
-    {
-        auto other = prepared;
-        other["id"] = "free-11-chinese-20260731-7.3.1";
-        assert(phone_adapter_for_profile(other).empty());
     }
     {
         auto old = prepared;
         old["patches"]["BluetoothPhone"]["steps"].erase(2);
         assert(phone_adapter_for_profile(old).empty());
     }
+    // The profile pin of the original is the only expected SHA-256.
     {
         auto changed = prepared;
         changed["original"]["BluetoothPhone"]["sha256"] = std::string(64, 'a');
-        assert(phone_adapter_for_profile(changed).empty());
+        assert(phone_adapter_for_profile(changed) == synthetic_phone_adapter(id));
     }
-    // Free A11 family: exact qinggan11_731 contract yields the qinggan11_731 adapter; anything
-    // else stays empty.
-    const Json qinggan11_731{
-            {"id", qinggan11_731_profile_id},
-            {"referenceProfile", qinggan09_profile()},
-            {"original",
-             {{"BluetoothPhone",
-               {{"sha256", "c8a33e377a6a708ef6c3cca7e8cc3f938349c04dd494dac32bcf823a3096efa1"}}}}},
-            {"patches",
-             {{"BluetoothPhone",
-               {{"input", "original:BluetoothPhone"},
-                {"steps", Json::array({"api30-phone-provider.json"})}}}}}};
-    {
-        const std::string id = "free-11-chinese-20250710-6.11.1";
-        Json old = {{"id", id},
-                    {"original",
-                     {{"BluetoothPhone",
-                       {{"sha256",
-                         "c3b53187d5161692a338a9504e1fa288dd163896da431bf89b8ad1e8fa56b1f4"}}}}},
-                    {"patches",
-                     {{"BluetoothPhone",
-                       {{"input", "original:BluetoothPhone"},
-                        {"steps", Json::array({"api30-phone-provider.json"})}}}}}};
-        const auto capability = phone_adapter_for_profile(old, id);
-        assert(synthetic_phone_supported({{"phone_adapter", capability}}));
-        auto wrong = old;
-        wrong["original"]["BluetoothPhone"]["sha256"] =
-                qinggan11_731["original"]["BluetoothPhone"]["sha256"];
-        assert(phone_adapter_for_profile(wrong, id).empty());
-        wrong = old;
-        wrong["patches"]["BluetoothPhone"]["steps"] = Json::array({"phone-provider.json"});
-        assert(phone_adapter_for_profile(wrong, id).empty());
-        assert(phone_adapter_for_profile(old, qinggan11_731_profile_id).empty());
-    }
-    const auto qinggan11_capability = phone_adapter_for_profile(qinggan11_731,
-                                                                qinggan11_731_profile_id);
-    assert(qinggan11_capability == (Json{{"schema", 1},
-                                         {"profile", qinggan11_731_profile_id},
-                                         {"authority", "com.voyemu.input.phone"},
-                                         {"kind", "synthetic-oem-bt-peer-v1"}}));
-    assert(synthetic_phone_supported({{"phone_adapter", qinggan11_capability}}));
-    assert(synthetic_phone_supported(
-            {{"machine", "/any"},
-             {"phone_adapter", synthetic_phone_adapter(qinggan09_profile())}}));
-    assert(!synthetic_phone_supported(
-            {{"phone_adapter", synthetic_phone_adapter("synthetic-local-copy")}}));
-    {
-        auto bad = qinggan11_731;
-        bad["original"]["BluetoothPhone"]["sha256"] = std::string(64, 'a');
-        assert(phone_adapter_for_profile(bad, qinggan11_731_profile_id).empty());
+
+    for (const auto &pin : Json::array({nullptr, 123, ""})) {
+        auto unpinned = prepared;
+        unpinned["original"]["BluetoothPhone"]["sha256"] = pin;
+        assert(phone_adapter_for_profile(unpinned).empty());
+        unpinned["original"]["BluetoothPhone"].erase("sha256");
+        assert(phone_adapter_for_profile(unpinned).empty());
     }
     {
-        auto bad = qinggan11_731;
-        bad["patches"]["BluetoothPhone"]["steps"].push_back("extra.json");
-        assert(phone_adapter_for_profile(bad, qinggan11_731_profile_id).empty());
-    }
-    {
-        auto bad = qinggan11_731;
-        bad["patches"]["BluetoothPhone"]["steps"][0] = "phone-provider.json";
-        assert(phone_adapter_for_profile(bad, qinggan11_731_profile_id).empty());
-    }
-    {
-        auto bad = qinggan11_731;
-        bad["capture"] = {{"profile", qinggan11_731_profile_id},
-                          {"referenceProfile", "unsupported-family"}};
-        assert(phone_adapter_for_profile(bad, qinggan11_731_profile_id).empty());
-    }
-    {
-        auto bad = qinggan11_731;
+        auto bad = prepared;
         bad["patches"]["BluetoothPhone"]["input"] = "original:Foreign";
-        assert(phone_adapter_for_profile(bad, qinggan11_731_profile_id).empty());
+        assert(phone_adapter_for_profile(bad).empty());
     }
+
+    // The NXP phone also requires its own Bluetooth component.
     {
-        auto bad = qinggan11_capability;
-        bad["authority"] = "foreign";
-        assert(!synthetic_phone_supported({{"phone_adapter", bad}}));
+        auto nxp = bluetooth_profile(
+                "synthetic-nxp", "55e7602d15f5d677a5ddeaaa44c0c04c355235c5322b51edefa3a6ef29636451",
+                Json::array({"add-qg-runtime.json", "nxp-phone-provider.json"}));
+        nxp["components"] = {{"bluetooth", "components/phone-bluetooth"}};
+        assert(phone_adapter_for_profile(nxp) == synthetic_phone_adapter("synthetic-nxp"));
+        auto wrong = nxp;
+        wrong["components"]["bluetooth"] = "components/bluetooth";
+        assert(phone_adapter_for_profile(wrong).empty());
+        wrong = nxp;
+        wrong.erase("components");
+        assert(phone_adapter_for_profile(wrong).empty());
+        wrong = nxp;
+        wrong["original"]["BluetoothPhone"].erase("sha256");
+        assert(phone_adapter_for_profile(wrong).empty());
+        wrong = nxp;
+        wrong["patches"]["BluetoothPhone"]["steps"] = Json::array({"phone-provider.json"});
+        assert(phone_adapter_for_profile(wrong).empty());
     }
-    {
-        auto bad = qinggan11_capability;
-        bad["kind"] = "foreign-v2";
-        assert(!synthetic_phone_supported({{"phone_adapter", bad}}));
+
+    // Every API30 Bluetooth phone takes the single provider step, whatever original it pins.
+    for (const auto &sha256 : {std::string(64, 'a'), std::string(64, 'b')}) {
+        const auto api30 = bluetooth_profile("synthetic-qinggan11-a", sha256,
+                                             Json::array({"api30-phone-provider.json"}));
+        assert(phone_adapter_for_profile(api30) ==
+               synthetic_phone_adapter("synthetic-qinggan11-a"));
+        auto bad = api30;
+        bad["patches"]["BluetoothPhone"]["steps"].push_back("extra.json");
+        assert(phone_adapter_for_profile(bad).empty());
+        bad = api30;
+        bad["patches"]["BluetoothPhone"]["steps"][0] = "phone-provider.json";
+        assert(phone_adapter_for_profile(bad).empty());
+        bad = api30;
+        bad["original"]["BluetoothPhone"].erase("sha256");
+        assert(phone_adapter_for_profile(bad).empty());
     }
-    {
-        auto bad = qinggan11_capability;
-        bad.erase("schema");
-        assert(!synthetic_phone_supported({{"phone_adapter", bad}}));
-    }
-    // A9 remains strict: a definition claiming A9-family with qinggan11_731 steps stays empty
-    {
-        auto mixed = qinggan11_731;
-        mixed["id"] = qinggan09_profile();
-        assert(runtime_profile_reference(mixed, qinggan09_profile()) == qinggan09_profile());
-        assert(phone_adapter_for_profile(mixed, qinggan09_profile()).empty());
-    }
-    // Passion opts in only with the standalone Telecom component and exact OEM injection contract.
-    const std::string passion_id = "passion-11-russian-20260403-2.1.4.80";
+
+    // The Telecom phone takes the standalone phone component and the exact OEM injection contract.
+    const std::string passion_id = "synthetic-passion-a";
     const Json passion{
             {"id", passion_id},
             {"components", {{"phone", "components/phone"}}},
@@ -220,25 +134,15 @@ int main() try {
                                   {"kind", "synthetic-telecom-v1"}};
     assert(phone_adapter_for_profile(passion) == passion_capability);
     assert(phone_adapter_for_profile(passion, passion_id) == passion_capability);
-    assert(synthetic_phone_supported({{"phone_adapter", passion_capability}}));
     {
         auto raw = passion;
         raw.erase("id");
         assert(phone_adapter_for_profile(raw).empty());
         assert(phone_adapter_for_profile(raw, passion_id) == passion_capability);
     }
-
-    for (const char *id : {"unknown-profile", qinggan09_profile().c_str(), qinggan11_731_profile_id,
-                           "free-11-chinese-20250710-6.11.1"}) {
-        auto wrong = passion;
-        wrong["id"] = id;
-        assert(phone_adapter_for_profile(wrong).empty());
-        assert(phone_adapter_for_profile(passion, id).empty());
-    }
-
     {
         auto bad = passion;
-        bad["capture"] = {{"profile", passion_id}, {"referenceProfile", "unsupported-family"}};
+        bad["capture"] = {{"profile", "different-copy"}, {"referenceProfile", passion_id}};
         assert(phone_adapter_for_profile(bad, passion_id).empty());
     }
 
@@ -322,43 +226,55 @@ int main() try {
         assert(phone_adapter_for_profile(bad).empty());
     }
 
-    for (const auto &pin : Json::array({nullptr, 123, std::string(64, 'a')})) {
+    for (const auto &pin : Json::array({nullptr, 123, ""})) {
         auto bad = passion;
         bad["original"]["LY_BtPhone"]["sha256"] = pin;
         assert(phone_adapter_for_profile(bad).empty());
     }
 
+    {
+        auto pinned = passion;
+        pinned["original"]["LY_BtPhone"]["sha256"] = std::string(64, 'a');
+        assert(phone_adapter_for_profile(pinned) == passion_capability);
+    }
+
+    // A launch reaches the phone bound to its own reference profile.
+    const Json launch{{"reference_profile", id}, {"phone_adapter", capability}};
+    assert(synthetic_phone_supported(launch));
+
+    for (const auto path : {"/moved/machines/renamed", "/moved/machines/local-copy"}) {
+        auto moved = launch;
+        moved["machine"] = path;
+        assert(synthetic_phone_supported(moved));
+    }
+
+    assert(synthetic_phone_supported(
+            {{"reference_profile", passion_id}, {"phone_adapter", passion_capability}}));
+    assert(!synthetic_phone_supported(Json::object()));
+    assert(!synthetic_phone_supported({{"phone_adapter", capability}}));
+    assert(!synthetic_phone_supported(
+            {{"reference_profile", "synthetic-other"}, {"phone_adapter", capability}}));
+    assert(!synthetic_phone_supported(
+            {{"reference_profile", ""}, {"phone_adapter", synthetic_phone_adapter("")}}));
+    assert(!synthetic_phone_supported({{"reference_profile", 1}, {"phone_adapter", capability}}));
+
     for (const char *field : {"schema", "profile", "authority", "kind"}) {
-        auto bad = passion_capability;
-        bad.erase(field);
-        assert(!synthetic_phone_supported({{"phone_adapter", bad}}));
+        auto bad = launch;
+        bad["phone_adapter"].erase(field);
+        assert(!synthetic_phone_supported(bad));
+    }
+
+    for (const auto &[field, value] : std::initializer_list<std::pair<const char *, Json>>{
+                 {"schema", 2}, {"authority", "foreign"}, {"kind", "foreign-v2"}}) {
+        auto bad = launch;
+        bad["phone_adapter"][field] = value;
+        assert(!synthetic_phone_supported(bad));
     }
 
     {
-        auto bad = passion_capability;
-        bad["schema"] = 2;
-        assert(!synthetic_phone_supported({{"phone_adapter", bad}}));
-    }
-    {
-        auto bad = passion_capability;
-        bad["profile"] = "unknown-profile";
-        assert(!synthetic_phone_supported({{"phone_adapter", bad}}));
-    }
-    {
-        auto bad = passion_capability;
-        bad["authority"] = "foreign";
-        assert(!synthetic_phone_supported({{"phone_adapter", bad}}));
-    }
-    {
-        auto bad = passion_capability;
-        bad["kind"] = "synthetic-oem-bt-peer-v1";
-        assert(!synthetic_phone_supported({{"phone_adapter", bad}}));
-    }
-    assert(!synthetic_phone_supported(Json::object()));
-    {
-        auto bad = capability;
-        bad["authority"] = "foreign";
-        assert(!synthetic_phone_supported({{"phone_adapter", bad}}));
+        auto bad = launch;
+        bad["phone_adapter"]["extra"] = true;
+        assert(!synthetic_phone_supported(bad));
     }
     const Json fixture{
             {"peer_name", "Voyemu test phone"},

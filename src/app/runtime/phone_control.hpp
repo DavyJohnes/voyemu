@@ -9,17 +9,44 @@
 #include <stdexcept>
 
 namespace voyemu {
-// The synthetic phone of an Android 9 profile on the 8155 board.
-inline Json synthetic_phone_adapter(std::string_view profile) {
+// The synthetic phone a machine reaches through the phone patch its profile declares.
+inline Json synthetic_phone_adapter(std::string_view profile,
+                                    std::string_view kind = "synthetic-oem-bt-peer-v1") {
     return {{"schema", 1},
             {"profile", profile},
             {"authority", "com.voyemu.input.phone"},
-            {"kind", "synthetic-oem-bt-peer-v1"}};
+            {"kind", kind}};
 }
 
+// Whether the profile pins this OEM phone by its SHA-256 and declares its patch with exactly these
+// steps; the profile pin is the only expected SHA-256.
+inline bool phone_patch_declared(const Json &definition, const std::string &name,
+                                 const Json &steps) {
+    if (!definition.contains("patches") || !definition.at("patches").is_object() ||
+        !definition.at("patches").contains(name) || !definition.contains("original") ||
+        !definition.at("original").is_object() || !definition.at("original").contains(name)) {
+        return false;
+    }
+
+    const auto &patch = definition.at("patches").at(name);
+    const auto &original = definition.at("original").at(name);
+
+    return patch.is_object() && patch.value("input", Json{}) == "original:" + name &&
+           patch.value("steps", Json{}) == steps && original.is_object() &&
+           original.contains("sha256") && original.at("sha256").is_string() &&
+           !original.at("sha256").get_ref<const std::string &>().empty();
+}
+
+inline bool phone_component_declared(const Json &definition, const std::string &name,
+                                     const std::string &path) {
+    return definition.contains("components") && definition.at("components").is_object() &&
+           definition.at("components").value(name, Json{}) == path;
+}
+
+// The pinned OEM phone and the declared patch select the synthetic phone; the profile id does not.
 inline Json phone_adapter_for_profile(const Json &definition,
                                       std::string_view verified_profile = {}) {
-    // A9 raw snapshots have no id field; the caller may supply the already verified runtime
+    // Raw snapshots may have no id field; the caller may supply the already verified runtime
     // manifest profile.
     if (!definition.is_object()) {
         return Json::object();
@@ -35,146 +62,47 @@ inline Json phone_adapter_for_profile(const Json &definition,
 
     const auto family = runtime_profile_reference(definition, verified_profile);
 
-    if (family == "passion-11-russian-20260403-2.1.4.80") {
-        if (!definition.contains("components") || !definition.at("components").is_object() ||
-            definition.at("components").value("phone", Json{}) != "components/phone" ||
-            !definition.contains("patches") || !definition.at("patches").is_object() ||
-            !definition.at("patches").contains("LY_BtPhone") || !definition.contains("original") ||
-            !definition.at("original").is_object() ||
-            !definition.at("original").contains("LY_BtPhone")) {
-            return Json::object();
-        }
-
-        const auto &patch = definition.at("patches").at("LY_BtPhone");
-        const auto &original = definition.at("original").at("LY_BtPhone");
-
-        if (!patch.is_object() || patch.value("input", Json{}) != "original:LY_BtPhone" ||
-            patch.value("type", Json{}) != "apk" ||
-            patch.value("steps", Json{}) != Json::array({"passion-api30-bluetooth-role.json",
-                                                         "passion-api30-phone.json"}) ||
-            !original.is_object() ||
-            original.value("sha256", Json{}) !=
-                    "5bc0f97b94009b2e5aa6cb9759ea2547ab17cdadfbb8021d5e9cb6d6c6589047") {
-            return Json::object();
-        }
-
-        return {{"schema", 1},
-                {"profile", "passion-11-russian-20260403-2.1.4.80"},
-                {"authority", "com.voyemu.input.phone"},
-                {"kind", "synthetic-telecom-v1"}};
-    }
-
-    if (!definition.contains("patches") || !definition.at("patches").is_object() ||
-        !definition.at("patches").contains("BluetoothPhone") || !definition.contains("original") ||
-        !definition.at("original").is_object() ||
-        !definition.at("original").contains("BluetoothPhone")) {
+    if (family.empty()) {
         return Json::object();
     }
 
-    const auto &patch = definition.at("patches").at("BluetoothPhone");
-    const auto &original = definition.at("original").at("BluetoothPhone");
-    const auto exact_patch = patch.is_object() && patch.at("input") == "original:BluetoothPhone" &&
-                             patch.contains("steps") && patch.at("steps").is_array();
-
-    if (qinggan11_profile_id(family)) {
-        // Free A11 family: same shared provider sources and authority, exact own OEM
-        // BluetoothPhone contract (single step api30-phone-provider.json; pinned original).
-        if (!exact_patch || !original.is_object() || !original.contains("sha256")) {
-            return Json::object();
-        }
-
-        const auto &steps = patch.at("steps");
-
-        if (steps.size() != 1 || steps.at(0) != "api30-phone-provider.json") {
-            return Json::object();
-        }
-
-        return {{"schema", 1},
-                {"profile", family},
-                {"authority", "com.voyemu.input.phone"},
-                {"kind", "synthetic-oem-bt-peer-v1"}};
+    // The OEM Telecom phone takes a standalone phone component.
+    if (phone_component_declared(definition, "phone", "components/phone") &&
+        phone_patch_declared(
+                definition, "LY_BtPhone",
+                Json::array({"passion-api30-bluetooth-role.json", "passion-api30-phone.json"})) &&
+        definition.at("patches").at("LY_BtPhone").value("type", Json{}) == "apk") {
+        return synthetic_phone_adapter(family, "synthetic-telecom-v1");
     }
 
-    if (family == "free-11-chinese-20250710-6.11.1") {
-        if (!exact_patch || !original.is_object() ||
-            original.value("sha256", std::string{}) !=
-                    "c3b53187d5161692a338a9504e1fa288dd163896da431bf89b8ad1e8fa56b1f4" ||
-            patch.at("steps") != Json::array({"api30-phone-provider.json"})) {
-            return Json::object();
-        }
-
-        return {{"schema", 1},
-                {"profile", "free-11-chinese-20250710-6.11.1"},
-                {"authority", "com.voyemu.input.phone"},
-                {"kind", "synthetic-oem-bt-peer-v1"}};
+    // The OEM Bluetooth phones share the phone provider sources and authority.
+    if (phone_patch_declared(definition, "BluetoothPhone",
+                             Json::array({"api30-phone-provider.json"})) ||
+        phone_patch_declared(definition, "BluetoothPhone",
+                             Json::array({"systemservice-framework.json", "add-qg-runtime.json",
+                                          "phone-provider.json"})) ||
+        (phone_component_declared(definition, "bluetooth", "components/phone-bluetooth") &&
+         phone_patch_declared(definition, "BluetoothPhone",
+                              Json::array({"add-qg-runtime.json", "nxp-phone-provider.json"})))) {
+        return synthetic_phone_adapter(family);
     }
 
-    if (family == "free-09-chinese-20221230-nxp-rc45") {
-        if (!exact_patch || !original.is_object() ||
-            original.value("sha256", std::string{}) !=
-                    "55e7602d15f5d677a5ddeaaa44c0c04c355235c5322b51edefa3a6ef29636451" ||
-            patch.at("steps") != Json::array({"add-qg-runtime.json", "nxp-phone-provider.json"}) ||
-            !definition.contains("components") || !definition.at("components").is_object() ||
-            definition.at("components").value("bluetooth", Json{}) !=
-                    "components/phone-bluetooth") {
-            return Json::object();
-        }
-
-        return {{"schema", 1},
-                {"profile", "free-09-chinese-20221230-nxp-rc45"},
-                {"authority", "com.voyemu.input.phone"},
-                {"kind", "synthetic-oem-bt-peer-v1"}};
-    }
-
-    if (!embedded_profile_declares(family, ProfilePlatform::qinggan09, ProfileBoard::sa8155)) {
-        return Json::object();
-    }
-
-    if (!exact_patch || !original.is_object() || !original.contains("sha256") ||
-        original.at("sha256") !=
-                "d5a7417be79e2e4bfd70e643df85ae76e1a8a15332a345f126ccc5781f5ba8a3") {
-        return Json::object();
-    }
-
-    const auto &steps = patch.at("steps");
-
-    if (steps.size() != 3 || steps.at(0) != "systemservice-framework.json" ||
-        steps.at(1) != "add-qg-runtime.json" || steps.at(2) != "phone-provider.json") {
-        return Json::object();
-    }
-
-    return synthetic_phone_adapter(family);
+    return Json::object();
 }
 
+// A launch reaches the synthetic phone that preparation bound to its own reference profile.
 inline bool synthetic_phone_supported(const Json &launch) {
-    if (!launch.is_object() || !launch.contains("phone_adapter")) {
+    if (!launch.is_object() || !launch.contains("phone_adapter") ||
+        !launch.contains("reference_profile") || !launch.at("reference_profile").is_string()) {
         return false;
     }
 
     const auto &adapter = launch.at("phone_adapter");
-    const auto profile = adapter.is_object() && adapter.contains("profile") &&
-                                         adapter.at("profile").is_string()
-                                 ? adapter.at("profile").get<std::string>()
-                                 : std::string{};
+    const auto &profile = launch.at("reference_profile").get_ref<const std::string &>();
 
-    return adapter == Json{{"schema", 1},
-                           {"profile", "free-09-chinese-20221230-nxp-rc45"},
-                           {"authority", "com.voyemu.input.phone"},
-                           {"kind", "synthetic-oem-bt-peer-v1"}} ||
-           (embedded_profile_declares(profile, ProfilePlatform::qinggan09, ProfileBoard::sa8155) &&
-            adapter == synthetic_phone_adapter(profile)) ||
-           adapter == Json{{"schema", 1},
-                           {"profile", qinggan11_731_profile_id},
-                           {"authority", "com.voyemu.input.phone"},
-                           {"kind", "synthetic-oem-bt-peer-v1"}} ||
-           adapter == Json{{"schema", 1},
-                           {"profile", "free-11-chinese-20250710-6.11.1"},
-                           {"authority", "com.voyemu.input.phone"},
-                           {"kind", "synthetic-oem-bt-peer-v1"}} ||
-           adapter == Json{{"schema", 1},
-                           {"profile", "passion-11-russian-20260403-2.1.4.80"},
-                           {"authority", "com.voyemu.input.phone"},
-                           {"kind", "synthetic-telecom-v1"}};
+    return !profile.empty() &&
+           (adapter == synthetic_phone_adapter(profile) ||
+            adapter == synthetic_phone_adapter(profile, "synthetic-telecom-v1"));
 }
 
 inline bool phone_input_operation(std::string_view op) {
