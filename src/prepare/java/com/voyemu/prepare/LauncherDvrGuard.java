@@ -34,21 +34,6 @@ final class LauncherDvrGuard {
     static final String HELPER_ROOT = "api30-launcher-dvr/src",
             HELPER_PATH = HELPER_ROOT + "/com/voyemu/launcher/DvrAvailability.java";
 
-    /**
-     * True selects the fixed instruction indices of the 7.3.1 Launcher classes2.dex, false locates
-     * the DVR reads by scan.
-     */
-    static final Map<String, Boolean> VARIANTS =
-            Map.of(
-                    "free-11-chinese-20250710-6.11.1",
-                    false,
-                    "free-11-chinese-20260731-7.3.1",
-                    true);
-
-    static List<String> pins(String profile) {
-        return VARIANTS.containsKey(profile) ? LauncherPowerGuard.pins(profile) : List.of();
-    }
-
     static void need(boolean v) {
         Failure.require(v, "LAUNCHER_DVR", "Exact Launcher DVR boundary required", 3);
     }
@@ -63,37 +48,38 @@ final class LauncherDvrGuard {
         return out;
     }
 
-    static boolean pinned(String profile) {
-        var variant = VARIANTS.get(profile);
-
-        need(variant != null);
-
-        return variant;
+    /**
+     * True selects the fixed instruction indices of a Launcher classes2.dex whose DVR reads are
+     * pinned, false locates the DVR reads by scan.
+     */
+    static boolean pinned(Map<String, Object> constants) {
+        return StepConstants.flag(constants, "launcher_dvr_pinned");
     }
 
-    static void validate(String profile, int api, String abi, Path apk, byte[] raw)
+    static void validate(Map<String, Object> constants, int api, String abi, Path apk, byte[] raw)
             throws Exception {
-        if (pinned(profile)) {
-            Pinned.validate(profile, api, abi, apk, raw);
+        if (pinned(constants)) {
+            Pinned.validate(constants, api, abi, apk, raw);
         } else {
-            Recomputed.validate(profile, api, abi, apk, raw);
+            Recomputed.validate(constants, api, abi, apk, raw);
         }
     }
 
-    static void validateOriginalChain(String profile, int api, String abi, Path apk, byte[] raw)
+    static void validateOriginalChain(
+            Map<String, Object> constants, int api, String abi, Path apk, byte[] raw)
             throws Exception {
-        if (pinned(profile)) {
-            Pinned.validate(profile, api, abi, apk, raw);
+        if (pinned(constants)) {
+            Pinned.validate(constants, api, abi, apk, raw);
         } else {
-            Recomputed.validateOriginalChain(profile, api, abi, apk, raw);
+            Recomputed.validateOriginalChain(constants, api, abi, apk, raw);
         }
     }
 
-    static byte[] apply(String profile, int api, String abi, Path apk, byte[] raw)
+    static byte[] apply(Map<String, Object> constants, int api, String abi, Path apk, byte[] raw)
             throws Exception {
-        return pinned(profile)
-                ? Pinned.apply(profile, api, abi, apk, raw)
-                : Recomputed.apply(profile, api, abi, apk, raw);
+        return pinned(constants)
+                ? Pinned.apply(constants, api, abi, apk, raw)
+                : Recomputed.apply(constants, api, abi, apk, raw);
     }
 
     /** All three config reads are located by scan; the input must equal the recomputed chain. */
@@ -124,7 +110,7 @@ final class LauncherDvrGuard {
             return found;
         }
 
-        static byte[] original(String profile, Path apk) throws Exception {
+        static byte[] original(Path apk) throws Exception {
             try (var zip = new java.util.zip.ZipFile(apk.toFile())) {
                 var entry = zip.getEntry("classes2.dex");
                 need(entry != null);
@@ -133,15 +119,15 @@ final class LauncherDvrGuard {
             }
         }
 
-        static void validate(String profile, int api, String abi, Path apk, byte[] raw)
+        static void validate(
+                Map<String, Object> constants, int api, String abi, Path apk, byte[] raw)
                 throws Exception {
             need(
-                    VARIANTS.containsKey(profile)
-                            && api == 30
+                    api == 30
                             && "arm64-v8a".equals(abi)
-                            && pins(profile).contains(FilesSupport.hash(apk))
+                            && StepConstants.admits(constants, FilesSupport.hash(apk))
                             && raw != null);
-            byte[] source = original(profile, apk);
+            byte[] source = original(apk);
             ViewDumpPatch.checkedDex(raw, NativeCore.hash(raw));
             var current = classes(raw);
             var before = classes(source);
@@ -164,17 +150,17 @@ final class LauncherDvrGuard {
             adaptRoute(method(current, ROUTE, "startAppBySubType"));
         }
 
-        static void validateOriginalChain(String profile, int api, String abi, Path apk, byte[] raw)
+        static void validateOriginalChain(
+                Map<String, Object> constants, int api, String abi, Path apk, byte[] raw)
                 throws Exception {
             need(
-                    VARIANTS.containsKey(profile)
-                            && api == 30
+                    api == 30
                             && "arm64-v8a".equals(abi)
-                            && pins(profile).contains(FilesSupport.hash(apk))
+                            && StepConstants.admits(constants, FilesSupport.hash(apk))
                             && raw != null
-                            && Arrays.equals(raw, original(profile, apk)));
-            byte[] power = LauncherPowerGuard.apply(profile, api, apk, raw, "classes2.dex");
-            validate(profile, api, abi, apk, AqyProviderGuard.apply(profile, api, apk, power));
+                            && Arrays.equals(raw, original(apk)));
+            byte[] power = LauncherPowerGuard.apply(constants, api, apk, raw, "classes2.dex");
+            validate(constants, api, abi, apk, AqyProviderGuard.apply(constants, api, apk, power));
         }
 
         static Method adapt(Method m) {
@@ -267,9 +253,10 @@ final class LauncherDvrGuard {
             return PassionServiceForegroundGuard.copy(m, b);
         }
 
-        static byte[] apply(String profile, int api, String abi, Path apk, byte[] raw)
+        static byte[] apply(
+                Map<String, Object> constants, int api, String abi, Path apk, byte[] raw)
                 throws Exception {
-            validate(profile, api, abi, apk, raw);
+            validate(constants, api, abi, apk, raw);
             var before = classes(raw);
             var out = new TreeMap<String, ClassDef>();
 
@@ -376,13 +363,13 @@ final class LauncherDvrGuard {
             return found;
         }
 
-        static void validate(String profile, int api, String abi, Path apk, byte[] raw)
+        static void validate(
+                Map<String, Object> constants, int api, String abi, Path apk, byte[] raw)
                 throws Exception {
             need(
-                    VARIANTS.containsKey(profile)
-                            && api == 30
+                    api == 30
                             && "arm64-v8a".equals(abi)
-                            && pins(profile).contains(FilesSupport.hash(apk))
+                            && StepConstants.admits(constants, FilesSupport.hash(apk))
                             && raw != null);
             var cs = classes(raw);
 
@@ -481,9 +468,10 @@ final class LauncherDvrGuard {
                     b);
         }
 
-        static byte[] apply(String profile, int api, String abi, Path apk, byte[] raw)
+        static byte[] apply(
+                Map<String, Object> constants, int api, String abi, Path apk, byte[] raw)
                 throws Exception {
-            validate(profile, api, abi, apk, raw);
+            validate(constants, api, abi, apk, raw);
             var before = classes(raw);
             var out = new TreeMap<String, ClassDef>();
 

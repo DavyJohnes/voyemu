@@ -3,10 +3,10 @@ package com.voyemu.prepare;
 import java.nio.file.Path;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.zip.ZipFile;
 
 public class MediaCloudConfigGuardTest {
-    static final String PROFILE = "free-11-chinese-20260731-7.3.1";
 
     interface Checked {
         void run() throws Exception;
@@ -56,6 +56,7 @@ public class MediaCloudConfigGuardTest {
 
     public static void main(String[] a) throws Exception {
         Path p = Path.of(a[0]);
+        Map<String, Object> constants = Map.of(StepConstants.PINS, List.of(FilesSupport.hash(p)));
         byte[] before;
 
         try (var z = new ZipFile(p.toFile())) {
@@ -66,20 +67,26 @@ public class MediaCloudConfigGuardTest {
             throw new AssertionError("RED not reproduced");
         }
 
-        byte[] after = MediaCloudConfigGuard.apply(PROFILE, 30, "arm64-v8a", p, before);
+        byte[] after = MediaCloudConfigGuard.apply(constants, 30, "arm64-v8a", p, before);
 
         if (removals(after) != 2) {
             throw new AssertionError("GREEN absent");
         }
 
-        reject(() -> MediaCloudConfigGuard.validate("other", 30, "arm64-v8a", p, before));
-        reject(() -> MediaCloudConfigGuard.validate(PROFILE, 28, "arm64-v8a", p, before));
-        reject(() -> MediaCloudConfigGuard.validate(PROFILE, 30, "arm64-v8a", p, null));
-        reject(() -> MediaCloudConfigGuard.validate(PROFILE, 30, "arm64-v8a", p, after));
         reject(() ->
                 MediaCloudConfigGuard.validate(
-                        PROFILE, 30, "arm64-v8a", p.resolveSibling("MusicConcate.apk"), before));
-        reject(() -> MediaCloudConfigGuard.validate(PROFILE, 30, "armeabi-v7a", p, before));
+                        Map.of(StepConstants.PINS, List.of("0".repeat(64))),
+                        30,
+                        "arm64-v8a",
+                        p,
+                        before));
+        reject(() -> MediaCloudConfigGuard.validate(constants, 28, "arm64-v8a", p, before));
+        reject(() -> MediaCloudConfigGuard.validate(constants, 30, "arm64-v8a", p, null));
+        reject(() -> MediaCloudConfigGuard.validate(constants, 30, "arm64-v8a", p, after));
+        reject(() ->
+                MediaCloudConfigGuard.validate(
+                        constants, 30, "arm64-v8a", p.resolveSibling("MusicConcate.apk"), before));
+        reject(() -> MediaCloudConfigGuard.validate(constants, 30, "armeabi-v7a", p, before));
         var supported =
                 new LinkedHashSet<>(
                         List.of("BT_MUSIC", "USB_MUSIC", "RADIO_YUNTING", "LOCAL_RADIO"));

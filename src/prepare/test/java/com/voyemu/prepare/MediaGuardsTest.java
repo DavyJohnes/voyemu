@@ -2,11 +2,9 @@ package com.voyemu.prepare;
 
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.Map;
 
 public final class MediaGuardsTest {
-    static final String OTHER = "free-11-chinese-20260731-7.3.1";
-
-    static final String PROFILE = "free-11-chinese-20250710-6.11.1";
 
     interface Check {
         void run() throws Exception;
@@ -24,15 +22,13 @@ public final class MediaGuardsTest {
 
     public static void main(String[] args) throws Exception {
         Path root = Path.of(args[0]);
-        Path a611 =
-                root.resolve(
-                        ".local/profiles/free-11-chinese-20250710-6.11.1/originals/QGMedia.apk");
-        Path a731 =
-                root.resolve(
-                        ".local/profiles/free-11-chinese-20260731-7.3.1/originals/QGMedia.apk");
+        var steps = TestSteps.declared(root, MediaCloudConfigGuard.NAME);
+        Map<String, Object> p = steps.get(0), other = steps.get(1);
+        Path a611 = TestSteps.original(root, p, "QGMedia.apk"),
+                a731 = TestSteps.original(root, other, "QGMedia.apk");
         var entries = NativeCore.entries(a611);
         byte[] raw = entries.get("classes3.dex"), manifest = entries.get("AndroidManifest.xml");
-        String p = PROFILE, abi = "arm64-v8a";
+        String abi = "arm64-v8a";
         byte[] cloud = MediaCloudConfigGuard.apply(p, 30, abi, a611, raw);
         byte[] fixedManifest = MediaCloudManifestGuard.apply(p, 30, abi, a611, manifest);
 
@@ -79,7 +75,7 @@ public final class MediaGuardsTest {
         }
 
         rejects(() -> MediaCloudConfigGuard.apply(p, 30, abi, a731, raw));
-        rejects(() -> MediaCloudConfigGuard.apply(OTHER, 30, abi, a611, raw));
+        rejects(() -> MediaCloudConfigGuard.apply(other, 30, abi, a611, raw));
         rejects(() -> MediaCloudManifestGuard.apply(p, 30, abi, a731, manifest));
         rejects(() -> MediaCloudManifestGuard.apply(p, 30, abi, a611, fixedManifest));
     }

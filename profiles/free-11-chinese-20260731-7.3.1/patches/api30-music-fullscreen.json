@@ -10,6 +10,8 @@
   "constants": {
     "original_sha256_allowlist": [
       "3dfa09d39638888de1f79d679867d1ac57c9a165a0eed6d43b39aedc4be1ea33"
-    ]
+    ],
+    "music_fullscreen_boundary": false,
+    "music_page_boundary": false
   }
 }

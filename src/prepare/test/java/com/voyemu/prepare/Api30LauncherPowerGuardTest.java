@@ -17,7 +17,6 @@ import java.util.Map;
 
 /** Actual owner-Dex map boundary; this does not implement or accept automotive power support. */
 public final class Api30LauncherPowerGuardTest {
-    static final String PROFILE = "free-11-chinese-20260731-7.3.1";
 
     static void check(boolean value, String message) {
         if (!value) {
@@ -226,9 +225,16 @@ public final class Api30LauncherPowerGuardTest {
                 args.length == 1 || args.length == 2,
                 "ROOT [--original-map|--original-wrapper|PREPARED_LAUNCHER_APK]");
         Path root = Path.of(args[0]).toRealPath();
-        Path original = root.resolve(".local/profiles/" + PROFILE + "/originals/Launcher.apk");
+        Map<String, Object>
+                constants =
+                        TestSteps.select(
+                                root, "launcher_power_boundary", false, LauncherPowerGuard.NAME),
+                other =
+                        TestSteps.select(
+                                root, "launcher_power_boundary", true, LauncherPowerGuard.NAME);
+        Path original = TestSteps.original(root, constants, "Launcher.apk");
         check(
-                FilesSupport.hash(original).equals(LauncherPowerGuard.pins(PROFILE).get(0)),
+                FilesSupport.hash(original).equals(StepConstants.pins(constants).get(0)),
                 "exact Launcher owner pin");
         boolean red = args.length == 2 && args[1].startsWith("--original-");
 
@@ -254,20 +260,19 @@ public final class Api30LauncherPowerGuardTest {
                 return;
             }
 
-            byte[] after = LauncherPowerGuard.apply(PROFILE, 30, original, before, entry);
+            byte[] after = LauncherPowerGuard.apply(constants, 30, original, before, entry);
             verify(
                     method(new DexBackedDexFile(Opcodes.forApi(30), before), entry),
                     method(new DexBackedDexFile(Opcodes.forApi(30), after), entry),
                     entry);
-            reject(() -> LauncherPowerGuard.validate("other", 30, original, before, entry));
-            reject(() -> LauncherPowerGuard.validate(PROFILE, 28, original, before, entry));
-            reject(() -> LauncherPowerGuard.validate(PROFILE, 30, original, null, entry));
+            reject(() -> LauncherPowerGuard.validate(other, 30, original, before, entry));
+            reject(() -> LauncherPowerGuard.validate(constants, 28, original, before, entry));
+            reject(() -> LauncherPowerGuard.validate(constants, 30, original, null, entry));
             reject(() ->
                     LauncherPowerGuard.validate(
-                            PROFILE,
+                            constants,
                             30,
-                            root.resolve(
-                                    ".local/profiles/" + PROFILE + "/originals/SystemService.apk"),
+                            original.resolveSibling("SystemService.apk"),
                             before,
                             entry));
 
@@ -280,7 +285,7 @@ public final class Api30LauncherPowerGuardTest {
         }
 
         check(
-                FilesSupport.hash(original).equals(LauncherPowerGuard.pins(PROFILE).get(0)),
+                FilesSupport.hash(original).equals(StepConstants.pins(constants).get(0)),
                 "original unchanged");
         System.out.println(
                 Json.write(

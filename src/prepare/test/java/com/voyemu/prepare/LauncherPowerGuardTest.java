@@ -1,12 +1,19 @@
 package com.voyemu.prepare;
 
 import java.nio.file.Path;
+import java.util.List;
+import java.util.Map;
 import java.util.zip.ZipFile;
 
 public class LauncherPowerGuardTest {
-    static final String OTHER = "free-11-chinese-20260731-7.3.1";
-
-    static final String PROFILE = "free-11-chinese-20250710-6.11.1";
+    /** Step constants of a Launcher; boundary selects the instruction-boundary check. */
+    static Map<String, Object> constants(Path original, boolean boundary) throws Exception {
+        return Map.of(
+                StepConstants.PINS,
+                List.of(FilesSupport.hash(original)),
+                "launcher_power_boundary",
+                boundary);
+    }
 
     interface Checked {
         void run() throws Exception;
@@ -75,14 +82,15 @@ public class LauncherPowerGuardTest {
 
     public static void main(String[] args) throws Exception {
         Path apk = Path.of(args[0]), other = Path.of(args[1]);
+        Map<String, Object> constants = constants(apk, true), foreign = constants(other, false);
 
         for (String entry : new String[] {"classes.dex", "classes2.dex"}) {
             byte[] d = dex(apk, entry);
-            LauncherPowerGuard.validate(PROFILE, 30, apk, d, entry);
-            denied(() -> LauncherPowerGuard.validate(OTHER, 30, apk, d, entry));
-            denied(() -> LauncherPowerGuard.validate(PROFILE, 30, other, d, entry));
-            byte[] out = LauncherPowerGuard.apply(PROFILE, 30, apk, d, entry);
-            denied(() -> LauncherPowerGuard.validate(PROFILE, 30, apk, out, entry));
+            LauncherPowerGuard.validate(constants, 30, apk, d, entry);
+            denied(() -> LauncherPowerGuard.validate(foreign, 30, apk, d, entry));
+            denied(() -> LauncherPowerGuard.validate(constants, 30, other, d, entry));
+            byte[] out = LauncherPowerGuard.apply(constants, 30, apk, d, entry);
+            denied(() -> LauncherPowerGuard.validate(constants, 30, apk, out, entry));
             boolean wrapper = entry.equals("classes2.dex");
             var ins =
                     instructions(

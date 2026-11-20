@@ -357,7 +357,11 @@ public final class Api30PreparedApkTest {
             if (name.equals("QGMedia") && entry.equals("AndroidManifest.xml")) {
                 expected =
                         MediaCloudManifestGuard.apply(
-                                profile.id(), 30, "arm64-v8a", input, expected);
+                                constants(profile, MediaCloudConfigGuard.NAME),
+                                30,
+                                "arm64-v8a",
+                                input,
+                                expected);
             }
 
             if (!Arrays.equals(expected, after.get(entry))) {
@@ -567,10 +571,18 @@ public final class Api30PreparedApkTest {
             throws Exception {
         if (name.equals("Launcher")
                 && (entry.equals("classes.dex") || entry.equals("classes2.dex"))) {
-            expected = LauncherPowerGuard.apply(profile.id(), 30, input, expected, entry);
+            expected =
+                    LauncherPowerGuard.apply(
+                            constants(profile, LauncherPowerGuard.NAME),
+                            30,
+                            input,
+                            expected,
+                            entry);
 
             if (entry.equals("classes2.dex")) {
-                expected = AqyProviderGuard.apply(profile.id(), 30, input, expected);
+                expected =
+                        AqyProviderGuard.apply(
+                                constants(profile, AqyProviderGuard.NAME), 30, input, expected);
             }
 
             return expected;
@@ -592,7 +604,12 @@ public final class Api30PreparedApkTest {
         }
 
         if (name.equals("QGMedia") && entry.equals("classes2.dex")) {
-            return MediaNotificationGuard.apply(profile.id(), 30, "arm64-v8a", input, expected);
+            return MediaNotificationGuard.apply(
+                    constants(profile, MediaNotificationGuard.NAME),
+                    30,
+                    "arm64-v8a",
+                    input,
+                    expected);
         }
 
         if (name.equals("Navi") && entry.equals("classes3.dex")) {
@@ -606,15 +623,21 @@ public final class Api30PreparedApkTest {
             String name, String entry, ProfileRegistry.Profile profile, Path input, byte[] expected)
             throws Exception {
         if (name.equals("QGMedia") && entry.equals("classes3.dex")) {
-            return MediaCloudConfigGuard.apply(profile.id(), 30, "arm64-v8a", input, expected);
+            return MediaCloudConfigGuard.apply(
+                    constants(profile, MediaCloudConfigGuard.NAME),
+                    30,
+                    "arm64-v8a",
+                    input,
+                    expected);
         }
 
         if (name.equals("MusicConcate") && entry.equals("classes.dex")) {
             return MusicFullscreenGuard.apply(
-                    profile.id(),
+                    constants(profile, MusicFullscreenGuard.NAME),
                     30,
                     input,
-                    MusicPageGuard.apply(profile.id(), 30, input, expected));
+                    MusicPageGuard.apply(
+                            constants(profile, MusicFullscreenGuard.NAME), 30, input, expected));
         }
 
         if (name.equals("SystemService") && entry.equals("classes.dex")) {
@@ -633,6 +656,14 @@ public final class Api30PreparedApkTest {
         }
 
         return null;
+    }
+
+    /** The constants of the step NAME.json that the profile declares. */
+    static Map<String, Object> constants(ProfileRegistry.Profile profile, String name)
+            throws Exception {
+        return Json.obj(
+                Json.object(ProfileRegistry.patchMetadata(profile).get(name + ".json")),
+                "constants");
     }
 
     private static void checkQgapiConsumer(Path root, Path work, ProfileRegistry.Profile profile)

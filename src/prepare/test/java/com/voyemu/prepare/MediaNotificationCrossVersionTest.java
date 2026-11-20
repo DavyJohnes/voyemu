@@ -13,10 +13,9 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 public final class MediaNotificationCrossVersionTest {
-    static final String PROFILE = "free-11-chinese-20250710-6.11.1",
-            OTHER = "free-11-chinese-20260731-7.3.1";
 
     interface Check {
         void run() throws Exception;
@@ -208,9 +207,11 @@ public final class MediaNotificationCrossVersionTest {
 
     public static void main(String[] args) throws Exception {
         Path root = Path.of(args[0]);
-        Path apk = root.resolve(".local/profiles/" + PROFILE + "/originals/QGMedia.apk");
-        Path foreign = root.resolve(".local/profiles/" + OTHER + "/originals/QGMedia.apk");
-        String p = PROFILE, abi = "arm64-v8a";
+        var steps = TestSteps.declared(root, MediaNotificationGuard.NAME);
+        Map<String, Object> p = steps.get(0), other = steps.get(1);
+        Path apk = TestSteps.original(root, p, "QGMedia.apk"),
+                foreign = TestSteps.original(root, other, "QGMedia.apk");
+        String abi = "arm64-v8a";
         byte[] raw = NativeCore.entries(apk).get("classes2.dex");
         byte[] fixed = MediaNotificationGuard.apply(p, 30, abi, apk, raw);
 
@@ -247,7 +248,7 @@ public final class MediaNotificationCrossVersionTest {
         }
 
         rejects(() -> MediaNotificationGuard.apply(p, 30, abi, foreign, raw));
-        rejects(() -> MediaNotificationGuard.apply(OTHER, 30, abi, apk, raw));
+        rejects(() -> MediaNotificationGuard.apply(other, 30, abi, apk, raw));
         rejects(() -> MediaNotificationGuard.apply(p, 30, abi, apk, fixed));
     }
 }

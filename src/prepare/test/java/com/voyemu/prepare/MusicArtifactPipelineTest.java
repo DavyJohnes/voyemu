@@ -89,14 +89,10 @@ public final class MusicArtifactPipelineTest {
                 requestFile = Path.of(args[1]).toRealPath(),
                 work = Path.of(args[2]).toAbsolutePath().normalize();
         var request = Json.object(Json.parse(Files.readString(requestFile)));
-        String id = "free-11-chinese-20260731-7.3.1";
+        String id = Json.str(request, "profile");
         check(
-                Json.str(request, "profile").equals(id)
-                        && FilesSupport.hash(
-                                        root.resolve("profiles")
-                                                .resolve(id)
-                                                .resolve("profile.json"))
-                                .equals(Json.str(request, "profile_sha256")),
+                FilesSupport.hash(root.resolve("profiles").resolve(id).resolve("profile.json"))
+                        .equals(Json.str(request, "profile_sha256")),
                 "actual normal profile pin");
         var profile = new ProfileRegistry(root, id).get(id);
         var log = new ArrayList<String>();
@@ -118,6 +114,7 @@ public final class MusicArtifactPipelineTest {
                 log.equals(expected),
                 "actual Artifacts validates every raw step before applying the complete chain");
         Path original = root.resolve(".local/profiles/" + id + "/originals/MusicConcate.apk");
+        var constants = TestProfiles.constants(root, MusicFullscreenGuard.NAME, original);
         var before = NativeCore.entries(original);
         var after = NativeCore.entries(apk);
         var entries = new TreeMap<>(before);
@@ -129,8 +126,8 @@ public final class MusicArtifactPipelineTest {
                 ManifestLibraries.add(
                         entries.get("AndroidManifest.xml"),
                         List.of("QGAPI", "QGMOD", "QGVehicle")));
-        byte[] page = MusicPageGuard.apply(id, 30, original, entries.get("classes.dex"));
-        entries.put("classes.dex", MusicFullscreenGuard.apply(id, 30, original, page));
+        byte[] page = MusicPageGuard.apply(constants, 30, original, entries.get("classes.dex"));
+        entries.put("classes.dex", MusicFullscreenGuard.apply(constants, 30, original, page));
         after.keySet().removeIf(DexOperations::signatureEntry);
         check(entries.keySet().equals(after.keySet()), "all actual producer APK entry inventory");
 

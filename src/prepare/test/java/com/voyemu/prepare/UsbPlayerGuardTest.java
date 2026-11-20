@@ -13,7 +13,6 @@ import java.util.TreeMap;
 import java.util.zip.ZipFile;
 
 public final class UsbPlayerGuardTest {
-    static final String PROFILE = "free-11-chinese-20260731-7.3.1";
 
     interface Action {
         void run() throws Exception;
@@ -43,12 +42,15 @@ public final class UsbPlayerGuardTest {
         return out;
     }
 
+    /** A pin of the stub original; the recipe allowlist declares it. */
+    static final String PIN = "ab".repeat(32);
+
     static final class Target implements Recipes.Target {
         int validations, mutations;
 
         @Override
         public String profile() {
-            return PROFILE;
+            return TestProfiles.SYNTHETIC;
         }
 
         @Override
@@ -78,7 +80,7 @@ public final class UsbPlayerGuardTest {
 
         @Override
         public String originalSha256() {
-            return UsbPlayerGuard.pins(PROFILE).get(0);
+            return PIN;
         }
 
         @Override
@@ -118,7 +120,7 @@ public final class UsbPlayerGuardTest {
                 "sourceSha256",
                 "a".repeat(64),
                 "constants",
-                Map.of("original_sha256_allowlist", List.of(UsbPlayerGuard.pins(PROFILE).get(0))),
+                Map.of("original_sha256_allowlist", List.of(PIN)),
                 "calls",
                 List.of(calls));
     }
@@ -231,13 +233,14 @@ public final class UsbPlayerGuardTest {
                 root = Path.of(args[1]),
                 platform = Path.of(args[2]),
                 work = Path.of(args[3]);
+        Map<String, Object> constants = TestProfiles.constants(root, UsbPlayerGuard.NAME, apk);
         byte[] original;
 
         try (var zip = new ZipFile(apk.toFile())) {
             original = zip.getInputStream(zip.getEntry("classes3.dex")).readAllBytes();
         }
 
-        byte[] prepared = MediaCloudConfigGuard.apply(PROFILE, 30, "arm64-v8a", apk, original);
+        byte[] prepared = MediaCloudConfigGuard.apply(constants, 30, "arm64-v8a", apk, original);
         var before = classes(prepared);
 
         if (!FrameworkDexMaterializer.semantic(before.get(UsbPlayerGuard.PLAYER + ";"))
@@ -247,7 +250,7 @@ public final class UsbPlayerGuardTest {
             throw new AssertionError("Cloud patch altered USB player");
         }
 
-        byte[] patched = UsbPlayerGuard.apply(PROFILE, 30, "arm64-v8a", apk, prepared);
+        byte[] patched = UsbPlayerGuard.apply(constants, 30, "arm64-v8a", apk, prepared);
         var after = classes(patched);
 
         if (!before.keySet().equals(after.keySet())) {
@@ -263,15 +266,27 @@ public final class UsbPlayerGuardTest {
             }
         }
 
-        reject(() -> UsbPlayerGuard.apply("other", 30, "arm64-v8a", apk, prepared));
-        reject(() -> UsbPlayerGuard.apply(PROFILE, 28, "arm64-v8a", apk, prepared));
-        reject(() -> UsbPlayerGuard.apply(PROFILE, 30, "armeabi-v7a", apk, prepared));
-        reject(() -> UsbPlayerGuard.apply(PROFILE, 30, "arm64-v8a", apk, patched));
+        reject(() ->
+                UsbPlayerGuard.apply(
+                        Map.of(StepConstants.PINS, List.of("0".repeat(64))),
+                        30,
+                        "arm64-v8a",
+                        apk,
+                        prepared));
+        reject(() -> UsbPlayerGuard.apply(constants, 28, "arm64-v8a", apk, prepared));
+        reject(() -> UsbPlayerGuard.apply(constants, 30, "armeabi-v7a", apk, prepared));
+        reject(() -> UsbPlayerGuard.apply(constants, 30, "arm64-v8a", apk, patched));
         checkRecipeDispatch();
         Path source =
-                root.resolve("profiles/" + PROFILE + "/patches/" + UsbPlayerGuard.NAME + "/src");
+                root.resolve(
+                        "profiles/"
+                                + TestProfiles.pinning(root, FilesSupport.hash(apk))
+                                + "/patches/"
+                                + UsbPlayerGuard.NAME
+                                + "/src");
         Path helper =
-                UsbPlayerGuard.compileHelper(PROFILE, 30, "arm64-v8a", apk, source, platform, work);
+                UsbPlayerGuard.compileHelper(
+                        constants, 30, "arm64-v8a", apk, source, platform, work);
         var helperClasses = classes(Files.readAllBytes(helper));
 
         if (!helperClasses.containsKey(UsbPlayerGuard.HELPER)

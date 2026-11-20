@@ -12,7 +12,6 @@ import java.util.TreeMap;
  * Exercise actual API30 Artifacts plan-before-apply using immutable normal producer request inputs.
  */
 public final class MediaCloudArtifactPipelineTest {
-    static final String PROFILE = "free-11-chinese-20260731-7.3.1";
 
     static void check(boolean value, String message) {
         if (!value) {
@@ -70,6 +69,11 @@ public final class MediaCloudArtifactPipelineTest {
                 FilesSupport.hash(data).equals(Json.str(request, "patch_data_sha256")),
                 "actual normal recipe transport pin");
         var metadata = Json.object(Json.parse(Files.readString(data)));
+        Path step =
+                root.resolve("profiles")
+                        .resolve(profile.id())
+                        .resolve("patches")
+                        .resolve(MediaCloudConfigGuard.NAME + ".json");
         metadata.put(
                 MediaCloudConfigGuard.NAME + ".json",
                 Map.of(
@@ -78,13 +82,9 @@ public final class MediaCloudArtifactPipelineTest {
                         "api",
                         30,
                         "sourceSha256",
-                        FilesSupport.hash(
-                                root.resolve(
-                                        "profiles/free-11-chinese-20260731-7.3.1/patches/api30-media-cloud-availability.json")),
+                        FilesSupport.hash(step),
                         "constants",
-                        Map.of(
-                                "original_sha256_allowlist",
-                                List.of(MediaCloudConfigGuard.pins(PROFILE).get(0))),
+                        Json.obj(Json.object(Json.parse(Files.readString(step))), "constants"),
                         "calls",
                         List.of(
                                 Map.of(
@@ -112,14 +112,10 @@ public final class MediaCloudArtifactPipelineTest {
                 requestFile = Path.of(args[1]).toRealPath(),
                 work = Path.of(args[2]).toAbsolutePath().normalize();
         var request = Json.object(Json.parse(Files.readString(requestFile)));
-        String id = PROFILE;
+        String id = Json.str(request, "profile");
         check(
-                Json.str(request, "profile").equals(id)
-                        && FilesSupport.hash(
-                                        root.resolve("profiles")
-                                                .resolve(id)
-                                                .resolve("profile.json"))
-                                .equals(Json.str(request, "profile_sha256")),
+                FilesSupport.hash(root.resolve("profiles").resolve(id).resolve("profile.json"))
+                        .equals(Json.str(request, "profile_sha256")),
                 "actual normal profile pin");
         var actualProfile = new ProfileRegistry(root, id).get(id);
         var data = Json.object(Json.parse(Json.write(actualProfile.data())));
@@ -154,6 +150,7 @@ public final class MediaCloudArtifactPipelineTest {
                 log.equals(expected),
                 "actual Artifacts validates every raw step before applying the complete chain");
         Path original = root.resolve(".local/profiles/" + id + "/originals/QGMedia.apk");
+        var constants = TestProfiles.constants(root, MediaCloudConfigGuard.NAME, original);
         var before = NativeCore.entries(original);
         var after = NativeCore.entries(apk);
         var entries = new TreeMap<>(before);
@@ -167,11 +164,11 @@ public final class MediaCloudArtifactPipelineTest {
         entries.put(
                 "AndroidManifest.xml",
                 MediaCloudManifestGuard.apply(
-                        id, 30, "arm64-v8a", original, entries.get("AndroidManifest.xml")));
+                        constants, 30, "arm64-v8a", original, entries.get("AndroidManifest.xml")));
         entries.put(
                 "classes3.dex",
                 MediaCloudConfigGuard.apply(
-                        id, 30, "arm64-v8a", original, entries.get("classes3.dex")));
+                        constants, 30, "arm64-v8a", original, entries.get("classes3.dex")));
         after.keySet().removeIf(DexOperations::signatureEntry);
         check(entries.keySet().equals(after.keySet()), "all actual producer APK entry inventory");
 

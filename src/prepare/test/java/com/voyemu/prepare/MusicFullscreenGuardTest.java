@@ -11,10 +11,11 @@ import org.jf.dexlib2.iface.instruction.ReferenceInstruction;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 import java.util.zip.ZipFile;
 
 public final class MusicFullscreenGuardTest {
-    static final String PROFILE = "free-11-chinese-20260731-7.3.1";
 
     static void check(boolean b, String s) {
         if (!b) {
@@ -118,8 +119,11 @@ public final class MusicFullscreenGuardTest {
     }
 
     public static void main(String[] a) throws Exception {
-        Path root = Path.of(a[0]).toRealPath(),
-                apk = root.resolve(".local/profiles/" + PROFILE + "/originals/MusicConcate.apk");
+        Path root = Path.of(a[0]).toRealPath();
+        Map<String, Object> constants =
+                TestSteps.select(
+                        root, "music_fullscreen_boundary", false, MusicFullscreenGuard.NAME);
+        Path apk = TestSteps.original(root, constants, "MusicConcate.apk");
         byte[] original;
 
         try (var z = new ZipFile(apk.toFile())) {
@@ -127,15 +131,15 @@ public final class MusicFullscreenGuardTest {
         }
 
         byte[] rawSnapshot = original.clone();
-        MusicFullscreenGuard.validateOriginalChain(PROFILE, 30, apk, original);
+        MusicFullscreenGuard.validateOriginalChain(constants, 30, apk, original);
         check(Arrays.equals(rawSnapshot, original), "plan validation preserves original raw DEX");
-        byte[] predecessor = MusicPageGuard.apply(PROFILE, 30, apk, original);
+        byte[] predecessor = MusicPageGuard.apply(constants, 30, apk, original);
         rejectOriginalChain(
-                () -> MusicFullscreenGuard.validateOriginalChain(PROFILE, 30, apk, predecessor));
+                () -> MusicFullscreenGuard.validateOriginalChain(constants, 30, apk, predecessor));
         byte[] after =
                 a.length > 1 && a[1].equals("--original")
                         ? predecessor
-                        : MusicFullscreenGuard.apply(PROFILE, 30, apk, predecessor);
+                        : MusicFullscreenGuard.apply(constants, 30, apk, predecessor);
         verify(method(predecessor), method(after));
         check(
                 FrameworkDexMaterializer.semantic(
@@ -144,9 +148,11 @@ public final class MusicFullscreenGuardTest {
                                 FrameworkDexMaterializer.semantic(
                                         MusicPageGuard.classes(after).get(MusicPageGuard.OWNER))),
                 "existing Kuwo absent-page fix preserved");
-        reject(() -> MusicFullscreenGuard.apply("wrong", 30, apk, predecessor));
-        reject(() -> MusicFullscreenGuard.apply(PROFILE, 28, apk, predecessor));
-        reject(() -> MusicFullscreenGuard.apply(PROFILE, 30, apk, null));
+        reject(() ->
+                MusicFullscreenGuard.apply(
+                        Map.of(StepConstants.PINS, List.of("0".repeat(64))), 30, apk, predecessor));
+        reject(() -> MusicFullscreenGuard.apply(constants, 28, apk, predecessor));
+        reject(() -> MusicFullscreenGuard.apply(constants, 30, apk, null));
 
         if (a.length > 1 && !a[1].equals("--original")) {
             try (var z = new ZipFile(a[1])) {

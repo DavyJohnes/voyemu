@@ -9,10 +9,22 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class LauncherCanbusPinnedTest {
-    static final String PROFILE = "free-11-chinese-20260731-7.3.1";
+    /** Step constants of a Launcher whose DVR reads have pinned instruction indices. */
+    static Map<String, Object> constants(Path original) throws Exception {
+        return Map.of(
+                StepConstants.PINS,
+                List.of(FilesSupport.hash(original)),
+                "launcher_power_boundary",
+                false,
+                "aqy_boundary",
+                false,
+                "launcher_dvr_pinned",
+                true);
+    }
 
     static void check(boolean v, String s) {
         if (!v) {
@@ -34,11 +46,13 @@ public class LauncherCanbusPinnedTest {
 
     public static void main(String[] a) throws Exception {
         Path original = Path.of(a[0]);
-        byte[] raw = LauncherCanbusGuard.original(PROFILE, original);
-        byte[] power = LauncherPowerGuard.apply(PROFILE, 30, original, raw, "classes2.dex");
-        byte[] before = AqyProviderGuard.apply(PROFILE, 30, original, power);
+        byte[] raw = LauncherCanbusGuard.original(original);
+        byte[] power =
+                LauncherPowerGuard.apply(constants(original), 30, original, raw, "classes2.dex");
+        byte[] before = AqyProviderGuard.apply(constants(original), 30, original, power);
 
-        byte[] after = LauncherCanbusGuard.apply(PROFILE, 30, "arm64-v8a", original, before);
+        byte[] after =
+                LauncherCanbusGuard.apply(constants(original), 30, "arm64-v8a", original, before);
         var old = LauncherCanbusGuard.classes(before);
         var out = LauncherCanbusGuard.classes(after);
         var register = refs(LauncherCanbusGuard.method(out, LauncherCanbusGuard.REGISTER));

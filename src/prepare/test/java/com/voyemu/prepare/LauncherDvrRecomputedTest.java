@@ -12,11 +12,9 @@ import org.jf.dexlib2.immutable.ImmutableDexFile;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public final class LauncherDvrRecomputedTest {
-    static final String PROFILE = "free-11-chinese-20250710-6.11.1",
-            OTHER = "free-11-chinese-20260731-7.3.1";
-
     interface Check {
         void run() throws Exception;
     }
@@ -96,17 +94,32 @@ public final class LauncherDvrRecomputedTest {
 
     public static void main(String[] args) throws Exception {
         Path root = Path.of(args[0]);
-        Path apk = root.resolve(".local/profiles/" + PROFILE + "/originals/Launcher.apk");
-        Path foreign =
-                root.resolve(
-                        ".local/profiles/free-11-chinese-20260731-7.3.1/originals/Launcher.apk");
-        String profile = PROFILE, abi = "arm64-v8a";
+        Map<String, Object>
+                constants =
+                        TestSteps.select(
+                                root,
+                                "launcher_dvr_pinned",
+                                false,
+                                LauncherDvrGuard.NAME,
+                                LauncherPowerGuard.NAME,
+                                AqyProviderGuard.NAME),
+                other =
+                        TestSteps.select(
+                                root,
+                                "launcher_dvr_pinned",
+                                true,
+                                LauncherDvrGuard.NAME,
+                                LauncherPowerGuard.NAME,
+                                AqyProviderGuard.NAME);
+        Path apk = TestSteps.original(root, constants, "Launcher.apk"),
+                foreign = TestSteps.original(root, other, "Launcher.apk");
+        String abi = "arm64-v8a";
         byte[] raw = NativeCore.entries(apk).get("classes2.dex");
 
-        LauncherDvrGuard.validateOriginalChain(profile, 30, abi, apk, raw);
-        byte[] power = LauncherPowerGuard.apply(profile, 30, apk, raw, "classes2.dex");
-        byte[] predecessor = AqyProviderGuard.apply(profile, 30, apk, power);
-        byte[] fixed = LauncherDvrGuard.apply(profile, 30, abi, apk, predecessor);
+        LauncherDvrGuard.validateOriginalChain(constants, 30, abi, apk, raw);
+        byte[] power = LauncherPowerGuard.apply(constants, 30, apk, raw, "classes2.dex");
+        byte[] predecessor = AqyProviderGuard.apply(constants, 30, apk, power);
+        byte[] fixed = LauncherDvrGuard.apply(constants, 30, abi, apk, predecessor);
         String select = LauncherDvrGuard.HELPER + "->select(I)I",
                 route = LauncherDvrGuard.HELPER + "->useService(Ljava/lang/Object;)Z";
 
@@ -151,8 +164,8 @@ public final class LauncherDvrRecomputedTest {
             throw new AssertionError("fixture altered route");
         }
 
-        rejects(() -> LauncherDvrGuard.apply(profile, 30, abi, foreign, predecessor));
-        rejects(() -> LauncherDvrGuard.apply(OTHER, 30, abi, apk, predecessor));
-        rejects(() -> LauncherDvrGuard.apply(profile, 30, abi, apk, fixed));
+        rejects(() -> LauncherDvrGuard.apply(constants, 30, abi, foreign, predecessor));
+        rejects(() -> LauncherDvrGuard.apply(other, 30, abi, apk, predecessor));
+        rejects(() -> LauncherDvrGuard.apply(constants, 30, abi, apk, fixed));
     }
 }

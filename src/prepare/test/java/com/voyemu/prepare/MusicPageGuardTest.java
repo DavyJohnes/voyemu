@@ -16,11 +16,11 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.zip.ZipFile;
 
 public final class MusicPageGuardTest {
-    static final String PROFILE = "free-11-chinese-20260731-7.3.1";
 
     static void check(boolean b, String message) {
         if (!b) {
@@ -166,9 +166,11 @@ public final class MusicPageGuardTest {
     }
 
     public static void main(String[] args) throws Exception {
-        Path root = Path.of(args[0]).toRealPath(),
-                original =
-                        root.resolve(".local/profiles/" + PROFILE + "/originals/MusicConcate.apk");
+        Path root = Path.of(args[0]).toRealPath();
+        Map<String, Object> constants =
+                TestSteps.select(
+                        root, "music_fullscreen_boundary", false, MusicFullscreenGuard.NAME);
+        Path original = TestSteps.original(root, constants, "MusicConcate.apk");
         byte[] source;
 
         try (var zip = new ZipFile(original.toFile())) {
@@ -187,7 +189,7 @@ public final class MusicPageGuardTest {
         byte[] patched =
                 args.length > 1 && args[1].equals("--original")
                         ? source
-                        : MusicPageGuard.apply(PROFILE, 30, original, source);
+                        : MusicPageGuard.apply(constants, 30, original, source);
         var support = method(patched, MusicPageGuard.OWNER, "isSupportKwMusic");
         var factory =
                 method(
@@ -236,15 +238,17 @@ public final class MusicPageGuardTest {
             }
         }
 
-        reject(() -> MusicPageGuard.apply("wrong", 30, original, source));
-        reject(() -> MusicPageGuard.apply(PROFILE, 28, original, source));
-        reject(() -> MusicPageGuard.apply(PROFILE, 30, original, patched));
+        reject(() ->
+                MusicPageGuard.apply(
+                        Map.of(StepConstants.PINS, List.of("0".repeat(64))), 30, original, source));
+        reject(() -> MusicPageGuard.apply(constants, 28, original, source));
+        reject(() -> MusicPageGuard.apply(constants, 30, original, patched));
 
         if (args.length > 1 && !args[1].equals("--original")) {
             try (var zip = new ZipFile(args[1])) {
                 check(
                         Arrays.equals(
-                                MusicFullscreenGuard.apply(PROFILE, 30, original, patched),
+                                MusicFullscreenGuard.apply(constants, 30, original, patched),
                                 zip.getInputStream(zip.getEntry("classes.dex")).readAllBytes()),
                         "normal producer includes exact page and fullscreen guards");
             }

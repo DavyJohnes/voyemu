@@ -10,6 +10,7 @@
   "constants": {
     "original_sha256_allowlist": [
       "b3287150827e7fa51072bcbcba257539101cda8433c5f9d3a95f4ca905abd567"
-    ]
+    ],
+    "aqy_boundary": false
   }
 }

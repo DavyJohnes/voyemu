@@ -15,7 +15,18 @@ import java.util.Map;
 import java.util.TreeMap;
 
 public class LauncherDvrPinnedTest {
-    static final String PROFILE = "free-11-chinese-20260731-7.3.1";
+    /** Step constants of a Launcher whose DVR reads have pinned instruction indices. */
+    static Map<String, Object> constants(Path original) throws Exception {
+        return Map.of(
+                StepConstants.PINS,
+                List.of(FilesSupport.hash(original)),
+                "launcher_power_boundary",
+                false,
+                "aqy_boundary",
+                false,
+                "launcher_dvr_pinned",
+                true);
+    }
 
     static void check(boolean v, String m) {
         if (!v) {
@@ -160,10 +171,12 @@ public class LauncherDvrPinnedTest {
 
     public static void main(String[] a) throws Exception {
         Path original = Path.of(a[0]);
-        byte[] raw = LauncherCanbusGuard.original(PROFILE, original);
-        byte[] power = LauncherPowerGuard.apply(PROFILE, 30, original, raw, "classes2.dex");
-        byte[] aqy = AqyProviderGuard.apply(PROFILE, 30, original, power);
-        byte[] before = LauncherCanbusGuard.apply(PROFILE, 30, "arm64-v8a", original, aqy);
+        byte[] raw = LauncherCanbusGuard.original(original);
+        byte[] power =
+                LauncherPowerGuard.apply(constants(original), 30, original, raw, "classes2.dex");
+        byte[] aqy = AqyProviderGuard.apply(constants(original), 30, original, power);
+        byte[] before =
+                LauncherCanbusGuard.apply(constants(original), 30, "arm64-v8a", original, aqy);
 
         var old = LauncherDvrGuard.classes(before);
         byte[] after = applyAndCheckClasses(original, before, old);
@@ -188,7 +201,8 @@ public class LauncherDvrPinnedTest {
                     "RED: OEM DVR entries exclude real virtual camera");
         }
 
-        byte[] after = LauncherDvrGuard.apply(PROFILE, 30, "arm64-v8a", original, before);
+        byte[] after =
+                LauncherDvrGuard.apply(constants(original), 30, "arm64-v8a", original, before);
         var out = LauncherDvrGuard.classes(after);
         check(old.keySet().equals(out.keySet()), "class set drift");
 
@@ -366,16 +380,23 @@ public class LauncherDvrPinnedTest {
     }
 
     static void checkDenials(Path original, byte[] before) throws Exception {
-        for (String profile : List.of("foreign", "free-09-chinese-20260106-6.0.3")) {
-            boolean denied = false;
+        boolean denied = false;
 
-            try {
-                LauncherDvrGuard.validate(profile, 30, "arm64-v8a", original, before);
-            } catch (Failure f) {
-                denied = true;
-            }
-
-            check(denied, "foreign profile accepted");
+        try {
+            LauncherDvrGuard.validate(
+                    Map.of(
+                            StepConstants.PINS,
+                            List.of("0".repeat(64)),
+                            "launcher_dvr_pinned",
+                            true),
+                    30,
+                    "arm64-v8a",
+                    original,
+                    before);
+        } catch (Failure f) {
+            denied = true;
         }
+
+        check(denied, "foreign original accepted");
     }
 }

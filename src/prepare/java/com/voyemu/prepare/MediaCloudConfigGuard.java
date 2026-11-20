@@ -20,21 +20,6 @@ import java.util.Set;
 import java.util.TreeMap;
 
 final class MediaCloudConfigGuard {
-    record Variant(String pin) {}
-
-    static final Map<String, Variant> VARIANTS =
-            Map.of(
-                    "free-11-chinese-20250710-6.11.1",
-                    new Variant("c6f96ac40525aac9600731f7494cc3d23cb969c4a88ff2815526abe7da2e6d2e"),
-                    "free-11-chinese-20260731-7.3.1",
-                    new Variant(
-                            "533a0b0dc5ccbe91a42847fac20c5735bd8d78a28bbb980a6bf365dd5ed0fba0"));
-
-    static List<String> pins(String profile) {
-        var variant = VARIANTS.get(profile);
-
-        return variant == null ? List.of() : List.of(variant.pin());
-    }
 
     static final String NAME = "api30-media-cloud-availability";
     static final String OWNER = "Lcom/qinggan/media/helper/impl/AsgardMediaConfigImpl;",
@@ -57,7 +42,7 @@ final class MediaCloudConfigGuard {
                 && m.getReturnType().equals("Ljava/util/Set;");
     }
 
-    static Method rewrite(String profile, Method m, boolean inverse) throws Exception {
+    static Method rewrite(Method m, boolean inverse) throws Exception {
         require(m.getImplementation() != null && m.getImplementation().getTryBlocks().isEmpty());
 
         var b = new MutableMethodImplementation(m.getImplementation());
@@ -121,8 +106,8 @@ final class MediaCloudConfigGuard {
         return PassionServiceForegroundGuard.copy(m, b);
     }
 
-    static Map<String, ClassDef> transform(
-            String profile, Map<String, ClassDef> input, boolean inverse) throws Exception {
+    static Map<String, ClassDef> transform(Map<String, ClassDef> input, boolean inverse)
+            throws Exception {
         var out = new TreeMap<String, ClassDef>();
         int count = 0;
 
@@ -138,7 +123,7 @@ final class MediaCloudConfigGuard {
                     Method n = m;
 
                     if (target(m)) {
-                        n = rewrite(profile, m, inverse);
+                        n = rewrite(m, inverse);
 
                         count++;
                     }
@@ -167,15 +152,15 @@ final class MediaCloudConfigGuard {
         return out;
     }
 
-    static void validate(String profile, int api, String abi, Path original, byte[] dex)
+    static void validate(
+            Map<String, Object> constants, int api, String abi, Path original, byte[] dex)
             throws Exception {
         require(
-                VARIANTS.containsKey(profile)
-                        && api == 30
+                api == 30
                         && abi.equals("arm64-v8a")
-                        && VARIANTS.get(profile).pin().equals(FilesSupport.hash(original))
+                        && StepConstants.admits(constants, FilesSupport.hash(original))
                         && dex != null);
-        transform(profile, PassionServiceForegroundGuard.classes(dex), false);
+        transform(PassionServiceForegroundGuard.classes(dex), false);
     }
 
     static byte[] binary(byte[] source, boolean inverse) throws Exception {
@@ -248,11 +233,12 @@ final class MediaCloudConfigGuard {
         return out;
     }
 
-    static byte[] apply(String profile, int api, String abi, Path original, byte[] dex)
+    static byte[] apply(
+            Map<String, Object> constants, int api, String abi, Path original, byte[] dex)
             throws Exception {
-        validate(profile, api, abi, original, dex);
+        validate(constants, api, abi, original, dex);
         var before = PassionServiceForegroundGuard.classes(dex);
-        var expected = transform(profile, before, false);
+        var expected = transform(before, false);
         byte[] output = binary(dex, false);
         var actual = PassionServiceForegroundGuard.classes(output);
         require(actual.keySet().equals(before.keySet()));

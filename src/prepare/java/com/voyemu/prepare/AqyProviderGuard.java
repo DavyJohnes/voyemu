@@ -28,14 +28,6 @@ import java.util.zip.ZipFile;
 final class AqyProviderGuard {
     static final String NAME = "api30-aqy-provider";
 
-    /** True selects the instruction-boundary check of the Launcher DEX. */
-    static final Map<String, Boolean> VARIANTS =
-            Map.of(
-                    "free-11-chinese-20250710-6.11.1",
-                    true,
-                    "free-11-chinese-20260731-7.3.1",
-                    false);
-
     static final String OWNER = "Lcom/qinggan/app/aiqiyi/present/MainRankPresent;",
             AUTHORITY = "com.qinggan.app.aiqiyi.data.AQYContentProvider";
 
@@ -74,15 +66,13 @@ final class AqyProviderGuard {
         return found;
     }
 
-    static void validate(String profile, int api, Path original, byte[] dex) throws Exception {
-        require(
-                VARIANTS.containsKey(profile)
-                        && api == 30
-                        && LauncherPowerGuard.pins(profile).contains(FilesSupport.hash(original)));
+    static void validate(Map<String, Object> constants, int api, Path original, byte[] dex)
+            throws Exception {
+        require(api == 30 && StepConstants.admits(constants, FilesSupport.hash(original)));
         require(dex != null);
         Method selected = method(dex);
 
-        if (VARIANTS.get(profile)) {
+        if (StepConstants.flag(constants, "aqy_boundary")) {
             boundary(selected);
         }
     }
@@ -202,7 +192,8 @@ final class AqyProviderGuard {
                 body);
     }
 
-    static byte[] validateOriginal(String profile, int api, Path original) throws Exception {
+    static byte[] validateOriginal(Map<String, Object> constants, int api, Path original)
+            throws Exception {
         byte[] source;
 
         try (var zip = new ZipFile(original.toFile())) {
@@ -211,17 +202,18 @@ final class AqyProviderGuard {
             source = zip.getInputStream(entry).readAllBytes();
         }
 
-        validate(profile, api, original, source);
+        validate(constants, api, original, source);
 
         return source;
     }
 
-    static byte[] apply(String profile, int api, Path original, byte[] current) throws Exception {
-        byte[] source = validateOriginal(profile, api, original);
+    static byte[] apply(Map<String, Object> constants, int api, Path original, byte[] current)
+            throws Exception {
+        byte[] source = validateOriginal(constants, api, original);
 
         require(current != null);
 
-        if (VARIANTS.get(profile)) {
+        if (StepConstants.flag(constants, "aqy_boundary")) {
             require(
                     FrameworkDexMaterializer.semantic(method(current))
                             .equals(FrameworkDexMaterializer.semantic(method(source))));
@@ -283,7 +275,7 @@ final class AqyProviderGuard {
                                             reread.get(definition.getKey()))));
         }
 
-        require(LauncherPowerGuard.pins(profile).contains(FilesSupport.hash(original)));
+        require(StepConstants.admits(constants, FilesSupport.hash(original)));
 
         return output;
     }

@@ -14,8 +14,18 @@ import java.util.Map;
 import java.util.Set;
 
 public class LauncherCanbusRecomputedTest {
-    static final String PROFILE = "free-11-chinese-20250710-6.11.1",
-            OTHER = "free-11-chinese-20260731-7.3.1";
+    /** Step constants of a Launcher whose DVR reads are located by scan. */
+    static Map<String, Object> constants(Path original) throws Exception {
+        return Map.of(
+                StepConstants.PINS,
+                List.of(FilesSupport.hash(original)),
+                "launcher_power_boundary",
+                true,
+                "aqy_boundary",
+                true,
+                "launcher_dvr_pinned",
+                false);
+    }
 
     static void check(boolean v, String s) {
         if (!v) {
@@ -37,11 +47,13 @@ public class LauncherCanbusRecomputedTest {
 
     public static void main(String[] a) throws Exception {
         Path original = Path.of(a[0]);
-        byte[] raw = LauncherCanbusGuard.original(PROFILE, original);
-        byte[] power = LauncherPowerGuard.apply(PROFILE, 30, original, raw, "classes2.dex");
-        byte[] aqy = AqyProviderGuard.apply(PROFILE, 30, original, power);
-        byte[] before = LauncherDvrGuard.apply(PROFILE, 30, "arm64-v8a", original, aqy);
-        byte[] after = LauncherCanbusGuard.apply(PROFILE, 30, "arm64-v8a", original, before);
+        byte[] raw = LauncherCanbusGuard.original(original);
+        byte[] power =
+                LauncherPowerGuard.apply(constants(original), 30, original, raw, "classes2.dex");
+        byte[] aqy = AqyProviderGuard.apply(constants(original), 30, original, power);
+        byte[] before = LauncherDvrGuard.apply(constants(original), 30, "arm64-v8a", original, aqy);
+        byte[] after =
+                LauncherCanbusGuard.apply(constants(original), 30, "arm64-v8a", original, before);
         var old = LauncherCanbusGuard.classes(before);
         var out = LauncherCanbusGuard.classes(after);
         var register = refs(LauncherCanbusGuard.method(out, LauncherCanbusGuard.REGISTER));
@@ -64,16 +76,18 @@ public class LauncherCanbusRecomputedTest {
         boolean denied = false;
 
         try {
-            LauncherCanbusGuard.validate(OTHER, 30, "arm64-v8a", original, before);
+            LauncherCanbusGuard.validate(
+                    constants(Path.of(a[1])), 30, "arm64-v8a", original, before);
         } catch (Failure f) {
             denied = true;
         }
 
-        check(denied, "cross-version profile accepted");
+        check(denied, "cross-version step constants accepted");
         denied = false;
 
         try {
-            LauncherCanbusGuard.validate(PROFILE, 30, "arm64-v8a", Path.of(a[1]), before);
+            LauncherCanbusGuard.validate(
+                    constants(original), 30, "arm64-v8a", Path.of(a[1]), before);
         } catch (Failure f) {
             denied = true;
         }

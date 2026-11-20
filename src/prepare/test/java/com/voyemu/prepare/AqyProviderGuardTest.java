@@ -13,9 +13,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 public final class AqyProviderGuardTest {
-    static final String OTHER = "free-11-chinese-20260731-7.3.1";
-
-    static final String PROFILE = "free-11-chinese-20250710-6.11.1";
 
     static void check(boolean value, String message) {
         if (!value) {
@@ -196,8 +193,24 @@ public final class AqyProviderGuardTest {
 
     public static void main(String[] args) throws Exception {
         check(args.length == 1 || args.length == 2, "ROOT [--original|PREPARED_APK]");
-        Path root = Path.of(args[0]).toRealPath(),
-                original = root.resolve(".local/profiles/" + PROFILE + "/originals/Launcher.apk");
+        Path root = Path.of(args[0]).toRealPath();
+        Map<String, Object>
+                constants =
+                        TestSteps.select(
+                                root,
+                                "aqy_boundary",
+                                true,
+                                AqyProviderGuard.NAME,
+                                LauncherPowerGuard.NAME),
+                other =
+                        TestSteps.select(
+                                root,
+                                "aqy_boundary",
+                                false,
+                                AqyProviderGuard.NAME,
+                                LauncherPowerGuard.NAME);
+        Path original = TestSteps.original(root, constants, "Launcher.apk"),
+                foreign = TestSteps.original(root, other, "Launcher.apk");
         byte[] source;
 
         try (var zip = new java.util.zip.ZipFile(original.toFile())) {
@@ -210,32 +223,23 @@ public final class AqyProviderGuardTest {
             return;
         }
 
-        byte[] prior = LauncherPowerGuard.apply(PROFILE, 30, original, source, "classes2.dex");
+        byte[] prior = LauncherPowerGuard.apply(constants, 30, original, source, "classes2.dex");
         check(
                 java.util.Arrays.equals(
-                        source, AqyProviderGuard.validateOriginal(PROFILE, 30, original)),
+                        source, AqyProviderGuard.validateOriginal(constants, 30, original)),
                 "second recipe validation reads pinned original despite current predecessor");
-        byte[] patched = AqyProviderGuard.apply(PROFILE, 30, original, prior);
+        byte[] patched = AqyProviderGuard.apply(constants, 30, original, prior);
         verify(AqyProviderGuard.method(source), AqyProviderGuard.method(patched));
-        reject(() -> AqyProviderGuard.validate(OTHER, 30, original, source));
-        reject(() -> AqyProviderGuard.validate(PROFILE, 28, original, source));
-        reject(() -> AqyProviderGuard.validate(PROFILE, 30, original, null));
-        reject(() -> AqyProviderGuard.validate(PROFILE, 30, original, patched));
+        reject(() -> AqyProviderGuard.validate(other, 30, original, source));
+        reject(() -> AqyProviderGuard.validate(constants, 28, original, source));
+        reject(() -> AqyProviderGuard.validate(constants, 30, original, null));
+        reject(() -> AqyProviderGuard.validate(constants, 30, original, patched));
         reject(() ->
                 AqyProviderGuard.validate(
-                        PROFILE,
-                        30,
-                        root.resolve(".local/profiles/" + PROFILE + "/originals/SystemService.apk"),
-                        source));
-        reject(() ->
-                AqyProviderGuard.validate(
-                        PROFILE,
-                        30,
-                        root.resolve(
-                                ".local/profiles/free-11-chinese-20260731-7.3.1/originals/Launcher.apk"),
-                        source));
-        reject(() -> AqyProviderGuard.apply(PROFILE, 30, original, null));
-        reject(() -> AqyProviderGuard.apply(PROFILE, 30, original, patched));
+                        constants, 30, original.resolveSibling("SystemService.apk"), source));
+        reject(() -> AqyProviderGuard.validate(constants, 30, foreign, source));
+        reject(() -> AqyProviderGuard.apply(constants, 30, original, null));
+        reject(() -> AqyProviderGuard.apply(constants, 30, original, patched));
 
         if (args.length == 2) {
             verify(

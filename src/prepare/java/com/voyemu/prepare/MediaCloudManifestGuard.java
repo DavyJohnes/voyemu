@@ -11,24 +11,20 @@ import java.util.Map;
 
 /** Exact ARM64 manifest availability patch of the profile; no XML reserialization. */
 final class MediaCloudManifestGuard {
-    private static final Map<String, String> VARIANTS =
-            Map.of(
-                    "free-11-chinese-20250710-6.11.1",
-                    "c6f96ac40525aac9600731f7494cc3d23cb969c4a88ff2815526abe7da2e6d2e",
-                    "free-11-chinese-20260731-7.3.1",
-                    "533a0b0dc5ccbe91a42847fac20c5735bd8d78a28bbb980a6bf365dd5ed0fba0");
 
     /** Initializer offsets of the original manifest and of the one with added libraries. */
     private static final int[] OFFSETS = {14624, 14688};
 
-    static void validate(String profile, int api, String abi, Path original, byte[] manifest)
+    static void validate(
+            Map<String, Object> constants, int api, String abi, Path original, byte[] manifest)
             throws Exception {
-        location(profile, api, abi, original, manifest);
+        location(constants, api, abi, original, manifest);
     }
 
-    static byte[] apply(String profile, int api, String abi, Path original, byte[] manifest)
+    static byte[] apply(
+            Map<String, Object> constants, int api, String abi, Path original, byte[] manifest)
             throws Exception {
-        int offset = location(profile, api, abi, original, manifest);
+        int offset = location(constants, api, abi, original, manifest);
         // Remove only the initializer's START_ELEMENT (76) and END_ELEMENT (24).
         byte[] output = new byte[manifest.length - 100];
 
@@ -42,9 +38,10 @@ final class MediaCloudManifestGuard {
         return output;
     }
 
-    private static int location(String profile, int api, String abi, Path original, byte[] manifest)
+    private static int location(
+            Map<String, Object> constants, int api, String abi, Path original, byte[] manifest)
             throws Exception {
-        require(VARIANTS.containsKey(profile) && api == 30 && "arm64-v8a".equals(abi), "scope");
+        require(api == 30 && "arm64-v8a".equals(abi), "scope");
         require(original != null && Files.isRegularFile(original), "original APK missing");
         MessageDigest digest = MessageDigest.getInstance("SHA-256");
 
@@ -58,7 +55,7 @@ final class MediaCloudManifestGuard {
         }
 
         require(
-                VARIANTS.get(profile).equals(HexFormat.of().formatHex(digest.digest())),
+                StepConstants.admits(constants, HexFormat.of().formatHex(digest.digest())),
                 "original APK SHA256");
         require(
                 manifest != null

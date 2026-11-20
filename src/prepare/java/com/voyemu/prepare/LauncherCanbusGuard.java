@@ -25,7 +25,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeMap;
 
 /**
@@ -34,18 +33,11 @@ import java.util.TreeMap;
 final class LauncherCanbusGuard {
     static final String NAME = "api30-launcher-canbus";
 
-    static final Set<String> PROFILES =
-            Set.of("free-11-chinese-20250710-6.11.1", "free-11-chinese-20260731-7.3.1");
-
     static final String OWNER = "Lcom/qinggan/launcher/base/manager/CompassDataManager;",
             REGISTER = "registerCanBusListener",
             CALLBACK = "lambda$registerCanBusListener$0$CompassDataManager",
             CAN = "Lcom/qinggan/canbus/CanBusManager;",
             GET = CAN + "->getInstance()" + CAN;
-
-    static List<String> pins(String profile) {
-        return PROFILES.contains(profile) ? LauncherPowerGuard.pins(profile) : List.of();
-    }
 
     static void need(boolean v) {
         Failure.require(
@@ -80,7 +72,7 @@ final class LauncherCanbusGuard {
         return found;
     }
 
-    static byte[] original(String profile, Path apk) throws Exception {
+    static byte[] original(Path apk) throws Exception {
         try (var zip = new java.util.zip.ZipFile(apk.toFile())) {
             var entry = zip.getEntry("classes2.dex");
             need(entry != null);
@@ -91,13 +83,13 @@ final class LauncherCanbusGuard {
         }
     }
 
-    static void validate(String profile, int api, String abi, Path apk, byte[] source)
+    static void validate(
+            Map<String, Object> constants, int api, String abi, Path apk, byte[] source)
             throws Exception {
         need(
-                PROFILES.contains(profile)
-                        && api == 30
+                api == 30
                         && abi.equals("arm64-v8a")
-                        && LauncherPowerGuard.pins(profile).contains(FilesSupport.hash(apk))
+                        && StepConstants.admits(constants, FilesSupport.hash(apk))
                         && source != null);
         var cs = classes(source);
         method(cs, REGISTER);
@@ -116,9 +108,9 @@ final class LauncherCanbusGuard {
                 code);
     }
 
-    static byte[] apply(String profile, int api, String abi, Path apk, byte[] source)
+    static byte[] apply(Map<String, Object> constants, int api, String abi, Path apk, byte[] source)
             throws Exception {
-        validate(profile, api, abi, apk, source);
+        validate(constants, api, abi, apk, source);
         var before = classes(source);
         var register = method(before, REGISTER);
         var callback = method(before, CALLBACK);

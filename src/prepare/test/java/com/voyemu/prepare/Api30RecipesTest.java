@@ -484,12 +484,10 @@ public final class Api30RecipesTest {
                 vinRecipe,
                 "Navi VIN helper pin accepted");
         var dvr = new Target();
-        dvr.original = LauncherDvrGuard.pins(PROFILE).get(0);
+        dvr.original = APK;
         var dvrRecipe =
                 new HashMap<String, Object>(
-                        recipe(
-                                List.of(LauncherDvrGuard.pins(PROFILE).get(0)),
-                                List.of(call("guardLauncherDvr"))));
+                        recipe(List.of(APK), List.of(call("guardLauncherDvr"))));
         dvrRecipe.put("helper", LauncherDvrGuard.HELPER_PATH);
         Recipes.apply(LauncherDvrGuard.NAME + ".json", dvrRecipe, dvr);
 
@@ -499,7 +497,7 @@ public final class Api30RecipesTest {
 
         rejectHelperPath(
                 LauncherDvrGuard.NAME + ".json",
-                LauncherDvrGuard.pins(PROFILE).get(0),
+                APK,
                 dvrRecipe,
                 "Launcher DVR helper pin accepted");
         var camera = new Target();
@@ -527,12 +525,10 @@ public final class Api30RecipesTest {
         var fullscreenGuard = call("guardMusicFullscreen");
         var fullscreen = new Target();
 
-        fullscreen.original = MusicFullscreenGuard.pins(PROFILE).get(0);
+        fullscreen.original = APK;
         Recipes.apply(
                 MusicFullscreenGuard.NAME + ".json",
-                recipe(
-                        List.of(MusicFullscreenGuard.pins(PROFILE).get(0)),
-                        List.of(fullscreenGuard)),
+                recipe(List.of(APK), List.of(fullscreenGuard)),
                 fullscreen);
 
         if (fullscreen.mutations != 1 || fullscreen.fullscreenValidations != 1) {
@@ -546,12 +542,12 @@ public final class Api30RecipesTest {
                         List.of(call("guardMusicFullscreen", "unexpected")))) {
             rejectCalls(
                     MusicFullscreenGuard.NAME + ".json",
-                    MusicFullscreenGuard.pins(PROFILE).get(0),
+                    APK,
                     calls,
                     "Invalid Music fullscreen list mutated APK");
         }
 
-        for (String name : List.of("other-api30.json", MusicFullscreenGuard.NAME + ".json")) {
+        for (String name : List.of("other-api30.json")) {
             rejectOwnerPin(
                     name, fullscreenGuard, "Music fullscreen requires exact recipe and owner pin");
         }
@@ -561,11 +557,9 @@ public final class Api30RecipesTest {
         var musicGuard = call("guardMusicPage");
         var music = new Target();
 
-        music.original = MusicPageGuard.pins(PROFILE).get(0);
+        music.original = APK;
         Recipes.apply(
-                MusicPageGuard.NAME + ".json",
-                recipe(List.of(MusicPageGuard.pins(PROFILE).get(0)), List.of(musicGuard)),
-                music);
+                MusicPageGuard.NAME + ".json", recipe(List.of(APK), List.of(musicGuard)), music);
 
         if (music.mutations != 1 || music.musicValidations != 1) {
             throw new AssertionError("Music page must prevalidate before mutation");
@@ -578,12 +572,12 @@ public final class Api30RecipesTest {
                         List.of(call("guardMusicPage", "unexpected")))) {
             rejectCalls(
                     MusicPageGuard.NAME + ".json",
-                    MusicPageGuard.pins(PROFILE).get(0),
+                    APK,
                     calls,
                     "Invalid Music page list mutated APK");
         }
 
-        for (String name : List.of("other-api30.json", MusicPageGuard.NAME + ".json")) {
+        for (String name : List.of("other-api30.json")) {
             rejectOwnerPin(name, musicGuard, "Music page requires exact recipe and owner pin");
         }
     }
@@ -592,10 +586,10 @@ public final class Api30RecipesTest {
         var kaolaGuard = call("guardMediaCloudAvailability");
         var kaola = new Target();
 
-        kaola.original = MediaCloudConfigGuard.pins(PROFILE).get(0);
+        kaola.original = APK;
         Recipes.apply(
                 MediaCloudConfigGuard.NAME + ".json",
-                recipe(List.of(MediaCloudConfigGuard.pins(PROFILE).get(0)), List.of(kaolaGuard)),
+                recipe(List.of(APK), List.of(kaolaGuard)),
                 kaola);
 
         if (kaola.mutations != 1 || kaola.kaolaValidations != 1) {
@@ -609,12 +603,12 @@ public final class Api30RecipesTest {
                         List.of(call("guardMediaCloudAvailability", "unexpected")))) {
             rejectCalls(
                     MediaCloudConfigGuard.NAME + ".json",
-                    MediaCloudConfigGuard.pins(PROFILE).get(0),
+                    APK,
                     calls,
                     "Invalid CloudFM availability list mutated APK");
         }
 
-        for (String name : List.of("other-api30.json", MediaCloudConfigGuard.NAME + ".json")) {
+        for (String name : List.of("other-api30.json")) {
             rejectOwnerPin(
                     name, kaolaGuard, "CloudFM availability requires exact recipe and owner pin");
         }
@@ -686,12 +680,10 @@ public final class Api30RecipesTest {
         var mapGuard = call("guardLauncherPower");
         var map = new Target();
 
-        map.original = LauncherPowerGuard.pins(PROFILE).get(0);
+        map.original = APK;
         Recipes.apply(
                 LauncherPowerGuard.NAME + ".json",
-                recipe(
-                        List.of(LauncherPowerGuard.pins(PROFILE).get(0)),
-                        List.of(libraries, mapGuard)),
+                recipe(List.of(APK), List.of(libraries, mapGuard)),
                 map);
 
         if (map.mutations != 2 || map.launcherPowerValidations != 1) {
@@ -705,12 +697,12 @@ public final class Api30RecipesTest {
                         List.of(call("guardLauncherPower", "unexpected")))) {
             rejectCalls(
                     LauncherPowerGuard.NAME + ".json",
-                    LauncherPowerGuard.pins(PROFILE).get(0),
+                    APK,
                     calls,
                     "Invalid Launcher power operation list mutated APK");
         }
 
-        for (String name : List.of("other-api30.json", LauncherPowerGuard.NAME + ".json")) {
+        for (String name : List.of("other-api30.json")) {
             rejectOwnerPin(
                     name, mapGuard, "Map power operation requires exact recipe and owner pin");
         }
@@ -720,12 +712,10 @@ public final class Api30RecipesTest {
         var aqyGuard = call("guardAqyProvider");
         var aqy = new Target();
 
-        aqy.original = LauncherPowerGuard.pins(PROFILE).get(0);
+        aqy.original = APK;
         Recipes.apply(
                 AqyProviderGuard.NAME + ".json",
-                recipe(
-                        List.of(LauncherPowerGuard.pins(PROFILE).get(0)),
-                        List.of(libraries, aqyGuard)),
+                recipe(List.of(APK), List.of(libraries, aqyGuard)),
                 aqy);
 
         if (aqy.mutations != 2 || aqy.aqyValidations != 1) {
@@ -739,12 +729,12 @@ public final class Api30RecipesTest {
                         List.of(call("guardAqyProvider", "unexpected")))) {
             rejectCalls(
                     AqyProviderGuard.NAME + ".json",
-                    LauncherPowerGuard.pins(PROFILE).get(0),
+                    APK,
                     calls,
                     "Invalid AQY provider list mutated APK");
         }
 
-        for (String name : List.of("other-api30.json", AqyProviderGuard.NAME + ".json")) {
+        for (String name : List.of("other-api30.json")) {
             rejectOwnerPin(
                     name, aqyGuard, "AQY provider boundary requires exact recipe and owner pin");
         }
@@ -787,7 +777,7 @@ public final class Api30RecipesTest {
                         ? AudioPolicyGuard.pins(PROFILE).get(0)
                         : operation.equals("guardAudioConsumer")
                                 ? AudioPolicyConsumerGuard.pins(PROFILE).get(0)
-                                : MediaNotificationGuard.pins(PROFILE).get(0);
+                                : "c".repeat(64);
         String name =
                 operation.equals("guardAudioPolicy")
                         ? "api30-audio-policy.json"

@@ -6,10 +6,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.zip.ZipFile;
 
 public final class MediaCloudManifestGuardTest {
-    static final String PROFILE = "free-11-chinese-20260731-7.3.1";
     static int negatives;
 
     interface Call {
@@ -38,6 +38,8 @@ public final class MediaCloudManifestGuardTest {
 
     public static void main(String[] args) throws Exception {
         Path original = Path.of(args[0]);
+        Map<String, Object> constants =
+                Map.of(StepConstants.PINS, List.of(FilesSupport.hash(original)));
         byte[] raw;
 
         try (ZipFile zip = new ZipFile(original.toFile())) {
@@ -50,9 +52,9 @@ public final class MediaCloudManifestGuardTest {
             byte[] input = rawInput ? raw : mapped;
             int removal = rawInput ? 14624 : 14688, enabled = removal + 1056;
             byte[] snapshot = input.clone();
-            MediaCloudManifestGuard.validate(PROFILE, 30, "arm64-v8a", original, input);
+            MediaCloudManifestGuard.validate(constants, 30, "arm64-v8a", original, input);
             byte[] output =
-                    MediaCloudManifestGuard.apply(PROFILE, 30, "arm64-v8a", original, input);
+                    MediaCloudManifestGuard.apply(constants, 30, "arm64-v8a", original, input);
             Files.write(
                     Path.of(args[2], rawInput ? "raw-patched.bin" : "mapped-patched.bin"), output);
             check(Arrays.equals(snapshot, input));
@@ -79,25 +81,32 @@ public final class MediaCloudManifestGuardTest {
                             input,
                             inverse)); // all providers, other metadata, permissions, services and
             // chunks preserved.
-            reject(() -> MediaCloudManifestGuard.apply(PROFILE, 30, "arm64-v8a", original, output));
+            reject(() ->
+                    MediaCloudManifestGuard.apply(constants, 30, "arm64-v8a", original, output));
 
             for (int changed : new int[] {removal, enabled}) {
                 byte[] bad = input.clone();
                 bad[changed] ^= 1;
                 reject(() ->
-                        MediaCloudManifestGuard.apply(PROFILE, 30, "arm64-v8a", original, bad));
+                        MediaCloudManifestGuard.apply(constants, 30, "arm64-v8a", original, bad));
             }
         }
 
-        reject(() -> MediaCloudManifestGuard.apply("other", 30, "arm64-v8a", original, raw));
-        reject(() -> MediaCloudManifestGuard.apply(PROFILE, 28, "arm64-v8a", original, raw));
-        reject(() -> MediaCloudManifestGuard.apply(PROFILE, 30, "armeabi-v7a", original, raw));
-        reject(() -> MediaCloudManifestGuard.apply(PROFILE, 30, "arm64-v8a", original, null));
         reject(() ->
                 MediaCloudManifestGuard.apply(
-                        PROFILE, 30, "arm64-v8a", original, Arrays.copyOf(raw, raw.length - 1)));
+                        Map.of(StepConstants.PINS, List.of("0".repeat(64))),
+                        30,
+                        "arm64-v8a",
+                        original,
+                        raw));
+        reject(() -> MediaCloudManifestGuard.apply(constants, 28, "arm64-v8a", original, raw));
+        reject(() -> MediaCloudManifestGuard.apply(constants, 30, "armeabi-v7a", original, raw));
+        reject(() -> MediaCloudManifestGuard.apply(constants, 30, "arm64-v8a", original, null));
         reject(() ->
-                MediaCloudManifestGuard.apply(PROFILE, 30, "arm64-v8a", Path.of(args[1]), raw));
+                MediaCloudManifestGuard.apply(
+                        constants, 30, "arm64-v8a", original, Arrays.copyOf(raw, raw.length - 1)));
+        reject(() ->
+                MediaCloudManifestGuard.apply(constants, 30, "arm64-v8a", Path.of(args[1]), raw));
         System.out.println(
                 "PASS raw and mapped exact inverses, immutable input, two-pass preflight/apply, "
                         + negatives

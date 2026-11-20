@@ -13,28 +13,12 @@ import org.jf.dexlib2.rewriter.Rewriters;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
 /** Type-reference adaptation only; the original USB queue, session and UI remain intact. */
 final class UsbPlayerGuard {
-    record Variant(String pin) {}
-
-    static final Map<String, Variant> VARIANTS =
-            Map.of(
-                    "free-11-chinese-20250710-6.11.1",
-                    new Variant("c6f96ac40525aac9600731f7494cc3d23cb969c4a88ff2815526abe7da2e6d2e"),
-                    "free-11-chinese-20260731-7.3.1",
-                    new Variant(
-                            "533a0b0dc5ccbe91a42847fac20c5735bd8d78a28bbb980a6bf365dd5ed0fba0"));
-
-    static List<String> pins(String profile) {
-        var variant = VARIANTS.get(profile);
-
-        return variant == null ? List.of() : List.of(variant.pin());
-    }
 
     static final String NAME = "api30-usb-player";
     static final String ORIGINAL = "Lorg/ijkplayer/IjkMediaPlayer;",
@@ -59,14 +43,13 @@ final class UsbPlayerGuard {
                 3);
     }
 
-    private static void identity(String profile, int api, String abi, Path original)
+    private static void identity(Map<String, Object> constants, int api, String abi, Path original)
             throws Exception {
         require(
-                VARIANTS.containsKey(profile)
-                        && api == 30
+                api == 30
                         && "arm64-v8a".equals(abi)
                         && original != null
-                        && VARIANTS.get(profile).pin().equals(FilesSupport.hash(original)));
+                        && StepConstants.admits(constants, FilesSupport.hash(original)));
     }
 
     static ImmutableDexFile rewrite(DexFile input, boolean inverse) throws Exception {
@@ -103,16 +86,18 @@ final class UsbPlayerGuard {
         return new ImmutableDexFile(Opcodes.forApi(30), output.values());
     }
 
-    static void validateOriginal(String profile, int api, String abi, Path apk, byte[] dex)
+    static void validateOriginal(
+            Map<String, Object> constants, int api, String abi, Path apk, byte[] dex)
             throws Exception {
-        identity(profile, api, abi, apk);
+        identity(constants, api, abi, apk);
         require(dex != null);
         rewrite(new DexBackedDexFile(Opcodes.forApi(30), dex), false);
     }
 
-    static void validatePrepared(String profile, int api, String abi, Path apk, byte[] dex)
+    static void validatePrepared(
+            Map<String, Object> constants, int api, String abi, Path apk, byte[] dex)
             throws Exception {
-        identity(profile, api, abi, apk);
+        identity(constants, api, abi, apk);
         require(dex != null);
         rewrite(new DexBackedDexFile(Opcodes.forApi(30), dex), false);
     }
@@ -170,9 +155,9 @@ final class UsbPlayerGuard {
                 virtual);
     }
 
-    static byte[] apply(String profile, int api, String abi, Path apk, byte[] dex)
+    static byte[] apply(Map<String, Object> constants, int api, String abi, Path apk, byte[] dex)
             throws Exception {
-        validatePrepared(profile, api, abi, apk, dex);
+        validatePrepared(constants, api, abi, apk, dex);
         var before = new DexBackedDexFile(Opcodes.forApi(30), dex);
         byte[] patched = FrameworkDexMaterializer.serialize(rewrite(before, false));
         var restored = new TreeMap<String, ClassDef>();
@@ -209,9 +194,15 @@ final class UsbPlayerGuard {
     }
 
     static Path compileHelper(
-            String profile, int api, String abi, Path apk, Path source, Path platform, Path work)
+            Map<String, Object> constants,
+            int api,
+            String abi,
+            Path apk,
+            Path source,
+            Path platform,
+            Path work)
             throws Exception {
-        identity(profile, api, abi, apk);
+        identity(constants, api, abi, apk);
         validateSource(source);
         require(!Files.exists(work));
         Path dex = GuestJava.dex(new GuestJava.Unit(source, api), platform, work.resolve("java"));

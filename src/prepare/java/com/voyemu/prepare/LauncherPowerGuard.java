@@ -27,26 +27,6 @@ import java.util.TreeMap;
 final class LauncherPowerGuard {
     static final String NAME = "api30-launcher-power";
 
-    /** Pin of the Launcher input; boundary selects the instruction-boundary check. */
-    record Variant(String pin, boolean boundary) {}
-
-    static final Map<String, Variant> VARIANTS =
-            Map.of(
-                    "free-11-chinese-20250710-6.11.1",
-                    new Variant(
-                            "48665cf9d6bb50b49b3aa0b1aa73bdb0ac5d9d7071240c46c7f13d07d4114d7e",
-                            true),
-                    "free-11-chinese-20260731-7.3.1",
-                    new Variant(
-                            "b3287150827e7fa51072bcbcba257539101cda8433c5f9d3a95f4ca905abd567",
-                            false));
-
-    static List<String> pins(String profile) {
-        var variant = VARIANTS.get(profile);
-
-        return variant == null ? List.of() : List.of(variant.pin());
-    }
-
     static final String MAP_OWNER = "Lcom/baidu/widgetmap/MapWidgetManager;",
             POWER_OWNER = "Lcom/qinggan/app/launcher/manager/PowerStateManagerWrapper;";
 
@@ -98,15 +78,14 @@ final class LauncherPowerGuard {
         return selected;
     }
 
-    static void validate(String profile, int api, Path original, byte[] dex, String entry)
+    static void validate(
+            Map<String, Object> constants, int api, Path original, byte[] dex, String entry)
             throws Exception {
-        var variant = VARIANTS.get(profile);
-
-        require(variant != null && api == 30 && FilesSupport.hash(original).equals(variant.pin()));
+        require(api == 30 && StepConstants.admits(constants, FilesSupport.hash(original)));
         require(dex != null);
         Method selected = method(dex, entry);
 
-        if (variant.boundary()) {
+        if (StepConstants.flag(constants, "launcher_power_boundary")) {
             int address = 0;
             boolean insertion = false, exit = false;
 
@@ -205,9 +184,10 @@ final class LauncherPowerGuard {
                 body);
     }
 
-    static byte[] apply(String profile, int api, Path original, byte[] dex, String entry)
+    static byte[] apply(
+            Map<String, Object> constants, int api, Path original, byte[] dex, String entry)
             throws Exception {
-        validate(profile, api, original, dex, entry);
+        validate(constants, api, original, dex, entry);
         var classes = new TreeMap<String, ClassDef>();
 
         for (ClassDef type : new DexBackedDexFile(Opcodes.forApi(30), dex).getClasses()) {
@@ -277,7 +257,7 @@ final class LauncherPowerGuard {
             }
         }
 
-        require(FilesSupport.hash(original).equals(VARIANTS.get(profile).pin()));
+        require(StepConstants.admits(constants, FilesSupport.hash(original)));
 
         return output;
     }

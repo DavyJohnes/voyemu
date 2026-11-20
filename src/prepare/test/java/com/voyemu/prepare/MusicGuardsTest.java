@@ -2,11 +2,9 @@ package com.voyemu.prepare;
 
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.Map;
 
 public final class MusicGuardsTest {
-    static final String OTHER = "free-11-chinese-20260731-7.3.1";
-
-    static final String PROFILE = "free-11-chinese-20250710-6.11.1";
 
     interface Check {
         void run() throws Exception;
@@ -24,18 +22,24 @@ public final class MusicGuardsTest {
 
     public static void main(String[] args) throws Exception {
         Path root = Path.of(args[0]);
-        Path a611 =
-                root.resolve(
-                        ".local/profiles/free-11-chinese-20250710-6.11.1/originals/MusicConcate.apk");
-        Path a731 =
-                root.resolve(
-                        ".local/profiles/free-11-chinese-20260731-7.3.1/originals/MusicConcate.apk");
+        Map<String, Object>
+                constants =
+                        TestSteps.select(
+                                root, "music_fullscreen_boundary", true, MusicFullscreenGuard.NAME),
+                other =
+                        TestSteps.select(
+                                root,
+                                "music_fullscreen_boundary",
+                                false,
+                                MusicFullscreenGuard.NAME);
+        Path a611 = TestSteps.original(root, constants, "MusicConcate.apk"),
+                a731 = TestSteps.original(root, other, "MusicConcate.apk");
         byte[] d611 = NativeCore.entries(a611).get("classes.dex"),
                 d731 = NativeCore.entries(a731).get("classes.dex");
-        byte[] page = MusicPageGuard.apply(PROFILE, 30, a611, d611);
+        byte[] page = MusicPageGuard.apply(constants, 30, a611, d611);
 
-        MusicFullscreenGuard.validateOriginalChain(PROFILE, 30, a611, d611);
-        byte[] full = MusicFullscreenGuard.apply(PROFILE, 30, a611, page);
+        MusicFullscreenGuard.validateOriginalChain(constants, 30, a611, d611);
+        byte[] full = MusicFullscreenGuard.apply(constants, 30, a611, page);
 
         if (Arrays.equals(d611, page) || Arrays.equals(page, full)) {
             throw new AssertionError("guards must change their intended DEX");
@@ -60,9 +64,9 @@ public final class MusicGuardsTest {
 
         MusicFullscreenGuardTest.verify(
                 MusicFullscreenGuardTest.method(page), MusicFullscreenGuardTest.method(full));
-        rejects(() -> MusicPageGuard.apply(PROFILE, 30, a731, d731));
-        rejects(() -> MusicPageGuard.apply(OTHER, 30, a611, d611));
-        rejects(() -> MusicPageGuard.apply(PROFILE, 30, a611, page));
-        rejects(() -> MusicFullscreenGuard.apply(PROFILE, 30, a731, d731));
+        rejects(() -> MusicPageGuard.apply(constants, 30, a731, d731));
+        rejects(() -> MusicPageGuard.apply(other, 30, a611, d611));
+        rejects(() -> MusicPageGuard.apply(constants, 30, a611, page));
+        rejects(() -> MusicFullscreenGuard.apply(constants, 30, a731, d731));
     }
 }

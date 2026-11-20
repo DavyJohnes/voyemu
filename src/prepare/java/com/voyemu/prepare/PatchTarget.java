@@ -290,14 +290,10 @@ final class PatchTarget implements Recipes.Target {
             entries.put(
                     "classes2.dex",
                     MediaNotificationGuard.apply(
-                            profile.referenceProfile(),
-                            api,
-                            abi,
-                            input,
-                            entries.get("classes2.dex")));
+                            constants, api, abi, input, entries.get("classes2.dex")));
         } else {
             MediaNotificationGuard.validate(
-                    profile.referenceProfile(), api, abi, input, entries.get("classes2.dex"));
+                    constants, api, abi, input, entries.get("classes2.dex"));
         }
     }
 
@@ -515,28 +511,15 @@ final class PatchTarget implements Recipes.Target {
             entries.put(
                     "AndroidManifest.xml",
                     MediaCloudManifestGuard.apply(
-                            profile.referenceProfile(),
-                            api,
-                            abi,
-                            input,
-                            entries.get("AndroidManifest.xml")));
+                            constants, api, abi, input, entries.get("AndroidManifest.xml")));
             entries.put(
                     "classes3.dex",
                     MediaCloudConfigGuard.apply(
-                            profile.referenceProfile(),
-                            api,
-                            abi,
-                            input,
-                            entries.get("classes3.dex")));
+                            constants, api, abi, input, entries.get("classes3.dex")));
         } else {
             MediaCloudManifestGuard.validate(
-                    profile.referenceProfile(),
-                    api,
-                    abi,
-                    input,
-                    entries.get("AndroidManifest.xml"));
-            MediaCloudConfigGuard.validate(
-                    profile.referenceProfile(), api, abi, input, entries.get("classes3.dex"));
+                    constants, api, abi, input, entries.get("AndroidManifest.xml"));
+            MediaCloudConfigGuard.validate(constants, api, abi, input, entries.get("classes3.dex"));
         }
     }
 
@@ -566,15 +549,10 @@ final class PatchTarget implements Recipes.Target {
         if (apply) {
             entries.put(
                     "classes3.dex",
-                    UsbPlayerGuard.apply(
-                            profile.referenceProfile(),
-                            api,
-                            abi,
-                            input,
-                            entries.get("classes3.dex")));
+                    UsbPlayerGuard.apply(constants, api, abi, input, entries.get("classes3.dex")));
             added.add(
                     UsbPlayerGuard.compileHelper(
-                            profile.referenceProfile(),
+                            constants,
                             api,
                             abi,
                             input,
@@ -583,10 +561,10 @@ final class PatchTarget implements Recipes.Target {
                             dir.resolve("helper-" + added.size())));
         } else if (planValidation) {
             UsbPlayerGuard.validateOriginal(
-                    profile.referenceProfile(), api, abi, input, entries.get("classes3.dex"));
+                    constants, api, abi, input, entries.get("classes3.dex"));
         } else {
             UsbPlayerGuard.validatePrepared(
-                    profile.referenceProfile(), api, abi, input, entries.get("classes3.dex"));
+                    constants, api, abi, input, entries.get("classes3.dex"));
         }
     }
 
@@ -595,14 +573,12 @@ final class PatchTarget implements Recipes.Target {
         if (apply) {
             entries.put(
                     "classes.dex",
-                    MusicFullscreenGuard.apply(
-                            profile.referenceProfile(), api, input, entries.get("classes.dex")));
+                    MusicFullscreenGuard.apply(constants, api, input, entries.get("classes.dex")));
         } else if (planValidation) {
             MusicFullscreenGuard.validateOriginalChain(
-                    profile.referenceProfile(), api, input, entries.get("classes.dex"));
+                    constants, api, input, entries.get("classes.dex"));
         } else {
-            MusicFullscreenGuard.validate(
-                    profile.referenceProfile(), api, input, entries.get("classes.dex"));
+            MusicFullscreenGuard.validate(constants, api, input, entries.get("classes.dex"));
         }
     }
 
@@ -636,11 +612,9 @@ final class PatchTarget implements Recipes.Target {
         if (apply) {
             entries.put(
                     "classes.dex",
-                    MusicPageGuard.apply(
-                            profile.referenceProfile(), api, input, entries.get("classes.dex")));
+                    MusicPageGuard.apply(constants, api, input, entries.get("classes.dex")));
         } else {
-            MusicPageGuard.validate(
-                    profile.referenceProfile(), api, input, entries.get("classes.dex"));
+            MusicPageGuard.validate(constants, api, input, entries.get("classes.dex"));
         }
     }
 
@@ -649,10 +623,9 @@ final class PatchTarget implements Recipes.Target {
         if (apply) {
             entries.put(
                     "classes2.dex",
-                    AqyProviderGuard.apply(
-                            profile.referenceProfile(), api, input, entries.get("classes2.dex")));
+                    AqyProviderGuard.apply(constants, api, input, entries.get("classes2.dex")));
         } else {
-            AqyProviderGuard.validateOriginal(profile.referenceProfile(), api, input);
+            AqyProviderGuard.validateOriginal(constants, api, input);
         }
     }
 
@@ -671,18 +644,13 @@ final class PatchTarget implements Recipes.Target {
             entries.put(
                     "classes2.dex",
                     LauncherDvrGuard.apply(
-                            profile.referenceProfile(),
-                            api,
-                            abi,
-                            input,
-                            entries.get("classes2.dex")));
+                            constants, api, abi, input, entries.get("classes2.dex")));
             addDex(LauncherDvrGuard.HELPER_ROOT);
         } else if (planValidation) {
             LauncherDvrGuard.validateOriginalChain(
-                    profile.referenceProfile(), api, abi, input, entries.get("classes2.dex"));
+                    constants, api, abi, input, entries.get("classes2.dex"));
         } else {
-            LauncherDvrGuard.validate(
-                    profile.referenceProfile(), api, abi, input, entries.get("classes2.dex"));
+            LauncherDvrGuard.validate(constants, api, abi, input, entries.get("classes2.dex"));
         }
     }
 
@@ -692,14 +660,9 @@ final class PatchTarget implements Recipes.Target {
             entries.put(
                     "classes2.dex",
                     LauncherCanbusGuard.apply(
-                            profile.referenceProfile(),
-                            api,
-                            abi,
-                            input,
-                            entries.get("classes2.dex")));
+                            constants, api, abi, input, entries.get("classes2.dex")));
         } else {
-            LauncherCanbusGuard.validate(
-                    profile.referenceProfile(), api, abi, input, entries.get("classes2.dex"));
+            LauncherCanbusGuard.validate(constants, api, abi, input, entries.get("classes2.dex"));
         }
     }
 
@@ -709,11 +672,9 @@ final class PatchTarget implements Recipes.Target {
             if (apply) {
                 entries.put(
                         entry,
-                        LauncherPowerGuard.apply(
-                                profile.referenceProfile(), api, input, entries.get(entry), entry));
+                        LauncherPowerGuard.apply(constants, api, input, entries.get(entry), entry));
             } else {
-                LauncherPowerGuard.validate(
-                        profile.referenceProfile(), api, input, entries.get(entry), entry);
+                LauncherPowerGuard.validate(constants, api, input, entries.get(entry), entry);
             }
         }
     }

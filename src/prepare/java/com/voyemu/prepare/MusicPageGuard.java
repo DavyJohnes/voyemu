@@ -26,27 +26,8 @@ import java.util.TreeMap;
 final class MusicPageGuard {
     static final String NAME = "api30-music-page";
 
-    /** Pin of the Music input; boundary selects the instruction-boundary check. */
-    record Variant(String pin, boolean boundary) {}
-
-    static final Map<String, Variant> VARIANTS =
-            Map.of(
-                    "free-11-chinese-20250710-6.11.1",
-                    new Variant(
-                            "5c4d5470b552c69575d5ea285220249ef2ec54ba79160bc6d004199232b0c389",
-                            true),
-                    "free-11-chinese-20260731-7.3.1",
-                    new Variant(
-                            "3dfa09d39638888de1f79d679867d1ac57c9a165a0eed6d43b39aedc4be1ea33",
-                            false));
     static final String OWNER = "Lcom/qinggan/base/manager/AppManager;",
             IMPLEMENTATION = "com.qinggan.app.kwSdkMusic.KwApiImpl";
-
-    static List<String> pins(String profile) {
-        var variant = VARIANTS.get(profile);
-
-        return variant == null ? List.of() : List.of(variant.pin());
-    }
 
     static void require(boolean value) {
         Failure.require(
@@ -60,7 +41,8 @@ final class MusicPageGuard {
                 && m.getReturnType().equals("Z");
     }
 
-    static Method rewrite(String profile, Method m, boolean inverse) throws Exception {
+    static Method rewrite(Map<String, Object> constants, Method m, boolean inverse)
+            throws Exception {
         var b = new MutableMethodImplementation(m.getImplementation());
 
         if (inverse) {
@@ -83,7 +65,7 @@ final class MusicPageGuard {
                         && m.getImplementation().getRegisterCount() == 1
                         && m.getImplementation().getTryBlocks().isEmpty());
 
-        if (VARIANTS.get(profile).boundary()) {
+        if (StepConstants.flag(constants, "music_page_boundary")) {
             var code = b.getInstructions();
             require(
                     code.size() == 3
@@ -142,7 +124,8 @@ final class MusicPageGuard {
     }
 
     static Map<String, ClassDef> transform(
-            String profile, Map<String, ClassDef> input, boolean inverse) throws Exception {
+            Map<String, Object> constants, Map<String, ClassDef> input, boolean inverse)
+            throws Exception {
         var out = new TreeMap<String, ClassDef>();
         int count = 0;
 
@@ -158,7 +141,7 @@ final class MusicPageGuard {
                     Method next = m;
 
                     if (target(m)) {
-                        next = rewrite(profile, m, inverse);
+                        next = rewrite(constants, m, inverse);
 
                         count++;
                     }
@@ -191,21 +174,20 @@ final class MusicPageGuard {
         return PassionServiceForegroundGuard.classes(dex);
     }
 
-    static void validate(String profile, int api, Path original, byte[] dex) throws Exception {
-        var variant = VARIANTS.get(profile);
-
+    static void validate(Map<String, Object> constants, int api, Path original, byte[] dex)
+            throws Exception {
         require(
-                variant != null
-                        && api == 30
-                        && variant.pin().equals(FilesSupport.hash(original))
+                api == 30
+                        && StepConstants.admits(constants, FilesSupport.hash(original))
                         && dex != null);
-        transform(profile, classes(dex), false);
+        transform(constants, classes(dex), false);
     }
 
-    static byte[] apply(String profile, int api, Path original, byte[] dex) throws Exception {
-        validate(profile, api, original, dex);
+    static byte[] apply(Map<String, Object> constants, int api, Path original, byte[] dex)
+            throws Exception {
+        validate(constants, api, original, dex);
         var before = classes(dex);
-        var expected = transform(profile, before, false);
+        var expected = transform(constants, before, false);
         byte[] output =
                 FrameworkDexMaterializer.serialize(
                         new ImmutableDexFile(Opcodes.forApi(30), expected.values()));
@@ -218,7 +200,7 @@ final class MusicPageGuard {
                             .equals(FrameworkDexMaterializer.semantic(actual.get(name))));
         }
 
-        var restored = transform(profile, actual, true);
+        var restored = transform(constants, actual, true);
 
         for (var name : before.keySet()) {
             require(

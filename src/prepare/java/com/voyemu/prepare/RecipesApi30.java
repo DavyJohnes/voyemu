@@ -348,7 +348,6 @@ final class RecipesApi30 {
             case "guardUsbPlayer" -> {
                 require(
                         name.equals(UsbPlayerGuard.NAME + ".json")
-                                && pins.equals(UsbPlayerGuard.pins(target.profile()))
                                 && args.isEmpty()
                                 && calls.size() == 1,
                         "Exact USB player operation required");
@@ -357,7 +356,6 @@ final class RecipesApi30 {
             case "guardMediaNotification" -> {
                 require(
                         name.equals(MediaNotificationGuard.NAME + ".json")
-                                && pins.equals(MediaNotificationGuard.pins(target.profile()))
                                 && args.isEmpty()
                                 && calls.size() == 1,
                         "Exact notification operation required");
@@ -831,7 +829,6 @@ final class RecipesApi30 {
             case "guardMediaCloudAvailability" -> {
                 require(
                         name.equals(MediaCloudConfigGuard.NAME + ".json")
-                                && pins.equals(MediaCloudConfigGuard.pins(target.profile()))
                                 && args.isEmpty()
                                 && calls.size() == 1,
                         "Exact unavailable CloudFM operation required");
@@ -840,7 +837,6 @@ final class RecipesApi30 {
             case "guardMusicFullscreen" -> {
                 require(
                         name.equals(MusicFullscreenGuard.NAME + ".json")
-                                && pins.equals(MusicFullscreenGuard.pins(target.profile()))
                                 && args.isEmpty()
                                 && calls.size() == 1,
                         "Exact Music fullscreen operation required");
@@ -849,7 +845,6 @@ final class RecipesApi30 {
             case "guardMusicPage" -> {
                 require(
                         name.equals(MusicPageGuard.NAME + ".json")
-                                && pins.equals(MusicPageGuard.pins(target.profile()))
                                 && args.isEmpty()
                                 && calls.size() == 1,
                         "Exact optional Music page operation required");
@@ -858,7 +853,6 @@ final class RecipesApi30 {
             case "guardAqyProvider" -> {
                 require(
                         name.equals(AqyProviderGuard.NAME + ".json")
-                                && pins.equals(LauncherPowerGuard.pins(target.profile()))
                                 && args.isEmpty()
                                 && !guardedAqyProvider,
                         "Exact optional AQY provider operation required");
@@ -868,7 +862,6 @@ final class RecipesApi30 {
             case "guardLauncherDvr" -> {
                 require(
                         name.equals(LauncherDvrGuard.NAME + ".json")
-                                && pins.equals(LauncherDvrGuard.pins(target.profile()))
                                 && args.isEmpty()
                                 && calls.size() == 1
                                 && LauncherDvrGuard.HELPER_PATH.equals(metadata.get("helper")),
@@ -878,7 +871,6 @@ final class RecipesApi30 {
             case "guardLauncherCanbus" -> {
                 require(
                         name.equals(LauncherCanbusGuard.NAME + ".json")
-                                && pins.equals(LauncherCanbusGuard.pins(target.profile()))
                                 && args.isEmpty()
                                 && calls.size() == 1,
                         "Exact Launcher CAN startup operation required");
@@ -898,7 +890,6 @@ final class RecipesApi30 {
             case "guardLauncherPower" -> {
                 require(
                         name.equals(LauncherPowerGuard.NAME + ".json")
-                                && pins.equals(LauncherPowerGuard.pins(target.profile()))
                                 && args.isEmpty()
                                 && !guardedLauncherPower,
                         "Exact unsupported Launcher power operation required");
