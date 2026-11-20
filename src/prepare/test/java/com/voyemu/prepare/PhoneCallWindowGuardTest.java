@@ -28,7 +28,8 @@ import java.util.TreeMap;
  * a boundary.
  */
 public class PhoneCallWindowGuardTest {
-    static final String PROFILE = "free-11-chinese-20260731-7.3.1";
+    /** The pin of the BluetoothPhone original whose call window this test checks. */
+    static final String PIN = "c8a33e377a6a708ef6c3cca7e8cc3f938349c04dd494dac32bcf823a3096efa1";
 
     static void need(boolean b, String s) {
         if (!b) {
@@ -265,10 +266,15 @@ public class PhoneCallWindowGuardTest {
         Path root = Path.of(a[0]), stage = Path.of(a[1]);
 
         Files.createDirectories(stage);
-        Path apk = root.resolve(".local/profiles/" + PROFILE + "/originals/BluetoothPhone.apk");
+        Path apk =
+                root.resolve(
+                        ".local/profiles/"
+                                + TestProfiles.pinning(root, PIN)
+                                + "/originals/BluetoothPhone.apk");
+        Map<String, Object> constants = TestProfiles.constants(root, PhoneProviderGuard.NAME, PIN);
         byte[] old = NativeCore.entries(apk).get("classes.dex"),
-                fixed = PhoneCallWindowGuard.apply(PROFILE, 30, apk, old);
-        PhoneCallWindowGuard.verify(PROFILE, old, fixed);
+                fixed = PhoneCallWindowGuard.apply(constants, 30, apk, old);
+        PhoneCallWindowGuard.verify(constants, old, fixed);
         int cases = 0;
 
         for (boolean fg : List.of(false, true)) {
@@ -318,13 +324,12 @@ public class PhoneCallWindowGuardTest {
         VM nullEvent = new VM(fixed);
         nullEvent.run("updateCallState", nullEvent.manager, null);
         need(nullEvent.shows == 0 && nullEvent.updates == 0, "null behavior");
-        rejects(() -> PhoneCallWindowGuard.apply("foreign", 30, apk, old));
-        rejects(() -> PhoneCallWindowGuard.apply(PROFILE, 28, apk, old));
-        rejects(() -> PhoneCallWindowGuard.apply(PROFILE, 30, apk, fixed));
-        rejects(() -> PhoneCallWindowGuard.verify(PROFILE, old, old));
+        rejects(() -> PhoneCallWindowGuard.apply(constants, 28, apk, old));
+        rejects(() -> PhoneCallWindowGuard.apply(constants, 30, apk, fixed));
+        rejects(() -> PhoneCallWindowGuard.verify(constants, old, old));
         byte[] drift = fixed.clone();
         drift[drift.length - 1] ^= 1;
-        rejects(() -> PhoneCallWindowGuard.verify(PROFILE, old, drift));
+        rejects(() -> PhoneCallWindowGuard.verify(constants, old, drift));
         var before = new DexBackedDexFile(Opcodes.forApi(30), old);
         var after = new DexBackedDexFile(Opcodes.forApi(30), fixed);
         Map<String, String> semantics = new TreeMap<>();

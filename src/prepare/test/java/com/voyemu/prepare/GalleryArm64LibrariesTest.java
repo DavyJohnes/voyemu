@@ -7,7 +7,10 @@ import java.util.Map;
 import java.util.TreeMap;
 
 public final class GalleryArm64LibrariesTest {
-    static final String PROFILE = "free-11-chinese-20260731-7.3.1";
+    /** The pin of the Gallery original this test adapts. */
+    static final String PIN = "c30633d39bb4127ac7fcd79300f00f2be608ff6b59cb24ebf855471e967be537";
+
+    static Map<String, Object> constants;
 
     interface Check {
         void run() throws Exception;
@@ -43,7 +46,10 @@ public final class GalleryArm64LibrariesTest {
         Files.createDirectories(out);
         Path original =
                 root.resolve(
-                        ".local/profiles/free-11-chinese-20260731-7.3.1/originals/Gallery.apk");
+                        ".local/profiles/"
+                                + TestProfiles.pinning(root, PIN)
+                                + "/originals/Gallery.apk");
+        constants = TestProfiles.constants(root, GalleryArm64Libraries.NAME, PIN);
         var baseline = NativeCore.entries(original);
         baseline.keySet().removeIf(DexOperations::signatureEntry);
         boolean red = baseline.keySet().stream().noneMatch(n -> n.startsWith("lib/arm64-v8a/"));
@@ -51,10 +57,10 @@ public final class GalleryArm64LibrariesTest {
         System.out.println("RED original has no ARM64 codec entries: reproduced");
         var expected = GalleryArm64Libraries.selected(source);
         need(expected.size() == 10);
-        Path component = GalleryArm64Libraries.build(PROFILE, 30, "arm64-v8a", source, out);
+        Path component = GalleryArm64Libraries.build(30, "arm64-v8a", source, out);
         var patched =
                 GalleryArm64Libraries.add(
-                        PROFILE, 30, "arm64-v8a", original, baseline, component, source);
+                        constants, 30, "arm64-v8a", original, baseline, component, source);
         need(patched.size() == baseline.size() + 10);
 
         for (var e : baseline.entrySet()) {
@@ -68,7 +74,7 @@ public final class GalleryArm64LibrariesTest {
                 GalleryArm64Libraries.same(
                         baseline,
                         GalleryArm64Libraries.remove(
-                                PROFILE, 30, "arm64-v8a", original, patched, component, source)));
+                                constants, 30, "arm64-v8a", original, patched, component, source)));
         checkRejectedContexts(original, baseline, patched, expected, component, source);
         Path badSource = out.resolve("bad-source");
         Files.createDirectories(badSource);
@@ -126,17 +132,16 @@ public final class GalleryArm64LibrariesTest {
             Path component,
             Path source)
             throws Exception {
-        reject(() -> GalleryArm64Libraries.context("foreign", 30, "arm64-v8a"));
-        reject(() -> GalleryArm64Libraries.context(PROFILE, 28, "arm64-v8a"));
-        reject(() -> GalleryArm64Libraries.context(PROFILE, 30, "armeabi-v7a"));
+        reject(() -> GalleryArm64Libraries.context(28, "arm64-v8a"));
+        reject(() -> GalleryArm64Libraries.context(30, "armeabi-v7a"));
         reject(() ->
                 GalleryArm64Libraries.add(
-                        PROFILE, 30, "arm64-v8a", original, patched, component, source));
+                        constants, 30, "arm64-v8a", original, patched, component, source));
         var corrupt = new TreeMap<>(patched);
         corrupt.put(expected.keySet().iterator().next(), new byte[20]);
         reject(() ->
                 GalleryArm64Libraries.remove(
-                        PROFILE, 30, "arm64-v8a", original, corrupt, component, source));
+                        constants, 30, "arm64-v8a", original, corrupt, component, source));
         var downgrade = new TreeMap<>(baseline);
         downgrade.remove(
                 downgrade.keySet().stream()
@@ -145,7 +150,7 @@ public final class GalleryArm64LibrariesTest {
                         .orElseThrow());
         reject(() ->
                 GalleryArm64Libraries.add(
-                        PROFILE, 30, "arm64-v8a", original, downgrade, component, source));
+                        constants, 30, "arm64-v8a", original, downgrade, component, source));
     }
 
     static void checkRejectedExternalSources(Path badSource, String originalDefinition)
@@ -239,7 +244,7 @@ public final class GalleryArm64LibrariesTest {
         Files.write(fake, new byte[] {1});
         reject(() ->
                 GalleryArm64Libraries.add(
-                        PROFILE, 30, "arm64-v8a", fake, baseline, component, source));
+                        constants, 30, "arm64-v8a", fake, baseline, component, source));
         Files.delete(fake);
         var wrongComponent = new TreeMap<>(expected);
         wrongComponent.remove(wrongComponent.keySet().iterator().next());
@@ -247,7 +252,7 @@ public final class GalleryArm64LibrariesTest {
         NativeCore.zip(wrongZip, wrongComponent, false);
         reject(() ->
                 GalleryArm64Libraries.add(
-                        PROFILE, 30, "arm64-v8a", original, baseline, wrongZip, source));
+                        constants, 30, "arm64-v8a", original, baseline, wrongZip, source));
         Files.delete(wrongZip);
 
         for (String protectedEntry :
@@ -256,7 +261,7 @@ public final class GalleryArm64LibrariesTest {
             changed.put(protectedEntry, new byte[] {1});
             reject(() ->
                     GalleryArm64Libraries.add(
-                            PROFILE, 30, "arm64-v8a", original, changed, component, source));
+                            constants, 30, "arm64-v8a", original, changed, component, source));
         }
 
         Path unsafe = out.resolve("unsafe.zip");
@@ -303,7 +308,8 @@ public final class GalleryArm64LibrariesTest {
             Map<String, byte[]> patched)
             throws Exception {
         Path proposal = Path.of(args[3]);
-        Path recipe = proposal.resolve("profiles/" + PROFILE);
+        String id = TestProfiles.pinning(proposal, PIN);
+        Path recipe = proposal.resolve("profiles/" + id);
         Path privateCache = out.resolve("cache");
 
         Files.createDirectories(privateCache.resolve("sources"));
@@ -324,7 +330,7 @@ public final class GalleryArm64LibrariesTest {
         var patch = Json.obj(data, "patches").get("Gallery");
         var selected =
                 new ProfileRegistry.Profile(
-                        PROFILE,
+                        id,
                         "private",
                         Map.of(
                                 "android",

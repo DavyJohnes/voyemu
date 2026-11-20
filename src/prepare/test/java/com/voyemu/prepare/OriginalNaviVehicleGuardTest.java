@@ -13,8 +13,6 @@ import java.util.Arrays;
 import java.util.List;
 
 public class OriginalNaviVehicleGuardTest {
-    static final String PROFILE = "free-11-chinese-20260731-7.3.1";
-
     static void check(boolean x, String s) {
         if (!x) {
             throw new AssertionError(s);
@@ -23,7 +21,9 @@ public class OriginalNaviVehicleGuardTest {
 
     public static void main(String[] a) throws Exception {
         byte[] orig = Files.readAllBytes(Path.of(a[0])),
-                out = OriginalNaviVehicleGuard.apply(PROFILE, 30, "arm64-v8a", Path.of(a[2]), orig);
+                out =
+                        OriginalNaviVehicleGuard.apply(
+                                TestProfiles.SYNTHETIC, 30, "arm64-v8a", Path.of(a[2]), orig);
         Method
                 old =
                         OriginalNaviVehicleGuard.method(
@@ -40,13 +40,14 @@ public class OriginalNaviVehicleGuardTest {
         checkPatchedShape(x, y);
 
         for (byte[] b : List.of(out, Arrays.copyOf(orig, orig.length - 1))) {
-            check(rejects(PROFILE, 30, "arm64-v8a", Path.of(a[2]), b), "bad dex accepted");
+            check(
+                    rejects(TestProfiles.SYNTHETIC, 30, "arm64-v8a", Path.of(a[2]), b),
+                    "bad dex accepted");
         }
 
-        check(rejects("other", 30, "arm64-v8a", Path.of(a[2]), orig), "bad profile");
-        check(rejects(PROFILE, 29, "arm64-v8a", Path.of(a[2]), orig), "bad API");
-        check(rejects(PROFILE, 30, "x86_64", Path.of(a[2]), orig), "bad ABI");
-        check(rejects(PROFILE, 30, "arm64-v8a", Path.of(a[0]), orig), "bad JAR");
+        check(rejects(TestProfiles.SYNTHETIC, 29, "arm64-v8a", Path.of(a[2]), orig), "bad API");
+        check(rejects(TestProfiles.SYNTHETIC, 30, "x86_64", Path.of(a[2]), orig), "bad ABI");
+        check(rejects(TestProfiles.SYNTHETIC, 30, "arm64-v8a", Path.of(a[0]), orig), "bad JAR");
         System.out.println(
                 "PASS cached return, branch targets, OEM fallback, wrong pin/reapply and metadata");
     }

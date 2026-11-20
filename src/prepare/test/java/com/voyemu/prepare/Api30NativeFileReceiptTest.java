@@ -23,8 +23,8 @@ public final class Api30NativeFileReceiptTest {
     private static void hiboardDraft(Path root, Path retained, Path recipe) throws Exception {
         var request = Json.object(Json.parse(Files.readString(retained.resolve("request.json"))));
 
-        if (!Api30NativeFiles.QINGGAN11_731.equals(Json.str(request, "profile"))) {
-            throw new AssertionError("Exact Free A11 7.3.1 retained transport required");
+        if (!originalNaviGraph(new ProfileRegistry(root).get(Json.str(request, "profile")))) {
+            throw new AssertionError("Retained transport of the original Navi graph required");
         }
 
         String step = "property-contexts-api30.json",
@@ -135,16 +135,24 @@ public final class Api30NativeFileReceiptTest {
             var select = old.getDeclaredMethod("forProfile", String.class);
             select.setAccessible(true);
 
-            for (String profile : List.of(Api30NativeFiles.PASSION, "unscoped-api30")) {
-                if (!select.invoke(null, profile)
+            // The legacy registry is keyed by its own profile constants; the current one by
+            // platform.
+            var legacyPassion = old.getDeclaredField("PASSION");
+            legacyPassion.setAccessible(true);
+            String passion = (String) legacyPassion.get(null);
+            var legacy = old.getDeclaredField("QINGGAN11_731");
+            legacy.setAccessible(true);
+
+            for (String platform : List.of("passion", "unscoped")) {
+                if (!select.invoke(null, platform.equals("passion") ? passion : "unscoped-api30")
                         .toString()
-                        .equals(Api30NativeFiles.forProfile(profile).toString())) {
+                        .equals(Api30NativeFiles.forPlatform(platform, false).toString())) {
                     throw new AssertionError("Legacy Passion/default native registry rows changed");
                 }
             }
 
-            var oldFree = (List<?>) select.invoke(null, Api30NativeFiles.QINGGAN11_731);
-            var current = Api30NativeFiles.forProfile(Api30NativeFiles.QINGGAN11_731);
+            var oldFree = (List<?>) select.invoke(null, legacy.get(null));
+            var current = Api30NativeFiles.forPlatform("qinggan11", true);
 
             if (current.size() != 9) {
                 throw new AssertionError("Exact 9-node Free native graph required");
@@ -299,10 +307,16 @@ public final class Api30NativeFileReceiptTest {
                                 false)));
     }
 
+    // A qinggan11 profile that also declares the original Navi MAC native node.
+    private static boolean originalNaviGraph(ProfileRegistry.Profile profile) {
+        return "qinggan11".equals(profile.data().get("platform"))
+                && Json.obj(profile.data(), "patches").containsKey("original-navi-mac");
+    }
+
     private static int malformedModes(ProfileRegistry.Profile profile, Map<String, Path> outputs) {
-        return (Api30NativeFiles.QINGGAN11_731.equals(profile.id())
+        return (originalNaviGraph(profile)
                 ? 32
-                : Api30NativeFiles.PASSION.equals(profile.id())
+                : "passion".equals(profile.data().get("platform"))
                         ? 22
                         : outputs.size() == 4 ? 20 : 12);
     }
@@ -313,14 +327,14 @@ public final class Api30NativeFileReceiptTest {
         var profile = handoff.profile();
         int rejected = 0;
 
-        if (Api30NativeFiles.QINGGAN11_731.equals(profile.id())) {
+        if (originalNaviGraph(profile)) {
             for (boolean empty : List.of(false, true)) {
                 checkPublicVisibilityRequired(empty, handoff);
                 rejected++;
             }
         }
 
-        if (Api30NativeFiles.QINGGAN11_731.equals(profile.id())) {
+        if (originalNaviGraph(profile)) {
             checkKeyManagerContextRequired(handoff);
             rejected++;
 
@@ -330,7 +344,7 @@ public final class Api30NativeFileReceiptTest {
             }
         }
 
-        if (Api30NativeFiles.QINGGAN11_731.equals(profile.id())) {
+        if (originalNaviGraph(profile)) {
             checkPropertyContextRequired(handoff);
             rejected++;
         }
@@ -464,10 +478,7 @@ public final class Api30NativeFileReceiptTest {
             Map<String, Object> provenance,
             Map<String, Path> android) {
         if (mode == 20 || mode == 21) {
-            var scoped =
-                    Api30NativeFiles.QINGGAN11_731.equals(profile.id())
-                            ? Json.object(files.get(3))
-                            : output;
+            var scoped = originalNaviGraph(profile) ? Json.object(files.get(3)) : output;
 
             if (mode == 20) {
                 scoped.remove("profile");
@@ -475,7 +486,7 @@ public final class Api30NativeFileReceiptTest {
                 scoped.put("profile", "other-profile");
             }
 
-            if (Api30NativeFiles.QINGGAN11_731.equals(profile.id())) {
+            if (originalNaviGraph(profile)) {
                 files.set(3, scoped);
             }
         }
@@ -653,7 +664,7 @@ public final class Api30NativeFileReceiptTest {
 
         if (!denied) {
             throw new AssertionError(
-                    "Current Free A11 7.3.1 requires public visibility even with"
+                    "The original Navi graph requires public visibility even with"
                             + " missing/all-removed native graph");
         }
     }
@@ -767,7 +778,7 @@ public final class Api30NativeFileReceiptTest {
         }
 
         if (!denied) {
-            throw new AssertionError("Current Free A11 7.3.1 requires cluster property context");
+            throw new AssertionError("The original Navi graph requires cluster property context");
         }
     }
 }

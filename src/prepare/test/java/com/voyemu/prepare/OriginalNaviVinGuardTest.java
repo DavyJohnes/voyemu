@@ -12,8 +12,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class OriginalNaviVinGuardTest {
-    static final String PROFILE = "free-11-chinese-20260731-7.3.1";
-
     static void check(boolean x, String s) {
         if (!x) {
             throw new AssertionError(s);
@@ -22,7 +20,9 @@ public class OriginalNaviVinGuardTest {
 
     public static void main(String[] a) throws Exception {
         byte[] raw = Files.readAllBytes(Path.of(a[0])),
-                patched = OriginalNaviVinGuard.apply(PROFILE, 30, "arm64-v8a", Path.of(a[2]), raw);
+                patched =
+                        OriginalNaviVinGuard.apply(
+                                TestProfiles.SYNTHETIC, 30, "arm64-v8a", Path.of(a[2]), raw);
         Method
                 o =
                         OriginalNaviVinGuard.method(
@@ -77,7 +77,8 @@ public class OriginalNaviVinGuardTest {
         boolean rejected = false;
 
         try {
-            OriginalNaviVinGuard.apply(PROFILE, 30, "arm64-v8a", Path.of(a[2]), patched);
+            OriginalNaviVinGuard.apply(
+                    TestProfiles.SYNTHETIC, 30, "arm64-v8a", Path.of(a[2]), patched);
         } catch (Failure e) {
             rejected = true;
         }
@@ -86,16 +87,7 @@ public class OriginalNaviVinGuardTest {
         rejected = false;
 
         try {
-            OriginalNaviVinGuard.apply("wrong-profile", 30, "arm64-v8a", Path.of(a[2]), raw);
-        } catch (Failure e) {
-            rejected = true;
-        }
-
-        check(rejected, "wrong profile accepted");
-        rejected = false;
-
-        try {
-            OriginalNaviVinGuard.apply(PROFILE, 30, "arm64-v8a", Path.of(a[0]), raw);
+            OriginalNaviVinGuard.apply(TestProfiles.SYNTHETIC, 30, "arm64-v8a", Path.of(a[0]), raw);
         } catch (Failure e) {
             rejected = true;
         }

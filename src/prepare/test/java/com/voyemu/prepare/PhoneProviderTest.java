@@ -9,8 +9,6 @@ import java.util.Map;
 import java.util.TreeMap;
 
 public final class PhoneProviderTest {
-    static final String PROFILE = "free-11-chinese-20260731-7.3.1";
-
     private static int checks;
 
     private static void need(boolean value) {
@@ -41,15 +39,19 @@ public final class PhoneProviderTest {
 
     public static void main(String[] args) throws Exception {
         Path root = Path.of(args[0]), job = Path.of(args[1]), platform = Path.of(args[2]);
-        String profile = PROFILE;
-        var selected = new ProfileRegistry.Profile(profile, "draft", Map.of(), "", root);
-        var sources = PhoneProviderGuard.sources(selected);
+        Path step = job.resolve(PhoneProviderGuard.NAME + ".json");
+        Map<String, Object> metadata = Json.object(Json.parse(Files.readString(step)));
 
-        checkSourcePins(sources);
+        metadata.put("sourceSha256", FilesSupport.hash(step));
+        Map<String, Object> constants = Json.obj(metadata, "constants");
+        var selected =
+                new ProfileRegistry.Profile(TestProfiles.SYNTHETIC, "draft", Map.of(), "", root);
+        var sources = PhoneProviderGuard.sources(selected, constants);
+
+        checkSourcePins(constants, sources);
         Path dex =
                 PhoneProviderGuard.compile(
-                        PROFILE,
-                        PhoneProviderGuard.source(selected),
+                        PhoneProviderGuard.source(selected, constants),
                         platform,
                         job.resolve("provider-compile"));
         var packaged = new java.util.TreeSet<String>();
@@ -64,20 +66,14 @@ public final class PhoneProviderTest {
         need(
                 packaged.contains("Lcom/voyemu/input/PhoneControlProvider;")
                         && packaged.contains("Lcom/voyemu/input/PhonePeerProvider;"));
-        Map<String, Object> metadata =
-                Json.object(
-                        Json.parse(
-                                Files.readString(job.resolve(PhoneProviderGuard.NAME + ".json"))));
-        metadata.put(
-                "sourceSha256", FilesSupport.hash(job.resolve(PhoneProviderGuard.NAME + ".json")));
         var events = new ArrayList<String>();
-        Recipes.Target target = recordingTarget(profile, events);
+        Recipes.Target target = recordingTarget(constants, events);
         checkRecipe(metadata, target, events);
         checkPatchMetadata(job, metadata);
         boolean actual = args.length == 4;
 
         if (actual) {
-            checkActualConsumer(profile, Path.of(args[3]));
+            checkActualConsumer(constants, Path.of(args[3]));
         }
 
         var receipt =
@@ -102,19 +98,21 @@ public final class PhoneProviderTest {
         System.out.println(Json.write(receipt));
     }
 
-    private static void checkSourcePins(Map<String, byte[]> sources) throws Exception {
+    private static void checkSourcePins(Map<String, Object> constants, Map<String, byte[]> sources)
+            throws Exception {
         var bad = new TreeMap<>(sources);
 
         bad.remove(bad.firstKey());
-        reject(() -> PhoneProviderGuard.verifySources(PROFILE, bad));
+        reject(() -> PhoneProviderGuard.verifySources(constants, bad));
         var changed = new TreeMap<>(sources);
         var bytes = changed.get(changed.firstKey()).clone();
         bytes[0] ^= 1;
         changed.put(changed.firstKey(), bytes);
-        reject(() -> PhoneProviderGuard.verifySources(PROFILE, changed));
+        reject(() -> PhoneProviderGuard.verifySources(constants, changed));
     }
 
-    private static Recipes.Target recordingTarget(String profile, List<String> events) {
+    private static Recipes.Target recordingTarget(
+            Map<String, Object> constants, List<String> events) {
         return (Recipes.Target)
                 Proxy.newProxyInstance(
                         Recipes.class.getClassLoader(),
@@ -122,9 +120,9 @@ public final class PhoneProviderTest {
                         (proxy, method, a) -> {
                             return switch (method.getName()) {
                                 case "api" -> 30;
-                                case "profile" -> profile;
+                                case "profile" -> TestProfiles.SYNTHETIC;
                                 case "abi" -> "arm64-v8a";
-                                case "originalSha256" -> PhoneProviderGuard.pins(PROFILE).get(0);
+                                case "originalSha256" -> StepConstants.pins(constants).get(0);
                                 case "guardPhoneProvider" -> {
                                     events.add("guard:" + a[0]);
                                     yield null;
@@ -154,20 +152,30 @@ public final class PhoneProviderTest {
                                 "guard:false",
                                 "guard:true",
                                 "libraries:[QGAPI, QGMOD, QGVehicle]")));
-        var noWindow = copy(metadata);
-        noWindow.remove("windowPolicy");
+        var noWindow = withConstants(metadata, constants -> constants.remove("windowPolicy"));
         reject(() -> Recipes.validateApi30(PhoneProviderGuard.NAME + ".json", noWindow, target));
-        var wrongWindow = copy(metadata);
-        wrongWindow.put("windowPolicy", Map.of());
+        var wrongWindow =
+                withConstants(metadata, constants -> constants.put("windowPolicy", Map.of()));
         reject(() -> Recipes.validateApi30(PhoneProviderGuard.NAME + ".json", wrongWindow, target));
-        var missing = copy(metadata);
-        missing.remove("helperSources");
+        var missing = withConstants(metadata, constants -> constants.remove("helperSources"));
         reject(() -> Recipes.validateApi30(PhoneProviderGuard.NAME + ".json", missing, target));
         var reordered = copy(metadata);
         var calls = new ArrayList<>(Json.list(reordered.get("calls")));
         java.util.Collections.reverse(calls);
         reordered.put("calls", calls);
         reject(() -> Recipes.validateApi30(PhoneProviderGuard.NAME + ".json", reordered, target));
+    }
+
+    // A copy of the recipe whose constants differ by change.
+    private static Map<String, Object> withConstants(
+            Map<String, Object> metadata, java.util.function.Consumer<Map<String, Object>> change) {
+        var result = copy(metadata);
+        var constants = Json.obj(result, "constants");
+
+        change.accept(constants);
+        result.put("constants", constants);
+
+        return result;
     }
 
     private static void checkPatchMetadata(Path job, Map<String, Object> metadata)
@@ -203,7 +211,8 @@ public final class PhoneProviderTest {
         reject(() -> ProfileRegistry.patchMetadata(fixtureProfile));
     }
 
-    private static void checkActualConsumer(String profile, Path apk) throws Exception {
+    private static void checkActualConsumer(Map<String, Object> constants, Path apk)
+            throws Exception {
         var ownerClasses = PhoneConsumerContract.read(apk);
 
         PhoneConsumerContract.verify(ownerClasses);
@@ -238,10 +247,10 @@ public final class PhoneProviderTest {
         }
 
         byte[] original = NativeCore.entries(apk).get("AndroidManifest.xml");
-        byte[] output = PhoneProviderGuard.manifest(profile, 30, "arm64-v8a", apk, original);
+        byte[] output = PhoneProviderGuard.manifest(constants, 30, "arm64-v8a", apk, original);
         PhoneManifestProvidersTest.providerDeclarations(output);
         PhoneManifestPreserveTest.preserve(original, output);
-        reject(() -> PhoneProviderGuard.manifest(profile, 28, "arm64-v8a", apk, original));
+        reject(() -> PhoneProviderGuard.manifest(constants, 28, "arm64-v8a", apk, original));
     }
 
     private static org.jf.dexlib2.iface.ClassDef masked(

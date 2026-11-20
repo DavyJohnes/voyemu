@@ -10,7 +10,8 @@ import java.util.Map;
 import java.util.zip.ZipFile;
 
 public final class Api30SystemUiRoutingTest {
-    static final String PROFILE = "free-11-chinese-20260731-7.3.1";
+    /** The pin of the original SystemUI whose call-site addresses this test checks. */
+    static final String PIN = "b676a3a426ba3b59fabb9d98355ff0e0ac7b07d7ad6545ac44d9cbf85f1700c1";
 
     static void check(boolean b, String s) {
         if (!b) {
@@ -89,8 +90,10 @@ public final class Api30SystemUiRoutingTest {
     }
 
     public static void main(String[] a) throws Exception {
-        Path root = Path.of(a[0]),
-                original = root.resolve(".local/profiles/" + PROFILE + "/originals/SystemUI.apk");
+        Path root = Path.of(a[0]);
+        String id = TestProfiles.pinning(root, PIN);
+        Path original = root.resolve(".local/profiles/" + id + "/originals/SystemUI.apk");
+        Map<String, Object> constants = TestProfiles.constants(root, SystemUiRouting.NAME, PIN);
         byte[] dex;
 
         try (var z = new ZipFile(original.toFile())) {
@@ -103,17 +106,16 @@ public final class Api30SystemUiRoutingTest {
             return;
         }
 
-        var output = SystemUiRouting.apply(PROFILE, 30, original, dex);
+        var output = SystemUiRouting.apply(constants, 30, original, dex);
         verify(dex, output);
-        reject(() -> SystemUiRouting.apply("other", 30, original, dex));
-        reject(() -> SystemUiRouting.apply(PROFILE, 28, original, dex));
-        reject(() -> SystemUiRouting.apply(PROFILE, 30, original, null));
-        reject(() -> SystemUiRouting.apply(PROFILE, 30, original, output));
+        reject(() -> SystemUiRouting.apply(constants, 28, original, dex));
+        reject(() -> SystemUiRouting.apply(constants, 30, original, null));
+        reject(() -> SystemUiRouting.apply(constants, 30, original, output));
         reject(() ->
                 SystemUiRouting.apply(
-                        PROFILE,
+                        constants,
                         30,
-                        root.resolve(".local/profiles/" + PROFILE + "/originals/SystemService.apk"),
+                        root.resolve(".local/profiles/" + id + "/originals/SystemService.apk"),
                         dex));
 
         if (a.length == 2) {

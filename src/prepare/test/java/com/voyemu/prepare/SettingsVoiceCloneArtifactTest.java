@@ -115,7 +115,7 @@ public final class SettingsVoiceCloneArtifactTest {
         before.put(
                 "AndroidManifest.xml",
                 SettingsManifest.apply(
-                        id,
+                        Json.obj(metadata, "constants"),
                         30,
                         original,
                         ManifestLibraries.add(

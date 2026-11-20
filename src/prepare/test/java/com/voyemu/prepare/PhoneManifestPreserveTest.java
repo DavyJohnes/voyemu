@@ -2,14 +2,16 @@ package com.voyemu.prepare;
 
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 import java.util.zip.ZipFile;
 
 /** Normal-source test; arguments are genuine executable APK and resource-only theme APK. */
 public final class PhoneManifestPreserveTest {
-    static final String PROFILE = "free-11-chinese-20260731-7.3.1";
-
     private static final String ORIGINAL =
             "c8a33e377a6a708ef6c3cca7e8cc3f938349c04dd494dac32bcf823a3096efa1";
+    private static final Map<String, Object> CONSTANTS =
+            Map.of(StepConstants.PINS, List.of(ORIGINAL));
 
     private static byte[] manifest(Path apk) throws Exception {
         try (ZipFile zip = new ZipFile(apk.toFile())) {
@@ -17,10 +19,11 @@ public final class PhoneManifestPreserveTest {
         }
     }
 
-    private static void reject(String profile, int api, Path apk, byte[] input, String code)
+    private static void reject(
+            Map<String, Object> constants, int api, Path apk, byte[] input, String code)
             throws Exception {
         try {
-            PhoneProviderGuard.manifest(profile, api, "arm64-v8a", apk, input);
+            PhoneProviderGuard.manifest(constants, api, "arm64-v8a", apk, input);
             throw new AssertionError("Accepted unsupported manifest contract");
         } catch (Failure expected) {
             if (!code.equals(expected.code)) {
@@ -92,7 +95,7 @@ public final class PhoneManifestPreserveTest {
         }
 
         byte[] original = manifest(apk), saved = original.clone();
-        byte[] output = PhoneProviderGuard.manifest(PROFILE, 30, "arm64-v8a", apk, original);
+        byte[] output = PhoneProviderGuard.manifest(CONSTANTS, 30, "arm64-v8a", apk, original);
 
         if (!Arrays.equals(saved, original) || !Arrays.equals(output, PhoneManifest.add(saved))) {
             throw new AssertionError("Shared manifest engine or original changed");
@@ -100,18 +103,18 @@ public final class PhoneManifestPreserveTest {
 
         PhoneManifestProvidersTest.providerDeclarations(output);
         preserve(original, output);
-        reject(PROFILE, 28, apk, original, "PHONE_PROVIDER_CONTRACT");
-        reject("free-09-chinese-20260106-6.0.3", 30, apk, original, "PHONE_PROVIDER_CONTRACT");
-        reject(PROFILE, 30, apk, manifest(Path.of(args[1])), "PATCH_MANIFEST_INVALID");
-        reject(PROFILE, 30, apk, output, "PATCH_MANIFEST_INVALID");
+        reject(CONSTANTS, 28, apk, original, "PHONE_PROVIDER_CONTRACT");
+        reject(Map.of(StepConstants.PINS, List.of()), 30, apk, original, "PHONE_PROVIDER_CONTRACT");
+        reject(CONSTANTS, 30, apk, manifest(Path.of(args[1])), "PATCH_MANIFEST_INVALID");
+        reject(CONSTANTS, 30, apk, output, "PATCH_MANIFEST_INVALID");
         reject(
-                PROFILE,
+                CONSTANTS,
                 30,
                 apk,
                 Arrays.copyOf(original, original.length - 1),
                 "PATCH_MANIFEST_INVALID");
         System.out.println(
                 "PASS exact genuine input, shared append behavior, permissions,"
-                        + " profile/API/theme/duplicate/truncation negatives");
+                        + " pin/API/theme/duplicate/truncation negatives");
     }
 }

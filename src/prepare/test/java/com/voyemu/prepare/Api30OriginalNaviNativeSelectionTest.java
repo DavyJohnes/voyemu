@@ -2,27 +2,19 @@ package com.voyemu.prepare;
 
 public final class Api30OriginalNaviNativeSelectionTest {
     public static void main(String[] args) throws Exception {
-        var legacy = Api30NativeFiles.forProfile(Api30NativeFiles.QINGGAN11_731);
-        var original = Api30NativeFiles.forProfile(Api30NativeFiles.QINGGAN11_731, true);
+        var original = Api30NativeFiles.forPlatform("qinggan11", true);
 
-        checkNodeGraph(legacy, original);
+        checkNodeGraph(Api30NativeFiles.QINGGAN11_ORIGINAL_NAVI_SPECS, original);
         checkNodeSteps();
-        var denied = false;
 
-        try {
-            Api30NativeFiles.forProfile(Api30NativeFiles.QINGGAN11_731, false);
-        } catch (IllegalStateException expected) {
-            denied = true;
+        if (Api30NativeFiles.forPlatform("qinggan11", false).contains(original.get(2))) {
+            throw new AssertionError("The original Navi MAC node must follow its declaration");
         }
 
-        if (!denied) {
-            throw new AssertionError("Disabled original Navi mode must be rejected");
-        }
-
-        for (String profile : java.util.List.of(Api30NativeFiles.PASSION, "other")) {
-            if (!Api30NativeFiles.forProfile(profile, true)
-                    .equals(Api30NativeFiles.forProfile(profile))) {
-                throw new AssertionError("Other profile changed");
+        for (String platform : java.util.List.of("passion", "qinggan09")) {
+            if (!Api30NativeFiles.forPlatform(platform, true)
+                    .equals(Api30NativeFiles.forPlatform(platform, false))) {
+                throw new AssertionError("Other platform changed");
             }
         }
 

@@ -10,6 +10,7 @@ import org.jf.dexlib2.iface.instruction.ReferenceInstruction;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.zip.ZipFile;
 
 /**
@@ -17,9 +18,6 @@ import java.util.zip.ZipFile;
  * listener through RearScreen.
  */
 public final class ThirdScreenRoutingTest {
-    static final String Q611 = "free-11-chinese-20250710-6.11.1",
-            Q731 = "free-11-chinese-20260731-7.3.1";
-
     interface Action {
         void run() throws Exception;
     }
@@ -82,6 +80,10 @@ public final class ThirdScreenRoutingTest {
                 name + " calls " + callee + " with " + registers);
     }
 
+    static Map<String, Object> admitting(Path apk) throws Exception {
+        return Map.of(StepConstants.PINS, List.of(FilesSupport.hash(apk)));
+    }
+
     public static void main(String[] args) throws Exception {
         if (args.length != 2) {
             throw new IllegalArgumentException("611_APK 731_APK");
@@ -89,12 +91,11 @@ public final class ThirdScreenRoutingTest {
 
         Path q611 = Path.of(args[0]), q731 = Path.of(args[1]);
 
-        for (var pair : new Object[][] {{Q611, q611}, {Q731, q731}}) {
-            String profile = (String) pair[0];
-            Path apk = (Path) pair[1];
+        for (Path apk : List.of(q611, q731)) {
+            Map<String, Object> constants = admitting(apk);
             byte[] original = dex(apk);
-            ThirdScreenRouting.validate(profile, 30, apk, original);
-            byte[] routed = ThirdScreenRouting.apply(profile, 30, apk, original);
+            ThirdScreenRouting.validate(constants, 30, apk, original);
+            byte[] routed = ThirdScreenRouting.apply(constants, 30, apk, original);
             // The start passes this, the intent and the options to RearScreen.
             routed(
                     routed,
@@ -127,15 +128,15 @@ public final class ThirdScreenRoutingTest {
                                     "Lcom/qinggan/os/ServiceManager;->registerIOnTouchListener("
                                             + "Landroid/app/IOnTouchListener;I)V"),
                     "the original lock countdown registers through the OEM ServiceManager");
-            // A routed or foreign input and an unknown profile or API are rejected.
-            reject(() -> ThirdScreenRouting.apply(profile, 30, apk, routed));
-            reject(() -> ThirdScreenRouting.validate(profile, 28, apk, original));
+            // A routed or foreign input and a step without its pin or another API are rejected.
+            reject(() -> ThirdScreenRouting.apply(constants, 30, apk, routed));
+            reject(() -> ThirdScreenRouting.validate(constants, 28, apk, original));
             reject(() ->
                     ThirdScreenRouting.validate(
-                            "passion-11-russian-20260403-2.1.4.80", 30, apk, original));
+                            Map.of(StepConstants.PINS, List.of()), 30, apk, original));
         }
 
-        reject(() -> ThirdScreenRouting.validate(Q611, 30, q731, dex(q731)));
+        reject(() -> ThirdScreenRouting.validate(admitting(q611), 30, q731, dex(q731)));
         System.out.println(
                 "ThirdScreen rear display start and touch routing passed for both profiles");
     }

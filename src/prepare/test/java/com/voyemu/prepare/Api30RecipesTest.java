@@ -344,12 +344,10 @@ public final class Api30RecipesTest {
     private static void checkGallery() throws Exception {
         var gallery = new Target();
 
-        gallery.original = GalleryArm64Libraries.pins(PROFILE).get(0);
+        gallery.original = APK;
         Recipes.apply(
                 GalleryArm64Libraries.NAME + ".json",
-                recipe(
-                        List.of(GalleryArm64Libraries.pins(PROFILE).get(0)),
-                        List.of(call("guardGalleryArm64"))),
+                recipe(List.of(APK), List.of(call("guardGalleryArm64"))),
                 gallery);
 
         if (gallery.mutations != 1 || gallery.galleryValidations != 1) {
@@ -362,7 +360,7 @@ public final class Api30RecipesTest {
                         List.of(call("guardGalleryArm64", "extra")))) {
             rejectCalls(
                     GalleryArm64Libraries.NAME + ".json",
-                    GalleryArm64Libraries.pins(PROFILE).get(0),
+                    APK,
                     calls,
                     "Invalid Gallery operations mutated");
         }
@@ -496,12 +494,10 @@ public final class Api30RecipesTest {
                 dvrRecipe,
                 "Launcher DVR helper pin accepted");
         var camera = new Target();
-        camera.original = CameraVirtualGuard.pins(PROFILE).get(0);
+        camera.original = APK;
         var cameraRecipe =
                 new HashMap<String, Object>(
-                        recipe(
-                                List.of(CameraVirtualGuard.pins(PROFILE).get(0)),
-                                List.of(call("guardCameraVirtual"))));
+                        recipe(List.of(APK), List.of(call("guardCameraVirtual"))));
         cameraRecipe.put("helper", CameraVirtualGuard.HELPER_PATH);
         Recipes.apply(CameraVirtualGuard.NAME + ".json", cameraRecipe, camera);
 
@@ -510,10 +506,7 @@ public final class Api30RecipesTest {
         }
 
         rejectHelperPath(
-                CameraVirtualGuard.NAME + ".json",
-                CameraVirtualGuard.pins(PROFILE).get(0),
-                cameraRecipe,
-                "Camera helper pin accepted");
+                CameraVirtualGuard.NAME + ".json", APK, cameraRecipe, "Camera helper pin accepted");
     }
 
     private static void checkMusicFullscreen() throws Exception {
@@ -739,11 +732,9 @@ public final class Api30RecipesTest {
         var routing = call("routeSystemUi");
         var statusBars = new Target();
 
-        statusBars.original = SystemUiRouting.pins(PROFILE).get(0);
+        statusBars.original = APK;
         Recipes.apply(
-                SystemUiRouting.NAME + ".json",
-                recipe(List.of(SystemUiRouting.pins(PROFILE).get(0)), List.of(routing)),
-                statusBars);
+                SystemUiRouting.NAME + ".json", recipe(List.of(APK), List.of(routing)), statusBars);
 
         if (statusBars.mutations != 1 || statusBars.routingValidations != 1) {
             throw new AssertionError("SystemUI routing must validate before one mutation");
@@ -756,14 +747,12 @@ public final class Api30RecipesTest {
                         List.of(call("routeSystemUi", "unexpected")))) {
             rejectCalls(
                     SystemUiRouting.NAME + ".json",
-                    SystemUiRouting.pins(PROFILE).get(0),
+                    APK,
                     calls,
                     "Invalid status-bar operation mutated APK");
         }
 
-        for (String name : List.of("other-api30.json", SystemUiRouting.NAME + ".json")) {
-            rejectOwnerPin(name, routing, "SystemUI routing needs exact recipe and original owner");
-        }
+        rejectOwnerPin("other-api30.json", routing, "SystemUI routing needs its exact recipe");
     }
 
     private static void checkRegisteredOperation(String operation) throws Exception {

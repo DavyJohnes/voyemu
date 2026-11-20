@@ -2,10 +2,12 @@ package com.voyemu.prepare;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 
 public final class PhoneProviderChainTest {
-    static final String PROFILE = "free-11-chinese-20250710-6.11.1",
-            OTHER = "free-11-chinese-20260731-7.3.1";
+    /** Pins of two BluetoothPhone originals of different firmware. */
+    static final String PIN = "c3b53187d5161692a338a9504e1fa288dd163896da431bf89b8ad1e8fa56b1f4",
+            OTHER_PIN = "c8a33e377a6a708ef6c3cca7e8cc3f938349c04dd494dac32bcf823a3096efa1";
 
     interface Check {
         void run() throws Exception;
@@ -29,16 +31,26 @@ public final class PhoneProviderChainTest {
 
     public static void main(String[] args) throws Exception {
         Path root = Path.of(args[0]);
-        Path apk611 = root.resolve(".local/profiles/" + PROFILE + "/originals/BluetoothPhone.apk");
-        Path apk731 = root.resolve(".local/profiles/" + OTHER + "/originals/BluetoothPhone.apk");
+        Path apk611 =
+                root.resolve(
+                        ".local/profiles/"
+                                + TestProfiles.pinning(root, PIN)
+                                + "/originals/BluetoothPhone.apk");
+        Path apk731 =
+                root.resolve(
+                        ".local/profiles/"
+                                + TestProfiles.pinning(root, OTHER_PIN)
+                                + "/originals/BluetoothPhone.apk");
+        Map<String, Object> constants = TestProfiles.constants(root, PhoneProviderGuard.NAME, PIN),
+                other = TestProfiles.constants(root, PhoneProviderGuard.NAME, OTHER_PIN);
         byte[] raw611 = NativeCore.entries(apk611).get("classes.dex");
         byte[] raw731 = NativeCore.entries(apk731).get("classes.dex");
 
         PhoneConsumerContract.verify(PhoneConsumerContract.read(apk611));
-        byte[] window = PhoneCallWindowGuard.apply(PROFILE, 30, apk611, raw611);
-        PhoneCallWindowGuard.verify(PROFILE, raw611, window);
-        byte[] fixed = PhoneDisconnectGuard.apply(PROFILE, 30, apk611, window);
-        PhoneDisconnectGuard.verify(PROFILE, apk611, raw611, fixed);
+        byte[] window = PhoneCallWindowGuard.apply(constants, 30, apk611, raw611);
+        PhoneCallWindowGuard.verify(constants, raw611, window);
+        byte[] fixed = PhoneDisconnectGuard.apply(constants, 30, apk611, window);
+        PhoneDisconnectGuard.verify(constants, apk611, raw611, fixed);
         need(
                 PhoneDisconnectGuardTest.suffix(window, null) == null,
                 "original getter must reproduce null");
@@ -51,12 +63,12 @@ public final class PhoneProviderChainTest {
         @SuppressWarnings("ReferenceEquality")
         boolean retained = PhoneDisconnectGuardTest.suffix(fixed, calls) == calls;
         need(retained, "fixed getter must retain snapshot");
-        rejects(() -> PhoneCallWindowGuard.apply(OTHER, 30, apk611, raw611));
-        rejects(() -> PhoneCallWindowGuard.apply(PROFILE, 30, apk731, raw731));
-        rejects(() -> PhoneCallWindowGuard.apply(OTHER, 30, apk611, raw611));
-        rejects(() -> PhoneDisconnectGuard.apply(PROFILE, 30, apk611, raw611));
+        rejects(() -> PhoneCallWindowGuard.apply(other, 30, apk611, raw611));
+        rejects(() -> PhoneCallWindowGuard.apply(constants, 30, apk731, raw731));
+        rejects(() -> PhoneCallWindowGuard.apply(other, 30, apk611, raw611));
+        rejects(() -> PhoneDisconnectGuard.apply(constants, 30, apk611, raw611));
         byte[] drift = fixed.clone();
         drift[drift.length - 1] ^= 1;
-        rejects(() -> PhoneDisconnectGuard.verify(PROFILE, apk611, raw611, drift));
+        rejects(() -> PhoneDisconnectGuard.verify(constants, apk611, raw611, drift));
     }
 }

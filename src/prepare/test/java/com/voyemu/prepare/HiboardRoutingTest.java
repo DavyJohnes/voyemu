@@ -24,7 +24,7 @@ import java.util.TreeMap;
 import java.util.zip.ZipFile;
 
 public final class HiboardRoutingTest {
-    static final String PROFILE = "free-11-chinese-20260731-7.3.1";
+    static java.util.List<HiboardRouting.Body> bodies;
 
     interface Action {
         void run() throws Exception;
@@ -68,7 +68,7 @@ public final class HiboardRoutingTest {
     }
 
     static Method mutate(Method m, int mode) {
-        var body = HiboardRouting.body(PROFILE, m);
+        var body = HiboardRouting.body(bodies, m);
         var code = new MutableMethodImplementation(m.getImplementation());
         int address = 0;
 
@@ -142,7 +142,7 @@ public final class HiboardRoutingTest {
 
         for (var c : a.values()) {
             for (var m : c.getMethods()) {
-                var spec = HiboardRouting.body(PROFILE, m);
+                var spec = HiboardRouting.body(bodies, m);
 
                 if (spec == null) {
                     continue;
@@ -205,7 +205,7 @@ public final class HiboardRoutingTest {
             boolean target = false;
 
             for (var m : before.getMethods()) {
-                if (HiboardRouting.body(PROFILE, m) != null) {
+                if (HiboardRouting.body(bodies, m) != null) {
                     target = true;
                 }
             }
@@ -221,6 +221,10 @@ public final class HiboardRoutingTest {
 
     public static void main(String[] args) throws Exception {
         Path original = Path.of(args[0]), stage = Path.of(args[1]);
+        Map<String, Object> constants =
+                TestProfiles.constants(Path.of("").toAbsolutePath(), HiboardRouting.NAME, original);
+
+        bodies = HiboardRouting.bodies(constants);
 
         Files.createDirectories(stage);
         byte[] dex;
@@ -242,17 +246,16 @@ public final class HiboardRoutingTest {
             return;
         }
 
-        byte[] output = HiboardRouting.apply(PROFILE, 30, original, dex);
+        byte[] output = HiboardRouting.apply(constants, 30, original, dex);
         verify(dex, output);
-        reject(() -> HiboardRouting.apply("other", 30, original, dex));
-        reject(() -> HiboardRouting.apply(PROFILE, 28, original, dex));
-        reject(() -> HiboardRouting.apply(PROFILE, 30, original, null));
-        reject(() -> HiboardRouting.apply(PROFILE, 30, original, output));
+        reject(() -> HiboardRouting.apply(constants, 28, original, dex));
+        reject(() -> HiboardRouting.apply(constants, 30, original, null));
+        reject(() -> HiboardRouting.apply(constants, 30, original, output));
         Path wrong = stage.resolve("wrong.apk");
         Files.writeString(wrong, "wrong original");
-        reject(() -> HiboardRouting.apply(PROFILE, 30, wrong, dex));
-        Method sample = method(dex, HiboardRouting.VARIANTS.get(PROFILE).bodies().get(0).method());
-        var spec = HiboardRouting.body(PROFILE, sample);
+        reject(() -> HiboardRouting.apply(constants, 30, wrong, dex));
+        Method sample = method(dex, bodies.get(0).method());
+        var spec = HiboardRouting.body(bodies, sample);
 
         for (int mode = 0; mode < 3; mode++) {
             var changed = mutate(sample, mode);

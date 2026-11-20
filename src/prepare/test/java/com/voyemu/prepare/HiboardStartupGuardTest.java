@@ -13,12 +13,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.TreeMap;
 import java.util.zip.ZipFile;
 
 public final class HiboardStartupGuardTest {
-    static final String PROFILE = "free-11-chinese-20260731-7.3.1";
-
     static void check(boolean b, String s) {
         if (!b) {
             throw new AssertionError(s);
@@ -153,13 +152,16 @@ public final class HiboardStartupGuardTest {
 
     public static void main(String[] a) throws Exception {
         Path original = Path.of(a[0]), job = Path.of(a[1]);
+        Map<String, Object> constants =
+                TestProfiles.constants(
+                        Path.of("").toAbsolutePath(), "api30-hiboard-startup", original);
         byte[] clean;
 
         try (var z = new ZipFile(original.toFile())) {
             clean = z.getInputStream(z.getEntry("classes.dex")).readAllBytes();
         }
 
-        byte[] pre = HiboardRouting.apply(PROFILE, 30, original, clean);
+        byte[] pre = HiboardRouting.apply(constants, 30, original, clean);
         var before = HiboardStartupGuard.classes(pre);
         var old = HiboardStartupGuard.target(before);
         boolean red = false;
@@ -171,7 +173,7 @@ public final class HiboardStartupGuardTest {
         }
 
         check(red, "original must fail on missing light snapshot");
-        byte[] out = HiboardStartupGuard.apply(PROFILE, 30, original, pre);
+        byte[] out = HiboardStartupGuard.apply(constants, 30, original, pre);
         var after = HiboardStartupGuard.classes(out);
         var now = HiboardStartupGuard.target(after);
         var unavailable = run(now, null, new State());
@@ -230,10 +232,9 @@ public final class HiboardStartupGuardTest {
         }
 
         check(changes == 1, "one changed class");
-        reject(() -> HiboardStartupGuard.apply("wrong", 30, original, pre));
-        reject(() -> HiboardStartupGuard.apply(PROFILE, 28, original, pre));
-        reject(() -> HiboardStartupGuard.apply(PROFILE, 30, original, clean));
-        reject(() -> HiboardStartupGuard.apply(PROFILE, 30, original, out));
+        reject(() -> HiboardStartupGuard.apply(constants, 28, original, pre));
+        reject(() -> HiboardStartupGuard.apply(constants, 30, original, clean));
+        reject(() -> HiboardStartupGuard.apply(constants, 30, original, out));
         reject(() -> HiboardStartupGuard.validate(now));
         Files.write(job.resolve("classes.dex"), out);
         Files.writeString(

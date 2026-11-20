@@ -34,7 +34,7 @@ public final class NaviEglGuardTest {
         }
 
         int at = NaviEglGuard.offset(before);
-        byte[] after = NaviEglGuard.apply(NaviEglGuard.PROFILE, 30, "arm64-v8a", apk, before);
+        byte[] after = NaviEglGuard.apply(TestProfiles.SYNTHETIC, 30, "arm64-v8a", apk, before);
         var b = ByteBuffer.wrap(after).order(ByteOrder.LITTLE_ENDIAN);
         check(
                 b.getInt(at + 9 * 4) == 0 && b.getInt(at + 11 * 4) == 0,
@@ -46,12 +46,11 @@ public final class NaviEglGuardTest {
             }
         }
 
-        rejects(() -> NaviEglGuard.validate("foreign", 30, "arm64-v8a", apk, before));
-        rejects(() -> NaviEglGuard.validate(NaviEglGuard.PROFILE, 28, "arm64-v8a", apk, before));
-        rejects(() -> NaviEglGuard.validate(NaviEglGuard.PROFILE, 30, "x86_64", apk, before));
-        rejects(() -> NaviEglGuard.validate(NaviEglGuard.PROFILE, 30, "arm64-v8a", apk, after));
+        rejects(() -> NaviEglGuard.validate(TestProfiles.SYNTHETIC, 28, "arm64-v8a", apk, before));
+        rejects(() -> NaviEglGuard.validate(TestProfiles.SYNTHETIC, 30, "x86_64", apk, before));
+        rejects(() -> NaviEglGuard.validate(TestProfiles.SYNTHETIC, 30, "arm64-v8a", apk, after));
         System.out.println(
                 "PASS exact MSAA0 configuration; OEM renderer/unrelated bytes preserved;"
-                        + " identity/reapply guards");
+                        + " API/ABI/reapply guards");
     }
 }

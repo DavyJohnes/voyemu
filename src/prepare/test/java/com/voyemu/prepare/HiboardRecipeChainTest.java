@@ -14,8 +14,7 @@ import java.util.zip.ZipFile;
  */
 public final class HiboardRecipeChainTest {
     static Map<String, Object> startupRecipe;
-    static final String PROFILE = "free-11-chinese-20260731-7.3.1",
-            LIBS = "api30-hiboard-libraries.json",
+    static final String LIBS = "api30-hiboard-libraries.json",
             ROUTE = "api30-hiboard-routing.json",
             START = "api30-hiboard-startup.json";
 
@@ -23,7 +22,8 @@ public final class HiboardRecipeChainTest {
         final Path original;
         final byte[] baselineDex, baselineManifest;
         byte[] dex, manifest;
-        String profile = PROFILE, pin = HiboardRouting.pins(PROFILE).get(0);
+        String pin;
+        Map<String, Object> constants = Map.of();
         boolean planValidation;
         Map<String, Object> startup;
         int api = 30, mutations;
@@ -31,6 +31,7 @@ public final class HiboardRecipeChainTest {
 
         Target(Path original) throws Exception {
             this.original = original;
+            pin = FilesSupport.hash(original);
             startup = startupRecipe;
 
             try (var zip = new ZipFile(original.toFile())) {
@@ -44,7 +45,7 @@ public final class HiboardRecipeChainTest {
 
         @Override
         public String profile() {
-            return profile;
+            return TestProfiles.SYNTHETIC;
         }
 
         @Override
@@ -102,14 +103,14 @@ public final class HiboardRecipeChainTest {
         @Override
         public void guardHiboardStartup(boolean apply) throws Exception {
             if (apply) {
-                dex = HiboardStartupGuard.apply(profile, api, original, dex);
+                dex = HiboardStartupGuard.apply(constants, api, original, dex);
                 mutations++;
                 events.add("startup");
             } else if (planValidation) {
-                HiboardStartupGuard.validateOriginalChain(profile, api, original, dex);
+                HiboardStartupGuard.validateOriginalChain(constants, api, original, dex);
                 events.add("plan-startup");
             } else {
-                HiboardStartupGuard.validateRouted(profile, api, original, dex);
+                HiboardStartupGuard.validateRouted(constants, api, original, dex);
                 events.add("validate-startup");
             }
         }
@@ -117,11 +118,11 @@ public final class HiboardRecipeChainTest {
         @Override
         public void routeHiboard(boolean apply) throws Exception {
             if (apply) {
-                dex = HiboardRouting.apply(profile, api, original, dex);
+                dex = HiboardRouting.apply(constants, api, original, dex);
                 mutations++;
                 events.add("route");
             } else {
-                HiboardRouting.validate(profile, api, original, dex);
+                HiboardRouting.validate(constants, api, original, dex);
                 events.add("validate-route");
             }
         }
@@ -145,13 +146,25 @@ public final class HiboardRecipeChainTest {
         Failure.require(
                 target.api() == 30, "PATCH_API_UNSUPPORTED", "API30 Hiboard chain required", 5);
         target.planValidation = true;
-        Recipes.validateApi30(first, libraries, target);
-        Recipes.validateApi30(ROUTE, routing, target);
-        Recipes.validateApi30(START, target.startup, target);
+        step(target, first, libraries, false);
+        step(target, ROUTE, routing, false);
+        step(target, START, target.startup, false);
         target.planValidation = false;
-        Recipes.apply(first, libraries, target);
-        Recipes.apply(ROUTE, routing, target);
-        Recipes.apply(START, target.startup, target);
+        step(target, first, libraries, true);
+        step(target, ROUTE, routing, true);
+        step(target, START, target.startup, true);
+    }
+
+    // Runs one step with its constants, as PatchTarget does.
+    static void step(Target target, String name, Map<String, Object> recipe, boolean apply)
+            throws Exception {
+        target.constants = Json.obj(recipe, "constants");
+
+        if (apply) {
+            Recipes.apply(name, recipe, target);
+        } else {
+            Recipes.validateApi30(name, recipe, target);
+        }
     }
 
     static void reject(Target target, Map<String, Object> libraries, Map<String, Object> routing)
@@ -179,7 +192,11 @@ public final class HiboardRecipeChainTest {
         }
 
         Path root = Path.of(args[0]).toRealPath(), original = Path.of(args[2]).toRealPath();
-        Path patches = root.resolve("profiles/" + PROFILE + "/patches");
+        Path patches =
+                root.resolve(
+                        "profiles/"
+                                + TestProfiles.pinning(root, FilesSupport.hash(original))
+                                + "/patches");
         var definition = Json.object(Json.parse(Files.readString(Path.of(args[1]))));
 
         if (!Json.list(Json.obj(Json.obj(definition, "patches"), "Hiboard").get("steps"))
@@ -218,9 +235,6 @@ public final class HiboardRecipeChainTest {
                             + " routing after complete preflight");
         }
 
-        var wrongProfile = new Target(original);
-        wrongProfile.profile = "other";
-        reject(wrongProfile, libraries, routing);
         var wrongApi = new Target(original);
         wrongApi.api = 28;
         reject(wrongApi, libraries, routing);
@@ -246,13 +260,13 @@ public final class HiboardRecipeChainTest {
                                 List.of(List.of("QGAPI", "QGMOD", "QGVehicle", "unexpected")))));
         reject(new Target(original), extraLibraries, routing);
 
-        if (!FilesSupport.hash(original).equals(HiboardRouting.pins(PROFILE).get(0))) {
+        if (!FilesSupport.hash(original).equals(target.pin)) {
             throw new AssertionError("OEM original mutated");
         }
 
         System.out.println(
-                "Actual ordered Hiboard library-manifest then guarded DEX chain PASS; six"
-                        + " wrong-profile/API/pin/libs/op negatives reject before any mutation; no"
+                "Actual ordered Hiboard library-manifest then guarded DEX chain PASS; five"
+                        + " API/pin/libs/op negatives reject before any mutation; no"
                         + " APK/guest produced");
     }
 }

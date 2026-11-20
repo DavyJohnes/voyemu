@@ -82,8 +82,7 @@ public final class NaviVersionGuardTest {
         }
 
         check(writesOnAosp(before), "RED: original enters rejected System write on AOSP channel");
-        byte[] after =
-                NaviVersionGuard.apply(NaviVersionGuard.PROFILE, 30, "arm64-v8a", apk, before);
+        byte[] after = NaviVersionGuard.apply(TestProfiles.SYNTHETIC, 30, "arm64-v8a", apk, before);
         check(!writesOnAosp(after), "GREEN: original OEM metadata early return");
         check(Arrays.equals(before, NaviVersionGuard.binary(after, true)), "exact DEX inverse");
         int bodyBytes = 0;
@@ -95,16 +94,14 @@ public final class NaviVersionGuardTest {
         }
 
         check(bodyBytes == 2, "only one DEX instruction changed beyond checksums");
-        reject(() -> NaviVersionGuard.validate("wrong", 30, "arm64-v8a", apk, before));
         reject(() ->
-                NaviVersionGuard.validate(NaviVersionGuard.PROFILE, 28, "arm64-v8a", apk, before));
+                NaviVersionGuard.validate(TestProfiles.SYNTHETIC, 28, "arm64-v8a", apk, before));
         reject(() ->
-                NaviVersionGuard.validate(
-                        NaviVersionGuard.PROFILE, 30, "armeabi-v7a", apk, before));
+                NaviVersionGuard.validate(TestProfiles.SYNTHETIC, 30, "armeabi-v7a", apk, before));
         reject(() ->
-                NaviVersionGuard.validate(NaviVersionGuard.PROFILE, 30, "arm64-v8a", apk, after));
+                NaviVersionGuard.validate(TestProfiles.SYNTHETIC, 30, "arm64-v8a", apk, after));
         System.out.println(
                 "PASS original AOSP write RED, OEM metadata return GREEN, exact DEX inverse and"
-                        + " profile/API/ABI gates");
+                        + " API/ABI gates");
     }
 }

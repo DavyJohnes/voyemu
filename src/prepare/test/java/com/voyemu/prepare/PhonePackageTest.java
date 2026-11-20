@@ -15,7 +15,8 @@ import java.util.TreeSet;
  * Bounded ordinary Artifacts graph proof; owns only this job's source fixture and writable outputs.
  */
 public final class PhonePackageTest {
-    static final String PROFILE = "free-11-chinese-20260731-7.3.1";
+    /** The constants of the Phone provider step this test packages. */
+    static Map<String, Object> constants;
 
     static void need(boolean value, String reason) {
         if (!value) {
@@ -40,7 +41,15 @@ public final class PhonePackageTest {
 
     public static void main(String[] args) throws Exception {
         Path root = Path.of(args[0]), job = Path.of(args[1]), apk = Path.of(args[2]);
-        String id = PROFILE;
+
+        constants =
+                Json.obj(
+                        Json.object(
+                                Json.parse(
+                                        Files.readString(
+                                                job.resolve(PhoneProviderGuard.NAME + ".json")))),
+                        "constants");
+        String id = TestProfiles.pinning(root, FilesSupport.hash(apk));
         Path sourceRoot = job.resolve("ordinary-profile"),
                 source = sourceRoot.resolve("profiles/" + id);
 
@@ -85,7 +94,7 @@ public final class PhonePackageTest {
                 cert = Path.of(Json.str(Json.obj(signing, "cert"), "file"));
         NativeCore.pinned(key, Json.str(Json.obj(signing, "key"), "sha256"));
         NativeCore.pinned(cert, Json.str(Json.obj(signing, "cert"), "sha256"));
-        NativeCore.pinned(apk, PhoneProviderGuard.pins(PROFILE).get(0));
+        NativeCore.pinned(apk, StepConstants.pins(constants).get(0));
         NativeCore.pinned(framework, Json.str(qgapi, "sha256"));
         Path sdk = root.resolve(".local/toolchains/java-sdk"),
                 platform = sdk.resolve("platforms/android-34/android.jar");
@@ -117,7 +126,7 @@ public final class PhonePackageTest {
         var expected =
                 ManifestLibraries.add(
                         PhoneProviderGuard.manifest(
-                                id, 30, "arm64-v8a", apk, before.get("AndroidManifest.xml")),
+                                constants, 30, "arm64-v8a", apk, before.get("AndroidManifest.xml")),
                         List.of("QGAPI", "QGMOD", "QGVehicle"));
         need(
                 Arrays.equals(expected, after.get("AndroidManifest.xml")),
@@ -125,11 +134,11 @@ public final class PhonePackageTest {
         PhoneManifestPreserveTest.preserve(
                 before.get("AndroidManifest.xml"),
                 PhoneProviderGuard.manifest(
-                        id, 30, "arm64-v8a", apk, before.get("AndroidManifest.xml")));
+                        constants, 30, "arm64-v8a", apk, before.get("AndroidManifest.xml")));
         Set<String> providers = checkAddedProviders(added, after);
         String certificate = verifySignature(output, cert);
         registry.verifySource(profile);
-        NativeCore.pinned(apk, PhoneProviderGuard.pins(PROFILE).get(0));
+        NativeCore.pinned(apk, StepConstants.pins(constants).get(0));
         NativeCore.pinned(framework, Json.str(qgapi, "sha256"));
         var receipt = new LinkedHashMap<String, Object>();
         receipt.put("schema", 1);
@@ -137,7 +146,7 @@ public final class PhonePackageTest {
         receipt.put("phone_install", expectedPhoneInstall);
         receipt.put("retained_userdata_delivery", "system-image");
         receipt.put("api", 30);
-        receipt.put("source_integrity_sha256", PhoneProviderGuard.pins(PROFILE).get(0));
+        receipt.put("source_integrity_sha256", StepConstants.pins(constants).get(0));
         receipt.put("semantic_consumer_checked", true);
         receipt.put(
                 "artifact",
@@ -150,7 +159,7 @@ public final class PhonePackageTest {
                         Files.size(output)));
         receipt.put("peer", Map.of("file", peer.toString(), "sha256", FilesSupport.hash(peer)));
         receipt.put("original_dex_entries_checked", originalDex);
-        receipt.put("window_policy", PhoneCallWindowGuard.policy(PROFILE));
+        receipt.put("window_policy", PhoneCallWindowGuard.policy(constants));
         receipt.put("original_non_code_entries_byte_identical", resources);
         receipt.put("added_provider_classes", providers);
         receipt.put("platform_certificate_sha256", certificate);
@@ -179,7 +188,7 @@ public final class PhonePackageTest {
             link(root.resolve(resource), sourceRoot.resolve(resource));
         }
 
-        for (Object path : PhoneProviderGuard.sourceInventory(PROFILE)) {
+        for (Object path : PhoneProviderGuard.sourceInventory(constants)) {
             link(root.resolve((String) path), sourceRoot.resolve((String) path));
         }
     }
@@ -227,7 +236,7 @@ public final class PhonePackageTest {
                                 "file",
                                 "BluetoothPhone.apk",
                                 "sha256",
-                                PhoneProviderGuard.pins(PROFILE).get(0)),
+                                StepConstants.pins(constants).get(0)),
                         "QGAPI",
                         Map.of("file", "QGAPI.jar", "sha256", qgapi.get("sha256")));
         var patch =
@@ -277,7 +286,7 @@ public final class PhonePackageTest {
             }
 
             if (e.getKey().equals("classes.dex")) {
-                PhoneDisconnectGuard.verify(PROFILE, apk, e.getValue(), after.get(e.getKey()));
+                PhoneDisconnectGuard.verify(constants, apk, e.getValue(), after.get(e.getKey()));
             } else {
                 need(
                         Arrays.equals(e.getValue(), after.get(e.getKey())),

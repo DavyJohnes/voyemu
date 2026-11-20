@@ -180,15 +180,16 @@ public class NaviVinGuardTest {
             initial = z.getInputStream(z.getEntry("classes3.dex")).readAllBytes();
         }
 
-        NaviVinGuard.validate(NaviVinGuard.PROFILE, 30, "arm64-v8a", original, initial);
+        NaviVinGuard.validate(TestProfiles.SYNTHETIC, 30, "arm64-v8a", original, initial);
         byte[] version =
-                NaviVersionGuard.apply(NaviVinGuard.PROFILE, 30, "arm64-v8a", original, initial);
-        NaviVinGuard.validate(NaviVinGuard.PROFILE, 30, "arm64-v8a", original, version);
+                NaviVersionGuard.apply(TestProfiles.SYNTHETIC, 30, "arm64-v8a", original, initial);
+        NaviVinGuard.validate(TestProfiles.SYNTHETIC, 30, "arm64-v8a", original, version);
         byte[] before =
-                NaviVehicleGuard.apply(NaviVinGuard.PROFILE, 30, "arm64-v8a", original, version);
+                NaviVehicleGuard.apply(TestProfiles.SYNTHETIC, 30, "arm64-v8a", original, version);
         var old = NaviVinGuard.classes(before);
         check(refs(NaviVinGuard.method(old)) == 0, "RED OEM empty input remains empty");
-        byte[] after = NaviVinGuard.apply(NaviVinGuard.PROFILE, 30, "arm64-v8a", original, before);
+        byte[] after =
+                NaviVinGuard.apply(TestProfiles.SYNTHETIC, 30, "arm64-v8a", original, before);
         var out = NaviVinGuard.classes(after);
         check(
                 old.keySet().equals(out.keySet()) && refs(NaviVinGuard.method(out)) == 1,

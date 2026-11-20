@@ -11,12 +11,11 @@ import org.jf.dexlib2.iface.instruction.ReferenceInstruction;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.TreeMap;
 
 /** Execute the real getter suffix, including its original empty-list branch. */
 public final class PhoneDisconnectGuardTest {
-    static final String PROFILE = "free-11-chinese-20260731-7.3.1";
-
     static void need(boolean ok, String message) {
         if (!ok) {
             throw new AssertionError(message);
@@ -96,12 +95,14 @@ public final class PhoneDisconnectGuardTest {
 
     public static void main(String[] args) throws Exception {
         Path apk = Path.of(args[0]);
+        Map<String, Object> constants =
+                TestProfiles.constants(Path.of("").toAbsolutePath(), PhoneProviderGuard.NAME, apk);
         byte[] original = NativeCore.entries(apk).get("classes.dex");
-        byte[] window = PhoneCallWindowGuard.apply(PROFILE, 30, apk, original);
+        byte[] window = PhoneCallWindowGuard.apply(constants, 30, apk, original);
         Object oldNull = suffix(window, null);
 
         need(oldNull == null, "RED: original returns null after disconnect");
-        byte[] fixed = PhoneDisconnectGuard.apply(PROFILE, 30, apk, window);
+        byte[] fixed = PhoneDisconnectGuard.apply(constants, 30, apk, window);
         Object empty = suffix(fixed, null);
         need(empty instanceof List && ((List<?>) empty).isEmpty(), "null must yield empty list");
         var nonempty = new ArrayList<>(List.of("call"));
@@ -112,13 +113,13 @@ public final class PhoneDisconnectGuardTest {
                 retainedEmpty = suffix(fixed, alreadyEmpty) == alreadyEmpty;
         need(retained, "return original snapshot");
         need(retainedEmpty, "retain empty snapshot");
-        PhoneDisconnectGuard.verify(PROFILE, apk, original, fixed);
+        PhoneDisconnectGuard.verify(constants, apk, original, fixed);
         byte[] drift = fixed.clone();
         drift[drift.length - 1] ^= 1;
         boolean rejected = false;
 
         try {
-            PhoneDisconnectGuard.verify(PROFILE, apk, original, drift);
+            PhoneDisconnectGuard.verify(constants, apk, original, drift);
         } catch (Failure expected) {
             rejected = true;
         }

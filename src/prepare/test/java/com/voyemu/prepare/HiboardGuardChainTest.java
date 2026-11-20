@@ -2,11 +2,10 @@ package com.voyemu.prepare;
 
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.zip.ZipFile;
 
 public final class HiboardGuardChainTest {
-    static final String PROFILE = "free-11-chinese-20250710-6.11.1";
-
     static void check(boolean ok, String reason) {
         if (!ok) {
             throw new AssertionError(reason);
@@ -39,37 +38,33 @@ public final class HiboardGuardChainTest {
 
         Path apk = Path.of(args[0]), other = Path.of(args[1]);
         byte[] original = dex(apk), foreign = dex(other);
-        String profile = PROFILE;
-        HiboardRouting.validate(profile, 30, apk, original);
-        check(
-                HiboardRouting.VARIANTS.get(PROFILE).bodies().size() == 28,
-                "exact routing method inventory");
+        String pin = FilesSupport.hash(apk);
+        Map<String, Object> constants =
+                TestProfiles.constants(Path.of("").toAbsolutePath(), "api30-hiboard-startup", pin);
+        HiboardRouting.validate(constants, 30, apk, original);
+        check(HiboardRouting.bodies(constants).size() == 28, "exact routing method inventory");
 
         for (int n = 10; n <= 12; n++) {
             String key = "Lcom/qinggan/app/hiboard/system/HiboardBar$" + n + ";->run()V";
             check(
-                    HiboardRouting.VARIANTS.get(PROFILE).bodies().stream()
-                            .anyMatch(b -> b.method().equals(key)),
+                    HiboardRouting.bodies(constants).stream().anyMatch(b -> b.method().equals(key)),
                     "renumbered callback missing");
         }
 
-        HiboardStartupGuard.validateOriginalChain(profile, 30, apk, original);
-        byte[] routed = HiboardRouting.apply(profile, 30, apk, original);
-        HiboardStartupGuard.validateRouted(profile, 30, apk, routed);
-        byte[] result = HiboardStartupGuard.apply(profile, 30, apk, routed);
+        HiboardStartupGuard.validateOriginalChain(constants, 30, apk, original);
+        byte[] routed = HiboardRouting.apply(constants, 30, apk, original);
+        HiboardStartupGuard.validateRouted(constants, 30, apk, routed);
+        byte[] result = HiboardStartupGuard.apply(constants, 30, apk, routed);
         check(
                 !Arrays.equals(original, routed) && !Arrays.equals(routed, result),
                 "routing and startup must change DEX");
-        reject(() -> HiboardRouting.validate("foreign", 30, apk, original));
-        reject(() -> HiboardRouting.validate(profile, 28, apk, original));
-        reject(() -> HiboardRouting.validate(profile, 30, other, foreign));
-        reject(() -> HiboardRouting.validate(profile, 30, apk, foreign));
-        reject(() -> HiboardRouting.validate(profile, 30, apk, routed));
-        reject(() -> HiboardStartupGuard.validateRouted(profile, 30, apk, original));
-        reject(() -> HiboardStartupGuard.validateRouted(profile, 30, apk, result));
-        check(
-                FilesSupport.hash(apk).equals(HiboardRouting.pins(PROFILE).get(0)),
-                "OEM input changed");
+        reject(() -> HiboardRouting.validate(constants, 28, apk, original));
+        reject(() -> HiboardRouting.validate(constants, 30, other, foreign));
+        reject(() -> HiboardRouting.validate(constants, 30, apk, foreign));
+        reject(() -> HiboardRouting.validate(constants, 30, apk, routed));
+        reject(() -> HiboardStartupGuard.validateRouted(constants, 30, apk, original));
+        reject(() -> HiboardStartupGuard.validateRouted(constants, 30, apk, result));
+        check(FilesSupport.hash(apk).equals(pin), "OEM input changed");
         System.out.println(
                 "611 Hiboard route and startup chain rejects foreign and reordered inputs;"
                         + " no guest acceptance");

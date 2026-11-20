@@ -34,7 +34,10 @@ public final class HiboardArtifactPipelineTest {
         Path manifest = root.resolve("src/app/toolchain.json");
 
         checkToolPins(manifest, selected, sign, platform);
-        String id = "free-11-chinese-20260731-7.3.1";
+        // The profile whose Hiboard original carries the routing helper pinned below.
+        String id =
+                TestProfiles.pinning(
+                        root, "902562587355d9e48d3878773da7955cd5a793c03e5ba6e5b595a317c7ec0f39");
         var base = new ProfileRegistry(root, id).get(id);
         var data = Json.object(Json.parse(Json.write(base.data())));
         var defs = Json.obj(data, "patches");
@@ -125,10 +128,14 @@ public final class HiboardArtifactPipelineTest {
         expected.put(
                 "classes.dex",
                 HiboardStartupGuard.apply(
-                        id,
+                        Json.obj(startup, "constants"),
                         30,
                         original,
-                        HiboardRouting.apply(id, 30, original, expected.get("classes.dex"))));
+                        HiboardRouting.apply(
+                                Json.obj(startup, "constants"),
+                                30,
+                                original,
+                                expected.get("classes.dex"))));
         var after = new TreeMap<>(NativeCore.entries(apk));
         after.keySet().removeIf(DexOperations::signatureEntry);
         check(

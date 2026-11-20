@@ -9,6 +9,7 @@ import org.jf.dexlib2.iface.instruction.ReferenceInstruction;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -44,11 +45,16 @@ public final class CameraVirtualGuardTest {
         return false;
     }
 
-    // Arguments: PROFILE APK PREDECESSOR_APK [OTHER_PROFILE_APK].
+    static Map<String, Object> admitting(Path apk) throws Exception {
+        return Map.of(StepConstants.PINS, List.of(FilesSupport.hash(apk)));
+    }
+
+    // Arguments: PROFILE APK PREDECESSOR_APK [OTHER_PROFILE_APK]; the profile argument is unused,
+    // the step constants admit the APK by its pin.
     public static void main(String[] arguments) throws Exception {
-        String profile = arguments[0];
         String[] a = java.util.Arrays.copyOfRange(arguments, 1, arguments.length);
         Path apk = Path.of(a[0]), pred = Path.of(a[1]);
+        Map<String, Object> constants = admitting(apk);
         byte[] raw;
 
         try (var z = new ZipFile(pred.toFile())) {
@@ -57,16 +63,16 @@ public final class CameraVirtualGuardTest {
 
         var before = CameraVirtualGuard.classes(raw);
         checkOriginalUnadapted(before);
-        byte[] patched = CameraVirtualGuard.apply(profile, 30, "arm64-v8a", apk, raw);
+        byte[] patched = CameraVirtualGuard.apply(constants, 30, "arm64-v8a", apk, raw);
         var after = CameraVirtualGuard.classes(patched);
         checkUnpinnedPreserved(before, after);
         checkHelperBoundaries(after);
         checkOriginalEntryStore(before);
         checkEntryAdaptation(after);
-        checkRejectedScopes(profile, apk, raw);
+        checkRejectedScopes(constants, apk, raw);
 
         if (a.length > 2) {
-            checkRejectedCrossVersion(profile, a, apk, raw);
+            checkRejectedCrossVersion(constants, a, apk, raw);
             System.out.println("Cross-version Camera inputs rejected");
         }
 
@@ -257,13 +263,14 @@ public final class CameraVirtualGuardTest {
         check(entry, "exact getIntExtra → localEntry → mInType path missing");
     }
 
-    static void checkRejectedScopes(String profile, Path apk, byte[] raw) throws Exception {
+    static void checkRejectedScopes(Map<String, Object> constants, Path apk, byte[] raw)
+            throws Exception {
         for (int i = 0; i < 4; i++) {
             boolean denied = false;
 
             try {
                 CameraVirtualGuard.validate(
-                        i == 0 ? "other" : profile,
+                        i == 0 ? Map.of(StepConstants.PINS, List.of()) : constants,
                         i == 1 ? 28 : 30,
                         i == 2 ? "x86" : "arm64-v8a",
                         apk,
@@ -276,21 +283,17 @@ public final class CameraVirtualGuardTest {
         }
     }
 
-    static void checkRejectedCrossVersion(String profile, String[] a, Path apk, byte[] raw)
-            throws Exception {
-        String otherProfile =
-                CameraVirtualGuard.VARIANTS.keySet().stream()
-                        .filter(p -> !p.equals(profile))
-                        .findFirst()
-                        .orElseThrow();
+    static void checkRejectedCrossVersion(
+            Map<String, Object> constants, String[] a, Path apk, byte[] raw) throws Exception {
         Path other = Path.of(a[2]);
+        Map<String, Object> otherConstants = admitting(other);
 
         for (int i = 0; i < 2; i++) {
             boolean denied = false;
 
             try {
                 CameraVirtualGuard.validate(
-                        i == 1 ? otherProfile : profile,
+                        i == 1 ? otherConstants : constants,
                         30,
                         "arm64-v8a",
                         i == 0 ? other : apk,
@@ -299,7 +302,7 @@ public final class CameraVirtualGuardTest {
                 denied = true;
             }
 
-            check(denied, "cross-version APK or profile accepted");
+            check(denied, "cross-version APK or step accepted");
         }
     }
 }

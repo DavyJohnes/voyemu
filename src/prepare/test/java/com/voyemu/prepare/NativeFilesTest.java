@@ -12,8 +12,8 @@ public final class NativeFilesTest {
     }
 
     public static void main(String[] args) throws Exception {
-        var graph611 = Api30NativeFiles.forProfile(Api30NativeFiles.QINGGAN11_611, false);
-        var graph731 = Api30NativeFiles.forProfile(Api30NativeFiles.QINGGAN11_731, true);
+        var graph611 = Api30NativeFiles.forPlatform("qinggan11", false);
+        var graph731 = Api30NativeFiles.forPlatform("qinggan11", true);
 
         require(
                 graph611.size() == 8 && graph731.size() == 9,
@@ -23,10 +23,10 @@ public final class NativeFilesTest {
                         graph731.stream()
                                 .filter(spec -> !spec.id().equals("original-navi-mac"))
                                 .toList()),
-                "Free A11 6.11.1 exact non-Navi graph differs");
+                "qinggan11 exact non-Navi graph differs");
         require(
                 graph611.stream().noneMatch(spec -> spec.id().equals("original-navi-mac")),
-                "Free A11 6.11.1 must not select Navi MAC");
+                "qinggan11 without original Navi must not select Navi MAC");
         require(
                 Api30NativeFiles.nodeSteps("can-early-policy-api30")
                         .equals(
@@ -42,24 +42,7 @@ public final class NativeFilesTest {
                                         "property-contexts-api30.json",
                                         "can-early-property-contexts-api30.json")),
                 "Early property step order differs");
-        boolean denied = false;
-
-        try {
-            Api30NativeFiles.forProfile(Api30NativeFiles.QINGGAN11_611, true);
-        } catch (IllegalStateException expected) {
-            denied = true;
-        }
-
-        require(denied, "Free A11 6.11.1 accepted Navi MAC");
-        denied = false;
-
-        try {
-            Api30NativeFiles.forProfile(Api30NativeFiles.QINGGAN11_731, false);
-        } catch (IllegalStateException expected) {
-            denied = true;
-        }
-
-        require(denied, "Free A11 7.3.1 accepted missing Navi MAC");
+        boolean denied;
 
         for (int count : List.of(0, 1, 7)) {
             var patches = new LinkedHashMap<String, Object>();
@@ -68,9 +51,10 @@ public final class NativeFilesTest {
                 patches.put(graph611.get(i).id(), Map.of("type", "file"));
             }
 
-            var data = Map.<String, Object>of("patches", patches);
-            var profile =
-                    new ProfileRegistry.Profile(Api30NativeFiles.QINGGAN11_611, "test", data, "");
+            var data =
+                    Map.<String, Object>of(
+                            "patches", patches, "platform", "qinggan11", "board", "8155");
+            var profile = new ProfileRegistry.Profile(TestProfiles.SYNTHETIC, "test", data, "");
             denied = false;
 
             try {
@@ -80,13 +64,12 @@ public final class NativeFilesTest {
                 denied = "PREPARATION_NATIVE_FILE".equals(expected.code);
             }
 
-            require(denied, "Free A11 6.11.1 accepted incomplete native graph of size " + count);
+            require(denied, "qinggan11 accepted incomplete native graph of size " + count);
         }
 
         require(
-                !Api30NativeFiles.forProfile("free-11-chinese-20250710-6.11.1-other")
-                        .equals(graph611),
-                "Similar profile selected Free A11 6.11.1 graph");
-        System.out.println("Free A11 6.11.1 native graph and negative selection checks passed");
+                !Api30NativeFiles.forPlatform("qinggan09", false).equals(graph611),
+                "Another platform selected the qinggan11 graph");
+        System.out.println("qinggan11 native graph and negative selection checks passed");
     }
 }

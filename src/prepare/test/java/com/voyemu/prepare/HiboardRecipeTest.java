@@ -6,15 +6,15 @@ import java.util.List;
 import java.util.Map;
 
 public final class HiboardRecipeTest {
-    static final String PROFILE = "free-11-chinese-20260731-7.3.1";
+    static final String PIN = "1".repeat(64);
 
     static final class Target implements Recipes.Target {
         int mutations, validations;
-        String pin = HiboardRouting.pins(PROFILE).get(0);
+        String pin = PIN;
 
         @Override
         public String profile() {
-            return PROFILE;
+            return TestProfiles.SYNTHETIC;
         }
 
         @Override
@@ -120,7 +120,7 @@ public final class HiboardRecipeTest {
     public static void main(String[] args) throws Exception {
         Object route = call("routeHiboard");
         String name = HiboardRouting.NAME + ".json";
-        List<Object> pins = List.of(HiboardRouting.pins(PROFILE).get(0));
+        List<Object> pins = List.of(PIN);
         var target = new Target();
 
         Recipes.validateApi30(name, recipe(List.of(route), pins), target);
@@ -142,21 +142,17 @@ public final class HiboardRecipeTest {
                         List.of(call("routeHiboard", "extra")),
                         List.of(call("useLibraries", List.of("QGAPI")), route),
                         List.of(route, call("useLibraries", List.of("QGAPI"))))) {
-            reject(name, calls, pins, HiboardRouting.pins(PROFILE).get(0));
+            reject(name, calls, pins, PIN);
         }
 
-        reject("other.json", List.of(route), pins, HiboardRouting.pins(PROFILE).get(0));
+        reject("other.json", List.of(route), pins, PIN);
         reject(name, List.of(route), pins, "0".repeat(64));
-        reject(
-                name,
-                List.of(route),
-                List.of(HiboardRouting.pins(PROFILE).get(0), "0".repeat(64)),
-                HiboardRouting.pins(PROFILE).get(0));
 
         if (args.length >= 1) {
             var metadata = Json.object(Json.parse(Files.readString(Path.of(args[0]))));
             metadata.put("sourceSha256", FilesSupport.hash(Path.of(args[0])));
             var actual = new Target();
+            actual.pin = StepConstants.pins(Json.obj(metadata, "constants")).get(0);
             Recipes.apply(name, metadata, actual);
 
             if (actual.mutations != 1 || actual.validations != 1) {
@@ -170,6 +166,7 @@ public final class HiboardRecipeTest {
             var metadata = Json.object(Json.parse(Files.readString(path)));
             metadata.put("sourceSha256", FilesSupport.hash(path));
             var libraries = new Target();
+            libraries.pin = StepConstants.pins(Json.obj(metadata, "constants")).get(0);
             Recipes.validateApi30(path.getFileName().toString(), metadata, libraries);
 
             if (libraries.mutations != 0) {
@@ -186,7 +183,7 @@ public final class HiboardRecipeTest {
         }
 
         System.out.println(
-                "Exact Hiboard recipe, prevalidation, one mutation, and eight metadata negatives"
+                "Exact Hiboard recipe, prevalidation, one mutation, and seven metadata negatives"
                         + " PASS");
     }
 }

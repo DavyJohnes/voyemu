@@ -5,15 +5,15 @@ import java.util.List;
 import java.util.Map;
 
 public final class StockStatusBarRecipeTest {
-    static final String PROFILE = "free-11-chinese-20260731-7.3.1";
+    static final String PIN = "1".repeat(64);
 
     static final class Target implements Recipes.Target {
         int mutations, validations;
-        String pin = StockStatusBarGuard.pins(PROFILE).get(0);
+        String pin = PIN;
 
         @Override
         public String profile() {
-            return PROFILE;
+            return TestProfiles.SYNTHETIC;
         }
 
         @Override
@@ -87,9 +87,7 @@ public final class StockStatusBarRecipeTest {
                 "sourceSha256",
                 "a".repeat(64),
                 "constants",
-                Map.of(
-                        "original_sha256_allowlist",
-                        List.of(StockStatusBarGuard.pins(PROFILE).get(0))),
+                Map.of("original_sha256_allowlist", List.of(PIN)),
                 "calls",
                 calls);
     }

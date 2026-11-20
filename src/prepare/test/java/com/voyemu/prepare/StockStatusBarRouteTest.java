@@ -2,11 +2,10 @@ package com.voyemu.prepare;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Map;
 import java.util.zip.ZipFile;
 
 public class StockStatusBarRouteTest {
-    static final String PROFILE = "free-11-chinese-20250710-6.11.1";
-
     interface Checked {
         void run() throws Exception;
     }
@@ -72,15 +71,17 @@ public class StockStatusBarRouteTest {
 
     public static void main(String[] args) throws Exception {
         Path apk = Path.of(args[0]);
+        Map<String, Object> constants =
+                Map.of(StepConstants.PINS, java.util.List.of(FilesSupport.hash(apk)));
         byte[] d = dex(apk, "classes.dex");
 
-        StockStatusBarGuard.validate(PROFILE, 30, apk, d);
+        StockStatusBarGuard.validate(constants, 30, apk, d);
         Path foreign = Files.createTempFile("foreign", ".apk");
         Files.writeString(foreign, "foreign");
-        denied(() -> StockStatusBarGuard.validate(PROFILE, 30, foreign, d));
+        denied(() -> StockStatusBarGuard.validate(constants, 30, foreign, d));
         Files.delete(foreign);
-        denied(() -> StockStatusBarGuard.validate(PROFILE, 29, apk, d));
-        byte[] out = StockStatusBarGuard.apply(PROFILE, 30, apk, d);
+        denied(() -> StockStatusBarGuard.validate(constants, 29, apk, d));
+        byte[] out = StockStatusBarGuard.apply(constants, 30, apk, d);
 
         for (String name : new String[] {"attach", "apply"}) {
             var ins = instructions(method(out, StockStatusBarGuard.OWNER, name));

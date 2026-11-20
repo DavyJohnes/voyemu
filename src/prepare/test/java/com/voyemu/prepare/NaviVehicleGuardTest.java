@@ -37,10 +37,10 @@ public final class NaviVehicleGuardTest {
         byte[]
                 version =
                         NaviVersionGuard.apply(
-                                NaviVehicleGuard.PROFILE, 30, "arm64-v8a", apk, original),
+                                TestProfiles.SYNTHETIC, 30, "arm64-v8a", apk, original),
                 after =
                         NaviVehicleGuard.apply(
-                                NaviVehicleGuard.PROFILE, 30, "arm64-v8a", apk, version);
+                                TestProfiles.SYNTHETIC, 30, "arm64-v8a", apk, version);
         check(
                 Arrays.equals(
                         Arrays.copyOfRange(after, at, at + 8),
@@ -53,16 +53,14 @@ public final class NaviVehicleGuardTest {
             }
         }
 
-        rejects(() -> NaviVehicleGuard.validate("foreign", 30, "arm64-v8a", apk, original));
         rejects(() ->
-                NaviVehicleGuard.validate(
-                        NaviVehicleGuard.PROFILE, 28, "arm64-v8a", apk, original));
+                NaviVehicleGuard.validate(TestProfiles.SYNTHETIC, 28, "arm64-v8a", apk, original));
         rejects(() ->
-                NaviVehicleGuard.validate(NaviVehicleGuard.PROFILE, 30, "x86_64", apk, original));
+                NaviVehicleGuard.validate(TestProfiles.SYNTHETIC, 30, "x86_64", apk, original));
         rejects(() ->
-                NaviVehicleGuard.validate(NaviVehicleGuard.PROFILE, 30, "arm64-v8a", apk, after));
+                NaviVehicleGuard.validate(TestProfiles.SYNTHETIC, 30, "arm64-v8a", apk, after));
         System.out.println(
-                "PASS Free A11 7.3.1 H97C factory RED/GREEN; unrelated bytes preserved;"
-                        + " profile/API/ABI/reapply denied");
+                "PASS H97C factory RED/GREEN; unrelated bytes preserved;"
+                        + " API/ABI/reapply denied");
     }
 }

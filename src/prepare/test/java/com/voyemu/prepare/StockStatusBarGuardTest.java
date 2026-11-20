@@ -19,8 +19,6 @@ import java.util.TreeMap;
 import java.util.zip.ZipFile;
 
 public final class StockStatusBarGuardTest {
-    static final String PROFILE = "free-11-chinese-20260731-7.3.1";
-
     static void check(boolean b, String s) {
         if (!b) {
             throw new AssertionError(s);
@@ -143,6 +141,8 @@ public final class StockStatusBarGuardTest {
 
     public static void main(String[] a) throws Exception {
         Path original = Path.of(a[0]);
+        Map<String, Object> constants =
+                Map.of(StepConstants.PINS, java.util.List.of(FilesSupport.hash(original)));
         byte[] d;
 
         try (var z = new ZipFile(original.toFile())) {
@@ -164,19 +164,18 @@ public final class StockStatusBarGuardTest {
         }
 
         check(red, "Original must fail desired lifecycle policy");
-        byte[] output = StockStatusBarGuard.apply(PROFILE, 30, original, d);
+        byte[] output = StockStatusBarGuard.apply(constants, 30, original, d);
         verify(d, output);
-        reject(() -> StockStatusBarGuard.apply("other", 30, original, d));
-        reject(() -> StockStatusBarGuard.apply(PROFILE, 28, original, d));
-        reject(() -> StockStatusBarGuard.apply(PROFILE, 30, original, null));
-        reject(() -> StockStatusBarGuard.apply(PROFILE, 30, original, output));
-        reject(() -> StockStatusBarGuard.apply(PROFILE, 30, null, d));
+        reject(() -> StockStatusBarGuard.apply(constants, 28, original, d));
+        reject(() -> StockStatusBarGuard.apply(constants, 30, original, null));
+        reject(() -> StockStatusBarGuard.apply(constants, 30, original, output));
+        reject(() -> StockStatusBarGuard.apply(constants, 30, null, d));
         Path destination = Path.of(a[1]);
         Path wrong = destination.resolveSibling("wrong-original.apk");
         Files.writeString(wrong, "wrong original", StandardOpenOption.CREATE_NEW);
 
         try {
-            reject(() -> StockStatusBarGuard.apply(PROFILE, 30, wrong, d));
+            reject(() -> StockStatusBarGuard.apply(constants, 30, wrong, d));
         } finally {
             Files.delete(wrong);
         }

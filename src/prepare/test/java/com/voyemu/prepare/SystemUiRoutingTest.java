@@ -1,13 +1,11 @@
 package com.voyemu.prepare;
 
 import java.nio.file.Path;
+import java.util.List;
+import java.util.Map;
 import java.util.zip.ZipFile;
 
 public class SystemUiRoutingTest {
-    static final String OTHER = "free-11-chinese-20260731-7.3.1";
-
-    static final String PROFILE = "free-11-chinese-20250710-6.11.1";
-
     interface Checked {
         void run() throws Exception;
     }
@@ -74,11 +72,13 @@ public class SystemUiRoutingTest {
     public static void main(String[] args) throws Exception {
         Path apk = Path.of(args[0]), other = Path.of(args[1]);
         byte[] d = dex(apk, "classes.dex");
+        Map<String, Object> constants = Map.of(StepConstants.PINS, List.of(FilesSupport.hash(apk))),
+                foreign = Map.of(StepConstants.PINS, List.of(FilesSupport.hash(other)));
 
-        SystemUiRouting.validate(PROFILE, 30, apk, d);
-        denied(() -> SystemUiRouting.validate(OTHER, 30, apk, d));
-        denied(() -> SystemUiRouting.validate(PROFILE, 30, other, d));
-        byte[] out = SystemUiRouting.apply(PROFILE, 30, apk, d);
+        SystemUiRouting.validate(constants, 30, apk, d);
+        denied(() -> SystemUiRouting.validate(foreign, 30, apk, d));
+        denied(() -> SystemUiRouting.validate(constants, 30, other, d));
+        byte[] out = SystemUiRouting.apply(constants, 30, apk, d);
 
         for (String name : new String[] {"addStatusBarWindow", "addStatusBarWindowSecond"}) {
             var ins = instructions(method(out, SystemUiRouting.OWNER, name));

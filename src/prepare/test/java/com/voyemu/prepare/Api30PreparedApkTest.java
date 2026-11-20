@@ -353,7 +353,16 @@ public final class Api30PreparedApkTest {
             }
 
             if (name.equals("Setting") && entry.equals("AndroidManifest.xml")) {
-                expected = SettingsManifest.apply(profile.id(), 30, input, expected);
+                expected =
+                        SettingsManifest.apply(
+                                Json.obj(
+                                        Json.object(
+                                                ProfileRegistry.patchMetadata(profile)
+                                                        .get("api30-settings-voice-clone.json")),
+                                        "constants"),
+                                30,
+                                input,
+                                expected);
             }
 
             if (name.equals("QGMedia") && entry.equals("AndroidManifest.xml")) {
@@ -550,7 +559,15 @@ public final class Api30PreparedApkTest {
         }
 
         if (name.equals("SystemUI") && entry.equals("classes.dex")) {
-            return SystemUiRouting.apply(profile.id(), 30, input, expected);
+            return SystemUiRouting.apply(
+                    Json.obj(
+                            Json.object(
+                                    ProfileRegistry.patchMetadata(profile)
+                                            .get("api30-systemui-routing.json")),
+                            "constants"),
+                    30,
+                    input,
+                    expected);
         }
 
         if (name.equals("AudioPolicy") && entry.equals("classes.dex")) {
@@ -603,11 +620,15 @@ public final class Api30PreparedApkTest {
         }
 
         if (name.equals("Hiboard") && entry.equals("classes.dex")) {
+            var constants =
+                    Json.obj(
+                            Json.object(
+                                    ProfileRegistry.patchMetadata(profile)
+                                            .get("api30-hiboard-startup.json")),
+                            "constants");
+
             return HiboardStartupGuard.apply(
-                    profile.id(),
-                    30,
-                    input,
-                    HiboardRouting.apply(profile.id(), 30, input, expected));
+                    constants, 30, input, HiboardRouting.apply(constants, 30, input, expected));
         }
 
         if (name.equals("QGMedia") && entry.equals("classes2.dex")) {
@@ -620,7 +641,7 @@ public final class Api30PreparedApkTest {
         }
 
         if (name.equals("Navi") && entry.equals("classes3.dex")) {
-            return NaviVersionGuard.apply(profile.id(), 30, "arm64-v8a", input, expected);
+            return NaviVersionGuard.apply(TestProfiles.SYNTHETIC, 30, "arm64-v8a", input, expected);
         }
 
         return rewrittenServiceEntry(name, entry, profile, input, expected);
