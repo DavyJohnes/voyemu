@@ -1360,12 +1360,8 @@ void bind_owner_inputs(const std::filesystem::path &root, std::string_view profi
 
 std::string profile_display_name(const std::filesystem::path &root, std::string_view profile) {
     try {
-        const auto title = load_profile(root, profile).value("title", std::string{});
-
-        if (!title.empty()) {
-            return title;
-        }
-    } catch (const std::exception &) { /* Ignored: a profile that cannot be read is named by id. */
+        return profile_title(load_profile(root, profile));
+    } catch (const std::exception &) { /* Ignored: a profile without a title is named by id. */
     }
 
     return std::string(profile);
