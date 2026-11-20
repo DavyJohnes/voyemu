@@ -5201,6 +5201,7 @@ int main(int argc, char **argv) {
                 declared["id"] = "synthetic-nxp";
                 declared["platform"] = "qinggan09";
                 declared["board"] = "nxp";
+                declared["title"] = "Synthetic NXP 1.0";
                 const auto launch = portable_android_launch(
                         app, PortableRuntimeHostBindings{}, seed30 / "android", clean30,
                         bound30 / "config-template.ini", "synthetic-nxp", Json::array(), declared);
@@ -5208,6 +5209,9 @@ int main(int argc, char **argv) {
                               launch.at("presentation_adapter").at("family") == "synthetic-nxp" &&
                               launch.at("platform") == "qinggan09" && launch.at("board") == "nxp",
                       "declared NXP platform and board did not select the NXP presentation");
+                check(launch.at("profile_title") == "Synthetic NXP 1.0" &&
+                              nxp_launch.at("profile_title") == nxp_definition.at("id"),
+                      "the window does not name the machine by the title of its profile");
             }
             {
                 auto wheel_definition = nxp_definition;

@@ -1438,11 +1438,8 @@ Json portable_android_launch(const std::filesystem::path &root,
                 diagnostic_native.at("launcher_sha256").get<std::string>());
     }
 
-    // The window names a local copy by its title and a published profile by its id, which the media
-    // view also matches; the title of a published profile is for text.
-    const auto launch_id = definition.value("id", std::string(verified_profile));
-    android["profile_title"] =
-            definition.value("local", false) ? definition.value("title", launch_id) : launch_id;
+    // The window names the machine by the title of its profile, such as "Voyemu Free 7.3.1".
+    android["profile_title"] = portable_launch_title(definition, verified_profile);
     android["api"] = definition.contains("android") ? native_base_api(definition.at("android"))
                                                     : 28;
 

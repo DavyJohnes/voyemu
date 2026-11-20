@@ -413,8 +413,11 @@ std::filesystem::path bind_machine_configuration(const std::filesystem::path &ro
             return false;
         }
 
-        // A launch written before it carried the platform of its profile is written again.
-        if (launch.value("platform", Json{}) != retained_definition.value("platform", Json{}) ||
+        // A launch written before it carried the title and platform of its profile is written
+        // again.
+        if (launch.value("profile_title", std::string{}) !=
+                    portable_launch_title(retained_definition, profile) ||
+            launch.value("platform", Json{}) != retained_definition.value("platform", Json{}) ||
             launch.value("board", Json{}) != retained_definition.value("board", Json{})) {
             return false;
         }
