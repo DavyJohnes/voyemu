@@ -36,7 +36,7 @@ int main(int argc, char **argv) try {
         return supervisor(argv[2], false);
     }
 
-    const auto root = std::filesystem::temp_directory_path() /
+    const auto root = std::filesystem::canonical(std::filesystem::temp_directory_path()) /
                       ("voyemu-supervisor-stop-" + random_token());
     ensure_private_directory(root);
     struct Cleanup {
