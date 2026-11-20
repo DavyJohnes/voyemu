@@ -1,5 +1,6 @@
 #include "ext4_image.hpp"
 #include "check.hpp"
+#include "disk_space.hpp"
 #include "error.hpp"
 #include "lp_image.hpp"
 #include "process.hpp"
@@ -482,10 +483,7 @@ Json extract_pinned_ext4_files(const std::filesystem::path &image, const std::st
         ancestor = ancestor.parent_path();
     }
 
-    if (reserve > std::numeric_limits<std::uint64_t>::max() - total ||
-        std::filesystem::space(ancestor).available < reserve + total) {
-        bad("disk reserve unavailable");
-    }
+    require_disk_space("EXT4_IMAGE", ancestor, total, reserve);
 
     ensure_private_directory(destination.parent_path());
 

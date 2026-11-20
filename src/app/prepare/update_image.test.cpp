@@ -1,8 +1,10 @@
 #include "update_image.hpp"
+#include "cli_messages.hpp"
 #include "os/platform.hpp"
 #include "process.hpp"
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <vector>
 #ifdef _WIN32
 #include <windows.h>
@@ -220,6 +222,20 @@ int main(int argc, char **argv) {
                                     root / "android-positive", 0);
         check(sha256_file(root / "android-positive/la_system.img") == sha256_bytes(source + source),
               "Android shares ordered segmented decoder");
+        // A volume without the reserve fails with the disk space error before any output.
+        bool short_space = false;
+        try {
+            import_android_update_image(archive, android_pin, android, library, codec_pin,
+                                        root / "android-space",
+                                        std::numeric_limits<std::uint64_t>::max() / 4);
+        } catch (const cli::LocalizedError &error) {
+            short_space =
+                    std::string_view(error.what())
+                            .starts_with("UPDATE_IMAGE_DISK_PREFLIGHT: not enough disk space: ");
+        }
+
+        check(short_space && !std::filesystem::exists(root / "android-space"),
+              "a volume without the reserve names the disk space");
 
         for (unsigned fault = 0; fault < 4; ++fault) {
             auto wrong = android;

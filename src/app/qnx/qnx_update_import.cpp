@@ -1,5 +1,6 @@
 #include "qnx_update_import.hpp"
 #include "check.hpp"
+#include "disk_space.hpp"
 #include "error.hpp"
 #include "interruption.hpp"
 #include "ordinary_path.hpp"
@@ -34,7 +35,7 @@ std::string basename(std::string_view value) {
 }
 
 void space(const std::filesystem::path &directory, std::uint64_t reserve) {
-    need(std::filesystem::space(directory).available >= reserve, "QNX_IMPORT_DISK_RESERVE");
+    require_disk_space("QNX_IMPORT_DISK_RESERVE", directory, 0, reserve);
 }
 
 #ifndef __APPLE__
@@ -254,8 +255,8 @@ Json import_qnx_update(const std::filesystem::path &file, std::string_view archi
         needed += packed;
     }
 
-    need(std::filesystem::space(output.parent_path()).available >= needed,
-         "QNX_IMPORT_DISK_PREFLIGHT");
+    require_disk_space("QNX_IMPORT_DISK_PREFLIGHT", output.parent_path(), needed - reserve,
+                       reserve);
     need(std::filesystem::create_directory(output), "QNX_IMPORT_CREATE");
     ensure_private_directory(output);
     const auto stage = output / (".stage-" + random_token());

@@ -1,5 +1,6 @@
 #include "update_image.hpp"
 #include "check.hpp"
+#include "disk_space.hpp"
 #include "error.hpp"
 #include "ordinary_path.hpp"
 #include "os/fs.hpp"
@@ -28,7 +29,7 @@ std::string basename(std::string_view value) {
 }
 
 void space(const std::filesystem::path &directory, std::uint64_t reserve) {
-    need(std::filesystem::space(directory).available >= reserve, "UPDATE_IMAGE_DISK_RESERVE");
+    require_disk_space("UPDATE_IMAGE_DISK_RESERVE", directory, 0, reserve);
 }
 } // namespace
 
@@ -150,8 +151,8 @@ Json import_android_update_image(const std::filesystem::path &file, std::string_
         needed += packed;
     }
 
-    need(std::filesystem::space(output.parent_path()).available >= needed,
-         "UPDATE_IMAGE_DISK_PREFLIGHT");
+    require_disk_space("UPDATE_IMAGE_DISK_PREFLIGHT", output.parent_path(), needed - reserve,
+                       reserve);
     need(std::filesystem::create_directory(output), "UPDATE_IMAGE_CREATE");
     ensure_private_directory(output);
     const auto stage = output / (".stage-" + random_token());

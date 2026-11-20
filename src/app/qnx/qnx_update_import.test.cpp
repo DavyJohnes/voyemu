@@ -1,8 +1,10 @@
 #include "qnx_update_import.hpp"
+#include "cli_messages.hpp"
 #include "process.hpp"
 #include "qnx_qinggan11.hpp"
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <vector>
 #ifdef _WIN32
 #include <windows.h>
@@ -231,6 +233,19 @@ int main(int argc, char **argv) {
             run(wrong, "bad-path");
         });
         check(!std::filesystem::exists(root / "bad-path"), "undeclared path before writes");
+        // A volume without the reserve fails with the disk space error before any output.
+        bool short_space = false;
+        try {
+            import_qnx_update(archive, archive_pin, definitions, library, codec_pin, root / "space",
+                              std::numeric_limits<std::uint64_t>::max() / 4);
+        } catch (const cli::LocalizedError &error) {
+            short_space =
+                    std::string_view(error.what())
+                            .starts_with("QNX_IMPORT_DISK_PREFLIGHT: not enough disk space: ");
+        }
+
+        check(short_space && !std::filesystem::exists(root / "space"),
+              "a volume without the reserve names the disk space");
 #ifdef _WIN32
         const auto handle =
                 LoadLibraryExW(library.c_str(), nullptr,
