@@ -4,7 +4,6 @@
  "title": "Free NXP RC45",
  "platform": "qinggan09",
  "board": "nxp",
- "name": "Free 09 Chinese NXP i.MX8QM BV.00.20221230140018.rc45",
  "status": "ready",
  "referenceProfile": "free-09-chinese-20260106-6.0.3",
  "device": {

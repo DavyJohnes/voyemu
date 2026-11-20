@@ -4,7 +4,6 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -258,40 +257,6 @@ final class ProfileRegistry {
                 profile != null, "PROFILE_MISSING", "Profile is not in this release: " + id, 2);
 
         return profile;
-    }
-
-    Profile selected(Arguments args, Storage storage, boolean requirePrepared) throws Exception {
-        if (args.profile() != null) {
-            return get(args.profile());
-        }
-
-        Path configuration = Storage.confined(storage.config(), "config.json");
-
-        if (Files.isRegularFile(configuration)) {
-            Map<String, Object> config = Json.object(Json.parse(Files.readString(configuration)));
-
-            if (config.containsKey("defaultProfile")) {
-                return get(Json.str(config, "defaultProfile"));
-            }
-        }
-
-        List<Profile> available = new ArrayList<>();
-
-        for (Profile profile : list()) {
-            if (!requirePrepared
-                    || Files.isRegularFile(
-                            Storage.confined(storage.machine(profile.id()), "manifest.json"))) {
-                available.add(profile);
-            }
-        }
-
-        Failure.require(
-                available.size() == 1,
-                "ARGUMENT_INVALID",
-                "Specify a profile ID: voyemu " + args.command() + " <profile>",
-                2);
-
-        return available.get(0);
     }
 
     Path sourceDirectory(Profile profile) throws Exception {
