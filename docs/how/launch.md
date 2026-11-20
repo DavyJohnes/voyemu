@@ -43,7 +43,7 @@ Different machines run at the same time, each in its own session. Every start cl
 | `--resume` | Restores the saved vehicle scenario instead of default vehicle values |
 | `--seconds 1..3600` | Bounds QNX execution time |
 | `--provider FILE` | Registers a provider manifest, up to four; the path follows the [path rule](preparation.md) |
-| `--verbose` | Prints the session details after a successful `start` |
+| `--verbose` | Prints the session details after a successful `start` and the log records on `stderr`, see [logs](logs.md) |
 
 ## Output language
 
@@ -55,7 +55,7 @@ When a session stops and the disk has room, the supervisor saves the Android RAM
 
 ## Failures
 
-A failed command prints `Voyemu:` followed by `CODE: message` on `stderr` and exits with code `4`; see [errors](errors.md). Session logs stay in the session directory, see [logs](logs.md).
+A failed command prints `Voyemu:` followed by `CODE: message` on `stderr` and exits with code `4`; see [errors](errors.md). `start` and `restart` then also print the path of their [command log](logs.md#command-log). Session logs stay in the session directory, see [logs](logs.md).
 
 ## QNX frames over gRPC
 

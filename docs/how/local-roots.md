@@ -19,7 +19,7 @@ Everything Voyemu keeps locally, apart from machines, lives in four roots under 
 
 ## .local/build
 
-Builds of Voyemu itself, preparation stages and temporary files go to `.local/build/`. The default build tree `.local/build/native/` places the launcher in the installation root. Automation keeps registered operations and their receipts in `.local/build/automation/`, so `operation.get` works only while they exist.
+Builds of Voyemu itself, preparation stages and temporary files go to `.local/build/`. The default build tree `.local/build/native/` places the launcher in the installation root. Automation keeps registered operations and their receipts in `.local/build/automation/`, so `operation.get` works only while they exist. Commands keep their newest 20 [command logs](logs.md#command-log) in `.local/build/logs/`.
 
 A successful `build` releases the outputs of its own preparation once the machine is published: the candidate Android disks, the artifacts it prepared and the QNX images it built and accepted. Receipts, logs, frames, signing keys and source patches of that preparation stay, as do shared inputs, outputs of a failed preparation and QNX inputs passed with `--reuse-qnx`. A file that no longer matches its receipt and a directory another preparation reads stay too; the `build_outputs` field of the result and an error-level log entry list each kept output.
 

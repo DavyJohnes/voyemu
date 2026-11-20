@@ -22,6 +22,8 @@ On stderr each command names every download with its size and source host, shows
 
 `build` checks the cold boot of each prepared guest without a time limit: it waits for the first cluster frame and for the Android boot, reports the elapsed time once a minute and stops with an error when the guest process exits.
 
+The records of each command, including those of the cold boot check, go to its [command log](logs.md#command-log), whose path a failed or interrupted command prints; `--verbose` also shows them on stderr.
+
 While the `prebuilt` pin of the QNX engine is pending, `deps` builds the engine from its recipe, see [the qnx-host workflow](../dev/ci.md#the-qnx-host-workflow): on macOS with Clang and `/usr/bin/python3` 3.9 or newer from the Command Line Tools, which `xcode-select --install` installs, and the Ninja of the SDK CMake package; on Linux with the pinned Zig, `/usr/bin/python3` 3.9 or newer, `/usr/bin/make` and the Ninja of the SDK CMake package. On Windows `deps` installs the engine only from its published asset or a verified ready-to-run engine of its local cache; otherwise it reports the engine unavailable and machines run without the cluster. An installed engine of the same recipe is reused. On Windows `build` formats the cache image of a machine with `mke2fs.exe` and `mke2fs.conf` of Platform Tools, and the prepared machine carries the formatted `cache.img`.
 
 `--jdk PATH` runs preparation on a JDK 25 or newer instead of the Java runtime and can compile guest Java code from the profile. In a source checkout it also selects the developer recipe for the helper; the option is meant for development.

@@ -17,14 +17,20 @@ Every host record has the same fields:
 | `message` | The event |
 | `fields` | Structured values of the event |
 
-Records go to `stderr`. Ordinary commands print them as text: the component, the message and the simple fields as `key=value`; `voyemu test` and the supervisor print one JSON record per line, so `stdout` stays reserved for the result.
+Ordinary commands print no records: their console shows only steps, progress, the result and errors. `voyemu test` and the supervisor print one JSON record per line on `stderr`, so `stdout` stays reserved for the result.
+
+## Command log
+
+`deps`, `fetch`, `build`, `start` and `restart` write their records to a new file `.local/build/logs/<command>-<YYYYMMDD-HHMMSS>.log` with the local time of the start, one JSON record per line and debug records included; see [local roots](local-roots.md). The newest 20 log files stay, a new command removes older ones. A failed or interrupted command prints the path of its log on its last line, a successful one does not. An error without a localized text prints only its code and the path of the log, which keeps the full English message, the text to attach to a problem report.
+
+`--verbose` on these commands also prints the `info` and `error` records on `stderr` as text: the component, the message and the simple fields as `key=value`.
 
 ## Debug level
 
-Debug records are off by default. `VOYEMU_LOG_LEVEL=debug` in the environment turns them on.
+Debug records are always in the command log. On `stderr` they are off by default; `VOYEMU_LOG_LEVEL=debug` in the environment turns them on for `--verbose`, `voyemu test` and the supervisor.
 
 ```sh
-VOYEMU_LOG_LEVEL=debug ./voyemu start machines/free-09-chinese-20260106-6.0.3
+VOYEMU_LOG_LEVEL=debug ./voyemu start machines/free-09-chinese-20260106-6.0.3 --verbose
 ```
 
 ## Session log files
