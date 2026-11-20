@@ -73,6 +73,16 @@ struct PrivateStateSecurity {
         }
     }
 
+    // Gives an object whose creating call takes no descriptor, such as CreateSymbolicLinkW, the
+    // same owner and DACL; file needs WRITE_OWNER and WRITE_DAC access.
+    bool assign(HANDLE file) const {
+        return SetSecurityInfo(file, SE_FILE_OBJECT,
+                               OWNER_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION |
+                                       PROTECTED_DACL_SECURITY_INFORMATION,
+                               reinterpret_cast<const TOKEN_USER *>(user.data())->User.Sid, nullptr,
+                               acl, nullptr) == ERROR_SUCCESS;
+    }
+
     // Existing Windows policy trusts the current user, SYSTEM and Administrators.
     // Artifacts may be readable by other principals, but never writable by them.
     bool accepts(HANDLE file, bool private_access) const {

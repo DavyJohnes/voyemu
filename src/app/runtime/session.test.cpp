@@ -2244,17 +2244,9 @@ static void cleanup_guards() {
                             {"ram_absent_before_owned_qemu", true},
                             {"qnx_pid", 99}});
 
+        // The session precreates the backing on Windows with the explicit user owner.
         if (ram) {
-            auto path = directory / "qnx-ram.bin";
-            {
-                std::ofstream file(path, std::ios::binary);
-                file << "owned-test";
-            }
-            os::resize_file(path, 8ULL * 1024 * 1024 * 1024);
-
-            if (std::filesystem::file_size(path) != 8ULL * 1024 * 1024 * 1024) {
-                throw std::runtime_error("sparse test extent differs from eight GiB");
-            }
+            create_qnx_ram(directory / "qnx-ram.bin", 8ULL << 30);
         }
 
         return directory;
@@ -2317,9 +2309,24 @@ static void cleanup_guards() {
     std::filesystem::remove(hard / "qnx-ram.bin");
 #endif
 #ifdef _WIN32
+    // Under an elevated token a backing that only inherits the token default owner stays foreign,
+    // while the explicit user owner of the session backing passes.
     auto previous_owner = elevated_default_owner();
+    auto defaulted = make(false);
+    { std::ofstream(defaulted / "qnx-ram.bin", std::ios::binary) << "defaulted"; }
+    os::resize_file(defaulted / "qnx-ram.bin", 8ULL << 30);
     auto valid = make();
     restore_default_owner(previous_owner);
+
+    if (previous_owner.empty()) {
+        std::cout << "SKIP elevated default owner: token keeps its default owner\n";
+    } else {
+        rejects([&] {
+            finalize_owned_qnx_session(defaulted, defaulted.filename().string(),
+                                       defaulted / "qnx-ram.bin", terminal);
+        });
+        assert(std::filesystem::exists(defaulted / "qnx-ram.bin"));
+    }
 #else
     auto valid = make();
 #endif

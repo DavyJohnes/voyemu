@@ -220,6 +220,25 @@ int main(int argc, char **argv) {
                   "actual creator/readback predicate");
         }
 
+        {
+            // An object created with the token default owner and a foreign writable DACL becomes
+            // private once assigned, as a symbolic link does after CreateSymbolicLinkW.
+            auto descriptor = security.descriptor;
+            check(SetSecurityDescriptorOwner(&descriptor, nullptr, FALSE) &&
+                          SetSecurityDescriptorDacl(&descriptor, TRUE, writable.value, FALSE),
+                  "defaulted fixture descriptor");
+            SECURITY_ATTRIBUTES attributes{sizeof attributes, &descriptor, FALSE};
+            HANDLE file = CreateFileW((root / "assigned").c_str(),
+                                      READ_CONTROL | WRITE_OWNER | WRITE_DAC, 0, &attributes,
+                                      CREATE_NEW, FILE_ATTRIBUTE_NORMAL, nullptr);
+            check(file != INVALID_HANDLE_VALUE, "defaulted fixture creation");
+            const bool before = security.accepts(file, false);
+            const bool assigned = security.assign(file);
+            const bool after = security.accepts(file, true);
+            CloseHandle(file);
+            check(!before && assigned && after, "assigned owner and private DACL accepted");
+        }
+
         std::cout
                 << "PASS synthetic owner/nullDACL/privileged SID and real creator/Everyone read-write DACL checks\n";
 

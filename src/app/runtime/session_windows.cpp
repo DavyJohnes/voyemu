@@ -1,5 +1,6 @@
 #include "session_windows.hpp"
 #include "error.hpp"
+#include "private_state_security.hpp"
 
 // The parts of Session that differ on Windows, where Android runs through framed transactions of
 // the embedded ADB and QNX through loopback TCP; session_posix.cpp holds the macOS and Linux parts.
@@ -8,8 +9,9 @@ using namespace session_detail;
 namespace session_detail {
 const std::array<const char *, 2> angle_libraries{"libEGL.dll", "libGLESv2.dll"};
 
-// Files that this process and its children such as QEMU create are owned by the default owner of
-// the token, which is Administrators rather than the user under an elevated Windows Server token.
+// Voyemu creates every file it later claims with the token user as an explicit owner through
+// detail::PrivateStateSecurity, so the token default owner, Administrators under an elevated
+// token, never qualifies.
 bool owned_windows_file(HANDLE file) {
     HANDLE token = nullptr;
 
@@ -17,13 +19,10 @@ bool owned_windows_file(HANDLE file) {
         return false;
     }
 
-    DWORD user_size = 0, default_owner_size = 0;
-    GetTokenInformation(token, TokenUser, nullptr, 0, &user_size);
-    GetTokenInformation(token, TokenOwner, nullptr, 0, &default_owner_size);
-    std::vector<std::byte> user(user_size), default_owner(default_owner_size);
-    bool valid = GetTokenInformation(token, TokenUser, user.data(), user_size, &user_size) != 0 &&
-                 GetTokenInformation(token, TokenOwner, default_owner.data(), default_owner_size,
-                                     &default_owner_size) != 0;
+    DWORD size = 0;
+    GetTokenInformation(token, TokenUser, nullptr, 0, &size);
+    std::vector<std::byte> bytes(size);
+    bool valid = GetTokenInformation(token, TokenUser, bytes.data(), size, &size) != 0;
     CloseHandle(token);
 
     if (!valid) {
@@ -35,8 +34,7 @@ bool owned_windows_file(HANDLE file) {
     DWORD result = GetSecurityInfo(file, SE_FILE_OBJECT, OWNER_SECURITY_INFORMATION, &owner,
                                    nullptr, nullptr, nullptr, &descriptor);
     bool same = result == ERROR_SUCCESS &&
-                (EqualSid(owner, reinterpret_cast<TOKEN_USER *>(user.data())->User.Sid) ||
-                 EqualSid(owner, reinterpret_cast<TOKEN_OWNER *>(default_owner.data())->Owner));
+                EqualSid(owner, reinterpret_cast<TOKEN_USER *>(bytes.data())->User.Sid);
 
     if (descriptor) {
         LocalFree(descriptor);
@@ -400,9 +398,29 @@ void link_overlay(const std::filesystem::path &disk, const std::filesystem::path
 
     std::filesystem::create_hard_link(disk, alias, link_error);
 
-    if (link_error && !CreateSymbolicLinkW(alias.c_str(), disk.c_str(), 0x2)) {
+    if (!link_error) {
+        return;
+    }
+
+    if (!CreateSymbolicLinkW(alias.c_str(), disk.c_str(), 0x2)) {
         throw VoyemuError("ANDROID_AVD_STORAGE",
                           "persistent overlay link requires same volume or Windows Developer Mode");
+    }
+
+    // owned_symlink later claims the link, which CreateSymbolicLinkW gives the token default owner.
+    const HANDLE handle = CreateFileW(
+            alias.c_str(), WRITE_OWNER | WRITE_DAC, FILE_SHARE_READ | FILE_SHARE_DELETE, nullptr,
+            OPEN_EXISTING, FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS, nullptr);
+    const bool owned = handle != INVALID_HANDLE_VALUE &&
+                       detail::PrivateStateSecurity().assign(handle);
+
+    if (handle != INVALID_HANDLE_VALUE) {
+        CloseHandle(handle);
+    }
+
+    if (!owned) {
+        DeleteFileW(alias.c_str());
+        throw VoyemuError("ANDROID_AVD_STORAGE", "persistent overlay link owner unavailable");
     }
 }
 
