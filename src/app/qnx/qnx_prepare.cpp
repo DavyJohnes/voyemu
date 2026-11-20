@@ -227,6 +227,43 @@ std::string qnx_profile_adapter(const Json &definition) {
     return adapter.get<std::string>();
 }
 
+bool qnx_kanzi_gauge_observer(const Json &definition) {
+    const auto observer = definition.contains("gauge_observer") ? definition.at("gauge_observer")
+                                                                : Json();
+
+    need(observer.is_null() || observer == "kanzi", "QNX_PREPARE_GAUGE_OBSERVER");
+
+    return observer == "kanzi";
+}
+
+QnxDonorInput qnx_donor_input(const std::filesystem::path &root, const Json &definition,
+                              std::string_view file) {
+    const auto inputs = definition.value("donor_inputs", Json::array());
+    const Json *match = nullptr;
+
+    need(inputs.is_array(), "QNX_DONOR_INPUT");
+
+    for (const auto &input : inputs) {
+        need(input.is_object() && input.size() == 3 && input.contains("profile") &&
+                     input.at("profile").is_string() && input.contains("file") &&
+                     input.at("file").is_string() && input.contains("sha256") &&
+                     input.at("sha256").is_string(),
+             "QNX_DONOR_INPUT");
+
+        if (input.at("file").get<std::string>() == file) {
+            need(match == nullptr, "QNX_DONOR_INPUT");
+            match = &input;
+        }
+    }
+
+    need(match != nullptr, "QNX_DONOR_INPUT_MISSING");
+    const auto profile = match->at("profile").get<std::string>(),
+               pin = match->at("sha256").get<std::string>();
+    need(valid_profile_name(profile) && sha256_text(pin), "QNX_DONOR_INPUT");
+
+    return {qnx_originals_directory(root, profile) / std::string(file), pin};
+}
+
 Json prepare_qnx_images(const std::filesystem::path &root, std::string_view profile,
                         const std::filesystem::path &output, bool offline) {
     ordinary(root);
@@ -253,11 +290,8 @@ Json prepare_qnx_images(const std::filesystem::path &root, std::string_view prof
         }
     }
 
-    if (profile == "passion-11-russian-20260403-2.1.4.80" && adapter == "sa8155-passion-21480") {
-        return prepare_qnx_passion_developer_images(
-                root,
-                root / ".local/profiles/free-09-chinese-20260106-6.0.3/qnx/ifs2_recovery_la.img",
-                output);
+    if (adapter == "sa8155-passion-21480") {
+        return prepare_qnx_passion_developer_images(root, profile, output);
     }
 
     if (adapter == "sa8155-qinggan11-731" || adapter == "sa8155-qinggan11-611") {
@@ -382,9 +416,7 @@ Json prepare_qnx_images(const std::filesystem::path &root, std::string_view prof
     auto runtime = prepare_qnx_guest_shell(qnx_qinggan09_runtime(
             project_file_bytes(root, "src/guest/qnx/qnx-runtime.sh", guest_script_bytes),
             project_file_bytes(root, "src/guest/qnx/persistent-runtime.sh", guest_script_bytes),
-            profile == "free-09-chinese-20260106-6.0.3" &&
-                    inputs.at("system_la.img").at("sha256") ==
-                            "ed32a05382848e0fb63cb33cdf0de55ec3d088f37aad21637b24c12e22a7a6bf"));
+            qnx_kanzi_gauge_observer(config)));
     need(runtime.starts_with("#!/proc/boot/bin/ksh\n"), "QNX_PREPARE_RUNTIME");
     const std::string old_observer =
                               "2e13e9b8299f882414400969309c501c639314a92f5d0e603806e0f13d37426c",
@@ -555,11 +587,16 @@ Json prepare_qnx_qinggan11_images(const std::filesystem::path &root, std::string
     const auto config = read_private_json(config_file, 128 * 1024);
     const auto family = runtime_profile_reference(read_private_json(profile_file, 1 << 20),
                                                   profile);
-    const bool older = family == "free-11-chinese-20250710-6.11.1" && profile == family;
-    need(older || family == "free-11-chinese-20260731-7.3.1", "QNX_QINGGAN11_DEVELOPER_IDENTITY");
+    const auto referenced_config = root / "profiles" / family / "profile-qnx.json";
+    // A local copy uses the QNX of its reference profile only when both declare the same QNX.
+    need(valid_profile_name(family) &&
+                 (family == profile ||
+                  (std::filesystem::is_regular_file(referenced_config) &&
+                   read_private_json(referenced_config, 128 * 1024) == config)),
+         "QNX_QINGGAN11_DEVELOPER_IDENTITY");
+    const bool older = qnx_profile_adapter(config) == "sa8155-qinggan11-611";
     need(config.at("schema") == 1 &&
-                 (older ? (config.at("hardware_adapter") == "sa8155-qinggan11-611" &&
-                           qnx_qinggan11_611_originals_match(config.at("originals")))
+                 (older ? qnx_qinggan11_611_originals_match(config.at("originals"))
                         : (config.at("hardware_adapter") == "sa8155-qinggan11-731" &&
                            qnx_qinggan11_originals_match(config.at("originals")))),
          "QNX_QINGGAN11_DEVELOPER_ADAPTER");
@@ -657,8 +694,10 @@ Json prepare_qnx_qinggan11_images(const std::filesystem::path &root, std::string
          "QNX_QINGGAN11_DEVELOPER_PAYLOAD_EXTENT");
     auto padded = observer;
     padded.resize(observer_extent, 0);
-    runtime = prepare_qnx_guest_shell(qnx_kanzi_gauge_runtime(prepare_qnx_qinggan11_runtime(
-            qnx_native_mcu_async_runtime(runtime), sha256_bytes(padded))));
+    runtime = prepare_qnx_qinggan11_runtime(qnx_native_mcu_async_runtime(runtime),
+                                            sha256_bytes(padded));
+    runtime = prepare_qnx_guest_shell(
+            qnx_kanzi_gauge_observer(config) ? qnx_kanzi_gauge_runtime(runtime) : runtime);
     auto display = older ? prepare_qnx_qinggan11_611_display_config(original_display, screen_config)
                          : prepare_qnx_qinggan11_display_config(original_display, screen_config);
     auto replace_display = [&](std::string_view name, std::string_view bytes,
@@ -812,25 +851,25 @@ Json prepare_qnx_qinggan11_developer_images(const std::filesystem::path &root,
 }
 
 Json prepare_qnx_passion_developer_images(const std::filesystem::path &root,
-                                          const std::filesystem::path &supplemental_recovery,
+                                          std::string_view profile,
                                           const std::filesystem::path &output) {
-    constexpr std::string_view
-            profile = "passion-11-russian-20260403-2.1.4.80",
-            recovery_pin = "d7dd2e04b36d760dd8e95a939e194530e66b24b8ffe77a5f7290684145e76930";
-
     ordinary(root);
     ordinary(output);
-    ordinary(supplemental_recovery);
-    need(std::filesystem::canonical(root) == root &&
+    need(std::filesystem::canonical(root) == root && valid_profile_name(profile) &&
                  output.parent_path() == root / ".local/build" && !std::filesystem::exists(output),
          "QNX_PASSION_DEVELOPER_PATH");
-    const auto profile_file = root / "profiles" / profile / "profile.json",
-               config_file = root / "profiles" / profile / "profile-qnx.json";
+    const auto profile_file = root / "profiles" / std::string(profile) / "profile.json",
+               config_file = root / "profiles" / std::string(profile) / "profile-qnx.json";
     const auto profile_pin = sha256_file(profile_file), config_pin = sha256_file(config_file);
     const auto config = read_private_json(config_file, 128 * 1024);
     need(config.at("schema") == 1 && config.at("status") == "incomplete" &&
                  qnx_profile_adapter(config) == "sa8155-passion-21480",
          "QNX_PASSION_DEVELOPER_ADAPTER");
+    // The supplemental recovery is a qinggan09 original that the profile declares as a donor input.
+    const auto donor = qnx_donor_input(root, config, "ifs2_recovery_la.img");
+    const auto &supplemental_recovery = donor.file;
+    const auto &recovery_pin = donor.sha256;
+    ordinary(supplemental_recovery);
     struct Original {
         const char *name;
         std::uint64_t bytes;
@@ -852,7 +891,7 @@ Json prepare_qnx_passion_developer_images(const std::filesystem::path &root,
     std::map<std::string, Json> epochs;
 
     for (const auto &item : originals) {
-        const auto file = root / ".local/profiles" / profile / "qnx" / item.name;
+        const auto file = root / ".local/profiles" / std::string(profile) / "qnx" / item.name;
         ordinary(file);
         need(config.at("originals").at(item.name).at("file") == item.name &&
                      config.at("originals").at(item.name).at("sha256") == item.sha &&
@@ -868,7 +907,7 @@ Json prepare_qnx_passion_developer_images(const std::filesystem::path &root,
     }
 
     need(std::filesystem::is_regular_file(supplemental_recovery) &&
-                 std::filesystem::file_size(supplemental_recovery) == 268435456 &&
+                 std::filesystem::file_size(supplemental_recovery) <= 256 * 1024 * 1024 &&
                  sha256_file(supplemental_recovery) == recovery_pin,
          "QNX_PASSION_SUPPLEMENTAL_SHA");
     const auto recovery_epoch = cache_file_identity(supplemental_recovery);

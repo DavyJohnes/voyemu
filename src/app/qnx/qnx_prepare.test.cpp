@@ -4,7 +4,9 @@
 #include "qnx_guest_build.hpp"
 #include "qnx_guest_shell.hpp"
 #include "qnx_imagefs.hpp"
+#include "qnx_qinggan11.hpp"
 #include <fstream>
+#include <functional>
 #include <iostream>
 using namespace voyemu;
 
@@ -33,7 +35,7 @@ int main(int argc, char **argv) {
         {
             // The incomplete Passion definition publishes its adapter; the standard preparation
             // reaches its guest modules.
-            const std::string passion = "passion-11-russian-20260403-2.1.4.80";
+            const std::string passion = "test-passion";
             const Json incomplete = {{"schema", 1},
                                      {"status", "incomplete"},
                                      {"hardware_adapter", "sa8155-passion-21480"}};
@@ -82,10 +84,72 @@ int main(int argc, char **argv) {
             }
         }
 
+        {
+            // profile-qnx.json data selects the Kanzi Gauge observer and resolves donor inputs.
+            if (!qnx_kanzi_gauge_observer(Json{{"gauge_observer", "kanzi"}}) ||
+                qnx_kanzi_gauge_observer(Json::object())) {
+                throw std::runtime_error("declared Kanzi Gauge observer differs");
+            }
+
+            auto code_of = [](const std::function<void()> &action) {
+                try {
+                    action();
+                } catch (const std::runtime_error &error) {
+                    return std::string(message_code(error.what()));
+                }
+
+                return std::string();
+            };
+
+            if (code_of([] {
+                    (void)qnx_kanzi_gauge_observer(Json{{"gauge_observer", "other"}});
+                }) != "QNX_PREPARE_GAUGE_OBSERVER") {
+                throw std::runtime_error("unknown Gauge observer accepted");
+            }
+
+            const auto scratch = std::filesystem::temp_directory_path() /
+                                 ("qnx-donor-input-" + random_token());
+            std::filesystem::create_directories(scratch / ".local/profiles/test-donor/qnx");
+            const auto root = std::filesystem::canonical(scratch);
+            const Json input = {{"profile", "test-donor"},
+                                {"file", "ifs2_recovery_la.img"},
+                                {"sha256", std::string(64, 'a')}};
+            const auto donor = qnx_donor_input(root, Json{{"donor_inputs", Json::array({input})}},
+                                               "ifs2_recovery_la.img");
+            const auto declared =
+                    donor.file == root / ".local/profiles/test-donor/qnx/ifs2_recovery_la.img" &&
+                    donor.sha256 == std::string(64, 'a');
+            auto extra = input, bad_pin = input, bad_profile = input;
+            extra["bytes"] = 1;
+            bad_pin["sha256"] = "x";
+            bad_profile["profile"] = "../test-donor";
+            const std::vector<std::pair<Json, std::string>> refused = {
+                    {Json::object(), "QNX_DONOR_INPUT_MISSING"},
+                    {Json{{"donor_inputs", Json::array({input, input})}}, "QNX_DONOR_INPUT"},
+                    {Json{{"donor_inputs", Json::array({extra})}}, "QNX_DONOR_INPUT"},
+                    {Json{{"donor_inputs", Json::array({bad_pin})}}, "QNX_DONOR_INPUT"},
+                    {Json{{"donor_inputs", Json::array({bad_profile})}}, "QNX_DONOR_INPUT"},
+                    {Json{{"donor_inputs", input}}, "QNX_DONOR_INPUT"}};
+            std::string refusal;
+
+            for (const auto &[definition, expected] : refused) {
+                if (code_of([&] {
+                        (void)qnx_donor_input(root, definition, "ifs2_recovery_la.img");
+                    }) != expected) {
+                    refusal = definition.dump();
+                }
+            }
+
+            std::filesystem::remove_all(root);
+
+            if (!declared || !refusal.empty()) {
+                throw std::runtime_error("donor input resolution differs: " + refusal);
+            }
+        }
+
         if (argc == 5 && std::string_view(argv[1]) == "--developer-passion") {
             const auto root = std::filesystem::canonical(argv[2]);
-            std::cout << prepare_qnx_passion_developer_images(root,
-                                                              std::filesystem::absolute(argv[3]),
+            std::cout << prepare_qnx_passion_developer_images(root, argv[3],
                                                               std::filesystem::absolute(argv[4]))
                                  .dump()
                       << '\n';
@@ -343,10 +407,19 @@ function /bin/sleep { qm_test_steps=$((qm_test_steps+1)); }
             throw std::runtime_error("A9 Kanzi observer must be scoped to Gauge");
         }
 
-        const auto original_ifs = source_root /
-                                  ".local/profiles/free-09-chinese-20260106-6.0.3/qnx/ifs2_la.img";
+        // Every fetched original of a qinggan09 adapter profile has the ssplash slack.
+        for (const auto &entry : std::filesystem::directory_iterator(source_root / "profiles")) {
+            const auto definition = entry.path() / "profile-qnx.json";
+            const auto original_ifs = source_root / ".local/profiles" / entry.path().filename() /
+                                      "qnx/ifs2_la.img";
 
-        if (std::filesystem::is_regular_file(original_ifs)) {
+            if (!std::filesystem::is_regular_file(definition) ||
+                read_private_json(definition, 128 * 1024).value("hardware_adapter", "") !=
+                        "sa8155-qinggan09" ||
+                !std::filesystem::is_regular_file(original_ifs)) {
+                continue;
+            }
+
             const auto display = read_qnx_imagefs_file(source_text(original_ifs),
                                                        "ifs_display.img");
             const auto before = read_qnx_imagefs_file(display, "bin/ssplash");
@@ -409,14 +482,27 @@ function /bin/sleep { qm_test_steps=$((qm_test_steps+1)); }
                     std::filesystem::remove_all(root, ec);
                 }
             } cleanup{fixture_root};
-            const std::string base = "free-11-chinese-20260731-7.3.1",
-                              alias = "qinggan11-test-copy";
+            const std::string base = "test-qinggan11", alias = "qinggan11-test-copy",
+                              other = "test-qinggan09";
             ensure_private_directory(fixture_root / "profiles" / base);
             ensure_private_directory(fixture_root / "profiles" / alias);
+            ensure_private_directory(fixture_root / "profiles" / other);
             ensure_private_directory(fixture_root / ".local/build");
-            const auto config = read_private_json(
-                    test_source_root / "profiles" / base / "profile-qnx.json", 128 * 1024);
+            Json originals = Json::object();
+
+            for (const auto &pin : qnx_qinggan11_originals) {
+                originals[pin.file] = {
+                        {"file", pin.file}, {"bytes", pin.bytes}, {"sha256", pin.sha256}};
+            }
+
+            const Json config = {{"schema", 1},
+                                 {"hardware_adapter", "sa8155-qinggan11-731"},
+                                 {"gauge_observer", "kanzi"},
+                                 {"originals", originals}};
             write_private_json(fixture_root / "profiles" / base / "profile.json", {{"id", base}});
+            write_private_json(fixture_root / "profiles" / other / "profile.json", {{"id", other}});
+            write_private_json(fixture_root / "profiles" / other / "profile-qnx.json",
+                               {{"schema", 1}, {"hardware_adapter", "sa8155-qinggan09"}});
             write_private_json(fixture_root / "profiles" / base / "profile-qnx.json", config);
             write_private_json(fixture_root / "profiles" / alias / "profile-qnx.json", config);
             const Json alias_definition = {
@@ -431,19 +517,21 @@ function /bin/sleep { qm_test_steps=$((qm_test_steps+1)); }
                     matched = std::string(e.what()).starts_with(expected);
 
                     if (!matched) {
-                        throw std::runtime_error("Free A11 alias expected " + expected + ", got " +
+                        throw std::runtime_error("qinggan11 alias expected " + expected + ", got " +
                                                  e.what());
                     }
                 }
 
                 if (!matched || std::filesystem::exists(destination)) {
                     throw std::runtime_error(
-                            "Free A11 alias mutated output or admitted absent inputs");
+                            "qinggan11 alias mutated output or admitted absent inputs");
                 }
             };
             refused(alias_definition, "QNX_ORIGINALS_REFERENCE_MISSING");
             auto bad = alias_definition;
-            bad["capture"]["referenceProfile"] = "free-09-chinese-20260106-6.0.3";
+            bad["capture"]["referenceProfile"] = other;
+            refused(bad, "QNX_QINGGAN11_DEVELOPER_IDENTITY");
+            bad["capture"]["referenceProfile"] = "test-absent";
             refused(bad, "QNX_QINGGAN11_DEVELOPER_IDENTITY");
             bad = alias_definition;
             bad["capture"]["profile"] = "foreign";
@@ -451,7 +539,7 @@ function /bin/sleep { qm_test_steps=$((qm_test_steps+1)); }
             auto changed = config;
             changed["unexpected_alias_drift"] = true;
             write_private_json(fixture_root / "profiles" / alias / "profile-qnx.json", changed);
-            refused(alias_definition, "QNX_ORIGINALS_REFERENCE");
+            refused(alias_definition, "QNX_QINGGAN11_DEVELOPER_IDENTITY");
         }
         bool dev_failed = false;
         try {
@@ -466,7 +554,7 @@ function /bin/sleep { qm_test_steps=$((qm_test_steps+1)); }
 
         bool passion_failed = false;
         try {
-            prepare_qnx_passion_developer_images("relative", {}, {});
+            prepare_qnx_passion_developer_images("relative", "invalid", {});
         } catch (...) {
             passion_failed = true;
         }

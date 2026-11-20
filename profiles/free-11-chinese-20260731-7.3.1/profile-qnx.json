@@ -1,6 +1,7 @@
 {
   "schema": 1,
   "hardware_adapter": "sa8155-qinggan11-731",
+  "gauge_observer": "kanzi",
   "update": {
     "sha256": "a1b0c8e26eec79dcd738c140070ec7f31792dbafd63006d8be113c2bbdec4220",
     "outer_archive_sha256": "15e753ceb31815274c99c94a05a708cbcd223abaa7e9931c31580d85d4f63690",

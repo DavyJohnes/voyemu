@@ -10,7 +10,7 @@ A profile is the authoring directory `profiles/<profile>/`. Its name encodes the
 | --- | --- |
 | `profile.json` | Android system image pin, emulator settings, displays, OEM inputs with SHA-256, recipes, installed files, guest configuration and checks |
 | `capture.json` | Which OEM files an import takes from a physical vehicle |
-| `profile-qnx.json` | OEM QNX images, the hardware adapter and storage settings; only in profiles with a cluster |
+| `profile-qnx.json` | OEM QNX images, the hardware adapter, storage settings and the OEM inputs taken from another profile; only in profiles with a cluster |
 | `components/` | [Components](components.md) of this profile |
 | `patches/` | Recipe steps that `profile.json` refers to |
 | `files/` | Small own files that preparation installs into the guest |

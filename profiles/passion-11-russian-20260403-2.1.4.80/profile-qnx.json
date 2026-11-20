@@ -2,6 +2,13 @@
   "schema": 1,
   "status": "incomplete",
   "hardware_adapter": "sa8155-passion-21480",
+  "donor_inputs": [
+    {
+      "profile": "free-09-chinese-20260106-6.0.3",
+      "file": "ifs2_recovery_la.img",
+      "sha256": "d7dd2e04b36d760dd8e95a939e194530e66b24b8ffe77a5f7290684145e76930"
+    }
+  ],
   "update": {
     "source": "owner-update",
     "container": "zip-stored-tgz",
