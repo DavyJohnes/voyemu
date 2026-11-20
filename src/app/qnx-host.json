@@ -9,7 +9,10 @@
       "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-host-linux-x64-86ea52c3/qnx-host-linux-x64.zip",
       "sha256": "86ea52c3f11b5427f5f97cfccbf02f31e2a5be80773b5672f1f3761e7c4b7e33"
     },
-    "windows_file_backend": null
+    "windows_file_backend": {
+      "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-host-windows-x64-22a1b169/qnx-host-windows-x64.zip",
+      "sha256": "22a1b169c9ff092928d91fae7497f70e6e12eb7d619e7e4fd5012c028870389d"
+    }
   },
   "windows_x64": {
     "version": "11.1.0",
@@ -394,8 +397,8 @@
           "bytes": 706022
         },
         "qemu-system-aarch64.exe": {
-          "sha256": "fc22d57507565348461ce33cd7d37cdbaa488337568d3622236098f3435a972c",
-          "bytes": 30151680
+          "sha256": "8f0e5258baef532e1f779de5d17f3ea930c87d5e9464c0062b2cf07fbb1d8b2f",
+          "bytes": 29986304
         },
         "zlib1.dll": {
           "sha256": "11cd91171765cd65f1c3362e3df67e5f5a618a6b88c8cdec899b802eaf1c7b0d",
@@ -441,7 +444,7 @@
       "qnx_file_backend": {
         "schema": 1,
         "version": "11.1.2",
-        "engine_sha256": "fc22d57507565348461ce33cd7d37cdbaa488337568d3622236098f3435a972c"
+        "engine_sha256": "8f0e5258baef532e1f779de5d17f3ea930c87d5e9464c0062b2cf07fbb1d8b2f"
       }
     },
     "build_shell": {
