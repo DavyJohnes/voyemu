@@ -24,7 +24,7 @@ Json Api::cluster_tree(const Json &request, Clock::time_point deadline) {
 
     if (!kanzi(name)) {
         // A local profile copy reaches the Kanzi scene through its retained machine whose
-        // profile names an A9 or A11 reference profile.
+        // profile names a qinggan09 or qinggan11 reference profile on the 8155 board.
         const auto record = session_record(request, false);
         const auto selection_file =
                 std::filesystem::path(record.at("directory").get<std::string>()) /
