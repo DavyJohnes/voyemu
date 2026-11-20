@@ -1,4 +1,5 @@
 #include "download.hpp"
+#include "disk_space.hpp"
 #include "interruption.hpp"
 #include "model.hpp"
 #include "os/https.hpp"
@@ -256,14 +257,16 @@ int main(int argc, char **argv) try {
     assert(progress::reported() == lines + 1);
     download_pinned(pin, root / "copied", false, 0, transport);
     assert(progress::reported() == lines + 1 && requests == 2);
-    // A volume without the reserve fails before the request and names its free space.
+    // A volume without the reserve fails before the request and names its free space and the
+    // installation root that holds the cache, such as a CI temporary directory under .local.
     bool spaceless = false;
     try {
         download_pinned(pin, root / "space", false, std::numeric_limits<std::uint64_t>::max() / 4,
                         transport);
     } catch (const cli::LocalizedError &error) {
         spaceless = std::string(error.what())
-                            .ends_with("on the volume of " + (root / "space").string() +
+                            .ends_with("on the volume of " +
+                                       installation_root_of(root / "space").string() +
                                        " or move Voyemu to another disk.");
     }
 
