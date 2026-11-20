@@ -1,5 +1,6 @@
 #include "error.hpp"
 #include "https.hpp"
+#include "interruption.hpp"
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
@@ -11,6 +12,53 @@
 #include <stdexcept>
 
 namespace voyemu::os {
+namespace {
+// One asynchronous request: WinHTTP completes each operation on its own thread and signals done, so
+// the waiting thread notices an interruption while no byte arrives.
+struct Transfer {
+    HANDLE done = CreateEventW(nullptr, FALSE, FALSE, nullptr);
+    HANDLE closed = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+    DWORD error = 0;
+    DWORD bytes = 0;
+
+    Transfer() = default;
+    Transfer(const Transfer &) = delete;
+    Transfer &operator=(const Transfer &) = delete;
+
+    ~Transfer() {
+        if (done) {
+            CloseHandle(done);
+        }
+
+        if (closed) {
+            CloseHandle(closed);
+        }
+    }
+};
+
+void CALLBACK transfer_status(HINTERNET, DWORD_PTR context, DWORD status, LPVOID information,
+                              DWORD length) {
+    auto &transfer = *reinterpret_cast<Transfer *>(context);
+
+    if (status == WINHTTP_CALLBACK_STATUS_HANDLE_CLOSING) {
+        SetEvent(transfer.closed);
+
+        return;
+    }
+
+    if (status == WINHTTP_CALLBACK_STATUS_REQUEST_ERROR) {
+        transfer.error = static_cast<WINHTTP_ASYNC_RESULT *>(information)->dwError;
+    } else if (status == WINHTTP_CALLBACK_STATUS_READ_COMPLETE) {
+        transfer.bytes = length;
+    } else if (status != WINHTTP_CALLBACK_STATUS_SENDREQUEST_COMPLETE &&
+               status != WINHTTP_CALLBACK_STATUS_HEADERS_AVAILABLE) {
+        return;
+    }
+
+    SetEvent(transfer.done);
+}
+} // namespace
+
 // WinHTTP with the system certificate store and proxy settings.
 void https_get(const std::string &url, const std::vector<std::string> &headers,
                const std::function<void(std::string_view)> &sink,
@@ -65,8 +113,16 @@ void https_get(const std::string &url, const std::vector<std::string> &headers,
             }
         }
     };
+    // The state of the request and its read buffer outlive the request handle and its callbacks.
+    Transfer transfer;
+    std::array<char, 65536> buffer{};
+
+    if (!transfer.done || !transfer.closed) {
+        throw VoyemuError("DOWNLOAD_HTTP", "transfer events unavailable");
+    }
+
     Handle session{WinHttpOpen(L"Voyemu/1.0", WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY,
-                               WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0)};
+                               WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, WINHTTP_FLAG_ASYNC)};
 
     if (!session.value || !WinHttpSetTimeouts(session.value, 30000, 30000, 30000, 60000)) {
         throw VoyemuError("DOWNLOAD_HTTP", "session initialization failed");
@@ -78,13 +134,56 @@ void https_get(const std::string &url, const std::vector<std::string> &headers,
         throw VoyemuError("DOWNLOAD_HTTP", "connection failed");
     }
 
-    Handle request{WinHttpOpenRequest(connection.value, L"GET", path.c_str(), nullptr,
-                                      WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES,
-                                      WINHTTP_FLAG_SECURE)};
+    auto *const opened = WinHttpOpenRequest(connection.value, L"GET", path.c_str(), nullptr,
+                                            WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES,
+                                            WINHTTP_FLAG_SECURE);
+    auto context = reinterpret_cast<DWORD_PTR>(&transfer);
 
-    if (!request.value) {
+    if (!opened) {
         throw VoyemuError("DOWNLOAD_HTTP", "request initialization failed");
     }
+
+    if (!WinHttpSetOption(opened, WINHTTP_OPTION_CONTEXT_VALUE, &context, sizeof context) ||
+        WinHttpSetStatusCallback(opened, transfer_status,
+                                 WINHTTP_CALLBACK_FLAG_SENDREQUEST_COMPLETE |
+                                         WINHTTP_CALLBACK_FLAG_HEADERS_AVAILABLE |
+                                         WINHTTP_CALLBACK_FLAG_READ_COMPLETE |
+                                         WINHTTP_CALLBACK_FLAG_REQUEST_ERROR |
+                                         WINHTTP_CALLBACK_FLAG_HANDLES,
+                                 0) == WINHTTP_INVALID_STATUS_CALLBACK) {
+        WinHttpCloseHandle(opened);
+
+        throw VoyemuError("DOWNLOAD_HTTP", "request initialization failed");
+    }
+
+    // Closing the request cancels its pending operation; its last callback announces the closing.
+    struct Request {
+        HINTERNET value;
+        const Transfer &transfer;
+
+        ~Request() {
+            WinHttpCloseHandle(value);
+            WaitForSingleObject(transfer.closed, INFINITE);
+        }
+    } request{opened, transfer};
+    // Completes the operation that begin starts: its WinHTTP error, 0 on success. While it waits,
+    // an interruption throws and the request closes on the way out.
+    const auto complete = [&](const auto &begin) -> DWORD {
+        transfer.error = 0;
+        transfer.bytes = 0;
+
+        if (!begin()) {
+            const auto error = GetLastError();
+
+            return error ? error : ERROR_WINHTTP_INTERNAL_ERROR;
+        }
+
+        while (WaitForSingleObject(transfer.done, 100) == WAIT_TIMEOUT) {
+            interruption::check();
+        }
+
+        return transfer.error;
+    };
 
     std::wstring extra;
 
@@ -94,16 +193,24 @@ void https_get(const std::string &url, const std::vector<std::string> &headers,
 
     DWORD redirects = 5, policy = WINHTTP_OPTION_REDIRECT_POLICY_DISALLOW_HTTPS_TO_HTTP;
 
-    if (!WinHttpSetOption(request.value, WINHTTP_OPTION_MAX_HTTP_AUTOMATIC_REDIRECTS, &redirects,
-                          sizeof redirects) ||
-        !WinHttpSetOption(request.value, WINHTTP_OPTION_REDIRECT_POLICY, &policy, sizeof policy) ||
-        !WinHttpSendRequest(request.value,
-                            extra.empty() ? WINHTTP_NO_ADDITIONAL_HEADERS : extra.c_str(),
-                            extra.empty() ? 0 : static_cast<DWORD>(extra.size()),
-                            WINHTTP_NO_REQUEST_DATA, 0, 0, 0) ||
-        !WinHttpReceiveResponse(request.value, nullptr)) {
-        const auto error = GetLastError();
+    auto error = complete([&] {
+        return WinHttpSetOption(request.value, WINHTTP_OPTION_MAX_HTTP_AUTOMATIC_REDIRECTS,
+                                &redirects, sizeof redirects) &&
+               WinHttpSetOption(request.value, WINHTTP_OPTION_REDIRECT_POLICY, &policy,
+                                sizeof policy) &&
+               WinHttpSendRequest(request.value,
+                                  extra.empty() ? WINHTTP_NO_ADDITIONAL_HEADERS : extra.c_str(),
+                                  extra.empty() ? 0 : static_cast<DWORD>(extra.size()),
+                                  WINHTTP_NO_REQUEST_DATA, 0, 0, context);
+    });
 
+    if (!error) {
+        error = complete([&] {
+            return WinHttpReceiveResponse(request.value, nullptr);
+        });
+    }
+
+    if (error) {
         if (error == ERROR_WINHTTP_NAME_NOT_RESOLVED || error == ERROR_WINHTTP_CANNOT_CONNECT ||
             error == ERROR_WINHTTP_TIMEOUT) {
             throw HttpsFailure(HttpsFailure::Kind::unreachable, 0, "HTTPS transfer failed");
@@ -148,26 +255,27 @@ void https_get(const std::string &url, const std::vector<std::string> &headers,
     }
 
     // The 60-second receive timeout of the session bounds each read, not the whole transfer.
-    std::array<char, 65536> buffer{};
-
     for (;;) {
-        DWORD count = 0;
+        // An asynchronous read reports its byte count only to the callback.
+        error = complete([&] {
+            return WinHttpReadData(request.value, buffer.data(), static_cast<DWORD>(buffer.size()),
+                                   nullptr);
+        });
 
-        if (!WinHttpReadData(request.value, buffer.data(), static_cast<DWORD>(buffer.size()),
-                             &count)) {
-            if (GetLastError() == ERROR_WINHTTP_TIMEOUT) {
-                throw HttpsFailure(HttpsFailure::Kind::stalled, static_cast<long>(status),
-                                   "response read failed");
-            }
+        if (error == ERROR_WINHTTP_TIMEOUT) {
+            throw HttpsFailure(HttpsFailure::Kind::stalled, static_cast<long>(status),
+                               "response read failed");
+        }
 
+        if (error) {
             throw VoyemuError("DOWNLOAD_HTTP", "response read failed");
         }
 
-        if (!count) {
+        if (!transfer.bytes) {
             break;
         }
 
-        sink({buffer.data(), count});
+        sink({buffer.data(), transfer.bytes});
     }
 }
 } // namespace voyemu::os
