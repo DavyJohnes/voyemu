@@ -1,6 +1,7 @@
 #pragma once
 #include "error.hpp"
 #include "model.hpp"
+#include "owner_lock.hpp"
 #include "qnx_host_prebuilt.hpp"
 #include "quickboot.hpp"
 namespace voyemu {
@@ -114,16 +115,8 @@ inline Json install_cached_windows_qnx_host(const std::filesystem::path &root,
     require(std::filesystem::space(root).available >= reserve + (64ULL << 20),
             "insufficient Windows engine install reserve");
     ensure_private_directory(parent);
-    const auto lock = parent / "qnx-host.lock";
-    require(std::filesystem::create_directory(lock), "installation already owned");
-    struct Lock {
-        std::filesystem::path path;
-
-        ~Lock() {
-            std::error_code error;
-            std::filesystem::remove(path, error);
-        }
-    } held{lock};
+    const auto lock = owner_lock(parent / "qnx-host.lock");
+    require(lock->held(), "installation already owned");
     const auto stage = root / ".local/build/tmp" / ("qnx-host-windows-" + random_token());
     struct Stage {
         std::filesystem::path path;

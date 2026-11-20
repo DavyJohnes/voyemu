@@ -2,6 +2,7 @@
 #include "deps.hpp"
 #include "download.hpp"
 #include "error.hpp"
+#include "owner_lock.hpp"
 #include "process.hpp"
 #include "qnx_host.hpp"
 #include "qnx_host_build_diagnostics.hpp"
@@ -65,16 +66,8 @@ Json install_qnx_host_macos(const std::filesystem::path &root, bool offline, std
     }
 
     ensure_private_directory(parent);
-    const auto lock = parent / "qnx-host.lock";
-    require(std::filesystem::create_directory(lock), "installation already owned");
-    struct Lock {
-        std::filesystem::path path;
-
-        ~Lock() {
-            std::error_code error;
-            std::filesystem::remove(path, error);
-        }
-    } locked{lock};
+    const auto lock = owner_lock(parent / "qnx-host.lock");
+    require(lock->held(), "installation already owned");
     const auto cache = root / ".local/toolchains/downloads/qnx-host";
     auto download = [&](const Json &spec) {
         return download_pinned({spec.at("url").get<std::string>(),

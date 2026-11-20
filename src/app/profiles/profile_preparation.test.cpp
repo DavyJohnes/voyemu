@@ -1,6 +1,7 @@
 #include "profile_preparation.hpp"
 #include "java_toolchain.hpp"
 #include "machine_preparation.hpp"
+#include "os/fs.hpp"
 #include "process.hpp"
 #include "quickboot.hpp"
 #include <algorithm>
@@ -608,6 +609,45 @@ int main(int argc, char **argv) {
         if (native_profile_android_inputs(fixture, "api30-fixture") !=
             std::vector<std::string>{"/system/framework/framework-res.apk"}) {
             throw std::runtime_error("minimal API30 profile acquired guessed Android inputs");
+        }
+
+        // The preparation lock belongs to its live process only: a running preparation refuses a
+        // second one, while the file of an exited one and the directory of an earlier version
+        // stay behind without blocking the next preparation, which here stops offline.
+        const auto preparation_lock = fixture / ".local/build/prepare-api30-fixture.lock";
+        const auto prepare_failure = [&] {
+            try {
+                prepare_profile_artifacts(fixture, "api30-fixture", true);
+            } catch (const std::exception &error) {
+                return std::string(error.what());
+            }
+
+            return std::string();
+        };
+        ensure_private_directory(preparation_lock.parent_path());
+        {
+            const os::FileLock running(preparation_lock, true);
+
+            const auto beside_running = prepare_failure();
+
+            if (!beside_running.starts_with("PROFILE_PREPARATION:")) {
+                throw std::runtime_error("a second preparation ran beside a running one: " +
+                                         beside_running);
+            }
+        }
+
+        const auto after_exit = prepare_failure();
+
+        if (after_exit.starts_with("PROFILE_PREPARATION:")) {
+            throw std::runtime_error("the lock of an exited preparation blocked the next one: " +
+                                     after_exit);
+        }
+
+        std::filesystem::remove(preparation_lock);
+        ensure_private_directory(preparation_lock);
+
+        if (prepare_failure().starts_with("PROFILE_PREPARATION:")) {
+            throw std::runtime_error("an earlier lock directory blocked preparation");
         }
 
         api30["patches"] = {{"stock-statusbar",

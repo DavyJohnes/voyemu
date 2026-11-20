@@ -1,4 +1,5 @@
 #include "deps.hpp"
+#include "os/fs.hpp"
 #include "os/platform.hpp"
 #include "process.hpp"
 #include "sdk_archive.hpp"
@@ -734,7 +735,7 @@ int main(int argc, char **argv) {
 
         check(offline, "offline install cannot download missing payload");
         check(!std::filesystem::exists(root / ".local/toolchains/native-sdk") &&
-                      !std::filesystem::exists(root / ".local/toolchains/native-sdk.lock"),
+                      os::FileLock(root / ".local/toolchains/native-sdk.lock", true).held(),
               "failed install publishes nothing and releases own lock");
 
         for (const auto &entry : std::filesystem::directory_iterator(root / ".local/build/tmp")) {

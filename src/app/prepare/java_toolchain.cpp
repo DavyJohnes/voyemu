@@ -6,6 +6,7 @@
 #include "java_runtime.hpp"
 #include "ordinary_path.hpp"
 #include "os/fs.hpp"
+#include "owner_lock.hpp"
 #include "process.hpp"
 #include "project_files.hpp"
 #include "quickboot.hpp"
@@ -127,57 +128,21 @@ void write(const std::filesystem::path &p, const std::string &data) {
     need(bool(out), "build file write failed");
 }
 
-Json helper_directory_identity(const std::filesystem::path &path) {
-    ordinary(path);
-#ifdef _WIN32
-    const auto handle = CreateFileW(
-            path.c_str(), FILE_READ_ATTRIBUTES,
-            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING,
-            FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS, nullptr);
-    need(handle != INVALID_HANDLE_VALUE, "helper lock identity open failed");
-    BY_HANDLE_FILE_INFORMATION info{};
-    const bool valid = GetFileInformationByHandle(handle, &info) &&
-                       (info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) &&
-                       !(info.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT);
-    CloseHandle(handle);
-    need(valid, "ordinary helper lock required");
-
-    return {{"volume", info.dwVolumeSerialNumber},
-            {"high", info.nFileIndexHigh},
-            {"low", info.nFileIndexLow}};
-#else
-    struct stat info{};
-    need(!::lstat(path.c_str(), &info) && S_ISDIR(info.st_mode) && info.st_uid == ::geteuid(),
-         "owned helper lock required");
-
-    return {{"device", info.st_dev}, {"inode", info.st_ino}};
-#endif
-}
-
-struct HelperLock {
-    std::filesystem::path path;
-    Json identity;
-
-    explicit HelperLock(const std::filesystem::path &p) : path(p) {
+// Waits while another process builds the same helper; the OS releases the lock of a process that
+// exits or is killed.
+class HelperLock {
+public:
+    explicit HelperLock(const std::filesystem::path &path) {
         const auto deadline = std::chrono::steady_clock::now() + std::chrono::minutes(10);
 
-        while (!std::filesystem::create_directory(path)) {
-            need(std::filesystem::is_directory(path) && std::chrono::steady_clock::now() < deadline,
-                 "helper build lock unavailable");
+        for (lock_ = owner_lock(path); !lock_->held(); lock_ = owner_lock(path)) {
+            need(std::chrono::steady_clock::now() < deadline, "helper build lock unavailable");
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
-
-        identity = helper_directory_identity(path);
     }
 
-    ~HelperLock() {
-        try {
-            if (helper_directory_identity(path) == identity) {
-                std::filesystem::remove(path);
-            }
-        } catch (...) { /* Ignored: cleanup of owned temporary state is best-effort. */
-        }
-    }
+private:
+    std::unique_ptr<os::FileLock> lock_;
 };
 
 std::map<std::string, std::string> environment(const std::filesystem::path &temporary) {

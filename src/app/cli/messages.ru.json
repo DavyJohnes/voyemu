@@ -34,6 +34,7 @@
     "error.other_machine_stopped": "остановленная сессия принадлежит другому каталогу машины",
     "error.patch_values": "patch требует --values JSON",
     "error.positional_selection": "укажите каталог машины или профиль подготовки позиционным аргументом",
+    "error.preparation_running": "другой процесс voyemu build уже готовит {profile}.\nДождитесь его завершения и повторите команду.",
     "error.profile_busy": "с профилем уже выполняется операция",
     "error.profile_required": "{command} требует идентификатор профиля",
     "error.project_root": "установка Voyemu не найдена; держите исполняемый файл рядом с поставляемой папкой profiles",

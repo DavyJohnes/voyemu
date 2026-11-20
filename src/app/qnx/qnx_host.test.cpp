@@ -1,4 +1,5 @@
 #include "qnx_host.hpp"
+#include "os/fs.hpp"
 #include "process.hpp"
 #include "qnx_host_prebuilt.hpp"
 #include "qnx_host_windows.hpp"
@@ -393,7 +394,7 @@ int main(int argc, char **argv) {
         check(failed &&
                       !std::filesystem::exists(root /
                                                ".local/toolchains/qnx-host-windows-11.1.0") &&
-                      !std::filesystem::exists(root / ".local/toolchains/qnx-host.lock"),
+                      os::FileLock(root / ".local/toolchains/qnx-host.lock", true).held(),
               "offline missing input cannot publish and lock released");
         const auto &win = c.at("windows_file_backend");
         check(win.at("version") == "11.1.2" && win.at("patched_sources").size() == 8 &&

@@ -34,6 +34,7 @@
     "error.other_machine_stopped": "stopped session belongs to another machine directory",
     "error.patch_values": "patch requires --values JSON",
     "error.positional_selection": "use a positional machine directory or preparation profile",
+    "error.preparation_running": "another voyemu build is already preparing {profile}.\nWait for it to finish and run the command again.",
     "error.profile_busy": "profile already in operation",
     "error.profile_required": "{command} requires a profile identifier",
     "error.project_root": "Voyemu installation not found; keep the executable beside the supplied profiles folder",

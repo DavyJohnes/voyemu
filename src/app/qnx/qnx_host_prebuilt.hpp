@@ -3,6 +3,7 @@
 #include "download.hpp"
 #include "error.hpp"
 #include "model.hpp"
+#include "owner_lock.hpp"
 #include "process.hpp"
 #include "progress.hpp"
 #include "zip_archive.hpp"
@@ -166,16 +167,8 @@ inline Json install_prebuilt_qnx_host(const std::filesystem::path &root, const J
     }
 
     ensure_private_directory(parent);
-    const auto lock = parent / "qnx-host.lock";
-    require(std::filesystem::create_directory(lock), "installation already owned");
-    struct Lock {
-        std::filesystem::path path;
-
-        ~Lock() {
-            std::error_code error;
-            std::filesystem::remove(path, error);
-        }
-    } held{lock};
+    const auto lock = owner_lock(parent / "qnx-host.lock");
+    require(lock->held(), "installation already owned");
     const auto stage = root / ".local/build/tmp" / ("qnx-host-prebuilt-" + random_token());
     struct Stage {
         std::filesystem::path path;

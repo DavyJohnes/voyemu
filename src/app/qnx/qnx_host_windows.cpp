@@ -2,6 +2,7 @@
 #include "check.hpp"
 #include "download.hpp"
 #include "error.hpp"
+#include "owner_lock.hpp"
 #include "process.hpp"
 #include "qnx_host.hpp"
 #include "qnx_host_build_diagnostics.hpp"
@@ -120,16 +121,8 @@ Json install_qnx_host_windows_source(const std::filesystem::path &root, bool off
     }
 
     ensure_private_directory(parent);
-    const auto lock = parent / "qnx-host.lock";
-    require(std::filesystem::create_directory(lock), "installation already owned");
-    struct Unlock {
-        std::filesystem::path path;
-
-        ~Unlock() {
-            std::error_code error;
-            std::filesystem::remove(path, error);
-        }
-    } unlock{lock};
+    const auto lock = owner_lock(parent / "qnx-host.lock");
+    require(lock->held(), "installation already owned");
     require(std::filesystem::space(root).available >= reserve + (4ULL << 30),
             "insufficient source build disk reserve");
     const auto token = random_token();

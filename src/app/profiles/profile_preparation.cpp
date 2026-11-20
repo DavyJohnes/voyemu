@@ -4,6 +4,7 @@
 #include "apk_identity.hpp"
 #include "base_image.hpp"
 #include "check.hpp"
+#include "cli_messages.hpp"
 #include "deps.hpp"
 #include "error.hpp"
 #include "ext4_image.hpp"
@@ -13,6 +14,7 @@
 #include "native_component.hpp"
 #include "ordinary_path.hpp"
 #include "os/fs.hpp"
+#include "owner_lock.hpp"
 #include "process.hpp"
 #include "profile_file_nodes.hpp"
 #include "profile_identity.hpp"
@@ -364,16 +366,14 @@ ProfilePreparationArtifacts prepare_profile_artifacts(const std::filesystem::pat
     const auto logical = native_profile_android_inputs(root, name);
 
     ensure_private_directory(root / ".local/build");
-    const auto lock = root / ".local/build" / ("prepare-" + std::string(name) + ".lock");
-    need(std::filesystem::create_directory(lock), "profile preparation already locked");
-    struct Unlock {
-        std::filesystem::path p;
+    const auto lock =
+            owner_lock(root / ".local/build" / ("prepare-" + std::string(name) + ".lock"));
 
-        ~Unlock() {
-            std::error_code error;
-            std::filesystem::remove(p, error);
-        }
-    } unlock{lock};
+    if (!lock->held()) {
+        throw cli::LocalizedError("PROFILE_PREPARATION", "error.preparation_running",
+                                  {{"profile", std::string(name)}});
+    }
+
     const auto dependencies = install_native_dependencies(root, offline);
     const auto fetched = fetch_native_inputs(root, name, offline);
     const auto tools = ensure_java_preparation_tools(

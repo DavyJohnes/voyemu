@@ -3,6 +3,7 @@
 #include "error.hpp"
 #include "os/fs.hpp"
 #include "os/platform.hpp"
+#include "owner_lock.hpp"
 #include "process.hpp"
 #include "progress.hpp"
 #include "quickboot.hpp"
@@ -1089,28 +1090,13 @@ Json install_native_dependencies(const std::filesystem::path &root, bool offline
                                   "installed SDK component identity differs; unsupported upgrade");
             }
 
-            const auto lock = root / ".local/toolchains/native-sdk.lock";
+            const auto lock = owner_lock(root / ".local/toolchains/native-sdk.lock");
 
-            if (!std::filesystem::create_directory(lock)) {
+            if (!lock->held()) {
                 throw VoyemuError("DEPS_LOCK", "SDK installation already owned");
             }
 
             const auto token = random_token();
-            write_private_json(lock / "owner.json", {{"token", token}, {"created", utc_now()}});
-            struct UpgradeLock {
-                std::filesystem::path path;
-                std::string token;
-
-                ~UpgradeLock() {
-                    try {
-                        if (read_private_json(path / "owner.json").at("token") == token) {
-                            std::filesystem::remove(path / "owner.json");
-                            std::filesystem::remove(path);
-                        }
-                    } catch (...) { /* Ignored: owned lock cleanup is best-effort. */
-                    }
-                }
-            } guard{lock, token};
             const auto downloads = root / ".local/toolchains/downloads";
             std::filesystem::path archive;
 
@@ -1159,28 +1145,13 @@ Json install_native_dependencies(const std::filesystem::path &root, bool offline
 
     const auto parent = root / ".local/toolchains";
     ensure_private_directory(parent);
-    const auto lock = parent / "native-sdk.lock";
+    const auto lock = owner_lock(parent / "native-sdk.lock");
 
-    if (!std::filesystem::create_directory(lock)) {
-        throw VoyemuError("DEPS_LOCK", "installation already owned; inspect lock before retry");
+    if (!lock->held()) {
+        throw VoyemuError("DEPS_LOCK", "installation already owned by another process");
     }
 
     const auto token = random_token();
-    write_private_json(lock / "owner.json", {{"token", token}, {"created", utc_now()}});
-    struct Lock {
-        std::filesystem::path path;
-        std::string token;
-
-        ~Lock() {
-            try {
-                if (read_private_json(path / "owner.json").at("token") == token) {
-                    std::filesystem::remove(path / "owner.json");
-                    std::filesystem::remove(path);
-                }
-            } catch (...) { /* Ignored: cleanup of owned temporary state is best-effort. */
-            }
-        }
-    } guard{lock, token};
     const auto staging = root / ".local/build/tmp" / ("native-sdk-" + token);
     ensure_private_directory(staging);
     struct Stage {
