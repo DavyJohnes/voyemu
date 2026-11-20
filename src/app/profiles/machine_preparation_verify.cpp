@@ -682,25 +682,19 @@ Json capture_candidate_frames(Candidate &c, const Json &profile) {
             [&] {
                 c.identity();
 
-                if (!c.process.owns_tcp_listener(grpc)) {
-                    return false;
-                }
+                need(c.process.owns_tcp_listener(grpc), "owned SDK gRPC listener is not ready");
 
                 const auto found =
                         sdk_discovery(c.stage / ("emulator-" + std::to_string(c.boots) + ".log"),
-                                      registration, static_cast<unsigned>(c.process.pid()));
-
-                if (!found) {
-                    return false;
-                }
+                                      registration, static_cast<unsigned>(c.process.pid()), false,
+                                      SdkAdvertisementWindow::startup);
+                need(found.has_value(), "owned SDK startup advertisement is not ready");
 
                 const auto copied =
                         import_sdk_descriptor(*found, c.stage / "sdk-metadata" / found->filename(),
                                               static_cast<unsigned>(c.process.pid()), c.port, grpc);
 
-                if (!copied) {
-                    return false;
-                }
+                need(copied.has_value(), "owned SDK discovery descriptor is not ready");
 
                 const auto record = c.stage / "media-connection.json";
                 write_private_json(record, {{"schema", 1},

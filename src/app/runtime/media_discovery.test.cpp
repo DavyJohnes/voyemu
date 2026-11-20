@@ -27,6 +27,18 @@ static void warm_sdk_descriptor_binding() {
            cache.authenticated() && cache.bearer() == "private-fixture-token");
     { std::ofstream(log, std::ios::app) << std::string(600000, 'x') << '\n'; }
     assert(std::filesystem::file_size(log) > 512 * 1024 && !sdk_discovery(log, root, 987));
+    assert(sdk_discovery(log, root, 987, false, SdkAdvertisementWindow::startup) == source);
+    assert(!sdk_discovery(log, root, 988, false, SdkAdvertisementWindow::startup));
+    assert(!sdk_discovery(log, saved, 987, false, SdkAdvertisementWindow::startup));
+    const auto truncated = root / "truncated.log";
+    const std::string advertisement = "Advertising in: " + source.string();
+    {
+        std::ofstream output(truncated);
+        output << std::string(512 * 1024 - advertisement.size(), 'x') << advertisement << 'x'
+               << '\n';
+    }
+    assert(!sdk_discovery(truncated, root, 987, false, SdkAdvertisementWindow::startup));
+
     // A guest warm reboot keeps this SDK launch, but its nonce must be verified again.
     assert(!cache.resolve(log, root, saved, 987, 5566, 45992, false));
     assert(cache.resolve(log, root, saved, 987, 5566, 45992, true) == target);

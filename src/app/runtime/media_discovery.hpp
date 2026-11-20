@@ -38,11 +38,16 @@ sdk_registration_directory(const std::filesystem::path &os_root,
 #endif
 }
 
+enum class SdkAdvertisementWindow {
+    tail,
+    startup
+};
+
 // The SDK's registration directory is a read-only input; our copy stays in the private session.
-inline std::optional<std::filesystem::path> sdk_discovery(const std::filesystem::path &log,
-                                                          const std::filesystem::path &root,
-                                                          unsigned pid,
-                                                          bool diagnostic_native = false) {
+inline std::optional<std::filesystem::path>
+sdk_discovery(const std::filesystem::path &log, const std::filesystem::path &root, unsigned pid,
+              bool diagnostic_native = false,
+              SdkAdvertisementWindow window = SdkAdvertisementWindow::tail) {
 #ifndef _WIN32
     (void)diagnostic_native;
 #endif
@@ -66,7 +71,7 @@ inline std::optional<std::filesystem::path> sdk_discovery(const std::filesystem:
 
     constexpr std::streamoff maximum = 512 * 1024;
     const auto length = std::min<std::streamoff>(extent, maximum);
-    input.seekg(extent - length);
+    input.seekg(window == SdkAdvertisementWindow::startup ? std::streampos{0} : extent - length);
     std::string bytes(static_cast<std::size_t>(length), '\0');
 
     if (!input.read(bytes.data(), length)) {
@@ -79,6 +84,12 @@ inline std::optional<std::filesystem::path> sdk_discovery(const std::filesystem:
     for (std::size_t offset = 0; (offset = bytes.find(marker, offset)) != std::string::npos;) {
         offset += marker.size();
         const auto end = bytes.find_first_of("\r\n", offset);
+
+        if (window == SdkAdvertisementWindow::startup && length < extent &&
+            end == std::string::npos) {
+            break;
+        }
+
         const auto advertised = bytes.substr(offset, end == std::string::npos ? end : end - offset);
         auto path = std::filesystem::path(advertised).lexically_normal();
 #ifdef _WIN32
