@@ -1321,6 +1321,11 @@
   "acquisition": {
     "format": "pinned-zip-zero-base-zstd-segments",
     "diff": false,
+    "qnxOriginals": [
+      "hyp_la.img",
+      "ifs2_la.img",
+      "system_la.img"
+    ],
     "images": {
       "system": {
         "file": "la_system.img",

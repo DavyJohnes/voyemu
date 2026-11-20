@@ -293,6 +293,8 @@ int segmented_synthetic_import(const std::filesystem::path &project) {
                         {"acquisition",
                          {{"format", "pinned-zip-zero-base-zstd-segments"},
                           {"diff", false},
+                          {"qnxOriginals", Json::array({"hyp_la.img", "ifs2_la.img",
+                                                        "system_la.img", "ifs2_recovery_la.img"})},
                           {"images", images}}}});
     write_private_json(directory / "profile-qnx.json",
                        {{"schema", 1},
@@ -303,7 +305,7 @@ int segmented_synthetic_import(const std::filesystem::path &project) {
     check(segmented_acquisition_plan(definition, qnx).at("originals").size() == 4,
           "segmented plan differs");
 
-    for (unsigned fault = 0; fault < 4; ++fault) {
+    for (unsigned fault = 0; fault < 7; ++fault) {
         auto bad = definition, badq = qnx;
 
         if (fault == 0) {
@@ -321,6 +323,20 @@ int segmented_synthetic_import(const std::filesystem::path &project) {
 
         if (fault == 3) {
             badq["update"]["sha256"] = std::string(64, '0');
+        }
+
+        // A declared QNX original missing from profile-qnx.json, an undeclared one and a repeated
+        // declaration.
+        if (fault == 4) {
+            badq["originals"].erase("ifs2_recovery_la.img");
+        }
+
+        if (fault == 5) {
+            bad["acquisition"]["qnxOriginals"].erase(std::size_t{3});
+        }
+
+        if (fault == 6) {
+            bad["acquisition"]["qnxOriginals"][3] = "hyp_la.img";
         }
 
         bool denied = false;
@@ -465,7 +481,7 @@ int segmented_synthetic_import(const std::filesystem::path &project) {
 #else
     dlclose(handle);
 #endif
-    std::cout << "Synthetic segmented owner update: four plan rejections, segmented system/resc "
+    std::cout << "Synthetic segmented owner update: seven plan rejections, segmented system/resc "
                  "originals, four QNX images, cache reuse, cache refresh with an added original "
                  "and archive pin passed\n";
 
@@ -565,6 +581,7 @@ int main(int argc, char **argv) {
                 {"acquisition",
                  {{"format", "pinned-zip-zero-base-zstd-segments"},
                   {"diff", false},
+                  {"qnxOriginals", Json::array({"hyp_la.img", "ifs2_la.img", "system_la.img"})},
                   {"images", images}}}};
         const auto plan = segmented_acquisition_plan(definition, qnx);
         check(plan.at("originals").size() == 3 &&
