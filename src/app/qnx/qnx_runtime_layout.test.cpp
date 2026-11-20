@@ -284,9 +284,8 @@ int main() try {
            std::make_pair(std::string("gpt-backup.bin"), std::string("0xbffbe000")));
     assert(actual.loaders.at(2).first == actual.loaders.at(3).first &&
            actual.loaders.at(2).second != actual.loaders.at(3).second);
-    rejects([&] {
-        qnx_runtime_layout(qinggan11_profile, old);
-    });
+    // Metadata without a hardware adapter selects the qinggan09 layout under any profile id.
+    assert(qnx_runtime_layout(qinggan11_profile, old).adapter == "sa8155-qinggan09");
     auto persistent_free = metadata;
     persistent_free["persistence"] = persisted.at("persistence");
     rejects([&] {

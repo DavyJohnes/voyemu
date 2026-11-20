@@ -2083,6 +2083,10 @@ static void api30_publication_checks(const std::filesystem::path &stage, bool ol
     }
 
     write_private_json(definition, profile);
+    write_private_json(
+            definition.parent_path() / "profile-qnx.json",
+            {{"schema", 1},
+             {"hardware_adapter", older ? "sa8155-qinggan11-611" : "sa8155-qinggan11-731"}});
     resource_source_fixture(root, read_private_json(definition));
     Json images = Json::object();
 
@@ -3964,6 +3968,8 @@ int main(int argc, char **argv) {
         auto captured_definition = read_private_json(def);
         captured_definition["components"]["can-model-observer"] = "components/can-model-observer";
         write_private_json(def, captured_definition);
+        write_private_json(def.parent_path() / "profile-qnx.json",
+                           {{"schema", 1}, {"hardware_adapter", "sa8155-qinggan09"}});
         auto accepted = read_private_json(candidate / "receipt.json");
         accepted["profile_sha256"] = sha256_file(def);
         accepted["clean_base_archive_sha256"] =
@@ -4320,6 +4326,8 @@ int main(int argc, char **argv) {
         const auto clone_profile = isolated / "profiles" / clone_id;
         ensure_private_directory(clone_profile);
         write_private_json(clone_profile / "profile.json", clone_definition);
+        write_private_json(clone_profile / "profile-qnx.json",
+                           {{"schema", 1}, {"hardware_adapter", "sa8155-qinggan09"}});
         std::filesystem::copy(def.parent_path() / "components", clone_profile / "components",
                               std::filesystem::copy_options::recursive);
         resource_source_fixture(isolated, clone_definition);

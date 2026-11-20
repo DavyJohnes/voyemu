@@ -109,7 +109,12 @@ int main() try {
         assert(qnx_owned_ram_bytes(Json{{"ram_geometry", qnx_owned_ram_geometry(ram)}}) ==
                (11713ULL << 20));
 
-        for (const auto *key : {"hardware_adapter", "ram_backend", "ram", "qemu"}) {
+        // Without its adapter the launch selects no Passion geometry, whatever else it carries.
+        auto unadapted = production;
+        unadapted.erase("hardware_adapter");
+        assert(!qnx_ram_binding(unadapted).passion);
+
+        for (const auto *key : {"ram_backend", "ram", "qemu"}) {
             auto bad = production;
             bad.erase(key);
             rejects([&] {

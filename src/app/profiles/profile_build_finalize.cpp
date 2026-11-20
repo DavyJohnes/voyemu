@@ -513,6 +513,11 @@ Json finalize_profile_build(const std::filesystem::path &root, std::string_view 
     const auto family = runtime_profile_reference(definition, profile);
     need(valid_profile_name(family), "valid QNX guest family required");
     const auto layout = qnx_runtime_layout(family, qnx);
+    // The accepted closure runs the hardware adapter that the profile declares.
+    need(read_private_json(root / "profiles" / std::string(profile) / "profile-qnx.json",
+                           128 * 1024)
+                         .at("hardware_adapter") == layout.adapter,
+         "accepted QNX adapter differs from the profile");
 
     if (!layout.projection.is_null()) {
         need(qnx.value("stopped", false), "stopped Free QNX seed required");
