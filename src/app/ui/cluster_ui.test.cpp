@@ -2931,6 +2931,10 @@ void wheel_hover_without_tooltips(const std::filesystem::path &assets) {
         historical.wheel_capability["supported"] = true;
         check(!wheel_action_available(historical, "volume_up"),
               "malformed Free capability cannot visually grant support");
+        historical.wheel_capability = qinggan11_partial_wheel_capability(qinggan11_731_profile_id);
+        historical.routes["volume_up"]["android"] = {{"key_code", 2}};
+        check(wheel_action_available(historical, "volume_up"),
+              "partial Free capability grants its exact Android route");
         historical.wheel_capability = nullptr;
         check(wheel_action_available(historical, "menu"),
               "A9 explicit null capability keeps existing wheel behavior");

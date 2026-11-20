@@ -613,6 +613,13 @@ int main() try {
            sha256_file(machine / "userdata-qemu.img.qcow2") == installed_overlay);
     auto free_spec = spec;
     free_spec["wheel_capability"] = qinggan11_partial_wheel_capability(qinggan11_731_profile_id);
+    auto ru_spec = spec;
+    ru_spec["wheel_capability"] = qinggan11_partial_wheel_capability(qinggan11_ru_profile);
+    auto foreign_spec = spec;
+    foreign_spec["wheel_capability"] =
+            qinggan11_partial_wheel_capability("free-11-chinese-20250710-6.11.1");
+    assert(android_presave_required(free_spec) && android_presave_required(ru_spec) &&
+           !android_presave_required(foreign_spec) && !android_presave_required(spec));
     const auto free_key = android_quickboot_key(free_spec);
     assert(free_key.at("presave_protocol") == 1 && !key.contains("presave_protocol"));
     AndroidQuickBoot free_cache(machine, free_key);
