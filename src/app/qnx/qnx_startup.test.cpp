@@ -601,20 +601,20 @@ int main(int argc, char **argv) {
         misc_failure_fixture();
         boot_query_fixture();
 
-        if (argc == 3 && std::string_view(argv[1]) == "--qinggan11-611") {
+        if (argc == 3 && std::string_view(argv[1]) == "--qinggan11-older") {
             std::ifstream in(argv[2], std::ios::binary);
 
             if (!in) {
-                throw std::runtime_error("6.11 startup input");
+                throw std::runtime_error("older qinggan11 startup input");
             }
 
             const std::string raw((std::istreambuf_iterator<char>(in)), {}),
                     pin = "dbb3bc2c6f9b0308e38627cf6a3e3b6757ba98c4f5413334526c26d812ab08f0";
-            const auto changed = prepare_qnx_qinggan11_611_startup(raw, pin),
+            const auto changed = prepare_qnx_qinggan11_older_startup(raw, pin),
                        packed = raw.substr(0x69108, 0x2d76d0 - 0x69108);
 
-            if (assemble_qnx_qinggan11_611_kernel(raw, pin, packed) != changed) {
-                throw std::runtime_error("6.11 identity assembly");
+            if (assemble_qnx_qinggan11_older_kernel(raw, pin, packed) != changed) {
+                throw std::runtime_error("older qinggan11 identity assembly");
             }
 
             for (unsigned i = 0; i < 3; ++i) {
@@ -623,22 +623,23 @@ int main(int argc, char **argv) {
                     if (i == 0) {
                         prepare_qnx_qinggan11_startup(raw, pin);
                     } else if (i == 1) {
-                        prepare_qnx_qinggan11_611_startup(raw, std::string(64, '0'));
+                        prepare_qnx_qinggan11_older_startup(raw, std::string(64, '0'));
                     } else {
                         auto bad = packed;
                         bad[4] ^= 1;
-                        assemble_qnx_qinggan11_611_kernel(raw, pin, bad);
+                        assemble_qnx_qinggan11_older_kernel(raw, pin, bad);
                     }
                 } catch (...) {
                     denied = true;
                 }
 
                 if (!denied) {
-                    throw std::runtime_error("6.11 wrong version or corrupt stream accepted");
+                    throw std::runtime_error(
+                            "older qinggan11 wrong version or corrupt stream accepted");
                 }
             }
 
-            std::cout << "6.11 startup and kernel guards passed\n";
+            std::cout << "older qinggan11 startup and kernel guards passed\n";
 
             return 0;
         }

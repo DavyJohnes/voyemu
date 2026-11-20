@@ -17,9 +17,9 @@ std::uint32_t qnx_a11_misc_failure_guard(std::string_view original);
 // Does not claim a bootable kernel or modify the embedded compressed stream.
 std::string prepare_qnx_startup(std::string_view original, std::string_view sha256);
 std::string prepare_qnx_qinggan11_startup(std::string_view original, std::string_view sha256);
-std::string prepare_qnx_qinggan11_611_startup(std::string_view original, std::string_view pin);
-std::string assemble_qnx_qinggan11_611_kernel(std::string_view original, std::string_view pin,
-                                              std::string_view packed);
+std::string prepare_qnx_qinggan11_older_startup(std::string_view original, std::string_view pin);
+std::string assemble_qnx_qinggan11_older_kernel(std::string_view original, std::string_view pin,
+                                                std::string_view packed);
 std::string assemble_qnx_qinggan11_kernel(std::string_view original, std::string_view sha256,
                                           std::string_view packed_host_ifs);
 std::string assemble_qnx_kernel(std::string_view original, std::string_view sha256,

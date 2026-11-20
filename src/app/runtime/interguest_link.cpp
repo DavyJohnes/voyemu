@@ -778,11 +778,11 @@ void InterguestLink::bind_ram(const std::filesystem::path &ram, std::uint64_t ri
         throw VoyemuError("INTERGUEST_STATE", "inactive bridge");
     }
 
-    if (geometry != RamGeometry::free8g && geometry != RamGeometry::passion21480) {
+    if (geometry != RamGeometry::free8g && geometry != RamGeometry::passion) {
         throw VoyemuError("INTERGUEST_RAM", "unsupported geometry");
     }
 
-    const bool passion = geometry == RamGeometry::passion21480;
+    const bool passion = geometry == RamGeometry::passion;
 
     if (passion && serial.empty()) {
         throw VoyemuError("INTERGUEST_UART", "Passion requires owned UART discovery");

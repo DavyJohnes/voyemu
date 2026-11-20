@@ -9,10 +9,11 @@ inline Json qnx_qinggan11_mcu_projection() {
             {"unsupported_fields", 117}, {"unmapped_wire_bits", "preserved-original-each-call"}};
 }
 
-inline constexpr unsigned qnx_qinggan11_611_previous_projected_fields = 34;
-inline constexpr unsigned qnx_qinggan11_611_projected_fields = 56;
+inline constexpr unsigned qnx_qinggan11_older_previous_projected_fields = 34;
+inline constexpr unsigned qnx_qinggan11_older_projected_fields = 56;
 
-inline Json qnx_qinggan11_611_mcu_projection(unsigned fields = qnx_qinggan11_611_projected_fields) {
+inline Json
+qnx_qinggan11_older_mcu_projection(unsigned fields = qnx_qinggan11_older_projected_fields) {
     return {{"hardware_adapter", "sa8155-qinggan11-611"},
             {"settings_feedback_supported", false},
             {"unsupported_field_policy", "reject_changes_from_initial_state"},
@@ -31,9 +32,9 @@ inline Json qnx_mcu_request_projection(std::uint64_t packet_bytes, std::uint64_t
     }
 
     if (packet_bytes == 650 && wire_fields == 736 &&
-        (projected_fields == qnx_qinggan11_611_previous_projected_fields ||
-         projected_fields == qnx_qinggan11_611_projected_fields)) {
-        return qnx_qinggan11_611_mcu_projection(static_cast<unsigned>(projected_fields));
+        (projected_fields == qnx_qinggan11_older_previous_projected_fields ||
+         projected_fields == qnx_qinggan11_older_projected_fields)) {
+        return qnx_qinggan11_older_mcu_projection(static_cast<unsigned>(projected_fields));
     }
 
     if (packet_bytes != 650 || wire_fields != 736 || projected_fields != 462) {
@@ -71,8 +72,9 @@ inline std::optional<Json> qnx_mcu_delivery_scope(const Json &ack, const Json &e
         }
     }
 
-    if (scope == qnx_qinggan11_611_mcu_projection() ||
-        scope == qnx_qinggan11_611_mcu_projection(qnx_qinggan11_611_previous_projected_fields)) {
+    if (scope == qnx_qinggan11_older_mcu_projection() ||
+        scope ==
+                qnx_qinggan11_older_mcu_projection(qnx_qinggan11_older_previous_projected_fields)) {
         return Json{{"fields", scope.at("projected_fields")},
                     {"mcu_projection", scope},
                     {"full_wire_verified", false}};

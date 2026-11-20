@@ -82,7 +82,7 @@ inline QnxRuntimeLayout qnx_runtime_layout(std::string_view adapter) {
         layout.images.insert(layout.images.end(), {"gpt-primary.bin", "gpt-backup.bin"});
         layout.loaders.insert(layout.loaders.end(), {{"gpt-primary.bin", "0xaffc0000"},
                                                      {"gpt-backup.bin", "0xbffbe000"}});
-        layout.projection = adapter == "sa8155-qinggan11-611" ? qnx_qinggan11_611_mcu_projection()
+        layout.projection = adapter == "sa8155-qinggan11-611" ? qnx_qinggan11_older_mcu_projection()
                                                               : qnx_qinggan11_mcu_projection();
     }
 
@@ -99,9 +99,9 @@ inline QnxRuntimeLayout qnx_runtime_layout(std::string_view profile, const Json 
 
     if (older &&
         metadata.value("mcu_projection", Json()) ==
-                qnx_qinggan11_611_mcu_projection(qnx_qinggan11_611_previous_projected_fields)) {
+                qnx_qinggan11_older_mcu_projection(qnx_qinggan11_older_previous_projected_fields)) {
         layout.projection =
-                qnx_qinggan11_611_mcu_projection(qnx_qinggan11_611_previous_projected_fields);
+                qnx_qinggan11_older_mcu_projection(qnx_qinggan11_older_previous_projected_fields);
     }
 
     if (free && (!metadata.contains("mcu_projection") ||
@@ -207,7 +207,7 @@ inline QnxRuntimeLayout qnx_portable_layout(std::string_view profile, const Json
 // QNX-upgrade boundary. Scope 33 stays upgrade-only. Scope 34 is a previously accepted runtime.
 inline QnxRuntimeLayout qnx_portable_upgrade_source_layout(std::string_view profile,
                                                            const Json &metadata) {
-    const auto previous = qnx_qinggan11_611_mcu_projection(33);
+    const auto previous = qnx_qinggan11_older_mcu_projection(33);
 
     if (metadata.value("hardware_adapter", std::string{}) != "sa8155-qinggan11-611" ||
         metadata.value("mcu_projection", Json()) != previous) {
@@ -215,7 +215,7 @@ inline QnxRuntimeLayout qnx_portable_upgrade_source_layout(std::string_view prof
     }
 
     auto checked = metadata;
-    checked["mcu_projection"] = qnx_qinggan11_611_mcu_projection();
+    checked["mcu_projection"] = qnx_qinggan11_older_mcu_projection();
     auto layout = qnx_portable_layout(profile, checked);
     layout.projection = previous;
 

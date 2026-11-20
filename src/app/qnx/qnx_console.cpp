@@ -114,8 +114,9 @@ std::string adapt_qnx_a11_pl011_console(std::string_view original, std::string_v
     return a11_console(original, pin, prepared, own, false);
 }
 
-std::string adapt_qnx_qinggan11_611_pl011_console(std::string_view original, std::string_view pin,
-                                                  std::string_view prepared, std::string_view own) {
+std::string adapt_qnx_qinggan11_older_pl011_console(std::string_view original, std::string_view pin,
+                                                    std::string_view prepared,
+                                                    std::string_view own) {
     return a11_console(original, pin, prepared, own, true);
 }
 } // namespace voyemu

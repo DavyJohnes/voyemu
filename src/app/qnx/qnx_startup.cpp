@@ -306,7 +306,7 @@ static std::string qinggan11_startup(std::string_view original, std::string_view
          "QNX_QINGGAN11_STARTUP_LAYOUT");
 
     if (older) {
-        need(word(original, 0x32d9c, true) == 0x095dc000, "QNX_QINGGAN11_611_STARTUP_FDT_SIZE");
+        need(word(original, 0x32d9c, true) == 0x095dc000, "QNX_QINGGAN11_OLDER_STARTUP_FDT_SIZE");
     }
 
     constexpr std::array local_sites{
@@ -415,7 +415,7 @@ std::string prepare_qnx_qinggan11_startup(std::string_view original, std::string
     return qinggan11_startup(original, pin, false);
 }
 
-std::string prepare_qnx_qinggan11_611_startup(std::string_view original, std::string_view pin) {
+std::string prepare_qnx_qinggan11_older_startup(std::string_view original, std::string_view pin) {
     return qinggan11_startup(original, pin, true);
 }
 
@@ -479,8 +479,8 @@ std::string assemble_qnx_qinggan11_kernel(std::string_view original, std::string
     return qinggan11_kernel(original, pin, packed, false);
 }
 
-std::string assemble_qnx_qinggan11_611_kernel(std::string_view original, std::string_view pin,
-                                              std::string_view packed) {
+std::string assemble_qnx_qinggan11_older_kernel(std::string_view original, std::string_view pin,
+                                                std::string_view packed) {
     return qinggan11_kernel(original, pin, packed, true);
 }
 

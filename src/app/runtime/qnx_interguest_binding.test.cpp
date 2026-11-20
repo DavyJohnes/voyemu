@@ -150,7 +150,7 @@ int main() try {
     }
     const auto spec = passion();
     const auto binding = qnx_interguest_binding(spec);
-    assert(binding.passion && binding.geometry == InterguestLink::RamGeometry::passion21480 &&
+    assert(binding.passion && binding.geometry == InterguestLink::RamGeometry::passion &&
            binding.ram_bytes() == (11713ULL << 20));
 
     for (const char *key : {"hardware_adapter", "interguest_ram", "ram_backend", "ram", "qemu"}) {

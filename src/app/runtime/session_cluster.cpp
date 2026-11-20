@@ -824,11 +824,11 @@ void Session::poll_qnx() {
         const bool older = free_adapter == "sa8155-qinggan11-611";
         const auto projection = cluster_boot_spec_.value("mcu_projection", Json());
         const auto expected =
-                older && projection == qnx_qinggan11_611_mcu_projection(
-                                               qnx_qinggan11_611_previous_projected_fields)
-                        ? qnx_qinggan11_611_mcu_projection(
-                                  qnx_qinggan11_611_previous_projected_fields)
-                : older ? qnx_qinggan11_611_mcu_projection()
+                older && projection == qnx_qinggan11_older_mcu_projection(
+                                               qnx_qinggan11_older_previous_projected_fields)
+                        ? qnx_qinggan11_older_mcu_projection(
+                                  qnx_qinggan11_older_previous_projected_fields)
+                : older ? qnx_qinggan11_older_mcu_projection()
                         : qnx_qinggan11_mcu_projection();
 
         if (!qnx_mcu_delivery_scope(Json{{"mcu_projection", projection}}, expected)) {

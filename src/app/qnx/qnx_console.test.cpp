@@ -332,15 +332,15 @@ int main(int argc, char **argv) {
             }
         }
 
-        if (argc == 4 && std::string_view(argv[1]) == "--source-611") {
+        if (argc == 4 && std::string_view(argv[1]) == "--source-older") {
             const auto original = read(argv[2]), prepared = read(argv[3]);
             const std::string pin =
                     "dbb3bc2c6f9b0308e38627cf6a3e3b6757ba98c4f5413334526c26d812ab08f0";
-            const auto changed = adapt_qnx_qinggan11_611_pl011_console(original, pin, prepared,
-                                                                       blob);
+            const auto changed = adapt_qnx_qinggan11_older_pl011_console(original, pin, prepared,
+                                                                         blob);
 
             if (changed.size() != prepared.size()) {
-                throw std::runtime_error("6.11 console extent");
+                throw std::runtime_error("older qinggan11 console extent");
             }
 
             bool denied = false;
@@ -351,21 +351,21 @@ int main(int argc, char **argv) {
             }
 
             if (!denied) {
-                throw std::runtime_error("6.11 accepted by 7.3.1 console");
+                throw std::runtime_error("older qinggan11 input accepted by the qinggan11 console");
             }
 
             denied = false;
             try {
-                adapt_qnx_qinggan11_611_pl011_console(original, pin, changed, blob);
+                adapt_qnx_qinggan11_older_pl011_console(original, pin, changed, blob);
             } catch (...) {
                 denied = true;
             }
 
             if (!denied) {
-                throw std::runtime_error("6.11 console reapplied");
+                throw std::runtime_error("older qinggan11 console reapplied");
             }
 
-            std::cout << "6.11 console guards passed\n";
+            std::cout << "older qinggan11 console guards passed\n";
 
             return 0;
         }

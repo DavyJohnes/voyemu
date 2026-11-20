@@ -12,7 +12,7 @@ using u64 = unsigned long long;
 using usize = unsigned long;
 static Qinggan11McuField qinggan11_fields[579];
 static unsigned qinggan11_calibration_fixture = 1, qinggan11_calibration_fixture_enabled = 1;
-static unsigned qinggan11_projected_fields = voyemu::qnx_qinggan11_611_projected_fields,
+static unsigned qinggan11_projected_fields = voyemu::qnx_qinggan11_older_projected_fields,
                 qinggan11_settings_feedback_enabled = 0;
 #define QGFX_QINGGAN11_LAYOUT_DEFINED 1
 #include "mcu_catalog.inc"
@@ -296,12 +296,12 @@ int main(int argc, char **argv) {
         }
 
         assert(previous_scope_rejected);
-        const auto previous = voyemu::qnx_qinggan11_611_mcu_projection(
-                voyemu::qnx_qinggan11_611_previous_projected_fields);
+        const auto previous = voyemu::qnx_qinggan11_older_mcu_projection(
+                voyemu::qnx_qinggan11_older_previous_projected_fields);
         assert(voyemu::qnx_mcu_request_projection(650, 736, 34) == previous);
         assert(!voyemu::qnx_mcu_delivery_scope(Json{{"mcu_projection", previous}},
-                                               voyemu::qnx_qinggan11_611_mcu_projection()));
-        const auto projection = voyemu::qnx_qinggan11_611_mcu_projection();
+                                               voyemu::qnx_qinggan11_older_mcu_projection()));
+        const auto projection = voyemu::qnx_qinggan11_older_mcu_projection();
         assert(voyemu::qnx_mcu_request_projection(650, 736, 56) == projection);
         assert(voyemu::qnx_mcu_delivery_scope(Json{{"mcu_projection", projection}}, projection));
         assert(!voyemu::qnx_mcu_delivery_scope(Json{{"mcu_projection", projection}}, previous));

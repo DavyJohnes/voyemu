@@ -292,7 +292,7 @@ int main(int argc, char **argv) try {
     UnmapViewOfFile(bytes);
     CloseHandle(mapping);
     // Passion backing includes OEM storage; only the boot-mapped prefix may own a mailbox.
-    const auto passion_geometry = InterguestLink::RamGeometry::passion21480;
+    const auto passion_geometry = InterguestLink::RamGeometry::passion;
     auto resize = [&](std::uint64_t extent) {
         LARGE_INTEGER length{};
         length.QuadPart = static_cast<LONGLONG>(extent);

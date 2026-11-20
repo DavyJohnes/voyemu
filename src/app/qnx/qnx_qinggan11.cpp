@@ -6,24 +6,25 @@
 #include <cctype>
 #include <stdexcept>
 namespace voyemu {
-void validate_qnx_qinggan11_611_ram_driver(std::string_view driver) {
+void validate_qnx_qinggan11_older_ram_driver(std::string_view driver) {
     if (driver.size() != 22165) {
-        throw VoyemuError("QNX_QINGGAN11_611_RAM_DRIVER_SIZE",
+        throw VoyemuError("QNX_QINGGAN11_OLDER_RAM_DRIVER_SIZE",
                           "OEM image differs from the expected layout");
     }
 
-    // Exact OEM ELF differs from 7.3.1 only in the p_paddr of its two PT_LOAD segments.
+    // Exact OEM ELF differs from the qinggan11 adapter one only in the p_paddr of its two PT_LOAD
+    // segments.
     // Preserve OEM bytes: this verifies code and relocations without rewriting the loader metadata.
     if (static_cast<unsigned char>(driver[201]) != 0x50 ||
         static_cast<unsigned char>(driver[257]) != 0x8b) {
-        throw VoyemuError("QNX_QINGGAN11_611_RAM_DRIVER_ADDRESS",
+        throw VoyemuError("QNX_QINGGAN11_OLDER_RAM_DRIVER_ADDRESS",
                           "OEM image differs from the expected layout");
     }
 }
 
-std::string prepare_qnx_qinggan11_611_theme_scene(std::string_view original) {
+std::string prepare_qnx_qinggan11_older_theme_scene(std::string_view original) {
     if (original.size() != 207032) {
-        throw VoyemuError("QNX_QINGGAN11_611_THEME_SCENE_SIZE",
+        throw VoyemuError("QNX_QINGGAN11_OLDER_THEME_SCENE_SIZE",
                           "OEM image differs from the expected layout");
     }
 
@@ -31,7 +32,7 @@ std::string prepare_qnx_qinggan11_611_theme_scene(std::string_view original) {
 
     for (const auto at : {0x9de4, 0x9ed4, 0xa2cc, 0xa3b4}) {
         if (original.substr(at, 4) != std::string_view("\x5f\x4c\x00\x71", 4)) {
-            throw VoyemuError("QNX_QINGGAN11_611_THEME_SCENE_COMPARATOR",
+            throw VoyemuError("QNX_QINGGAN11_OLDER_THEME_SCENE_COMPARATOR",
                               "OEM image differs from the expected layout");
         }
 
@@ -41,9 +42,9 @@ std::string prepare_qnx_qinggan11_611_theme_scene(std::string_view original) {
     return output;
 }
 
-std::string prepare_qnx_qinggan11_611_theme_manager(std::string_view original) {
+std::string prepare_qnx_qinggan11_older_theme_manager(std::string_view original) {
     if (original.size() != 116616) {
-        throw VoyemuError("QNX_QINGGAN11_611_THEME_MANAGER_SIZE",
+        throw VoyemuError("QNX_QINGGAN11_OLDER_THEME_MANAGER_SIZE",
                           "OEM image differs from the expected layout");
     }
 
@@ -51,7 +52,7 @@ std::string prepare_qnx_qinggan11_611_theme_manager(std::string_view original) {
 
     for (const auto at : {0x5844, 0x587c, 0x58ec, 0x5924, 0x59b0}) {
         if (original.substr(at, 4) != std::string_view("\x1f\x4c\x00\x71", 4)) {
-            throw VoyemuError("QNX_QINGGAN11_611_THEME_MANAGER_COMPARATOR",
+            throw VoyemuError("QNX_QINGGAN11_OLDER_THEME_MANAGER_COMPARATOR",
                               "OEM image differs from the expected layout");
         }
 
@@ -340,10 +341,10 @@ qm_qconn=$!
     return output;
 }
 
-std::string prepare_qnx_qinggan11_611_display_config(std::string_view image,
-                                                     std::string_view configuration) {
+std::string prepare_qnx_qinggan11_older_display_config(std::string_view image,
+                                                       std::string_view configuration) {
     if (configuration.empty() || configuration.size() > 1119) {
-        throw VoyemuError("QNX_QINGGAN11_611_GRAPHICS_CAPACITY",
+        throw VoyemuError("QNX_QINGGAN11_OLDER_GRAPHICS_CAPACITY",
                           "OEM image differs from the expected layout");
     }
 

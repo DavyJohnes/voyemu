@@ -79,8 +79,8 @@ std::filesystem::path pinned_zig(const std::filesystem::path &root) {
 }
 
 constexpr std::array<QnxGuestAdapter, 4> adapters = {
-        QnxGuestAdapter::qinggan09, QnxGuestAdapter::qinggan11, QnxGuestAdapter::qinggan11611,
-        QnxGuestAdapter::passion21480};
+        QnxGuestAdapter::qinggan09, QnxGuestAdapter::qinggan11, QnxGuestAdapter::qinggan11_older,
+        QnxGuestAdapter::passion};
 
 // Links an OEM-like library with a GNU hash table that exports names, with the pinned Zig.
 std::string library(const std::filesystem::path &zig, const std::filesystem::path &work,
@@ -187,17 +187,14 @@ int main(int argc, char **argv) {
             return 0;
         }
 
-        if (argc == 4 && (std::string_view(argv[1]) == "--run" ||
+        // --run, --run-qinggan11 and --run-passion read the fetched originals of PROFILE.
+        if (argc == 5 && (std::string_view(argv[1]) == "--run" ||
                           std::string_view(argv[1]) == "--run-qinggan11" ||
                           std::string_view(argv[1]) == "--run-passion")) {
             const bool qinggan11 = std::string_view(argv[1]) == "--run-qinggan11",
                        passion = std::string_view(argv[1]) == "--run-passion";
             const auto root = std::filesystem::canonical(argv[2]),
-                       inputs = root / ".local/profiles" /
-                                (passion     ? "passion-11-russian-20260403-2.1.4.80"
-                                 : qinggan11 ? "free-11-chinese-20260731-7.3.1"
-                                             : "free-09-chinese-20260106-6.0.3") /
-                                "qnx";
+                       inputs = root / ".local/profiles" / argv[3] / "qnx";
             auto read = [](const std::filesystem::path &file) {
                 std::ifstream in(file, std::ios::binary);
 
@@ -237,8 +234,8 @@ int main(int argc, char **argv) {
                        screen = read_qnx_imagefs_file(read_qnx_imagefs_file(ifs, "ifs_display.img"),
                                                       "lib64/libscreen.so.1");
             std::cout << build_qnx_guest_modules(
-                                 root, libc, screen, std::filesystem::absolute(argv[3]), false,
-                                 passion     ? QnxGuestAdapter::passion21480
+                                 root, libc, screen, std::filesystem::absolute(argv[4]), false,
+                                 passion     ? QnxGuestAdapter::passion
                                  : qinggan11 ? QnxGuestAdapter::qinggan11
                                              : QnxGuestAdapter::qinggan09,
                                  qinggan11 ? Json{{"eps_calibrationFlag", 1}} : Json::object())
@@ -248,9 +245,8 @@ int main(int argc, char **argv) {
             return 0;
         }
 
-        for (const auto adapter :
-             {QnxGuestAdapter::qinggan11, QnxGuestAdapter::qinggan11611,
-              QnxGuestAdapter::passion21480, static_cast<QnxGuestAdapter>(99)}) {
+        for (const auto adapter : {QnxGuestAdapter::qinggan11, QnxGuestAdapter::qinggan11_older,
+                                   QnxGuestAdapter::passion, static_cast<QnxGuestAdapter>(99)}) {
             const auto error = failure_code([&] {
                 build_qnx_guest_modules("relative", "", "", {}, true, adapter);
             });
@@ -259,7 +255,7 @@ int main(int argc, char **argv) {
                   "adapter or path guard");
         }
 
-        for (const auto adapter : {QnxGuestAdapter::qinggan09, QnxGuestAdapter::passion21480}) {
+        for (const auto adapter : {QnxGuestAdapter::qinggan09, QnxGuestAdapter::passion}) {
             check(failure_code([&] {
                       build_qnx_guest_modules("relative", "", "", {}, true, adapter,
                                               Json{{"eps_calibrationFlag", 1}});

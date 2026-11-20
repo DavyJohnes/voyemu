@@ -19,7 +19,7 @@ public:
     };
     enum class RamGeometry {
         free8g,
-        passion21480
+        passion
     };
     InterguestLink();
     ~InterguestLink();

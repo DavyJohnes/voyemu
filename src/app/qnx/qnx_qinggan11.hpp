@@ -69,15 +69,15 @@ inline bool qnx_qinggan11_originals_match(const Json &originals) {
     return true;
 }
 
-void validate_qnx_qinggan11_611_ram_driver(std::string_view driver);
-std::string prepare_qnx_qinggan11_611_theme_scene(std::string_view original);
-std::string prepare_qnx_qinggan11_611_theme_manager(std::string_view original);
+void validate_qnx_qinggan11_older_ram_driver(std::string_view driver);
+std::string prepare_qnx_qinggan11_older_theme_scene(std::string_view original);
+std::string prepare_qnx_qinggan11_older_theme_manager(std::string_view original);
 std::string prepare_qnx_qinggan11_theme_scene(std::string_view original);
 std::string prepare_qnx_qinggan11_theme_manager(std::string_view original);
 std::string prepare_qnx_qinggan11_runtime(std::string_view owned_runtime,
                                           std::string_view padded_observer_sha256);
-std::string prepare_qnx_qinggan11_611_display_config(std::string_view original_display,
-                                                     std::string_view owned_configuration);
+std::string prepare_qnx_qinggan11_older_display_config(std::string_view original_display,
+                                                       std::string_view owned_configuration);
 std::string prepare_qnx_qinggan11_display_config(std::string_view original_display,
                                                  std::string_view owned_configuration);
 } // namespace voyemu

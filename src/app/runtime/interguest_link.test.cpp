@@ -479,7 +479,7 @@ int main(int argc, char **argv) try {
     });
     link.stop();
     // Passion backing includes OEM storage; only the boot-mapped prefix may own a mailbox.
-    const auto passion_geometry = InterguestLink::RamGeometry::passion21480;
+    const auto passion_geometry = InterguestLink::RamGeometry::passion;
     reset_page();
     serial_write(marker);
     assert(ftruncate(fd, 11713ULL << 20) == 0);

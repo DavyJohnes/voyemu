@@ -280,7 +280,7 @@ Json prepare_qnx_images(const std::filesystem::path &root, std::string_view prof
     // The adapter paths read installed guest modules; downloads happen here, where offline is
     // known.
     for (const auto guest : {QnxGuestAdapter::qinggan09, QnxGuestAdapter::qinggan11,
-                             QnxGuestAdapter::qinggan11611, QnxGuestAdapter::passion21480}) {
+                             QnxGuestAdapter::qinggan11_older, QnxGuestAdapter::passion}) {
         if (adapter == qnx_guest_adapter_name(guest)) {
             install_qnx_guest_modules(root, guest,
                                       embedded_toolchain_manifest()
@@ -645,7 +645,7 @@ Json prepare_qnx_qinggan11_images(const std::filesystem::path &root, std::string
          "QNX_QINGGAN11_DEVELOPER_RESERVE");
     const auto hyp = read(files.at("hyp_la.img"), 8 * 1024 * 1024),
                ifs = read(files.at("ifs2_la.img"), 256 * 1024 * 1024);
-    const auto host = older ? decode_qnx_qinggan11_611_host(
+    const auto host = older ? decode_qnx_qinggan11_older_host(
                                       hyp, inputs.at("hyp_la.img").at("sha256").get<std::string>())
                             : decode_qnx_qinggan11_host(
                                       hyp, inputs.at("hyp_la.img").at("sha256").get<std::string>());
@@ -653,7 +653,7 @@ Json prepare_qnx_qinggan11_images(const std::filesystem::path &root, std::string
                disk = read_qnx_imagefs_file(ifs, "ifs_disk.img");
 
     if (older) {
-        validate_qnx_qinggan11_611_ram_driver(read_qnx_imagefs_file(disk, "bin/devb-ram"));
+        validate_qnx_qinggan11_older_ram_driver(read_qnx_imagefs_file(disk, "bin/devb-ram"));
     }
 
     need(std::filesystem::file_size(files.at("system_la.img")) / 512 + 98 == 2097250,
@@ -670,7 +670,7 @@ Json prepare_qnx_qinggan11_images(const std::filesystem::path &root, std::string
                                         256 * 1024),
                       config.value("initial_native_state", Json::object()))
                       .empty(),
-             "QNX_QINGGAN11_611_MCU_LAYOUT_REQUIRED");
+             "QNX_QINGGAN11_OLDER_MCU_LAYOUT_REQUIRED");
     }
 
     need(std::filesystem::create_directory(output), "QNX_QINGGAN11_DEVELOPER_CREATE");
@@ -678,7 +678,7 @@ Json prepare_qnx_qinggan11_images(const std::filesystem::path &root, std::string
     const auto guest = build_qnx_guest_modules(
             root, read_qnx_imagefs_file(host, "lib64/libc.so.4"),
             read_qnx_imagefs_file(original_display, "lib64/libscreen.so.1"), output / "guest", true,
-            older ? QnxGuestAdapter::qinggan11611 : QnxGuestAdapter::qinggan11,
+            older ? QnxGuestAdapter::qinggan11_older : QnxGuestAdapter::qinggan11,
             config.value("initial_native_state", Json::object()));
     const auto bundle = read(output / "guest/front-bundle.so", 360000),
                observer = read(output / "guest/observer.so", 21312),
@@ -698,7 +698,8 @@ Json prepare_qnx_qinggan11_images(const std::filesystem::path &root, std::string
                                             sha256_bytes(padded));
     runtime = prepare_qnx_guest_shell(
             qnx_kanzi_gauge_observer(config) ? qnx_kanzi_gauge_runtime(runtime) : runtime);
-    auto display = older ? prepare_qnx_qinggan11_611_display_config(original_display, screen_config)
+    auto display = older ? prepare_qnx_qinggan11_older_display_config(original_display,
+                                                                      screen_config)
                          : prepare_qnx_qinggan11_display_config(original_display, screen_config);
     auto replace_display = [&](std::string_view name, std::string_view bytes,
                                unsigned alignment = 1, bool retain = true) {
@@ -744,25 +745,25 @@ Json prepare_qnx_qinggan11_images(const std::filesystem::path &root, std::string
                                            read_qnx_imagefs_file(host, "bin/startupmgr"), stub,
                                            sha256_bytes(display), sha256_bytes(disk)));
     const auto hyp_pin = inputs.at("hyp_la.img").at("sha256").get<std::string>();
-    const auto packed = older ? encode_qnx_qinggan11_611_host(hyp, hyp_pin, derived_host)
+    const auto packed = older ? encode_qnx_qinggan11_older_host(hyp, hyp_pin, derived_host)
                               : encode_qnx_qinggan11_host(hyp, hyp_pin, derived_host);
-    const auto prepared = older ? assemble_qnx_qinggan11_611_kernel(hyp, hyp_pin, packed)
+    const auto prepared = older ? assemble_qnx_qinggan11_older_kernel(hyp, hyp_pin, packed)
                                 : assemble_qnx_qinggan11_kernel(hyp, hyp_pin, packed);
     const auto console = read(output / "guest/qnx-pl011-console.bin", 112);
-    const auto kernel = older ? adapt_qnx_qinggan11_611_pl011_console(hyp, hyp_pin, prepared,
-                                                                      console)
+    const auto kernel = older ? adapt_qnx_qinggan11_older_pl011_console(hyp, hyp_pin, prepared,
+                                                                        console)
                               : adapt_qnx_a11_pl011_console(hyp, hyp_pin, prepared, console);
     write(output / "hyp-hvf.img", kernel);
     write(output / "host-native-lzo.bin", packed);
     write(output / "ifs2-native.img",
-          older ? qnx_qinggan11_611_loader_image(new_ifs, sha256_bytes(new_ifs))
+          older ? qnx_qinggan11_older_loader_image(new_ifs, sha256_bytes(new_ifs))
                 : qnx_qinggan11_loader_image(new_ifs, sha256_bytes(new_ifs)));
     write(output / "smem.bin", qnx_smem_memory());
-    const auto gpt = older ? qnx_qinggan11_611_gpt(new_ifs, sha256_bytes(new_ifs))
+    const auto gpt = older ? qnx_qinggan11_older_gpt(new_ifs, sha256_bytes(new_ifs))
                            : qnx_qinggan11_gpt(new_ifs, sha256_bytes(new_ifs));
 
     if (older) {
-        validate_qnx_qinggan11_611_gpt(gpt, new_ifs, sha256_bytes(new_ifs));
+        validate_qnx_qinggan11_older_gpt(gpt, new_ifs, sha256_bytes(new_ifs));
     } else {
         validate_qnx_qinggan11_gpt(gpt, new_ifs, sha256_bytes(new_ifs));
     }
@@ -782,7 +783,7 @@ Json prepare_qnx_qinggan11_images(const std::filesystem::path &root, std::string
             files.at("system_la.img"), inputs.at("system_la.img").at("sha256").get<std::string>(),
             "usr/bin/themmgr");
     replace_qnx6_file(system, sha256_file(system), "usr/bin/themmgr", sha256_bytes(theme_manager),
-                      (older ? prepare_qnx_qinggan11_611_theme_manager(theme_manager)
+                      (older ? prepare_qnx_qinggan11_older_theme_manager(theme_manager)
                              : prepare_qnx_qinggan11_theme_manager(theme_manager)),
                       64 * 512);
     const auto theme_scene = read_qnx6_file(
@@ -790,7 +791,7 @@ Json prepare_qnx_qinggan11_images(const std::filesystem::path &root, std::string
             "lib64/libclusterscene_withoutfaceid.so.0.1");
     replace_qnx6_file(system, sha256_file(system), "lib64/libclusterscene_withoutfaceid.so.0.1",
                       sha256_bytes(theme_scene),
-                      (older ? prepare_qnx_qinggan11_611_theme_scene(theme_scene)
+                      (older ? prepare_qnx_qinggan11_older_theme_scene(theme_scene)
                              : prepare_qnx_qinggan11_theme_scene(theme_scene)),
                       64 * 512);
     std::filesystem::rename(system, output / "sysla-gpt-ramdisk-v3.img");
@@ -965,7 +966,7 @@ Json prepare_qnx_passion_developer_images(const std::filesystem::path &root,
     const auto guest =
             build_qnx_guest_modules(root, read_qnx_imagefs_file(host, "lib64/libc.so.4"),
                                     read_qnx_imagefs_file(display, "lib64/libscreen.so.1"),
-                                    output / "guest", true, QnxGuestAdapter::passion21480);
+                                    output / "guest", true, QnxGuestAdapter::passion);
     const auto front = read(output / "guest/front.so", 360000),
                bounded = read(output / "guest/bounded.so", 21313),
                ram64 = read(output / "guest/ram64.so", 5728),

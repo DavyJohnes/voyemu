@@ -29,8 +29,8 @@ inline constexpr bool qnx_qinggan11_source_space_available(std::uint64_t availab
 enum class QnxGuestAdapter {
     qinggan09,
     qinggan11,
-    passion21480,
-    qinggan11611
+    passion,
+    qinggan11_older
 };
 // The guest ldqnx preloader reads a full page per PT_GNU_RELRO segment; a file ending short of the
 // last relro page fails preload fatally.

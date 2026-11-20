@@ -151,47 +151,47 @@ std::uint32_t qinggan11_imagefs_extent(std::string_view image, std::string_view 
 }
 } // namespace
 namespace {
-std::uint32_t qinggan11_611_imagefs_extent(std::string_view image, std::string_view pin) {
+std::uint32_t qinggan11_older_imagefs_extent(std::string_view image, std::string_view pin) {
     need(image.size() == 0x10000000 && pin.size() == 64 && sha256_bytes(image) == pin,
-         "QNX_QINGGAN11_611_GPT_INPUT_SHA");
+         "QNX_QINGGAN11_OLDER_GPT_INPUT_SHA");
     std::uint32_t extent = 0;
 
     for (unsigned i = 0; i < 4; ++i) {
         extent |= std::uint32_t(static_cast<unsigned char>(image[8 + i])) << (8 * i);
     }
 
-    need(extent == 147830848, "QNX_QINGGAN11_611_GPT_IMAGEFS_EXTENT");
+    need(extent == 147830848, "QNX_QINGGAN11_OLDER_GPT_IMAGEFS_EXTENT");
 
     return extent;
 }
 } // namespace
 
-QnxIfs2Gpt qnx_qinggan11_611_gpt(std::string_view image, std::string_view pin) {
-    return ifs2_gpt(qinggan11_611_imagefs_extent(image, pin));
+QnxIfs2Gpt qnx_qinggan11_older_gpt(std::string_view image, std::string_view pin) {
+    return ifs2_gpt(qinggan11_older_imagefs_extent(image, pin));
 }
 
-std::string qnx_qinggan11_611_loader_image(std::string_view image, std::string_view pin) {
-    const auto extent = qinggan11_611_imagefs_extent(image, pin);
+std::string qnx_qinggan11_older_loader_image(std::string_view image, std::string_view pin) {
+    const auto extent = qinggan11_older_imagefs_extent(image, pin);
     const std::size_t loaded = (std::size_t(extent) + 4095) / 4096 * 4096;
 
     need(loaded == 147832832 && loaded <= image.size() && loaded < 0x0ffbe000,
-         "QNX_QINGGAN11_611_LOADER_EXTENT");
+         "QNX_QINGGAN11_OLDER_LOADER_EXTENT");
     need(std::all_of(image.begin() + extent, image.end(),
                      [](unsigned char value) {
                          return value == 0xff;
                      }),
-         "QNX_QINGGAN11_611_LOADER_PADDING");
+         "QNX_QINGGAN11_OLDER_LOADER_PADDING");
 
     return std::string(image.substr(0, loaded));
 }
 
-void validate_qnx_qinggan11_611_gpt(const QnxIfs2Gpt &images, std::string_view image,
-                                    std::string_view pin) {
-    const auto expected = qnx_qinggan11_611_gpt(image, pin);
+void validate_qnx_qinggan11_older_gpt(const QnxIfs2Gpt &images, std::string_view image,
+                                      std::string_view pin) {
+    const auto expected = qnx_qinggan11_older_gpt(image, pin);
 
     need(images.cache == expected.cache && images.primary == expected.primary &&
                  images.backup == expected.backup,
-         "QNX_QINGGAN11_611_GPT_METADATA");
+         "QNX_QINGGAN11_OLDER_GPT_METADATA");
 }
 
 QnxIfs2Gpt qnx_qinggan11_gpt(std::string_view image, std::string_view pin) {

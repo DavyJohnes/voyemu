@@ -263,9 +263,9 @@ std::string qnx_guest_adapter_name(QnxGuestAdapter adapter) {
         return "sa8155-qinggan09";
     case QnxGuestAdapter::qinggan11:
         return "sa8155-qinggan11-731";
-    case QnxGuestAdapter::qinggan11611:
+    case QnxGuestAdapter::qinggan11_older:
         return "sa8155-qinggan11-611";
-    case QnxGuestAdapter::passion21480:
+    case QnxGuestAdapter::passion:
         return "sa8155-passion-21480";
     }
 
@@ -278,10 +278,10 @@ std::vector<std::string> qnx_guest_module_files(QnxGuestAdapter adapter) {
         return {"front.so",     "observer.so",      "virtual_wfd.so",
                 "readstub.bin", "qnx-ipl-virt.bin", "qnx-ifs2-restore.bin"};
     case QnxGuestAdapter::qinggan11:
-    case QnxGuestAdapter::qinggan11611:
+    case QnxGuestAdapter::qinggan11_older:
         return {"front.so",         "observer.so",          "virtual_wfd.so",       "readstub.bin",
                 "qnx-ipl-virt.bin", "qnx-ifs2-restore.bin", "qnx-pl011-console.bin"};
-    case QnxGuestAdapter::passion21480:
+    case QnxGuestAdapter::passion:
         return {"front.so",
                 "bounded.so",
                 "ram64.so",
@@ -298,7 +298,7 @@ std::vector<std::string> qnx_guest_module_files(QnxGuestAdapter adapter) {
 
 std::string qnx_guest_modules_digest(std::string_view hardware_adapter) {
     for (const auto adapter : {QnxGuestAdapter::qinggan09, QnxGuestAdapter::qinggan11,
-                               QnxGuestAdapter::qinggan11611, QnxGuestAdapter::passion21480}) {
+                               QnxGuestAdapter::qinggan11_older, QnxGuestAdapter::passion}) {
         if (qnx_guest_adapter_name(adapter) == hardware_adapter) {
             return module_digest(adapter, module_pins(adapter));
         }
@@ -311,9 +311,9 @@ Json build_qnx_guest_recipe(const std::filesystem::path &root, const std::filesy
                             const std::filesystem::path &output, bool offline,
                             QnxGuestAdapter adapter, const Json &initial_native_state) {
     const auto name = qnx_guest_adapter_name(adapter);
-    const bool older = adapter == QnxGuestAdapter::qinggan11611,
+    const bool older = adapter == QnxGuestAdapter::qinggan11_older,
                qinggan11 = adapter == QnxGuestAdapter::qinggan11 || older,
-               passion = adapter == QnxGuestAdapter::passion21480,
+               passion = adapter == QnxGuestAdapter::passion,
                qinggan09 = adapter == QnxGuestAdapter::qinggan09;
 
     need(initial_native_state.is_object() && (qinggan11 || initial_native_state.empty()),
@@ -801,12 +801,11 @@ Json build_qnx_guest_modules(const std::filesystem::path &root, std::string_view
                              const Json &initial_native_state, std::string_view startup_baseline,
                              std::string_view sysmgrtool_original) {
     need(adapter == QnxGuestAdapter::qinggan09 || adapter == QnxGuestAdapter::qinggan11 ||
-                 adapter == QnxGuestAdapter::qinggan11611 ||
-                 adapter == QnxGuestAdapter::passion21480,
+                 adapter == QnxGuestAdapter::qinggan11_older || adapter == QnxGuestAdapter::passion,
          "QNX_GUEST_ADAPTER");
-    const bool older = adapter == QnxGuestAdapter::qinggan11611,
+    const bool older = adapter == QnxGuestAdapter::qinggan11_older,
                qinggan11 = adapter == QnxGuestAdapter::qinggan11 || older,
-               passion = adapter == QnxGuestAdapter::passion21480,
+               passion = adapter == QnxGuestAdapter::passion,
                qinggan09 = adapter == QnxGuestAdapter::qinggan09;
     need(initial_native_state.is_object() && (qinggan11 || initial_native_state.empty()),
          "QNX_GUEST_INITIAL_STATE_ADAPTER");
@@ -891,7 +890,7 @@ Json build_qnx_guest_modules(const std::filesystem::path &root, std::string_view
              qinggan11 ? qnx_qinggan11_simulated_initial_state(initial_native_state,
                                                                qnx_guest_adapter_name(adapter))
                        : Json(nullptr)},
-            {"mcu_projection", older       ? qnx_qinggan11_611_mcu_projection()
+            {"mcu_projection", older       ? qnx_qinggan11_older_mcu_projection()
                                : qinggan11 ? qnx_qinggan11_mcu_projection()
                                            : Json(nullptr)},
             {"oem_libc_sha256", sha256_bytes(libc)},

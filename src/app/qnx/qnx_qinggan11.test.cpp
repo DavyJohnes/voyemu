@@ -49,41 +49,41 @@ template <class Function> void rejects_code(Function function, std::string_view 
 
 int main(int argc, char **argv) {
     try {
-        if (argc == 4 && std::string_view(argv[1]) == "--qinggan11-611-display") {
+        if (argc == 4 && std::string_view(argv[1]) == "--qinggan11-older-display") {
             const auto image = read(argv[2]), configuration = read(argv[3]);
-            const auto changed = prepare_qnx_qinggan11_611_display_config(image, configuration);
+            const auto changed = prepare_qnx_qinggan11_older_display_config(image, configuration);
             const auto actual = read_qnx_imagefs_file(changed, "lib64/graphics.conf");
 
             if (actual.substr(0, configuration.size()) != configuration || actual.size() != 1119) {
-                throw std::runtime_error("6.11 display configuration differs");
+                throw std::runtime_error("older qinggan11 display configuration differs");
             }
 
             rejects([&] {
-                prepare_qnx_qinggan11_611_display_config(changed, configuration);
+                prepare_qnx_qinggan11_older_display_config(changed, configuration);
             });
-            std::cout << "6.11 display exact guard passed\n";
+            std::cout << "older qinggan11 display exact guard passed\n";
 
             return 0;
         }
 
-        if (argc == 5 && std::string_view(argv[1]) == "--qinggan11-611") {
+        if (argc == 5 && std::string_view(argv[1]) == "--qinggan11-older") {
             const auto manager = read(argv[2]), scene = read(argv[3]), driver = read(argv[4]);
-            const auto fixed_manager = prepare_qnx_qinggan11_611_theme_manager(manager),
-                       fixed_scene = prepare_qnx_qinggan11_611_theme_scene(scene);
+            const auto fixed_manager = prepare_qnx_qinggan11_older_theme_manager(manager),
+                       fixed_scene = prepare_qnx_qinggan11_older_theme_scene(scene);
 
             for (const auto at : {0x5844, 0x587c, 0x58ec, 0x5924, 0x59b0}) {
                 if (static_cast<unsigned char>(fixed_manager[at + 1]) != 0xcc) {
-                    throw std::runtime_error("6.11 manager comparator");
+                    throw std::runtime_error("older qinggan11 manager comparator");
                 }
             }
 
             for (const auto at : {0x9de4, 0x9ed4, 0xa2cc, 0xa3b4}) {
                 if (static_cast<unsigned char>(fixed_scene[at + 1]) != 0xcc) {
-                    throw std::runtime_error("6.11 scene comparator");
+                    throw std::runtime_error("older qinggan11 scene comparator");
                 }
             }
 
-            validate_qnx_qinggan11_611_ram_driver(driver);
+            validate_qnx_qinggan11_older_ram_driver(driver);
             rejects([&] {
                 prepare_qnx_qinggan11_theme_manager(manager);
             });
@@ -91,17 +91,17 @@ int main(int argc, char **argv) {
                 prepare_qnx_qinggan11_theme_scene(scene);
             });
             rejects([&] {
-                prepare_qnx_qinggan11_611_theme_manager(fixed_manager);
+                prepare_qnx_qinggan11_older_theme_manager(fixed_manager);
             });
             rejects([&] {
-                prepare_qnx_qinggan11_611_theme_scene(fixed_scene);
+                prepare_qnx_qinggan11_older_theme_scene(fixed_scene);
             });
             auto bad = driver;
             bad[201] ^= 1;
             rejects([&] {
-                validate_qnx_qinggan11_611_ram_driver(bad);
+                validate_qnx_qinggan11_older_ram_driver(bad);
             });
-            std::cout << "6.11 theme and OEM RAM driver guards passed\n";
+            std::cout << "older qinggan11 theme and OEM RAM driver guards passed\n";
 
             return 0;
         }
@@ -518,7 +518,7 @@ esac
             }
 
             std::cout
-                    << "Free A11 7.3.1 exact own-runtime utility namespace source passed; no OEM execution\n";
+                    << "qinggan11 exact own-runtime utility namespace source passed; no OEM execution\n";
 
             return 0;
         }

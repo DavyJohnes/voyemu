@@ -180,75 +180,76 @@ int main() try {
     rejects([&] {
         qnx_portable_layout(qinggan09_profile, fractional_network);
     });
-    Json portable611 = {{"guest_arch", "aarch64"}, {"images", Json::object()}};
-    const auto layout611 = qnx_runtime_layout("sa8155-qinggan11-611");
-    qnx_runtime_metadata(portable611, layout611);
-    portable611["interguest_network"] = qnx_interguest_contract();
-    portable611["simulated_initial_native_state"] = qnx_qinggan11_simulated_initial_state(
+    Json portable_older = {{"guest_arch", "aarch64"}, {"images", Json::object()}};
+    const auto layout_older = qnx_runtime_layout("sa8155-qinggan11-611");
+    qnx_runtime_metadata(portable_older, layout_older);
+    portable_older["interguest_network"] = qnx_interguest_contract();
+    portable_older["simulated_initial_native_state"] = qnx_qinggan11_simulated_initial_state(
             Json{{"eps_calibrationFlag", 1}}, "sa8155-qinggan11-611");
 
-    for (const auto &image : layout611.images) {
-        portable611["images"][image] = {
+    for (const auto &image : layout_older.images) {
+        portable_older["images"][image] = {
                 {"file", "qnx/" + image}, {"bytes", 1}, {"sha256", std::string(64, 'a')}};
     }
 
-    const auto accepted611 = qnx_portable_layout(older_profile, portable611);
-    assert(accepted611.images.size() == 10 && accepted611.projection.at("projected_fields") == 56 &&
-           accepted611.projection.at("unsupported_fields") == 523);
-    auto older611 = portable611;
-    older611["mcu_projection"] =
-            qnx_qinggan11_611_mcu_projection(qnx_qinggan11_611_previous_projected_fields);
-    assert(qnx_portable_layout(older_profile, older611).projection.at("projected_fields") == 34);
-    auto fractional611 = older611;
-    fractional611["mcu_projection"]["projected_fields"] = 34.0;
+    const auto accepted_older = qnx_portable_layout(older_profile, portable_older);
+    assert(accepted_older.images.size() == 10 &&
+           accepted_older.projection.at("projected_fields") == 56 &&
+           accepted_older.projection.at("unsupported_fields") == 523);
+    auto scope34 = portable_older;
+    scope34["mcu_projection"] =
+            qnx_qinggan11_older_mcu_projection(qnx_qinggan11_older_previous_projected_fields);
+    assert(qnx_portable_layout(older_profile, scope34).projection.at("projected_fields") == 34);
+    auto fractional_older = scope34;
+    fractional_older["mcu_projection"]["projected_fields"] = 34.0;
     rejects([&] {
-        qnx_portable_layout(older_profile, fractional611);
+        qnx_portable_layout(older_profile, fractional_older);
     });
-    auto previous611 = portable611;
-    previous611["mcu_projection"]["projected_fields"] = 33;
-    previous611["mcu_projection"]["unsupported_fields"] = 546;
+    auto scope33 = portable_older;
+    scope33["mcu_projection"]["projected_fields"] = 33;
+    scope33["mcu_projection"]["unsupported_fields"] = 546;
     rejects([&] {
-        qnx_portable_layout(older_profile, previous611);
+        qnx_portable_layout(older_profile, scope33);
     });
-    assert(qnx_portable_upgrade_source_layout(older_profile, previous611)
+    assert(qnx_portable_upgrade_source_layout(older_profile, scope33)
                    .projection.at("projected_fields") == 33);
-    assert(qnx_portable_upgrade_source_layout(qinggan11_profile, previous611)
+    assert(qnx_portable_upgrade_source_layout(qinggan11_profile, scope33)
                    .projection.at("projected_fields") == 33);
-    auto bad_previous = previous611;
+    auto bad_previous = scope33;
     bad_previous["mcu_projection"]["projected_fields"] = 32;
     rejects([&] {
         qnx_portable_upgrade_source_layout(older_profile, bad_previous);
     });
-    bad_previous = previous611;
+    bad_previous = scope33;
     bad_previous["mcu_projection"]["projected_fields"] = 19;
     bad_previous["mcu_projection"]["unsupported_fields"] = 560;
     rejects([&] {
         qnx_portable_upgrade_source_layout(older_profile, bad_previous);
     });
-    bad_previous = previous611;
+    bad_previous = scope33;
     bad_previous["hardware_adapter"] = "sa8155-qinggan11-731";
     rejects([&] {
         qnx_portable_upgrade_source_layout(older_profile, bad_previous);
     });
-    bad_previous = previous611;
+    bad_previous = scope33;
     bad_previous["mcu_projection"]["unsupported_field_policy"] = "ignore";
     rejects([&] {
         qnx_portable_upgrade_source_layout(older_profile, bad_previous);
     });
-    auto wrong611 = portable611;
-    wrong611["mcu_projection"] = qnx_qinggan11_mcu_projection();
+    auto wrong_older = portable_older;
+    wrong_older["mcu_projection"] = qnx_qinggan11_mcu_projection();
     rejects([&] {
-        qnx_portable_layout(older_profile, wrong611);
+        qnx_portable_layout(older_profile, wrong_older);
     });
-    wrong611 = portable611;
-    wrong611["simulated_initial_native_state"]["hardware_adapter"] = "sa8155-qinggan11-731";
+    wrong_older = portable_older;
+    wrong_older["simulated_initial_native_state"]["hardware_adapter"] = "sa8155-qinggan11-731";
     rejects([&] {
-        qnx_portable_layout(older_profile, wrong611);
+        qnx_portable_layout(older_profile, wrong_older);
     });
-    wrong611 = portable611;
-    wrong611["mcu_projection"]["settings_feedback_supported"] = true;
+    wrong_older = portable_older;
+    wrong_older["mcu_projection"]["settings_feedback_supported"] = true;
     rejects([&] {
-        qnx_portable_layout(older_profile, wrong611);
+        qnx_portable_layout(older_profile, wrong_older);
     });
     auto free = qnx_runtime_layout("sa8155-qinggan11-731");
     qnx_runtime_metadata(metadata, free);

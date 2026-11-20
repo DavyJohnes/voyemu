@@ -172,13 +172,13 @@ int main() try {
                        {"mcu_projection", qnx_qinggan11_mcu_projection()}}},
                      {"presentation", {{"after_timestamp_ns", 100}}}};
     assert(qnx_qinggan11_post_ack_frame(delivery, owner, owner, 101, 2));
-    const auto projection611 = qnx_qinggan11_611_mcu_projection();
-    auto delivery611 = delivery;
-    delivery611["vehicle"]["fields"] = qnx_qinggan11_611_projected_fields;
-    delivery611["vehicle"]["mcu_projection"] = projection611;
-    assert(qnx_qinggan11_post_ack_frame(delivery611, owner, owner, 101, 2, projection611));
-    assert(!qnx_qinggan11_post_ack_frame(delivery611, owner, owner, 101, 2));
-    assert(!qnx_qinggan11_post_ack_frame(delivery, owner, owner, 101, 2, projection611));
+    const auto projection_older = qnx_qinggan11_older_mcu_projection();
+    auto delivery_older = delivery;
+    delivery_older["vehicle"]["fields"] = qnx_qinggan11_older_projected_fields;
+    delivery_older["vehicle"]["mcu_projection"] = projection_older;
+    assert(qnx_qinggan11_post_ack_frame(delivery_older, owner, owner, 101, 2, projection_older));
+    assert(!qnx_qinggan11_post_ack_frame(delivery_older, owner, owner, 101, 2));
+    assert(!qnx_qinggan11_post_ack_frame(delivery, owner, owner, 101, 2, projection_older));
     std::vector<std::byte> sparse(1920 * 720 * 4);
     assert(!qnx_native_frame_nonblank(sparse, 1920, 720));
     std::fill(sparse.begin(), sparse.end(), std::byte{255});

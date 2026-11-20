@@ -291,34 +291,34 @@ int main(int argc, char **argv) {
             qnx_qinggan11_gpt({}, {});
         });
 
-        if (argc == 3 && std::string_view(argv[1]) == "--qinggan11-611") {
+        if (argc == 3 && std::string_view(argv[1]) == "--qinggan11-older") {
             std::ifstream in(argv[2], std::ios::binary);
 
             if (!in) {
-                throw std::runtime_error("6.11 IFS input");
+                throw std::runtime_error("older qinggan11 IFS input");
             }
 
             const std::string image((std::istreambuf_iterator<char>(in)), {}),
                     pin = "fe181358fb9f827bc9df2d63e7ba0fad4f5fb0264b3bfa43f9fa6d0b47bc3ad7";
-            const auto gpt = qnx_qinggan11_611_gpt(image, pin);
-            validate_qnx_qinggan11_611_gpt(gpt, image, pin);
+            const auto gpt = qnx_qinggan11_older_gpt(image, pin);
+            validate_qnx_qinggan11_older_gpt(gpt, image, pin);
 
-            if (qnx_qinggan11_611_loader_image(image, pin).size() != 147832832) {
-                throw std::runtime_error("6.11 loader extent");
+            if (qnx_qinggan11_older_loader_image(image, pin).size() != 147832832) {
+                throw std::runtime_error("older qinggan11 loader extent");
             }
 
             qinggan11_rejects([&] {
                 qnx_qinggan11_gpt(image, pin);
             });
             qinggan11_rejects([&] {
-                qnx_qinggan11_611_gpt(image, std::string(64, '0'));
+                qnx_qinggan11_older_gpt(image, std::string(64, '0'));
             });
             auto corrupt = gpt;
             corrupt.cache[0] ^= 1;
             qinggan11_rejects([&] {
-                validate_qnx_qinggan11_611_gpt(corrupt, image, pin);
+                validate_qnx_qinggan11_older_gpt(corrupt, image, pin);
             });
-            std::cout << "6.11 IFS GPT and cross-version guards passed\n";
+            std::cout << "older qinggan11 IFS GPT and cross-version guards passed\n";
 
             return 0;
         }

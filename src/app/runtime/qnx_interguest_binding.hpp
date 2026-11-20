@@ -103,7 +103,7 @@ inline QnxInterguestBinding qnx_passion_ram_binding(const Json &runtime, bool pr
          "memory-backend-file,id=qnxmem,size=11713M,mem-path=${SESSION}/qnx-ram.bin,share=on");
     need(option("-serial") == "file:${SESSION}/qnx-serial.log");
 
-    return {InterguestLink::RamGeometry::passion21480, true};
+    return {InterguestLink::RamGeometry::passion, true};
 }
 
 inline QnxInterguestBinding qnx_interguest_binding(const Json &runtime) {

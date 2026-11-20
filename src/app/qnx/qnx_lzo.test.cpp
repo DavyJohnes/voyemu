@@ -273,30 +273,30 @@ void synthetic() {
 
 int main(int argc, char **argv) {
     try {
-        if (argc == 3 && std::string_view(argv[1]) == "--qinggan11-611") {
+        if (argc == 3 && std::string_view(argv[1]) == "--qinggan11-older") {
             std::ifstream in(argv[2], std::ios::binary);
 
             if (!in) {
-                throw std::runtime_error("6.11 owner input open");
+                throw std::runtime_error("older qinggan11 owner input open");
             }
 
             const std::string hyp((std::istreambuf_iterator<char>(in)), {}),
                     pin = "dbb3bc2c6f9b0308e38627cf6a3e3b6757ba98c4f5413334526c26d812ab08f0";
-            const auto host = decode_qnx_qinggan11_611_host(hyp, pin);
+            const auto host = decode_qnx_qinggan11_older_host(hyp, pin);
 
             if (sha256_bytes(host) !=
                         "734b0b0f0c0383853231f5d1ba216cd4e9d6e9fe8373ec4aeb21b1db7d5ed7e2" ||
-                encode_qnx_qinggan11_611_host(hyp, pin, host) !=
+                encode_qnx_qinggan11_older_host(hyp, pin, host) !=
                         hyp.substr(0x69108, 0x2d76d0 - 0x69108)) {
-                throw std::runtime_error("6.11 host identity");
+                throw std::runtime_error("older qinggan11 host identity");
             }
 
             auto changed = host;
             changed.at(changed.size() - 8) ^= 1;
-            const auto packed = encode_qnx_qinggan11_611_host(hyp, pin, changed);
+            const auto packed = encode_qnx_qinggan11_older_host(hyp, pin, changed);
 
             if (decode_qnx_declared_boot_stream(packed, 103, 6704052) != changed) {
-                throw std::runtime_error("6.11 host changed roundtrip");
+                throw std::runtime_error("older qinggan11 host changed roundtrip");
             }
 
             for (unsigned mode = 0; mode < 3; ++mode) {
@@ -305,22 +305,23 @@ int main(int argc, char **argv) {
                     if (mode == 0) {
                         decode_qnx_qinggan11_host(hyp, pin);
                     } else if (mode == 1) {
-                        decode_qnx_qinggan11_611_host(hyp, std::string(64, '0'));
+                        decode_qnx_qinggan11_older_host(hyp, std::string(64, '0'));
                     } else {
                         auto bad = hyp;
                         bad[0x3024] ^= 1;
-                        decode_qnx_qinggan11_611_host(bad, sha256_bytes(bad));
+                        decode_qnx_qinggan11_older_host(bad, sha256_bytes(bad));
                     }
                 } catch (...) {
                     rejected = true;
                 }
 
                 if (!rejected) {
-                    throw std::runtime_error("6.11 cross-version or mutated host accepted");
+                    throw std::runtime_error(
+                            "older qinggan11 cross-version or mutated host accepted");
                 }
             }
 
-            std::cout << "6.11 host identity and mixed-version guards passed\n";
+            std::cout << "older qinggan11 host identity and mixed-version guards passed\n";
 
             return 0;
         }

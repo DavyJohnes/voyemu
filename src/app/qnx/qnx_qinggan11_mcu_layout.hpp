@@ -45,7 +45,7 @@ inline std::string qnx_qinggan11_mcu_layout(const Json &definition,
     validate_qnx_qinggan11_initial_state(initial_native);
     const bool older = definition.value("hardware_adapter", std::string{}) ==
                        "sa8155-qinggan11-611";
-    const unsigned projected_count = older ? qnx_qinggan11_611_projected_fields : 462U;
+    const unsigned projected_count = older ? qnx_qinggan11_older_projected_fields : 462U;
     auto need = [](bool okay) {
         if (!okay) {
             throw VoyemuError("QNX_QINGGAN11_MCU_LAYOUT", "invalid MCU layout");

@@ -2457,7 +2457,7 @@ static void api30_publication_checks(const std::filesystem::path &stage, bool ol
 
     if (full.at("qnx").at("images").size() != 10 ||
         full.at("qnx").at("mcu_projection") !=
-                (older ? qnx_qinggan11_611_mcu_projection() : qnx_qinggan11_mcu_projection()) ||
+                (older ? qnx_qinggan11_older_mcu_projection() : qnx_qinggan11_mcu_projection()) ||
         combined.at("profile_ready") != true || full.at("android").at("api") != 30 ||
         full.at("android").at("base_archive_sha256") != archive ||
         read_private_json(definition).at("status") != "incomplete") {

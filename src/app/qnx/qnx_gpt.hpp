@@ -20,10 +20,10 @@ struct QnxIfs2Gpt {
 };
 QnxIfs2Gpt qnx_passion_gpt(std::uint64_t ifs_bytes);
 void validate_qnx_passion_gpt(const QnxIfs2Gpt &images, std::uint64_t ifs_bytes);
-QnxIfs2Gpt qnx_qinggan11_611_gpt(std::string_view ifs_image, std::string_view sha256);
-std::string qnx_qinggan11_611_loader_image(std::string_view ifs_image, std::string_view sha256);
-void validate_qnx_qinggan11_611_gpt(const QnxIfs2Gpt &images, std::string_view ifs_image,
-                                    std::string_view sha256);
+QnxIfs2Gpt qnx_qinggan11_older_gpt(std::string_view ifs_image, std::string_view sha256);
+std::string qnx_qinggan11_older_loader_image(std::string_view ifs_image, std::string_view sha256);
+void validate_qnx_qinggan11_older_gpt(const QnxIfs2Gpt &images, std::string_view ifs_image,
+                                      std::string_view sha256);
 QnxIfs2Gpt qnx_qinggan11_gpt(std::string_view ifs_image, std::string_view sha256);
 std::string qnx_qinggan11_loader_image(std::string_view ifs_image, std::string_view sha256);
 void validate_qnx_qinggan11_gpt(const QnxIfs2Gpt &images, std::string_view ifs_image,

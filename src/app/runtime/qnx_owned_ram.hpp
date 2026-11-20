@@ -14,7 +14,7 @@ inline std::uint64_t qnx_owned_ram_bytes(const Json &owner) {
     }
 
     if (geometry == "Passion11713MiB") {
-        return QnxInterguestBinding{InterguestLink::RamGeometry::passion21480, true}.ram_bytes();
+        return QnxInterguestBinding{InterguestLink::RamGeometry::passion, true}.ram_bytes();
     }
 
     throw VoyemuError("QNX_CLEANUP_OWNER", "unsupported RAM geometry");
