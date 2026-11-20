@@ -2,7 +2,7 @@
 
 Experimental profile. End-to-end factory and cold-boot acceptance is pending.
 
-The Russian Free firmware RC1 of 18 March 2026 on Android 11. The profile takes the OEM Android originals from a partition snapshot instead of the firmware update archive; the QNX cluster inputs remain those of Free 7.3.1, imported from its pinned firmware archive.
+The Russian firmware Free Sport+ 2026-03-18 RC1 on Android 11. The profile takes the OEM Android originals from a partition snapshot instead of the firmware update archive; the QNX cluster inputs remain those of Free 7.3.1, imported from its pinned firmware archive.
 
 ## Guests
 
@@ -16,7 +16,7 @@ The Russian Free firmware RC1 of 18 March 2026 on Android 11. The profile takes 
 
 ## OEM inputs
 
-Import the pinned partition snapshot `free-11-russian-20260318-rc1.zip` from an absolute local path. The snapshot holds the raw `system.img` and `vendor.img` of the vehicle plus `vbmeta.img`; `fetch` extracts the Android originals declared in `profile.json` from the pinned images. The QNX originals are not in the snapshot: import them once from the pinned Free 7.3.1 firmware archive `update.zip` of the Chinese `free-11-chinese-20260731-7.3.1` profile, whose QNX partitions match this firmware. Preparation takes the `su` rules of the Android machine from the SELinux policies of the system_ext and vendor partitions, so `su` is restricted as in the vehicle.
+`fetch` imports the pinned partition snapshot `free-11-russian-20260318-rc1.zip` from an absolute local path. The snapshot holds the raw `system.img` and `vendor.img` of the vehicle plus `vbmeta.img`; `fetch` extracts the Android originals declared in `profile.json` from the pinned images. The QNX originals are not in the snapshot: they are imported once from the pinned Free 7.3.1 firmware archive `update.zip` of the Chinese `free-11-chinese-20260731-7.3.1` profile, whose QNX partitions match this firmware. Preparation takes the `su` rules of the Android machine from the SELinux policies of the system_ext and vendor partitions, so `su` is restricted as in the vehicle.
 
 ```sh
 ./voyemu deps free-11-russian-20260318-rc1

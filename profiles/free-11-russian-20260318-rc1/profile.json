@@ -1,6 +1,9 @@
 {
   "schema": 1,
   "id": "free-11-russian-20260318-rc1",
+  "title": "Free Sport+ 2026-03-18 RC1",
+  "platform": "qinggan11",
+  "board": "8155",
   "status": "ready",
   "initial_state": {
     "aeb_sts": 1
