@@ -8,6 +8,8 @@ using namespace session_detail;
 namespace session_detail {
 const std::array<const char *, 2> angle_libraries{"libEGL.dll", "libGLESv2.dll"};
 
+// Files that this process and its children such as QEMU create are owned by the default owner of
+// the token, which is Administrators rather than the user under an elevated Windows Server token.
 bool owned_windows_file(HANDLE file) {
     HANDLE token = nullptr;
 
@@ -15,10 +17,13 @@ bool owned_windows_file(HANDLE file) {
         return false;
     }
 
-    DWORD size = 0;
-    GetTokenInformation(token, TokenUser, nullptr, 0, &size);
-    std::vector<std::byte> bytes(size);
-    bool valid = GetTokenInformation(token, TokenUser, bytes.data(), size, &size) != 0;
+    DWORD user_size = 0, default_owner_size = 0;
+    GetTokenInformation(token, TokenUser, nullptr, 0, &user_size);
+    GetTokenInformation(token, TokenOwner, nullptr, 0, &default_owner_size);
+    std::vector<std::byte> user(user_size), default_owner(default_owner_size);
+    bool valid = GetTokenInformation(token, TokenUser, user.data(), user_size, &user_size) != 0 &&
+                 GetTokenInformation(token, TokenOwner, default_owner.data(), default_owner_size,
+                                     &default_owner_size) != 0;
     CloseHandle(token);
 
     if (!valid) {
@@ -30,7 +35,8 @@ bool owned_windows_file(HANDLE file) {
     DWORD result = GetSecurityInfo(file, SE_FILE_OBJECT, OWNER_SECURITY_INFORMATION, &owner,
                                    nullptr, nullptr, nullptr, &descriptor);
     bool same = result == ERROR_SUCCESS &&
-                EqualSid(owner, reinterpret_cast<TOKEN_USER *>(bytes.data())->User.Sid);
+                (EqualSid(owner, reinterpret_cast<TOKEN_USER *>(user.data())->User.Sid) ||
+                 EqualSid(owner, reinterpret_cast<TOKEN_OWNER *>(default_owner.data())->Owner));
 
     if (descriptor) {
         LocalFree(descriptor);

@@ -2163,6 +2163,56 @@ static void android_nonce_authority() {
     assert(android_nonce_matches("current", "current", "retained", true));
 }
 
+#ifdef _WIN32
+// Files created under an elevated Windows Server token are owned by Administrators; reproduce that
+// default owner whenever the token allows it. The previous default owner is returned for restoring.
+static std::vector<std::byte> elevated_default_owner() {
+    HANDLE token = nullptr;
+
+    if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY | TOKEN_ADJUST_DEFAULT, &token)) {
+        throw std::runtime_error("process token unavailable");
+    }
+
+    DWORD size = 0;
+    GetTokenInformation(token, TokenOwner, nullptr, 0, &size);
+    std::vector<std::byte> previous(size);
+    BYTE administrators[SECURITY_MAX_SID_SIZE]{};
+    DWORD administrators_size = sizeof administrators;
+    TOKEN_OWNER owner{administrators};
+    const bool loaded = GetTokenInformation(token, TokenOwner, previous.data(), size, &size) != 0 &&
+                        CreateWellKnownSid(WinBuiltinAdministratorsSid, nullptr, administrators,
+                                           &administrators_size) != 0;
+
+    if (loaded) {
+        SetTokenInformation(token, TokenOwner, &owner, sizeof owner);
+    }
+
+    CloseHandle(token);
+
+    if (!loaded) {
+        throw std::runtime_error("default owner unavailable");
+    }
+
+    return previous;
+}
+
+static void restore_default_owner(std::vector<std::byte> &previous) {
+    HANDLE token = nullptr;
+    const bool restored = OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_DEFAULT, &token) !=
+                                  0 &&
+                          SetTokenInformation(token, TokenOwner, previous.data(),
+                                              static_cast<DWORD>(previous.size())) != 0;
+
+    if (token) {
+        CloseHandle(token);
+    }
+
+    if (!restored) {
+        throw std::runtime_error("default owner not restored");
+    }
+}
+#endif
+
 static void cleanup_guards() {
     auto root = std::filesystem::canonical(std::filesystem::temp_directory_path()) /
                 ("voyemu-owned-qnx-cleanup-test-" + random_token());
@@ -2283,7 +2333,13 @@ static void cleanup_guards() {
     assert(std::filesystem::exists(path));
     std::filesystem::remove(hard / "qnx-ram.bin");
 #endif
+#ifdef _WIN32
+    auto previous_owner = elevated_default_owner();
     auto valid = make();
+    restore_default_owner(previous_owner);
+#else
+    auto valid = make();
+#endif
     {
         std::ofstream(valid / "qnx-console.log") << "preserved";
         std::ofstream(valid / "OEM-input.bin") << "preserved";
