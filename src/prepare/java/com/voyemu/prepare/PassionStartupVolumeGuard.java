@@ -4,8 +4,7 @@ import java.nio.file.Path;
 
 /**
  * Passion starts every platform stream at its minimum and each volume group at zero; later volume
- * controls stay stock. Only the profile identity differs from the Free A11 7.3.1 recipe, so the
- * rewrite itself delegates to the same instruction sequence.
+ * controls stay stock. The rewrite delegates to the instruction sequence of StartupVolumeGuard.
  */
 final class PassionStartupVolumeGuard {
     static final String NAME = "passion-api30-startup-volume", DEX = "classes.dex";

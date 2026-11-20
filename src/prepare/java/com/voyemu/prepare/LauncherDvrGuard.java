@@ -321,7 +321,7 @@ final class LauncherDvrGuard {
         }
     }
 
-    /** Fixed instruction indices of the pinned 7.3.1 DEX and its predecessors. */
+    /** Fixed instruction indices of the pinned DEX and its predecessors. */
     static final class Pinned {
         static final Set<String> METHODS = Set.of("generateApp", "generateHomeCardApp");
 
