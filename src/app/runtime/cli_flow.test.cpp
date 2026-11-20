@@ -406,8 +406,10 @@ int main(int argc, char **argv) try {
         }
 
         spec.environment["VOYEMU_NATIVE_FIXTURE_ROOT"] = root.string();
+        // Latency flows keep control pipe accept and lock-wait records in retained diagnostics.
         spec.environment["VOYEMU_LOG_LEVEL"] = (timings || boot_observation || control_latency ||
-                                                slow_startup || clock_observation || root_restart)
+                                                state_flow || slow_startup || clock_observation ||
+                                                root_restart)
                                                        ? "debug"
                                                        : "info";
 

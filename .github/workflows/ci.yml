@@ -201,6 +201,16 @@ jobs:
             - name: Run native Windows host tests
               id: host-tests
               run: ctest --test-dir .local/build/windows-native --label-exclude 'oem|deps' --output-on-failure --parallel 1
+            # Failed CLI fixtures retain supervisor logs and state; passing fixtures remove their roots.
+            - name: Upload retained native fixture diagnostics
+              if: failure() && steps.host-tests.outcome == 'failure'
+              uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+              with:
+                  name: windows-native-fixture-diagnostics
+                  path: |
+                      ${{ env.VOYEMU_NATIVE_FIXTURE_BASE }}
+                      !${{ env.VOYEMU_NATIVE_FIXTURE_BASE }}/**/*.exe
+                  if-no-files-found: ignore
             - name: Diagnose Windows admission storage
               if: failure() && steps.host-tests.outcome == 'failure'
               run: |

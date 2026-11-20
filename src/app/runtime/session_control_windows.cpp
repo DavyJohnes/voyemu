@@ -202,12 +202,26 @@ void ControlServer::serve(std::atomic<bool> &stop) {
         if (impl_->tick && now >= next_tick) {
             impl_->tick();
             next_tick = now + std::chrono::milliseconds(20);
+            const auto tick_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                         std::chrono::steady_clock::now() - now)
+                                         .count();
+
+            // The tick shares the session lock with request handlers; a long wait stalls accept.
+            if (tick_ms > 250) {
+                try {
+                    logging::write(logging::Level::debug, "control", "pipe.tick_slow",
+                                   {{"elapsed_ms", tick_ms}});
+                } catch (...) { /* Ignored: diagnostics must not change accept behavior. */
+                }
+            }
         }
     };
     bool serve_announced = false;
 
     try {
         while (!stop.load()) {
+            // No listening instance exists until CreateNamedPipe; clients then fail IPC_CONNECT.
+            const auto instance_absent = std::chrono::steady_clock::now();
             tick();
 
             if (!serve_announced) {
@@ -234,6 +248,18 @@ void ControlServer::serve(std::atomic<bool> &stop) {
 
             if (pipe == INVALID_HANDLE_VALUE) {
                 throw VoyemuError("IPC_BIND", "named pipe failed");
+            }
+
+            const auto absent_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                           std::chrono::steady_clock::now() - instance_absent)
+                                           .count();
+
+            if (absent_ms > 250) {
+                try {
+                    logging::write(logging::Level::debug, "control", "pipe.instance_gap",
+                                   {{"elapsed_ms", absent_ms}});
+                } catch (...) { /* Ignored: diagnostics must not change accept behavior. */
+                }
             }
 
             bool connected = false;
