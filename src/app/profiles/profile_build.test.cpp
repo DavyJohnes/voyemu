@@ -3925,7 +3925,10 @@ int main(int argc, char **argv) {
         const auto def = isolated / "profiles" / qinggan09_profile() / "profile.json";
         write_private_json(
                 def,
-                {{"android",
+                {{"title", "Synthetic Free 1.0"},
+                 {"platform", "qinggan09"},
+                 {"board", "8155"},
+                 {"android",
                   {{"package", "system-images;android-28;default;arm64-v8a"},
                    {"revision", "1"},
                    {"url",
