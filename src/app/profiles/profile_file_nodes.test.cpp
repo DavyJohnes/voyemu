@@ -223,24 +223,31 @@ int main(int argc, char **argv) {
 
         write_private_json(system / "receipt.json", system_receipt);
         write_private_json(vendor / "receipt.json", vendor_receipt);
-        check(api30_file_recipes_for("free-11-chinese-20260731-7.3.1")[1].id ==
-                              "keymanager-contexts-api30" &&
+        check(api30_file_recipes_for("qinggan11")[0].id == "keymanager-contexts-api30" &&
                       api30_file_recipes_for("api30-fixture")[1].id ==
                               "selinux-service-contexts-api30" &&
-                      api30_file_recipes_for("passion-11-russian-20260403-2.1.4.80")[1].id ==
-                              "passion-service-contexts",
+                      api30_file_recipes_for("passion")[1].id == "passion-service-contexts",
               "Free wheel context must not widen generic/Passion context transforms");
         check(api30_file_recipes_for("api30-fixture").size() == 3 &&
-                      api30_file_recipes_for("free-11-chinese-20250710-6.11.1").size() == 8 &&
-                      api30_file_recipes_for("passion-11-russian-20260403-2.1.4.80").size() == 4 &&
-                      api30_file_recipes_for("free-11-chinese-20260731-7.3.1").size() == 10,
+                      api30_file_recipes_for("qinggan11").size() == 8 &&
+                      api30_file_recipes_for("passion").size() == 4,
               "profile-specific API30 graph inventories preserved");
-        const auto original_recipes = api30_file_recipes_for("free-11-chinese-20260731-7.3.1",
-                                                             true);
+        const auto original_recipes = api30_file_recipes_for("qinggan11", true);
         check(original_recipes.size() == 9 && original_recipes[2].id == "original-navi-selinux" &&
                       original_recipes[8].id == "selinux-hash-api30" &&
                       original_recipes[6].id == "can-early-policy-api30",
               "only original Navi graph gets MAC and keeps policy-hash dependency order");
+        // The feature alone decides the early policy and its hash; no profile id takes part.
+        check(api30_file_recipes_for("qinggan11")[5].id == "can-early-policy-api30" &&
+                      api30_file_recipes_for("qinggan11")[5].output_sha256 ==
+                              "50e7563396d73b053a36a9022d31807121731ecc0ce51b695df65ec7d6838db6" &&
+                      api30_file_recipes_for("qinggan11")[7].output_sha256 ==
+                              "2f158789774a59073cf85bf2c91272416b0da948eea037f9e13586187338f2c9" &&
+                      original_recipes[6].output_sha256 ==
+                              "e8f3b8cb54b3ec09280cf5c630f495b3202f1c9994e796c5a1cf707a5dcd6cf6" &&
+                      original_recipes[8].output_sha256 ==
+                              "7293ab8b5ff6f3890a7f60b158e6bf28c882896c755edf1e996c9231519c37de",
+              "qinggan11 early policy follows the original_navi feature");
         bool wrong_original = false;
         try {
             (void)api30_file_recipes_for("api30-fixture", true);
@@ -248,15 +255,15 @@ int main(int argc, char **argv) {
             wrong_original = error.code() == "QINGGAN11_ORIGINAL_NAVI";
         }
 
-        check(wrong_original, "original Navi SELinux graph rejects foreign profile");
+        check(wrong_original, "original Navi SELinux graph rejects another platform");
         bool old_navi_rejected = false;
         try {
-            (void)api30_file_recipes_for("free-11-chinese-20250710-6.11.1", true);
+            (void)api30_file_recipes_for("passion", true);
         } catch (const VoyemuError &error) {
             old_navi_rejected = error.code() == "QINGGAN11_ORIGINAL_NAVI";
         }
 
-        check(old_navi_rejected, "6.11 graph rejects unverified Navi");
+        check(old_navi_rejected, "Passion graph rejects the original Navi");
         const std::string free_profile = "free-11-chinese-20260731-7.3.1";
         const auto free_dir = root / "profiles" / free_profile;
         ensure_private_directory(free_dir);

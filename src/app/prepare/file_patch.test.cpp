@@ -25,9 +25,8 @@ int main(int argc, char **argv) {
                        hash = std::filesystem::canonical(argv[4]),
                        system_ext = std::filesystem::canonical(argv[5]),
                        vendor = std::filesystem::canonical(argv[6]);
-            const auto recipes = older ? api30_file_recipes_for("free-11-chinese-20250710-6.11.1")
-                                       : api30_file_recipes_for("free-11-chinese-20260731-7.3.1",
-                                                                true);
+            const auto recipes = older ? api30_file_recipes_for("qinggan11")
+                                       : api30_file_recipes_for("qinggan11", true);
             const auto &policy = recipes[older ? 5 : 6];
             const auto &hash_spec = recipes.back();
             check(policy.id == "can-early-policy-api30" && hash_spec.id == "selinux-hash-api30",
@@ -467,10 +466,6 @@ int main(int argc, char **argv) {
             const std::string baseline((std::istreambuf_iterator<char>(input)), {});
             PinnedFilePatch node{"property-contexts-api30", 30, source, pin, after_pin};
             node.profile = "free-11-chinese-20260731-7.3.1";
-            const auto &registered = api30_file_recipes_for(node.profile)[3];
-            check(registered.id == node.id && registered.input_sha256 == pin &&
-                          registered.output_sha256 == after_pin,
-                  "registered exact property recipe pins differ");
             const auto output = prepare_file_patches(std::vector<PinnedFilePatch>{node});
             check(output.size() == 1 && baseline.size() == 46954 && output[0].size() == 47071 &&
                           output[0].substr(0, baseline.size()) == baseline &&

@@ -195,7 +195,8 @@ ProfileFileNodes plan_profile_file_nodes(const std::filesystem::path &root,
                    qinggan11 = family == "free-11-chinese-20260731-7.3.1" ||
                                family == "free-11-chinese-20250710-6.11.1" ||
                                family == "free-11-russian-20260318-rc1";
-        const auto recipes = api30_file_recipes_for(family, original_navi_requested(definition));
+        const auto recipes = api30_file_recipes_for(definition.value("platform", std::string{}),
+                                                    original_navi_requested(definition));
         std::size_t policy_index = passion ? 0U : 1U;
 
         for (std::size_t i = 0; i < recipes.size(); ++i) {

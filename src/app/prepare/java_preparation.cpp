@@ -346,7 +346,8 @@ Json java_preparation_native_files(const std::filesystem::path &root,
     }
 
     const bool passion = request.profile == "passion-11-russian-20260403-2.1.4.80";
-    const auto recipes = api30_file_recipes_for(request.profile, original_navi_requested(profile));
+    const auto recipes = api30_file_recipes_for(profile.value("platform", std::string{}),
+                                                original_navi_requested(profile));
     std::size_t native_nodes = 0;
 
     if (guest_api == 30) {
