@@ -9,6 +9,11 @@
 #include <thread>
 using namespace voyemu;
 
+constexpr ProfileScope qinggan09_scope{ProfilePlatform::qinggan09, ProfileBoard::sa8155},
+        nxp_scope{ProfilePlatform::qinggan09, ProfileBoard::nxp},
+        qinggan11_scope{ProfilePlatform::qinggan11, ProfileBoard::sa8155},
+        passion_scope{ProfilePlatform::passion, ProfileBoard::sa8155};
+
 static void check(bool ok, const char *text) {
     if (!ok) {
         throw std::runtime_error(text);
@@ -33,8 +38,8 @@ int main(int argc, char **argv) {
                   "registered early policy dependency order required");
             PinnedFilePatch early{std::string(policy.id), 30, cil, std::string(policy.input_sha256),
                                   std::string(policy.output_sha256)};
-            early.profile = older ? "free-11-chinese-20250710-6.11.1"
-                                  : "free-11-chinese-20260731-7.3.1";
+            early.profile = "test-qinggan11";
+            early.scope = qinggan11_scope;
             // Only the original_navi feature adds the su read of mac_perms_file.
             early.original_navi = !older;
             early.donor = PinnedFileDependency{system_ext, sha256_file(system_ext)};
@@ -79,6 +84,8 @@ int main(int argc, char **argv) {
                     std::string(policy.id),
                     std::string(policy.output_sha256)};
             hashed.profile = early.profile;
+            hashed.scope = early.scope;
+            hashed.original_navi = early.original_navi;
             const std::vector<PinnedFilePatch> nodes{early, hashed};
             const auto output = prepare_file_patches(nodes);
             check(output.size() == 2 && output[1] == expected_file,
@@ -107,10 +114,10 @@ int main(int argc, char **argv) {
                     bad[1].api = 28;
                     break;
                 case 6:
-                    bad[1].profile.clear();
+                    bad[1].scope.reset();
                     break;
                 case 7:
-                    bad[0].profile = "passion-11-russian-20260403-2.1.4.80";
+                    bad[0].scope = passion_scope;
                     break;
                 case 8:
                     bad[0].vendor_donor.reset();
@@ -119,8 +126,7 @@ int main(int argc, char **argv) {
                     bad[0].donor.value().sha256 = std::string(64, '0');
                     break;
                 case 10:
-                    bad[1].profile = older ? "free-11-chinese-20260731-7.3.1"
-                                           : "free-11-chinese-20250710-6.11.1";
+                    bad[1].original_navi = older;
                     break;
                 default:
                     break;
@@ -154,7 +160,7 @@ int main(int argc, char **argv) {
                     vendor_pin = "47ae473c9702ad2f64d156e98d8400f2328bcfba4a3a7f314e0c6bfdd379564c",
                     output = "ea017c277007b5ba8401ab214b2d607d72ddd39b7a303db05eb5281cb405fd22";
             PinnedFilePatch node{"can-simulator-policy-a9", 28, source, input, output};
-            node.profile = "free-09-chinese-20260106-6.0.3";
+            node.scope = qinggan09_scope;
             node.donor = PinnedFileDependency{plat, plat_pin};
             node.vendor_donor = PinnedFileDependency{vendor, vendor_pin};
             check(native_file_patch_steps(node.id).size() == 3 &&
@@ -166,7 +172,7 @@ int main(int argc, char **argv) {
                 auto bad = node;
 
                 if (i == 0) {
-                    bad.profile = "other";
+                    bad.scope = nxp_scope;
                 }
 
                 if (i == 1) {
@@ -218,7 +224,7 @@ int main(int argc, char **argv) {
                     input = "88e8b4bf854406de5a5464ea37f0996487ae60e7e12ae1302fc9119e9b46456c",
                     output = "b140f7f850f0279e8935053b948784708c9c62de4aeb59019a7c07ef0d9f5813";
             PinnedFilePatch node{"can-simulator-contexts-a9", 28, source, input, output};
-            node.profile = "free-09-chinese-20260106-6.0.3";
+            node.scope = qinggan09_scope;
             check(native_file_patch_steps(node.id) ==
                           std::vector<std::string>{"can-simulator-contexts-a9.json"},
                   "exact simulator step required");
@@ -230,11 +236,11 @@ int main(int argc, char **argv) {
                 auto bad = node;
 
                 if (i == 0) {
-                    bad.profile = "other";
+                    bad.scope = nxp_scope;
                 }
 
                 if (i == 1) {
-                    bad.profile.clear();
+                    bad.scope.reset();
                 }
 
                 if (i == 2) {
@@ -281,7 +287,8 @@ int main(int argc, char **argv) {
             check(sha256_file(source) == before && std::filesystem::file_size(source) == 632488,
                   "exact extracted A9 codec input required");
             PinnedFilePatch node{"ccodec-allocation-a9", 28, source, before, after};
-            node.profile = "free-09-chinese-20260106-6.0.3";
+            node.profile = "test-qinggan09";
+            node.scope = qinggan09_scope;
             const auto output = prepare_file_patches(std::vector<PinnedFilePatch>{node});
             check(output.size() == 1 && sha256_bytes(output[0]) == after,
                   "native codec node must dispatch exact guarded transform");
@@ -304,11 +311,11 @@ int main(int argc, char **argv) {
                 }
 
                 if (which == 1) {
-                    invalid.profile = "passion-11-russian-20260403-2.1.4.80";
+                    invalid.scope = passion_scope;
                 }
 
                 if (which == 2) {
-                    invalid.profile.clear();
+                    invalid.scope.reset();
                 }
 
                 if (which == 3) {
@@ -365,7 +372,7 @@ int main(int argc, char **argv) {
             std::ifstream input(source, std::ios::binary);
             const std::string baseline((std::istreambuf_iterator<char>(input)), {});
             PinnedFilePatch node{"public-qg-runtime-api30", 30, source, pin, after_pin};
-            node.profile = "free-11-chinese-20260731-7.3.1";
+            node.scope = qinggan11_scope;
             const auto output = prepare_file_patches(std::vector<PinnedFilePatch>{node});
             check(output.size() == 1 && baseline.size() == 471 && output[0].size() == 491 &&
                           output[0].substr(0, baseline.size()) == baseline &&
@@ -393,11 +400,11 @@ int main(int argc, char **argv) {
                 }
 
                 if (mode == 1) {
-                    bad.profile = "other-profile";
+                    bad.scope = nxp_scope;
                 }
 
                 if (mode == 2) {
-                    bad.profile.clear();
+                    bad.scope.reset();
                 }
 
                 if (mode == 3) {
@@ -465,7 +472,7 @@ int main(int argc, char **argv) {
             std::ifstream input(source, std::ios::binary);
             const std::string baseline((std::istreambuf_iterator<char>(input)), {});
             PinnedFilePatch node{"property-contexts-api30", 30, source, pin, after_pin};
-            node.profile = "free-11-chinese-20260731-7.3.1";
+            node.scope = qinggan11_scope;
             const auto output = prepare_file_patches(std::vector<PinnedFilePatch>{node});
             check(output.size() == 1 && baseline.size() == 46954 && output[0].size() == 47071 &&
                           output[0].substr(0, baseline.size()) == baseline &&
@@ -494,11 +501,11 @@ int main(int argc, char **argv) {
                 }
 
                 if (mode == 1) {
-                    bad.profile = "other-profile";
+                    bad.scope = nxp_scope;
                 }
 
                 if (mode == 2) {
-                    bad.profile.clear();
+                    bad.scope.reset();
                 }
 
                 if (mode == 3) {
@@ -606,7 +613,7 @@ int main(int argc, char **argv) {
                      "passion-services", patched_pin}};
 
             for (auto &node : nodes) {
-                node.profile = "passion-11-russian-20260403-2.1.4.80";
+                node.scope = passion_scope;
             }
 
             const auto output = prepare_file_patches(nodes);
@@ -641,10 +648,10 @@ int main(int argc, char **argv) {
                     bad[3].output_sha256 = std::string(64, '0');
                     break;
                 case 7:
-                    bad[0].profile = "free-11-chinese-20260731-7.3.1";
+                    bad[0].scope = qinggan11_scope;
                     break;
                 case 8:
-                    bad[1].profile.clear();
+                    bad[1].scope.reset();
                     break;
                 case 9:
                     bad[0].id = "passion-unknown";
@@ -653,7 +660,7 @@ int main(int argc, char **argv) {
                     bad[0].api = 28;
                     break;
                 case 11:
-                    bad[2].profile.clear();
+                    bad[2].scope.reset();
                     break;
                 case 12:
                     bad[2].input_sha256 = std::string(64, '0');
@@ -706,12 +713,12 @@ int main(int argc, char **argv) {
                              mapping,
                              "c14ab911584595a94e6783600371fed23cec1d56b8001383584a3192d028eb60"},
                      "selinux-services-api30", patched_pin}};
-            nodes[0].profile = "free-11-chinese-20260731-7.3.1";
-            nodes[2].profile = "free-11-chinese-20260731-7.3.1";
+            nodes[0].scope = qinggan11_scope;
+            nodes[2].scope = qinggan11_scope;
             PinnedFilePatch key{"keymanager-contexts-api30", 30, contexts,
                                 "e4a9f3406dc9c3ff5a03c4b478941e02bede17ee95798bdbce1a31cc33f40959",
                                 "d73bcfe6f82f18f52e40e86d55f2a1163d2b526a0143bee9322d0ea5da368061"};
-            key.profile = "free-11-chinese-20260731-7.3.1";
+            key.scope = qinggan11_scope;
             const auto keyoutput = prepare_file_patches(std::vector<PinnedFilePatch>{key});
             const auto legacy_context =
                     prepare_file_patches(std::vector<PinnedFilePatch>{nodes[1]})[0];
@@ -725,11 +732,11 @@ int main(int argc, char **argv) {
                 auto bad = key;
 
                 if (mode == 0) {
-                    bad.profile.clear();
+                    bad.scope.reset();
                 }
 
                 if (mode == 1) {
-                    bad.profile = "passion-11-russian-20260403-2.1.4.80";
+                    bad.scope = passion_scope;
                 }
 
                 if (mode == 2) {
@@ -770,9 +777,10 @@ int main(int argc, char **argv) {
             }
 
             for (int i : {0, 2}) {
-                for (const std::string profile : {"", "passion-11-russian-20260403-2.1.4.80"}) {
+                for (const auto scope :
+                     {std::optional<ProfileScope>(), std::optional<ProfileScope>(passion_scope)}) {
                     auto bad = nodes;
-                    bad[i].profile = profile;
+                    bad[i].scope = scope;
                     bool denied = false;
                     try {
                         prepare_file_patches(bad);
@@ -867,7 +875,7 @@ int main(int argc, char **argv) {
         PinnedFilePatch pinned{std::string(recipe.id), 28, source, sha256_bytes(input),
                                sha256_bytes(output)};
         auto wrong_profile = pinned;
-        wrong_profile.profile = "passion-11-russian-20260403-2.1.4.80";
+        wrong_profile.scope = passion_scope;
         bool scoped = false;
         try {
             prepare_file_patches(std::vector<PinnedFilePatch>{wrong_profile});

@@ -6,6 +6,11 @@
 #include <regex>
 using namespace voyemu;
 
+constexpr ProfileScope qinggan09_scope{ProfilePlatform::qinggan09, ProfileBoard::sa8155},
+        nxp_scope{ProfilePlatform::qinggan09, ProfileBoard::nxp},
+        qinggan11_scope{ProfilePlatform::qinggan11, ProfileBoard::sa8155},
+        passion_scope{ProfilePlatform::passion, ProfileBoard::sa8155};
+
 static void check(bool ok, const char *text) {
     if (!ok) {
         throw std::runtime_error(text);
@@ -28,14 +33,13 @@ int main(int argc, char **argv) {
             std::ifstream source(argv[2], std::ios::binary);
             check(bool(source), "API28 context input required");
             const std::string input{std::istreambuf_iterator<char>(source), {}};
-            const auto output = apply_can_simulator_context_patch("free-09-chinese-20260106-6.0.3",
-                                                                  28, input);
+            const auto output = apply_can_simulator_context_patch(qinggan09_scope, 28, input);
             check(output.starts_with(input) &&
                           sha256_bytes(output) ==
                                   "b140f7f850f0279e8935053b948784708c9c62de4aeb59019a7c07ef0d9f5813",
                   "exact stock context bytes and scoped simulator labels");
 
-            for (const auto bad : {std::string_view("other"), std::string_view("")}) {
+            for (const auto bad : {nxp_scope, qinggan11_scope}) {
                 bool rejected = false;
                 try {
                     apply_can_simulator_context_patch(bad, 28, input);
@@ -49,7 +53,7 @@ int main(int argc, char **argv) {
             for (const auto &bad : {input + " ", output}) {
                 bool rejected = false;
                 try {
-                    apply_can_simulator_context_patch("free-09-chinese-20260106-6.0.3", 28, bad);
+                    apply_can_simulator_context_patch(qinggan09_scope, 28, bad);
                 } catch (...) {
                     rejected = true;
                 }
@@ -59,7 +63,7 @@ int main(int argc, char **argv) {
 
             bool wrong_api = false;
             try {
-                apply_can_simulator_context_patch("free-09-chinese-20260106-6.0.3", 30, input);
+                apply_can_simulator_context_patch(qinggan09_scope, 30, input);
             } catch (...) {
                 wrong_api = true;
             }
@@ -79,21 +83,19 @@ int main(int argc, char **argv) {
             };
             auto input = read(argv[2]), plat = read(argv[3]), vendor = read(argv[4]);
             auto base = apply_bounded_canbus_policy(28, input, plat, vendor).cil;
-            auto output = apply_can_simulator_policy_patch("free-09-chinese-20260106-6.0.3", 28,
-                                                           base);
+            auto output = apply_can_simulator_policy_patch(qinggan09_scope, 28, base);
             check(output.starts_with(base) &&
                           sha256_bytes(output) ==
                                   "ea017c277007b5ba8401ab214b2d607d72ddd39b7a303db05eb5281cb405fd22",
                   "simulator policy preserves bounded su and exact candidate");
-            const auto early = apply_can_early_policy_patch("free-09-chinese-20260106-6.0.3", 28,
-                                                            output);
+            const auto early = apply_can_early_policy_patch(qinggan09_scope, 28, output);
             check(early.starts_with(output) &&
                           sha256_bytes(early) ==
                                   "2879712e7a6a12f262ab346fbe61b7f5b992e652e10d93edf8eb44a6c7b84a77",
                   "early policy exact pin");
             bool reapply = false;
             try {
-                apply_can_early_policy_patch("free-09-chinese-20260106-6.0.3", 28, early);
+                apply_can_early_policy_patch(qinggan09_scope, 28, early);
             } catch (...) {
                 reapply = true;
             }
@@ -103,11 +105,11 @@ int main(int argc, char **argv) {
             for (int i = 0; i < 4; ++i) {
                 bool denied = false;
                 try {
-                    apply_can_simulator_policy_patch(
-                            i == 0 ? "other" : "free-09-chinese-20260106-6.0.3", i == 1 ? 30 : 28,
-                            i == 2   ? base + " "
-                            : i == 3 ? output
-                                     : base);
+                    apply_can_simulator_policy_patch(i == 0 ? nxp_scope : qinggan09_scope,
+                                                     i == 1 ? 30 : 28,
+                                                     i == 2   ? base + " "
+                                                     : i == 3 ? output
+                                                              : base);
                 } catch (...) {
                     denied = true;
                 }
@@ -126,8 +128,7 @@ int main(int argc, char **argv) {
             const std::string source{std::istreambuf_iterator<char>(f), {}};
             const auto base = apply_selinux_context_patch("selinux-property-contexts-a9", 28,
                                                           source);
-            const auto output = apply_can_early_property_patch("free-09-chinese-20260106-6.0.3", 28,
-                                                               base);
+            const auto output = apply_can_early_property_patch(qinggan09_scope, 28, base);
             check(sha256_bytes(output) ==
                           "bd2a3eafde0f3d98966d590dcc70047f9fa38e9812f3660a0326182e0f43540d",
                   "exact property output");
@@ -135,8 +136,7 @@ int main(int argc, char **argv) {
             for (int i = 0; i < 3; ++i) {
                 bool denied = false;
                 try {
-                    apply_can_early_property_patch(i == 0 ? "other"
-                                                          : "free-09-chinese-20260106-6.0.3",
+                    apply_can_early_property_patch(i == 0 ? nxp_scope : qinggan09_scope,
                                                    i == 1 ? 30 : 28, i == 2 ? output : base);
                 } catch (...) {
                     denied = true;
@@ -152,10 +152,8 @@ int main(int argc, char **argv) {
             std::ifstream f(argv[2], std::ios::binary);
             check(bool(f), "file context source required");
             const std::string source{std::istreambuf_iterator<char>(f), {}};
-            const auto base = apply_can_simulator_context_patch("free-09-chinese-20260106-6.0.3",
-                                                                28, source);
-            const auto output = apply_can_early_file_context_patch("free-09-chinese-20260106-6.0.3",
-                                                                   28, base);
+            const auto base = apply_can_simulator_context_patch(qinggan09_scope, 28, source);
+            const auto output = apply_can_early_file_context_patch(qinggan09_scope, 28, base);
             check(sha256_bytes(output) ==
                           "8bd8062c3b8108bdc34573f78d403691e747298a986a3464ace94721b02ad1d7",
                   "exact early contexts output");
@@ -163,8 +161,7 @@ int main(int argc, char **argv) {
             for (int i = 0; i < 3; ++i) {
                 bool denied = false;
                 try {
-                    apply_can_early_file_context_patch(i == 0 ? "other"
-                                                              : "free-09-chinese-20260106-6.0.3",
+                    apply_can_early_file_context_patch(i == 0 ? nxp_scope : qinggan09_scope,
                                                        i == 1 ? 30 : 28, i == 2 ? output : base);
                 } catch (...) {
                     denied = true;
@@ -178,8 +175,7 @@ int main(int argc, char **argv) {
 
         bool passion_unpinned = false;
         try {
-            apply_passion_selinux_patch("passion-11-russian-20260403-2.1.4.80", 30, "services",
-                                        "unverified fixture");
+            apply_passion_selinux_patch(passion_scope, 30, "services", "unverified fixture");
         } catch (...) {
             passion_unpinned = true;
         }
@@ -193,8 +189,8 @@ int main(int argc, char **argv) {
 
                 return std::string{std::istreambuf_iterator<char>(source), {}};
             };
-            constexpr std::string_view profile = "passion-11-russian-20260403-2.1.4.80";
-            auto denied = [](std::string_view p, unsigned api, std::string_view id,
+            constexpr auto profile = passion_scope;
+            auto denied = [](ProfileScope p, unsigned api, std::string_view id,
                              std::string_view input) {
                 try {
                     apply_passion_selinux_patch(p, api, id, input);
@@ -238,7 +234,7 @@ int main(int argc, char **argv) {
                                        : std::string_view(id) == "service-contexts"
                                                ? contexts
                                                : output + mapping;
-                check(denied("free-11-chinese-20260731-7.3.1", 30, id, original) &&
+                check(denied(qinggan11_scope, 30, id, original) &&
                               denied(profile, 28, id, original) &&
                               denied(profile, 30, id, original + " "),
                       "wrong profile/API/source rejected");

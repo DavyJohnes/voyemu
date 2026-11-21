@@ -19,6 +19,7 @@
 namespace voyemu {
 namespace {
 constexpr Check need{"PROFILE_FILE"};
+constexpr ProfileScope qinggan09_scope{ProfilePlatform::qinggan09, ProfileBoard::sa8155};
 
 void ordinary(const std::filesystem::path &path) {
     ordinary_path(path, need, PathForm::Canonical, "canonical input required",
@@ -92,8 +93,7 @@ ProfileFileNodes plan_profile_codec_file_node(const std::filesystem::path &root,
                profile_file = directory / "profile.json";
     const auto profile_bytes = read(profile_file, 512 * 1024);
     const auto definition = Json::parse(profile_bytes);
-    const auto family = runtime_profile_reference(definition, profile);
-    need(family == "free-09-chinese-20260106-6.0.3" && definition.at("schema") == 1 &&
+    need(profile_scope(definition) == qinggan09_scope && definition.at("schema") == 1 &&
                  native_base_api(definition.at("android")) == 28,
          "registered clean A9 codec base required");
     const std::string id = "ccodec-allocation-a9",
@@ -135,6 +135,7 @@ ProfileFileNodes plan_profile_codec_file_node(const std::filesystem::path &root,
     const auto transformed = android_codec_timing_patch(bytes);
     PinnedFilePatch patch{id, 28, input, input_pin, sha256_bytes(transformed.bytes)};
     patch.profile = runtime_profile_reference(definition, profile);
+    patch.scope = profile_scope(definition);
     ProfileFileNodes result;
     result.patches.push_back(std::move(patch));
     result.provenance = {{"schema", 1},
@@ -188,13 +189,11 @@ ProfileFileNodes plan_profile_file_nodes(const std::filesystem::path &root,
                profile_file = directory / "profile.json";
     const auto profile_bytes = read(profile_file, 512 * 1024);
     const auto definition = Json::parse(profile_bytes);
-    const auto family = runtime_profile_reference(definition, profile);
 
     if (native_base_api(definition.at("android")) == 30) {
-        const bool passion = family == "passion-11-russian-20260403-2.1.4.80",
-                   qinggan11 = family == "free-11-chinese-20260731-7.3.1" ||
-                               family == "free-11-chinese-20250710-6.11.1" ||
-                               family == "free-11-russian-20260318-rc1";
+        const auto platform = profile_platform(definition);
+        const bool passion = platform == ProfilePlatform::passion,
+                   qinggan11 = platform == ProfilePlatform::qinggan11;
         const auto recipes = api30_file_recipes_for(definition.value("platform", std::string{}),
                                                     original_navi_requested(definition));
         std::size_t policy_index = passion ? 0U : 1U;
@@ -328,6 +327,7 @@ ProfileFileNodes plan_profile_file_nodes(const std::filesystem::path &root,
                 name == "public-qg-runtime-api30" || name == "property-contexts-api30" ||
                 name == "keymanager-contexts-api30" || name == "original-navi-selinux") {
                 patch.profile = runtime_profile_reference(definition, profile);
+                patch.scope = profile_scope(definition);
             }
 
             result.patches.push_back(std::move(patch));
@@ -377,7 +377,7 @@ ProfileFileNodes plan_profile_file_nodes(const std::filesystem::path &root,
     auto selected_input_paths = input_paths();
 
     if (definition.at("patches").contains("can-early-file-contexts-a9")) {
-        need(runtime_profile_reference(definition, profile) == "free-09-chinese-20260106-6.0.3",
+        need(profile_scope(definition) == qinggan09_scope,
              "early file contexts require A9 reference family");
         need(!definition.at("patches").contains("can-simulator-contexts-a9"),
              "early contexts replace existing context node");
@@ -386,14 +386,14 @@ ProfileFileNodes plan_profile_file_nodes(const std::filesystem::path &root,
     }
 
     if (definition.at("patches").contains("can-simulator-contexts-a9")) {
-        need(runtime_profile_reference(definition, profile) == "free-09-chinese-20260106-6.0.3",
+        need(profile_scope(definition) == qinggan09_scope,
              "simulator contexts require A9 reference family");
         selected_input_paths.emplace("can-simulator-contexts-a9",
                                      "/system/etc/selinux/plat_file_contexts");
     }
 
     if (definition.at("patches").contains("can-early-property-contexts-a9")) {
-        need(runtime_profile_reference(definition, profile) == "free-09-chinese-20260106-6.0.3",
+        need(profile_scope(definition) == qinggan09_scope,
              "early property requires A9 reference family");
         need(!definition.at("patches").contains("selinux-property-contexts-a9"),
              "early property replaces stock property node");
@@ -403,7 +403,7 @@ ProfileFileNodes plan_profile_file_nodes(const std::filesystem::path &root,
     }
 
     if (definition.at("patches").contains("can-early-policy-a9")) {
-        need(runtime_profile_reference(definition, profile) == "free-09-chinese-20260106-6.0.3",
+        need(profile_scope(definition) == qinggan09_scope,
              "early policy requires A9 reference family");
         need(!definition.at("patches").contains("selinux-canbus-a9") &&
                      !definition.at("patches").contains("can-simulator-policy-a9"),
@@ -414,7 +414,7 @@ ProfileFileNodes plan_profile_file_nodes(const std::filesystem::path &root,
     }
 
     if (definition.at("patches").contains("can-simulator-policy-a9")) {
-        need(runtime_profile_reference(definition, profile) == "free-09-chinese-20260106-6.0.3",
+        need(profile_scope(definition) == qinggan09_scope,
              "simulator policy requires A9 reference family");
         need(!definition.at("patches").contains("selinux-canbus-a9"),
              "simulator policy replaces stock policy node");
@@ -485,20 +485,23 @@ ProfileFileNodes plan_profile_file_nodes(const std::filesystem::path &root,
 
         if (name == "can-early-file-contexts-a9") {
             patch.profile = runtime_profile_reference(definition, profile);
+            patch.scope = profile_scope(definition);
             output = apply_can_early_file_context_patch(
-                    patch.profile, 28, apply_can_simulator_context_patch(patch.profile, 28, bytes));
+                    *patch.scope, 28, apply_can_simulator_context_patch(*patch.scope, 28, bytes));
         } else if (name == "can-early-property-contexts-a9") {
             patch.profile = runtime_profile_reference(definition, profile);
+            patch.scope = profile_scope(definition);
             output = apply_can_early_property_patch(
-                    patch.profile, 28,
+                    *patch.scope, 28,
                     apply_selinux_context_patch("selinux-property-contexts-a9", 28, bytes));
         } else if (name == "can-simulator-contexts-a9") {
             patch.profile = runtime_profile_reference(definition, profile);
-            output = apply_can_simulator_context_patch(patch.profile, 28, bytes);
+            patch.scope = profile_scope(definition);
+            output = apply_can_simulator_context_patch(*patch.scope, 28, bytes);
         } else if (name == "ccodec-allocation-a9") {
             patch.profile = runtime_profile_reference(definition, profile);
-            need(runtime_profile_reference(definition, profile) == "free-09-chinese-20260106-6.0.3",
-                 "exact A9 codec profile required");
+            patch.scope = profile_scope(definition);
+            need(profile_scope(definition) == qinggan09_scope, "exact A9 codec profile required");
             output = android_codec_timing_patch(bytes).bytes;
         } else if (name == "selinux-canbus-a9" || name == "can-simulator-policy-a9" ||
                    name == "can-early-policy-a9") {
@@ -520,10 +523,11 @@ ProfileFileNodes plan_profile_file_nodes(const std::filesystem::path &root,
 
             if (name != "selinux-canbus-a9") {
                 patch.profile = runtime_profile_reference(definition, profile);
-                output = apply_can_simulator_policy_patch(patch.profile, 28, output);
+                patch.scope = profile_scope(definition);
+                output = apply_can_simulator_policy_patch(*patch.scope, 28, output);
 
                 if (name == "can-early-policy-a9") {
-                    output = apply_can_early_policy_patch(patch.profile, 28, output);
+                    output = apply_can_early_policy_patch(*patch.scope, 28, output);
                 }
             }
         } else if (name == "selinux-hash-a9") {

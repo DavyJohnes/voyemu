@@ -19,6 +19,9 @@
 #endif
 namespace voyemu {
 namespace {
+constexpr ProfileScope qinggan09_scope{ProfilePlatform::qinggan09, ProfileBoard::sa8155},
+        qinggan11_scope{ProfilePlatform::qinggan11, ProfileBoard::sa8155},
+        passion_scope{ProfilePlatform::passion, ProfileBoard::sa8155};
 bool valid_pin(const std::string &pin) {
     return sha256_text(pin);
 }
@@ -198,7 +201,7 @@ std::vector<std::string> prepare_file_patches(std::span<const PinnedFilePatch> p
                                     patch.id == "can-early-property-contexts-api30");
         const bool free_policy = (patch.id == "selinux-services-api30" ||
                                   patch.id == "selinux-hash-api30") &&
-                                 !patch.profile.empty();
+                                 patch.scope.has_value();
         const bool codec = patch.id == "ccodec-allocation-a9";
 
         if (patch.certificate_apk && !navi_selinux) {
@@ -220,11 +223,11 @@ std::vector<std::string> prepare_file_patches(std::span<const PinnedFilePatch> p
         if (patch.id == "can-simulator-contexts-a9" || patch.id == "can-simulator-policy-a9" ||
             patch.id == "can-early-property-contexts-a9" ||
             patch.id == "can-early-file-contexts-a9" || patch.id == "can-early-policy-a9") {
-            if (patch.profile != "free-09-chinese-20260106-6.0.3" || patch.api != 28) {
+            if (patch.scope != qinggan09_scope || patch.api != 28) {
                 throw VoyemuError("FILE_PATCH_PROFILE", "exact A9 API28 family required");
             }
         } else if (codec) {
-            if (patch.profile != "free-09-chinese-20260106-6.0.3" || patch.api != 28) {
+            if (patch.scope != qinggan09_scope || patch.api != 28) {
                 throw VoyemuError("FILE_PATCH_PROFILE", "exact A9 API28 codec profile required");
             }
         } else if (navi_selinux) {
@@ -233,24 +236,17 @@ std::vector<std::string> prepare_file_patches(std::span<const PinnedFilePatch> p
                                   "API30 profile with the original_navi feature required");
             }
         } else if (free_public || free_property || free_key || free_policy) {
-            if ((patch.profile != "free-11-chinese-20260731-7.3.1" &&
-                 patch.profile != "free-11-russian-20260318-rc1" &&
-                 patch.profile != "free-11-chinese-20250710-6.11.1") ||
-                patch.api != 30) {
+            if (patch.scope != qinggan11_scope || patch.api != 30) {
                 throw VoyemuError("FILE_PATCH_PROFILE",
                                   "exact Free A11 API30 file profile required");
             }
         } else if (qinggan11_can) {
-            if ((patch.profile != "free-11-chinese-20260731-7.3.1" &&
-                 patch.profile != "free-11-chinese-20250710-6.11.1" &&
-                 patch.profile != "free-11-russian-20260318-rc1") ||
-                patch.api != 30) {
+            if (patch.scope != qinggan11_scope || patch.api != 30) {
                 throw VoyemuError("FILE_PATCH_PROFILE",
                                   "exact Free A11 API30 can-early profile required");
             }
-        } else if (passion ? (patch.profile != "passion-11-russian-20260403-2.1.4.80" ||
-                              patch.api != 30)
-                           : !patch.profile.empty()) {
+        } else if (passion ? (patch.scope != passion_scope || patch.api != 30)
+                           : patch.scope.has_value()) {
             throw VoyemuError("FILE_PATCH_PROFILE", "exact scoped Passion recipe/profile required");
         }
 
@@ -267,8 +263,8 @@ std::vector<std::string> prepare_file_patches(std::span<const PinnedFilePatch> p
             }
 
             output = apply_can_early_file_context_patch(
-                    patch.profile, patch.api,
-                    apply_can_simulator_context_patch(patch.profile, patch.api, input));
+                    *patch.scope, patch.api,
+                    apply_can_simulator_context_patch(*patch.scope, patch.api, input));
         } else if (patch.id == "can-early-property-contexts-a9") {
             if (patch.donor || !patch.patched_dependency.empty() ||
                 !patch.dependency_sha256.empty()) {
@@ -276,7 +272,7 @@ std::vector<std::string> prepare_file_patches(std::span<const PinnedFilePatch> p
             }
 
             output = apply_can_early_property_patch(
-                    patch.profile, patch.api,
+                    *patch.scope, patch.api,
                     apply_selinux_context_patch("selinux-property-contexts-a9", patch.api, input));
         } else if (patch.id == "can-simulator-contexts-a9") {
             if (patch.donor || !patch.patched_dependency.empty() ||
@@ -285,7 +281,7 @@ std::vector<std::string> prepare_file_patches(std::span<const PinnedFilePatch> p
                                   "unexpected simulator context dependency");
             }
 
-            output = apply_can_simulator_context_patch(patch.profile, patch.api, input);
+            output = apply_can_simulator_context_patch(*patch.scope, patch.api, input);
         } else if (codec) {
             if (patch.donor || !patch.patched_dependency.empty() ||
                 !patch.dependency_sha256.empty()) {
@@ -343,7 +339,7 @@ std::vector<std::string> prepare_file_patches(std::span<const PinnedFilePatch> p
                                   "unexpected API30 simulator context dependency");
             }
 
-            output = apply_qinggan11_can_simulator_context_patch(patch.profile, patch.api, input);
+            output = apply_qinggan11_can_simulator_context_patch(*patch.scope, patch.api, input);
         } else if (patch.id == "can-early-file-contexts-api30") {
             if (patch.donor || !patch.patched_dependency.empty() ||
                 !patch.dependency_sha256.empty()) {
@@ -352,8 +348,8 @@ std::vector<std::string> prepare_file_patches(std::span<const PinnedFilePatch> p
             }
 
             output = apply_qinggan11_can_early_context_patch(
-                    patch.profile, patch.api,
-                    apply_qinggan11_can_simulator_context_patch(patch.profile, patch.api, input));
+                    *patch.scope, patch.api,
+                    apply_qinggan11_can_simulator_context_patch(*patch.scope, patch.api, input));
         } else if (bounded_api30) {
             if (!patch.donor || !patch.vendor_donor || !patch.patched_dependency.empty() ||
                 !patch.dependency_sha256.empty()) {
@@ -367,7 +363,7 @@ std::vector<std::string> prepare_file_patches(std::span<const PinnedFilePatch> p
                        vendor = read_pinned(patch.vendor_donor->input, patch.vendor_donor->sha256,
                                             32 * 1024 * 1024);
             output = apply_qinggan11_can_simulator_policy_patch(
-                    patch.profile, patch.api,
+                    *patch.scope, patch.api,
                     apply_bounded_canbus_policy(
                             patch.api,
                             apply_selinux_context_patch("selinux-services-api30", patch.api, input,
@@ -376,7 +372,7 @@ std::vector<std::string> prepare_file_patches(std::span<const PinnedFilePatch> p
                             .cil);
 
             if (patch.id == "can-early-policy-api30") {
-                output = apply_qinggan11_can_early_policy_patch(patch.profile, patch.api, output,
+                output = apply_qinggan11_can_early_policy_patch(*patch.scope, patch.api, output,
                                                                 patch.original_navi);
             }
         } else if (patch.id == "can-early-property-contexts-api30") {
@@ -393,7 +389,7 @@ std::vector<std::string> prepare_file_patches(std::span<const PinnedFilePatch> p
             }
 
             output = apply_qinggan11_can_early_property_patch(
-                    patch.profile, patch.api,
+                    *patch.scope, patch.api,
                     input + "persist.clusterCardInfo u:object_r:system_prop:s0 exact string\nignoreActivation u:object_r:system_prop:s0 exact bool\n");
         } else if (free_public) {
             if (patch.input_sha256 !=
@@ -462,7 +458,7 @@ std::vector<std::string> prepare_file_patches(std::span<const PinnedFilePatch> p
 
                 const auto mapping = read_pinned(patch.donor->input, patch.donor->sha256,
                                                  1024 * 1024);
-                output = apply_passion_selinux_patch(patch.profile, patch.api, "policy-hash",
+                output = apply_passion_selinux_patch(*patch.scope, patch.api, "policy-hash",
                                                      cil + mapping);
             } else {
                 if (patch.donor || !patch.patched_dependency.empty() ||
@@ -470,7 +466,7 @@ std::vector<std::string> prepare_file_patches(std::span<const PinnedFilePatch> p
                     throw VoyemuError("FILE_PATCH_DEPENDENCY", "unexpected Passion dependency");
                 }
 
-                output = apply_passion_selinux_patch(patch.profile, patch.api,
+                output = apply_passion_selinux_patch(*patch.scope, patch.api,
                                                      patch.id == "passion-services" ? "services"
                                                      : patch.id == "passion-service-contexts"
                                                              ? "service-contexts"
@@ -491,11 +487,11 @@ std::vector<std::string> prepare_file_patches(std::span<const PinnedFilePatch> p
             output = apply_bounded_canbus_policy(patch.api, input, plat, vendor).cil;
 
             if (patch.id != "selinux-canbus-a9") {
-                output = apply_can_simulator_policy_patch(patch.profile, patch.api, output);
+                output = apply_can_simulator_policy_patch(*patch.scope, patch.api, output);
             }
 
             if (patch.id == "can-early-policy-a9") {
-                output = apply_can_early_policy_patch(patch.profile, patch.api, output);
+                output = apply_can_early_policy_patch(*patch.scope, patch.api, output);
             }
         } else if (patch.id == "selinux-hash-api30") {
             if (patch.api != 30 || !patch.donor ||
@@ -524,7 +520,7 @@ std::vector<std::string> prepare_file_patches(std::span<const PinnedFilePatch> p
 
             const auto mapping = read_pinned(patch.donor->input, patch.donor->sha256, 1024 * 1024);
             output = apply_selinux_context_patch(patch.id, patch.api, cil + mapping, free_policy,
-                                                 patch.profile);
+                                                 patch.patched_dependency, patch.original_navi);
         } else if (patch.id == "selinux-hash-a9") {
             if (patch.donor || patch.patched_dependency.empty() ||
                 !valid_pin(patch.dependency_sha256)) {

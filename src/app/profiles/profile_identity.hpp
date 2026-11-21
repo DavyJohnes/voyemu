@@ -53,6 +53,17 @@ inline ProfileBoard profile_board(const Json &definition) {
     throw VoyemuError("PROFILE_INVALID", "profile board must be 8155 or nxp");
 }
 
+// The platform and board of a profile, which scope its recipes.
+struct ProfileScope {
+    ProfilePlatform platform;
+    ProfileBoard board;
+    bool operator==(const ProfileScope &) const = default;
+};
+
+inline ProfileScope profile_scope(const Json &definition) {
+    return {profile_platform(definition), profile_board(definition)};
+}
+
 // The name of the profile in human text, such as "Free 7.3.1".
 inline std::string profile_title(const Json &definition) {
     if (!definition.is_object() || !definition.contains("title") ||

@@ -264,7 +264,8 @@ int main(int argc, char **argv) {
         }
 
         check(old_navi_rejected, "Passion graph rejects the original Navi");
-        const std::string free_profile = "free-11-chinese-20260731-7.3.1";
+        const auto free_profile =
+                embedded_profile_names(ProfilePlatform::qinggan11, ProfileBoard::sa8155).at(0);
         const auto free_dir = root / "profiles" / free_profile;
         ensure_private_directory(free_dir);
         const auto complete_free = read_private_json(
@@ -288,7 +289,7 @@ int main(int argc, char **argv) {
             }
 
             check(rejected,
-                  "current Free A11 7.3.1 must reject missing/all-removed public native graph before extraction");
+                  "current qinggan11 profile must reject missing/all-removed public native graph before extraction");
         }
 
         auto missing_property = complete_free;
@@ -303,7 +304,7 @@ int main(int argc, char **argv) {
         }
 
         check(property_rejected,
-              "current Free A11 7.3.1 must reject missing can early property context before extraction");
+              "current qinggan11 profile must reject missing can early property context before extraction");
         auto unsupported_java = definition;
         unsupported_java["patches"]["shutdown-router-a9"] = java_shutdown;
         unsupported_java["install"].push_back(java_shutdown_install);

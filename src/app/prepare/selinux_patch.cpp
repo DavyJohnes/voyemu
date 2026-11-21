@@ -8,6 +8,9 @@
 #include <stdexcept>
 namespace voyemu {
 namespace {
+constexpr ProfileScope qinggan09_scope{ProfilePlatform::qinggan09, ProfileBoard::sa8155},
+        qinggan11_scope{ProfilePlatform::qinggan11, ProfileBoard::sa8155},
+        passion_scope{ProfilePlatform::passion, ProfileBoard::sa8155};
 constexpr std::array<std::string_view, 7> services = {
         "qg.canbus u:object_r:voyemu_canbus_service:s0",
         "qg.power_manager u:object_r:voyemu_oem_service:s0",
@@ -77,9 +80,8 @@ std::string one_newline(std::string_view input) {
 // OEM vendor_file_contexts SHA256 74dc51b9ead1e5dc3ea3a5e88c539b5beee3c769ae88789506461b18b9c03748
 // maps /dev/block/vdh to vdh_device. This synthetic read-only loop uses that label; OEM
 // mlstrustedobject and qg_device attributes are not reproduced.
-std::string apply_can_early_policy_patch(std::string_view profile, unsigned api,
-                                         std::string_view input) {
-    if (profile != "free-09-chinese-20260106-6.0.3" || api != 28 ||
+std::string apply_can_early_policy_patch(ProfileScope scope, unsigned api, std::string_view input) {
+    if (scope != qinggan09_scope || api != 28 ||
         sha256_bytes(input) != "ea017c277007b5ba8401ab214b2d607d72ddd39b7a303db05eb5281cb405fd22") {
         throw VoyemuError("SELINUX_PATCH_MISMATCH", "exact simulator policy required");
     }
@@ -177,9 +179,9 @@ std::string apply_can_early_policy_patch(std::string_view profile, unsigned api,
     return output;
 }
 
-std::string apply_can_early_file_context_patch(std::string_view profile, unsigned api,
+std::string apply_can_early_file_context_patch(ProfileScope scope, unsigned api,
                                                std::string_view input) {
-    if (profile != "free-09-chinese-20260106-6.0.3" || api != 28 ||
+    if (scope != qinggan09_scope || api != 28 ||
         sha256_bytes(input) != "b140f7f850f0279e8935053b948784708c9c62de4aeb59019a7c07ef0d9f5813") {
         throw VoyemuError("SELINUX_PATCH_MISMATCH", "exact simulator file contexts required");
     }
@@ -204,9 +206,9 @@ std::string apply_can_early_file_context_patch(std::string_view profile, unsigne
     return output;
 }
 
-std::string apply_can_early_property_patch(std::string_view profile, unsigned api,
+std::string apply_can_early_property_patch(ProfileScope scope, unsigned api,
                                            std::string_view input) {
-    if (profile != "free-09-chinese-20260106-6.0.3" || api != 28 ||
+    if (scope != qinggan09_scope || api != 28 ||
         sha256_bytes(input) != "734cfb54ff72018f7c198a4f558a59428836dc0abe20da6cc68cc77c4526101e") {
         throw VoyemuError("SELINUX_PATCH_MISMATCH", "exact A9 property contexts required");
     }
@@ -223,9 +225,9 @@ std::string apply_can_early_property_patch(std::string_view profile, unsigned ap
     return output;
 }
 
-std::string apply_can_simulator_policy_patch(std::string_view profile, unsigned api,
+std::string apply_can_simulator_policy_patch(ProfileScope scope, unsigned api,
                                              std::string_view input) {
-    if (profile != "free-09-chinese-20260106-6.0.3" || api != 28 ||
+    if (scope != qinggan09_scope || api != 28 ||
         sha256_bytes(input) != "3df9140132bf65a7e6e59d8fec735595feee3ed3b32d57d7f6b4a10b82cb903e") {
         throw VoyemuError("SELINUX_PATCH_MISMATCH", "exact A9 bounded policy required");
     }
@@ -240,9 +242,9 @@ std::string apply_can_simulator_policy_patch(std::string_view profile, unsigned 
     return output;
 }
 
-std::string apply_can_simulator_context_patch(std::string_view profile, unsigned api,
+std::string apply_can_simulator_context_patch(ProfileScope scope, unsigned api,
                                               std::string_view input) {
-    if (profile != "free-09-chinese-20260106-6.0.3" || api != 28 ||
+    if (scope != qinggan09_scope || api != 28 ||
         sha256_bytes(input) != "88e8b4bf854406de5a5464ea37f0996487ae60e7e12ae1302fc9119e9b46456c") {
         throw VoyemuError("SELINUX_PATCH_MISMATCH", "exact A9 API28 file contexts required");
     }
@@ -264,12 +266,9 @@ std::string apply_can_simulator_context_patch(std::string_view profile, unsigned
 }
 
 // A11 API30 CAN simulator/early-input transforms; addition bytes mirror the A9 recipes.
-std::string apply_qinggan11_can_simulator_context_patch(std::string_view profile, unsigned api,
+std::string apply_qinggan11_can_simulator_context_patch(ProfileScope scope, unsigned api,
                                                         std::string_view input) {
-    if ((profile != "free-11-chinese-20260731-7.3.1" &&
-         profile != "free-11-chinese-20250710-6.11.1" &&
-         profile != "free-11-russian-20260318-rc1") ||
-        api != 30 ||
+    if (scope != qinggan11_scope || api != 30 ||
         sha256_bytes(input) != "cf0a4db0a9962781c83e6d1430c23276ebd406c404a54ab2226a1dfa4ac2844c") {
         throw VoyemuError("SELINUX_PATCH_MISMATCH", "exact API30 platform file contexts required");
     }
@@ -297,12 +296,9 @@ std::string apply_qinggan11_can_simulator_context_patch(std::string_view profile
     return output;
 }
 
-std::string apply_qinggan11_can_early_context_patch(std::string_view profile, unsigned api,
+std::string apply_qinggan11_can_early_context_patch(ProfileScope scope, unsigned api,
                                                     std::string_view input) {
-    if ((profile != "free-11-chinese-20260731-7.3.1" &&
-         profile != "free-11-chinese-20250710-6.11.1" &&
-         profile != "free-11-russian-20260318-rc1") ||
-        api != 30 ||
+    if (scope != qinggan11_scope || api != 30 ||
         sha256_bytes(input) != "7fc4c203185a6036dafacc401472a152111b9d313702f28befb1327b5dab1f5e") {
         throw VoyemuError("SELINUX_PATCH_MISMATCH",
                           "exact patched API30 simulator contexts required");
@@ -332,12 +328,9 @@ std::string apply_qinggan11_can_early_context_patch(std::string_view profile, un
     return output;
 }
 
-std::string apply_qinggan11_can_simulator_policy_patch(std::string_view profile, unsigned api,
+std::string apply_qinggan11_can_simulator_policy_patch(ProfileScope scope, unsigned api,
                                                        std::string_view input) {
-    if ((profile != "free-11-chinese-20260731-7.3.1" &&
-         profile != "free-11-chinese-20250710-6.11.1" &&
-         profile != "free-11-russian-20260318-rc1") ||
-        api != 30 ||
+    if (scope != qinggan11_scope || api != 30 ||
         sha256_bytes(input) != "5aa168a2fbb99353449d52a1d05c6baf5a900b4244de381e66173de7ef2028f9") {
         throw VoyemuError("SELINUX_PATCH_MISMATCH",
                           "exact bounded API30 Free A11 service policy required");
@@ -359,12 +352,9 @@ std::string apply_qinggan11_can_simulator_policy_patch(std::string_view profile,
     return output;
 }
 
-std::string apply_qinggan11_can_early_policy_patch(std::string_view profile, unsigned api,
+std::string apply_qinggan11_can_early_policy_patch(ProfileScope scope, unsigned api,
                                                    std::string_view input, bool original_navi) {
-    if ((profile != "free-11-chinese-20260731-7.3.1" &&
-         profile != "free-11-chinese-20250710-6.11.1" &&
-         profile != "free-11-russian-20260318-rc1") ||
-        api != 30 ||
+    if (scope != qinggan11_scope || api != 30 ||
         sha256_bytes(input) != "da0a10c128b5c52c67e52795090755fd97fc5d02999c26d150bd9afa27d6fdb1") {
         throw VoyemuError("SELINUX_PATCH_MISMATCH",
                           "exact patched API30 simulator policy required");
@@ -454,12 +444,9 @@ std::string apply_qinggan11_can_early_policy_patch(std::string_view profile, uns
     return output;
 }
 
-std::string apply_qinggan11_can_early_property_patch(std::string_view profile, unsigned api,
+std::string apply_qinggan11_can_early_property_patch(ProfileScope scope, unsigned api,
                                                      std::string_view input) {
-    if ((profile != "free-11-chinese-20260731-7.3.1" &&
-         profile != "free-11-chinese-20250710-6.11.1" &&
-         profile != "free-11-russian-20260318-rc1") ||
-        api != 30 ||
+    if (scope != qinggan11_scope || api != 30 ||
         sha256_bytes(input) != "50c13ef43f195b1b94c5e1ed85f3a33578220e6074d9d244414ae73c9837d2db") {
         throw VoyemuError("SELINUX_PATCH_MISMATCH",
                           "exact patched API30 Free A11 7.3.1 property contexts required");
@@ -478,17 +465,17 @@ std::string apply_qinggan11_can_early_property_patch(std::string_view profile, u
 }
 
 std::string apply_selinux_context_patch(std::string_view id, unsigned api, std::string_view input,
-                                        bool qinggan11_731, std::string_view profile) {
+                                        bool qinggan11, std::string_view dependency,
+                                        bool original_navi) {
     if (api == 30 && id == "selinux-hash-api30") {
         auto pin = std::string_view{
                 "f1e41e034fbb8e72dbafd180f86188cee6e04facde570982f199160079bfe04f"};
 
-        if (qinggan11_731) {
-            if (profile == "free-11-chinese-20260731-7.3.1") {
-                pin = "8b7d6819e4429cec7a98a86d31366d6b7fc75ae03033d418b15f84ec1f9161c3";
-            } else if (profile == "free-11-chinese-20250710-6.11.1" ||
-                       profile == "free-11-russian-20260318-rc1") {
-                pin = "38be4a4cdae3f201ae05de187700538cb460ff7958025ac1066208018c388387";
+        if (qinggan11) {
+            if (dependency == "can-early-policy-api30") {
+                pin = original_navi
+                              ? "8b7d6819e4429cec7a98a86d31366d6b7fc75ae03033d418b15f84ec1f9161c3"
+                              : "38be4a4cdae3f201ae05de187700538cb460ff7958025ac1066208018c388387";
             } else {
                 pin = "d312218f439e3f970934791cdfa572078b5d78b21a3d5eeddff3f2a1c5b6e364";
             }
@@ -548,12 +535,12 @@ multiwindow u:object_r:voyemu_cockpit_service:s0
 )CONTEXTS";
         auto output = std::string(input) + std::string(addition);
 
-        if (policy && qinggan11_731) {
+        if (policy && qinggan11) {
             output += "(allow platform_app voyemu_cockpit_service (service_manager (find)))\n";
         }
 
         const std::string_view output_pin =
-                policy ? (qinggan11_731
+                policy ? (qinggan11
                                   ? "b07971ed43c0ccfb97e69af4b251f58a0e021cb93c1e68d3ccbfc664845bb55d"
                                   : "ff445a22bb8718bed947ca97f05d091d0e62a87bb309165cc2c67945e7bd2d14")
                        : "ac366650a5d9e011d299845155d1319a1f35ec92e107cc1cded0973fa945f1b5";
@@ -621,9 +608,9 @@ multiwindow u:object_r:voyemu_cockpit_service:s0
     throw VoyemuError("SELINUX_PATCH_NOT_FOUND", "unsupported context recipe");
 }
 
-std::string apply_passion_selinux_patch(std::string_view profile, unsigned api, std::string_view id,
+std::string apply_passion_selinux_patch(ProfileScope scope, unsigned api, std::string_view id,
                                         std::string_view input) {
-    if (profile != "passion-11-russian-20260403-2.1.4.80" || api != 30) {
+    if (scope != passion_scope || api != 30) {
         throw VoyemuError("SELINUX_PATCH_PROFILE", "exact Passion API30 profile required");
     }
 

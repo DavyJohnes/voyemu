@@ -1,37 +1,41 @@
 #pragma once
 #include "error.hpp"
+#include "profile_identity.hpp"
 #include <array>
 #include <span>
 #include <stdexcept>
 #include <string>
 #include <string_view>
 namespace voyemu {
-// Pure pinned Android context transforms. API30 hash consumes patched CIL plus its mapping.
-// Caller verifies whole-file input/output pins and dependency provenance.
-std::string apply_can_early_policy_patch(std::string_view profile, unsigned api,
-                                         std::string_view input);
-std::string apply_can_early_file_context_patch(std::string_view profile, unsigned api,
+// Pure pinned Android context transforms scoped by the platform and board of the profile. API30
+// hash consumes patched CIL plus its mapping. Caller verifies whole-file input/output pins and
+// dependency provenance.
+std::string apply_can_early_policy_patch(ProfileScope scope, unsigned api, std::string_view input);
+std::string apply_can_early_file_context_patch(ProfileScope scope, unsigned api,
                                                std::string_view input);
-std::string apply_can_early_property_patch(std::string_view profile, unsigned api,
+std::string apply_can_early_property_patch(ProfileScope scope, unsigned api,
                                            std::string_view input);
-std::string apply_can_simulator_policy_patch(std::string_view profile, unsigned api,
+std::string apply_can_simulator_policy_patch(ProfileScope scope, unsigned api,
                                              std::string_view input);
-std::string apply_can_simulator_context_patch(std::string_view profile, unsigned api,
+std::string apply_can_simulator_context_patch(ProfileScope scope, unsigned api,
                                               std::string_view input);
+// On qinggan11 the API30 hash pins its input by the patched CIL it consumes: dependency names that
+// node, and original_navi selects the early policy with the su read of mac_perms_file.
 std::string apply_selinux_context_patch(std::string_view id, unsigned api, std::string_view input,
-                                        bool qinggan11_731 = false, std::string_view profile = {});
-std::string apply_qinggan11_can_simulator_context_patch(std::string_view profile, unsigned api,
+                                        bool qinggan11 = false, std::string_view dependency = {},
+                                        bool original_navi = false);
+std::string apply_qinggan11_can_simulator_context_patch(ProfileScope scope, unsigned api,
                                                         std::string_view input);
-std::string apply_qinggan11_can_early_context_patch(std::string_view profile, unsigned api,
+std::string apply_qinggan11_can_early_context_patch(ProfileScope scope, unsigned api,
                                                     std::string_view input);
-std::string apply_qinggan11_can_simulator_policy_patch(std::string_view profile, unsigned api,
+std::string apply_qinggan11_can_simulator_policy_patch(ProfileScope scope, unsigned api,
                                                        std::string_view input);
 // original_navi adds the su read of mac_perms_file that the original_navi feature needs.
-std::string apply_qinggan11_can_early_policy_patch(std::string_view profile, unsigned api,
+std::string apply_qinggan11_can_early_policy_patch(ProfileScope scope, unsigned api,
                                                    std::string_view input, bool original_navi);
-std::string apply_qinggan11_can_early_property_patch(std::string_view profile, unsigned api,
+std::string apply_qinggan11_can_early_property_patch(ProfileScope scope, unsigned api,
                                                      std::string_view input);
-std::string apply_passion_selinux_patch(std::string_view profile, unsigned api, std::string_view id,
+std::string apply_passion_selinux_patch(ProfileScope scope, unsigned api, std::string_view id,
                                         std::string_view input);
 struct Api30FileRecipe {
     std::string_view id, target, input_sha256, output_sha256;

@@ -1,5 +1,6 @@
 #pragma once
 #include "model.hpp"
+#include "profile_identity.hpp"
 #include <filesystem>
 #include <optional>
 #include <span>
@@ -18,7 +19,9 @@ struct PinnedFilePatch {
     std::string input_sha256, output_sha256;
     std::optional<PinnedFileDependency> donor;
     std::string patched_dependency, dependency_sha256;
+    // The profile a scoped recipe records in its receipt, and the platform and board that admit it.
     std::string profile;
+    std::optional<ProfileScope> scope;
     std::optional<PinnedFileDependency> certificate_apk;
     // OEM vendor policy of the bounded A9 su; donor is the OEM plat policy.
     std::optional<PinnedFileDependency> vendor_donor;
