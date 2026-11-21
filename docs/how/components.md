@@ -17,6 +17,8 @@ Third-party sources and archives inside a component are pinned by URL and SHA-25
 
 Several profiles can build one component from shared sources. Their `component.json` lists under `sourceFiles` which files of a component in `profiles/common/` the build takes, including the variant files of their firmware generation, and `sourceEdits` names exact text edits that adapt the shared sources to their firmware, for example by removing an API that their firmware does not declare. An edit whose original text is not found stops preparation. A `native` component takes shared C sources through `sourceFiles` too, without edits.
 
+A `native` component whose output another profile already publishes names that pin under `pin` as `<profile>/<component>`. Preparation downloads the published file, and the profile publishes no file of its own for this component.
+
 ## Recipes and guards
 
 A recipe is an entry under `patches` in `profile.json`. It names its input, such as `original:Launcher` for an OEM APK, the components it uses, the list of steps and the signing key. A step is a JSON file in `patches/` with a list of operations: line edits in decompiled sources, added DEX files, removed entries, library declarations and class merges.

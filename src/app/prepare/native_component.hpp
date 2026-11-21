@@ -16,9 +16,14 @@ Json build_native_component(const std::filesystem::path &source,
 std::filesystem::path native_component_sources(const std::filesystem::path &root,
                                                const std::filesystem::path &component,
                                                const std::filesystem::path &work);
+// The androidNativeComponents key of a native component: the pin its definition names, which
+// another profile publishes for the same bytes, or else <profile>/<component>.
+std::string native_component_pin(const std::string &profile, const std::string &component,
+                                 const Json &definition);
 // The recipe of the release assets: materializes and builds every native component of every profile
 // with the pinned NDK clang into output as <profile>-<component>-<output>; returns the SHA-256 of
-// each by <profile>/<component>.
+// each by <profile>/<component>; a component that names a pin is built by the profile that
+// publishes it.
 Json build_native_component_recipe(const std::filesystem::path &root,
                                    const std::filesystem::path &compiler,
                                    const std::string &compiler_sha256,

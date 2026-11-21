@@ -563,7 +563,8 @@ static Json request_document(const std::filesystem::path &root,
         // The receipt names the CI-built asset of the androidNativeComponents pin of this
         // component.
         const auto proof = read_private_json(item.receipt, 1 << 20);
-        const auto &pin = manifest.at("androidNativeComponents").at(request.profile + "/" + id);
+        const auto &pin = manifest.at("androidNativeComponents")
+                                  .at(native_component_pin(request.profile, id, definition));
         need(proof.at("schema") == 1 && proof.at("type") == "native" &&
                      proof.at("output_type") == output_type && proof.at("api") == recipe_api &&
                      proof.at("abi") == "arm64-v8a" &&

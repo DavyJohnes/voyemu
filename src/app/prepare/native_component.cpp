@@ -572,6 +572,11 @@ Json build_native_component(const std::filesystem::path &source,
     return result;
 }
 
+std::string native_component_pin(const std::string &profile, const std::string &component,
+                                 const Json &definition) {
+    return definition.value("pin", profile + "/" + component);
+}
+
 namespace {
 // The declared native component source of a profile and its definition.
 std::pair<std::filesystem::path, Json> profile_native_component(const std::filesystem::path &root,
@@ -677,8 +682,14 @@ Json build_native_component_recipe(const std::filesystem::path &root,
             const auto definition_file = directory / it.value().get<std::string>() /
                                          "component.json";
 
-            if (!std::filesystem::is_regular_file(definition_file) ||
-                read_private_json(definition_file).value("type", std::string{}) != "native") {
+            if (!std::filesystem::is_regular_file(definition_file)) {
+                continue;
+            }
+
+            const auto component = read_private_json(definition_file);
+
+            // A component that names a pin of another profile publishes no asset of its own.
+            if (component.value("type", std::string{}) != "native" || component.contains("pin")) {
                 continue;
             }
 
@@ -700,20 +711,29 @@ install_native_component(const std::filesystem::path &root, const std::string &p
                          const std::string &component, const Json &pins, bool offline,
                          const DownloadTransport &transport,
                          const std::function<void(const std::filesystem::path &)> &build) {
-    const auto key = profile + "/" + component;
+    const std::regex keys(R"(^[a-z0-9][a-z0-9.-]*/[a-z0-9][a-z0-9-]*$)");
 
-    if (!std::regex_match(key, std::regex(R"(^[a-z0-9][a-z0-9.-]*/[a-z0-9][a-z0-9-]*$)"))) {
+    if (!std::regex_match(profile + "/" + component, keys)) {
         throw VoyemuError("COMPONENT_PATH", "invalid native component key");
     }
 
     const auto [source, definition] = profile_native_component(root, profile, component);
+    const auto key = native_component_pin(profile, component, definition);
+
+    if (!std::regex_match(key, keys)) {
+        throw VoyemuError("COMPONENT_PIN", "invalid native component pin");
+    }
+
     const auto output = definition.at("output").get<std::string>();
     const auto api = definition.at("minSdk").get<int>();
     const auto output_type = definition.value("outputType", std::string("shared-library"));
     const auto &pin = pins.at(key);
     const auto sha = pin.at("sha256").get<std::string>(), url = pin.at("url").get<std::string>();
 
-    if (!url.ends_with("/" + profile + "-" + component + "-" + output)) {
+    auto asset = key;
+    asset[key.find('/')] = '-';
+
+    if (!url.ends_with("/" + asset + "-" + output)) {
         throw VoyemuError("COMPONENT_PIN", "asset name differs from the component");
     }
 

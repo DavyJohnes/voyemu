@@ -1,5 +1,6 @@
 {
   "type": "native",
+  "pin": "free-11-chinese-20260731-7.3.1/qg-runtime",
   "minSdk": 28,
   "output": "libqg_runtime.so",
   "libs": ["log"],

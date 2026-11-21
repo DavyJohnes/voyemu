@@ -1,5 +1,6 @@
 {
   "type": "native",
+  "pin": "free-11-chinese-20260731-7.3.1/early-inputs",
   "minSdk": 30,
   "outputType": "executable",
   "output": "voyemu-early-inputs",

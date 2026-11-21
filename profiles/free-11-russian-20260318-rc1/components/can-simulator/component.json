@@ -1,5 +1,6 @@
 {
   "type": "native",
+  "pin": "free-11-chinese-20260731-7.3.1/can-simulator",
   "minSdk": 30,
   "outputType": "executable",
   "output": "voyemu-can-model",

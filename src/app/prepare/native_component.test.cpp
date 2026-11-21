@@ -123,10 +123,13 @@ int main(int argc, char **argv) {
                 check(section.name != ".comment", "native component kept the host tool identity");
             }
 
-            check(receipt.at("sha256") == embedded_toolchain_manifest()
-                                                  .at("androidNativeComponents")
-                                                  .at(profile + "/" + component)
-                                                  .at("sha256"),
+            check(receipt.at("sha256") ==
+                          embedded_toolchain_manifest()
+                                  .at("androidNativeComponents")
+                                  .at(native_component_pin(
+                                          profile, component,
+                                          read_private_json(source / "component.json")))
+                                  .at("sha256"),
                   "native component recipe differs from its pin");
             std::cout << "native component recipe matches its pin: " << profile << '/' << component
                       << '\n';
@@ -588,11 +591,28 @@ int main(int argc, char **argv) {
         const auto direct = install_native_component(root, "private", "own", private_pins, true);
         check(std::filesystem::is_regular_file(direct.parent_path() / "libown.so"),
               "local profile remains directly buildable and installable");
+        // A component that names the pin of another profile installs that published asset.
+        const auto reuse_component = root / "profiles/reuse/components/own";
+        ensure_private_directory(reuse_component / "src");
+        auto reuse = local;
+        reuse["pin"] = "private/own";
+        write_private_json(reuse_component / "component.json", reuse);
+        std::filesystem::copy_file(component / "src/own.c", reuse_component / "src/own.c");
+        write_private_json(root / "profiles/reuse/profile.json",
+                           {{"components", {{"own", "components/own"}}}});
+        const auto reused = read_private_json(
+                install_native_component(root, "reuse", "own", private_pins, true));
+        check(reused.at("sha256") == private_sha &&
+                      reused.at("asset") == private_pins.at("private/own").at("url"),
+              "a component installs the asset of the pin it names");
         const auto exported = build_native_component_recipe(root, compiler, pin,
                                                             root / "public-export", true);
         check(exported.size() == 1 && exported.contains("p/own") &&
                       !std::filesystem::exists(root / "public-export/private-own-libown.so"),
               "public native assets exclude local profiles without excluding published components");
+        check(!exported.contains("reuse/own") &&
+                      !std::filesystem::exists(root / "public-export/reuse-own-libown.so"),
+              "a component that names another pin publishes no asset of its own");
         std::cout
                 << "native component recipe, output confinement, materialization and guest library guards passed\n";
 
