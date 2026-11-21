@@ -7,6 +7,7 @@
 #include <functional>
 #include <future>
 #include <iostream>
+#include <optional>
 #include <stdexcept>
 #include <thread>
 #ifdef _WIN32
@@ -293,6 +294,14 @@ static void state_replace_regressions(const std::filesystem::path &directory) {
     check(recovered.empty() && read_private_json(file).at("epoch") == 104 &&
                   !std::filesystem::exists(pending) && state_private(file, false),
           "staging file of a terminated writer blocked publication");
+    // A holder whose thread exits without releasing the lock abandons it.
+    std::optional<detail::PrivateJsonLock> abandoned;
+    std::thread([&] {
+        abandoned.emplace(file);
+    }).join();
+    const auto after_abandon = attempted({{"epoch", 105}});
+    check(after_abandon.empty() && read_private_json(file).at("epoch") == 105,
+          "abandoned state lock blocked publication");
 }
 #endif
 

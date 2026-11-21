@@ -3,6 +3,7 @@
 #ifdef _WIN32
 #include <windows.h>
 
+#include "logging.hpp"
 #include "process.hpp"
 #include <algorithm>
 #include <cstdint>
@@ -95,12 +96,12 @@ public:
 
         const auto result = WaitForSingleObject(mutex_.value, 5000);
 
+        // A holder that exited without releasing the lock left at most its staging file, which
+        // the next writer replaces; the published file is still whole.
         if (result == WAIT_ABANDONED) {
-            ReleaseMutex(mutex_.value);
-            throw VoyemuError("STATE_LOCK_ABANDONED", "previous state operation did not finish");
-        }
-
-        if (result != WAIT_OBJECT_0) {
+            logging::try_write(logging::Level::debug, "state", "state.lock_abandoned",
+                               {{"path", path.string()}});
+        } else if (result != WAIT_OBJECT_0) {
             if (result == WAIT_TIMEOUT) {
                 throw VoyemuError("STATE_LOCK_TIMEOUT", "state operation exceeded five seconds");
             }
