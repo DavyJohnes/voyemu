@@ -4,7 +4,7 @@
   "map_sha256": "255335b86bb5fd782d23086018dcfc3874d088364ad5f15b264cfb12020d800e",
   "packet_bytes": 650,
   "wire_fields": 736,
-  "projected_fields": 432,
+  "projected_fields": 461,
   "source_parser_sha256": "a830d876d9091190096025f4f4eb81294078b3002d955283b3a9dec296414f05",
   "source_engine_sha256": "faeb580b46c5c92d7ecd5b707be15b85874c838471f5cb9ca010b9a90e9ae195",
   "fields": [
@@ -732,7 +732,17 @@
       "position": 50,
       "name": "bcm_pepsPowerMode",
       "normalized_width": 3,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 51,
+        "start_bit": 105,
+        "width": 3,
+        "order": 1,
+        "named_consumer": "_mcumiscitems_struct",
+        "case_address": "0x5e64",
+        "output_bit": 3,
+        "output_width": 3
+      }
     },
     {
       "position": 51,
@@ -4352,7 +4362,17 @@
       "position": 319,
       "name": "poweroff_req",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 321,
+        "start_bit": 1281,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_pwrmgritems_struct",
+        "case_address": "0x566c",
+        "output_bit": 4,
+        "output_width": 2
+      }
     },
     {
       "position": 320,
@@ -4484,7 +4504,17 @@
       "position": 331,
       "name": "ic_bat_voltage",
       "normalized_width": 12,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 333,
+        "start_bit": 1295,
+        "width": 12,
+        "order": 1,
+        "named_consumer": "_mcumiscitems_struct",
+        "case_address": "0x5dd4",
+        "output_bit": 32,
+        "output_width": 12
+      }
     },
     {
       "position": 332,
@@ -5582,151 +5612,401 @@
       "position": 410,
       "name": "apa_avmSts",
       "normalized_width": 4,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 411,
+        "start_bit": 1600,
+        "width": 4,
+        "order": 1,
+        "named_consumer": "_mcumiscitems_struct",
+        "case_address": "0x5db4",
+        "output_bit": 57,
+        "output_width": 4
+      }
     },
     {
       "position": 411,
       "name": "apa_avmHmiIndex",
       "normalized_width": 4,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 412,
+        "start_bit": 1604,
+        "width": 4,
+        "order": 1,
+        "named_consumer": "_mcumiscitems_struct",
+        "case_address": "0x5da4",
+        "output_bit": 64,
+        "output_width": 4
+      }
     },
     {
       "position": 412,
       "name": "apa_avmViewMode",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 413,
+        "start_bit": 1608,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_mcumiscitems_struct",
+        "case_address": "0x5d94",
+        "output_bit": 68,
+        "output_width": 2
+      }
     },
     {
       "position": 413,
       "name": "apa_avmDisplayReq",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 414,
+        "start_bit": 1610,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_mcumiscitems_struct",
+        "case_address": "0x5d84",
+        "output_bit": 70,
+        "output_width": 2
+      }
     },
     {
       "position": 414,
       "name": "apa_avmMODSts",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 415,
+        "start_bit": 1612,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_mcumiscitems_struct",
+        "case_address": "0x5d74",
+        "output_bit": 72,
+        "output_width": 2
+      }
     },
     {
       "position": 415,
       "name": "apa_avmTrigByTurnningSts",
       "normalized_width": 1,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 416,
+        "start_bit": 1614,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_mcumiscitems_struct",
+        "case_address": "0x5d64",
+        "output_bit": 74,
+        "output_width": 1
+      }
     },
     {
       "position": 416,
       "name": "apa_avmSingleViewSts",
       "normalized_width": 5,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 417,
+        "start_bit": 1615,
+        "width": 5,
+        "order": 1,
+        "named_consumer": "_mcumiscitems_struct",
+        "case_address": "0x5d54",
+        "output_bit": 75,
+        "output_width": 5
+      }
     },
     {
       "position": 417,
       "name": "apa_avmTrajectory_display",
       "normalized_width": 1,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 418,
+        "start_bit": 1620,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_mcumiscitems_struct",
+        "case_address": "0x5d44",
+        "output_bit": 80,
+        "output_width": 1
+      }
     },
     {
       "position": 418,
       "name": "apa_avmAutoswitching_display",
       "normalized_width": 1,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 419,
+        "start_bit": 1621,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_mcumiscitems_struct",
+        "case_address": "0x5d34",
+        "output_bit": 81,
+        "output_width": 1
+      }
     },
     {
       "position": 419,
       "name": "apa_avmCarBodyTransparent",
       "normalized_width": 1,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 420,
+        "start_bit": 1622,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_mcumiscitems_struct",
+        "case_address": "0x5d24",
+        "output_bit": 82,
+        "output_width": 1
+      }
     },
     {
       "position": 420,
       "name": "apa_avmSwSts",
       "normalized_width": 1,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 421,
+        "start_bit": 1623,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_mcumiscitems_struct",
+        "case_address": "0x5d14",
+        "output_bit": 83,
+        "output_width": 1
+      }
     },
     {
       "position": 421,
       "name": "apa_avmMonitVideoOutput",
       "normalized_width": 1,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 422,
+        "start_bit": 1624,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_mcumiscitems_struct",
+        "case_address": "0x5d04",
+        "output_bit": 84,
+        "output_width": 1
+      }
     },
     {
       "position": 422,
       "name": "apa_avmPDCfailureWarn",
       "normalized_width": 3,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 423,
+        "start_bit": 1625,
+        "width": 3,
+        "order": 1,
+        "named_consumer": "_mcumiscitems_struct",
+        "case_address": "0x5cf4",
+        "output_bit": 85,
+        "output_width": 3
+      }
     },
     {
       "position": 423,
       "name": "avm_sts",
       "normalized_width": 4,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 424,
+        "start_bit": 1628,
+        "width": 4,
+        "order": 1,
+        "named_consumer": "_mcumiscitems_struct",
+        "case_address": "0x5ce4",
+        "output_bit": 88,
+        "output_width": 4
+      }
     },
     {
       "position": 424,
       "name": "avm_hmiIndex",
       "normalized_width": 4,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 425,
+        "start_bit": 1632,
+        "width": 4,
+        "order": 1,
+        "named_consumer": "_mcumiscitems_struct",
+        "case_address": "0x5cd4",
+        "output_bit": 92,
+        "output_width": 4
+      }
     },
     {
       "position": 425,
       "name": "avm_viewMode",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 426,
+        "start_bit": 1636,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_mcumiscitems_struct",
+        "case_address": "0x5cc4",
+        "output_bit": 96,
+        "output_width": 2
+      }
     },
     {
       "position": 426,
       "name": "avm_displayReq",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 427,
+        "start_bit": 1638,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_mcumiscitems_struct",
+        "case_address": "0x5cb4",
+        "output_bit": 98,
+        "output_width": 2
+      }
     },
     {
       "position": 427,
       "name": "avm_MODSts",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 428,
+        "start_bit": 1640,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_mcumiscitems_struct",
+        "case_address": "0x5ca4",
+        "output_bit": 100,
+        "output_width": 2
+      }
     },
     {
       "position": 428,
       "name": "avm_trigByTurnningSts",
       "normalized_width": 1,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 429,
+        "start_bit": 1642,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_mcumiscitems_struct",
+        "case_address": "0x5c94",
+        "output_bit": 102,
+        "output_width": 1
+      }
     },
     {
       "position": 429,
       "name": "avm_singleViewSts",
       "normalized_width": 5,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 430,
+        "start_bit": 1643,
+        "width": 5,
+        "order": 1,
+        "named_consumer": "_mcumiscitems_struct",
+        "case_address": "0x5c84",
+        "output_bit": 103,
+        "output_width": 5
+      }
     },
     {
       "position": 430,
       "name": "avm_Trajectory_display",
       "normalized_width": 1,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 431,
+        "start_bit": 1648,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_mcumiscitems_struct",
+        "case_address": "0x5c74",
+        "output_bit": 108,
+        "output_width": 1
+      }
     },
     {
       "position": 431,
       "name": "avm_Autoswitching_display",
       "normalized_width": 1,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 432,
+        "start_bit": 1649,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_mcumiscitems_struct",
+        "case_address": "0x5c64",
+        "output_bit": 109,
+        "output_width": 1
+      }
     },
     {
       "position": 432,
       "name": "avm_CarBodyTransparent",
       "normalized_width": 1,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 433,
+        "start_bit": 1650,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_mcumiscitems_struct",
+        "case_address": "0x5c54",
+        "output_bit": 110,
+        "output_width": 1
+      }
     },
     {
       "position": 433,
       "name": "avm_SwSts",
       "normalized_width": 1,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 434,
+        "start_bit": 1651,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_mcumiscitems_struct",
+        "case_address": "0x5c44",
+        "output_bit": 111,
+        "output_width": 1
+      }
     },
     {
       "position": 434,
       "name": "avm_QuitSw",
       "normalized_width": 1,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 435,
+        "start_bit": 1652,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_mcumiscitems_struct",
+        "case_address": "0x5c34",
+        "output_bit": 112,
+        "output_width": 1
+      }
     },
     {
       "position": 435,
@@ -7804,7 +8084,17 @@
       "position": 577,
       "name": "cfg_reserve_13",
       "normalized_width": 8,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 637,
+        "start_bit": 2184,
+        "width": 8,
+        "order": 1,
+        "named_consumer": "_pwrmgritems_struct",
+        "case_address": "0x51fc",
+        "output_bit": 132,
+        "output_width": 8
+      }
     },
     {
       "position": 578,

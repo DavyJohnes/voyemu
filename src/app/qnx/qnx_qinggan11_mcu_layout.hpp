@@ -106,9 +106,23 @@ inline std::string qnx_qinggan11_mcu_layout(const Json &definition,
             bit = wire.at("start_bit").get<unsigned>();
             width = wire.at("width").get<unsigned>();
             need(id >= 1 && id <= 736 && !indices[id] && wire.at("order") == 1 && width >= 1 &&
-                 width <= 32 && bit < 5200 && width <= 5200 - bit &&
-                 wire.at("output_width") == width);
+                 width <= 32 && bit < 5200 && width <= 5200 - bit);
             indices[id] = true;
+
+            // A row names the engine item its parser case writes, or none when no parser case of
+            // this firmware reads the wire field; the vehicle still sends it.
+            if (wire.contains("named_consumer")) {
+                need(wire.at("named_consumer").is_string() && wire.at("case_address").is_string() &&
+                     wire.at("output_bit").is_number_unsigned() &&
+                     wire.at("output_width") == width);
+            } else {
+                need(!wire.contains("case_address") && !wire.contains("output_bit") &&
+                     !wire.contains("output_width"));
+            }
+
+            // The name of the OEM simulator for the wire field when it differs from the model name.
+            need(!wire.contains("oem_name") ||
+                 (wire.at("oem_name").is_string() && wire.at("oem_name") != common.name));
 
             // An OEM slot wider than its normalized field whose engine tests the wire all-ones.
             if (wire.contains("unknown")) {

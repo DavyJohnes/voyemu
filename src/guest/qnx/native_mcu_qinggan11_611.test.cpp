@@ -632,9 +632,44 @@ int main(int argc, char **argv) {
                 {"can_msg_timeout_203", 1962, 2, 3}, {"can_msg_timeout_208", 1964, 2, 3},
         });
 
-        // AdasEcu acc and cancel, the power-off request, the lane departure lamp and the language
-        // write fields that this layout does not project. The guest rejects the logical revision as
-        // a whole, and the host state for the guest carries their initial values and the new speed.
+        // The power manager and AVM items of the OEM parser: bcm_pepsPowerMode, ic_bat_voltage and
+        // the AVM states reach _mcumiscitems_struct, poweroff_req and cfg_reserve_13 the power
+        // manager item _pwrmgritems_struct.
+        deliver_cases({
+                {"bcm_pepsPowerMode", 105, 3, 3},
+                {"poweroff_req", 1281, 2, 1},
+                {"ic_bat_voltage", 1295, 12, 1240},
+                {"apa_avmSts", 1600, 4, 11},
+                {"apa_avmHmiIndex", 1604, 4, 11},
+                {"apa_avmViewMode", 1608, 2, 3},
+                {"apa_avmDisplayReq", 1610, 2, 3},
+                {"apa_avmMODSts", 1612, 2, 3},
+                {"apa_avmTrigByTurnningSts", 1614, 1, 1},
+                {"apa_avmSingleViewSts", 1615, 5, 21},
+                {"apa_avmTrajectory_display", 1620, 1, 1},
+                {"apa_avmAutoswitching_display", 1621, 1, 1},
+                {"apa_avmCarBodyTransparent", 1622, 1, 1},
+                {"apa_avmSwSts", 1623, 1, 1},
+                {"apa_avmMonitVideoOutput", 1624, 1, 1},
+                {"apa_avmPDCfailureWarn", 1625, 3, 5},
+                {"avm_sts", 1628, 4, 11},
+                {"avm_hmiIndex", 1632, 4, 11},
+                {"avm_viewMode", 1636, 2, 3},
+                {"avm_displayReq", 1638, 2, 3},
+                {"avm_MODSts", 1640, 2, 3},
+                {"avm_trigByTurnningSts", 1642, 1, 1},
+                {"avm_singleViewSts", 1643, 5, 21},
+                {"avm_Trajectory_display", 1648, 1, 1},
+                {"avm_Autoswitching_display", 1649, 1, 1},
+                {"avm_CarBodyTransparent", 1650, 1, 1},
+                {"avm_SwSts", 1651, 1, 1},
+                {"avm_QuitSw", 1652, 1, 1},
+                {"cfg_reserve_13", 2184, 8, 171},
+        });
+
+        // AdasEcu acc and cancel, the lane departure lamp and the language write fields that this
+        // layout does not project. The guest rejects the logical revision as a whole, and the host
+        // state for the guest carries their initial values and the new speed.
         {
             auto state = voyemu::apply_patch(voyemu::initial_state(),
                                              {{"speed", 80}, {"gear", 3}, {"gear_valid", 1}});
@@ -651,9 +686,8 @@ int main(int argc, char **argv) {
             press("acc");
             assert(state.at("raw_oem").at("acc_mode") == 3);
             press("cancel");
-            state = voyemu::apply_patch(
-                    state,
-                    {{"speed", 60}, {"poweroff_req", 1}, {"ldws_lamp", 1}, {"ivi_languageSet", 1}});
+            state = voyemu::apply_patch(state,
+                                        {{"speed", 60}, {"ldws_lamp", 1}, {"ivi_languageSet", 1}});
             const auto &raw = state.at("raw_oem");
             assert(raw.at("acc_mode") == 0 && raw.at("mpc_icaSts") == 1 &&
                    raw.at("mrr_vSetDis") == 160 && raw.at("time_gap_set") == 1);
@@ -673,7 +707,7 @@ int main(int argc, char **argv) {
             const auto guest = voyemu::qnx_qinggan11_guest_state(source, raw);
 
             for (const auto *name : {"acc_mode", "mpc_icaSts", "mrr_vSetDis", "time_gap_set",
-                                     "poweroff_req", "ldws_lamp", "ivi_languageSet"}) {
+                                     "ldws_lamp", "ivi_languageSet"}) {
                 assert(guest.at(name) == 0);
             }
 
@@ -724,6 +758,13 @@ int main(int argc, char **argv) {
         reject(wrong);
         wrong = source;
         wrong["fields"][286]["wire"]["unknown"]["wire"] = 4095;
+        reject(wrong);
+        // A row that names its engine item states the case and the output bits it writes.
+        wrong = source;
+        wrong["fields"][37]["wire"].erase("output_width");
+        reject(wrong);
+        wrong = source;
+        wrong["fields"][37]["wire"]["oem_name"] = "ready_lamp";
         reject(wrong);
         bool old_scope_rejected = false;
         try {

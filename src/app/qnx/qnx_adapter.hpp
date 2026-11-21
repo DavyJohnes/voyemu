@@ -134,7 +134,7 @@ inline constexpr std::array qnx_adapter_registry{
                        207032,
                        116616,
                        {0x50, 0x8b},
-                       432,
+                       461,
                        34,
                        33,
                        false,
