@@ -22,6 +22,7 @@ namespace {
 constexpr ProfileScope qinggan09_scope{ProfilePlatform::qinggan09, ProfileBoard::sa8155},
         qinggan11_scope{ProfilePlatform::qinggan11, ProfileBoard::sa8155},
         passion_scope{ProfilePlatform::passion, ProfileBoard::sa8155};
+
 bool valid_pin(const std::string &pin) {
     return sha256_text(pin);
 }
