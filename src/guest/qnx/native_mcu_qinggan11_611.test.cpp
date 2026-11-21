@@ -260,7 +260,9 @@ int main(int argc, char **argv) {
             const auto now = voyemu::AdasEcu::Clock::now();
             std::uint32_t sequence = 0;
             auto press = [&](const char *button) {
-                assert(adas.input(state, ++sequence, button, "down", "test", now).handled);
+                const bool pressed =
+                        adas.input(state, ++sequence, button, "down", "test", now).handled;
+                assert(pressed);
                 const auto outcome = adas.input(state, ++sequence, button, "up", "test", now);
                 state = voyemu::apply_patch(state, outcome.patch);
             };
