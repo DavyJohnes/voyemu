@@ -70,7 +70,7 @@ void emit(std::string_view key, const Arguments &arguments, bool live) {
 
             pending = false;
             shown = true;
-            indent.assign(2 * depth, ' ');
+            indent.assign(std::size_t{2} * depth, ' ');
         }
         logging::console_line(indent + cli::message(console_language,
                                                     "progress." + std::string(key),
