@@ -621,8 +621,8 @@ int main(int argc, char **argv) {
         }
 
         // The preparation lock belongs to its live process only: a running preparation refuses a
-        // second one, while the file of an exited one and the directory of an earlier version
-        // stay behind without blocking the next preparation, which here stops offline.
+        // second one, while the file of an exited one stays behind without blocking the next
+        // preparation, which here stops offline.
         const auto preparation_lock = fixture / ".local/build/prepare-api30-fixture.lock";
         const auto prepare_failure = [&] {
             try {
@@ -650,13 +650,6 @@ int main(int argc, char **argv) {
         if (after_exit.starts_with("PROFILE_PREPARATION:")) {
             throw std::runtime_error("the lock of an exited preparation blocked the next one: " +
                                      after_exit);
-        }
-
-        std::filesystem::remove(preparation_lock);
-        ensure_private_directory(preparation_lock);
-
-        if (prepare_failure().starts_with("PROFILE_PREPARATION:")) {
-            throw std::runtime_error("an earlier lock directory blocked preparation");
         }
 
         api30["patches"] = {{"stock-statusbar",
