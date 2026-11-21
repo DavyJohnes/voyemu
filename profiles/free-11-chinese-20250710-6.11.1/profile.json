@@ -73,7 +73,7 @@
     "gpuMode": "host"
   },
   "wheel": {
-    "assets": "profiles/common/wheels/free-2021",
+    "assets": "profiles/common/wheels/free-2024",
     "androidRoutes": "src/app/android-wheel-routes.json"
   },
   "displays": [

@@ -2401,8 +2401,7 @@ static void api30_publication_checks(const std::filesystem::path &stage, bool ol
     rejects_qnx(wrong_qnx, "missing-free-gpt");
     write_private_json(qnx_receipt, qnx_acceptance);
     auto with_wheel = read_private_json(definition);
-    with_wheel["wheel"] = {{"assets", older ? "profiles/common/wheels/free-2021"
-                                            : "profiles/common/wheels/free-2024"}};
+    with_wheel["wheel"] = {{"assets", "profiles/common/wheels/free-2024"}};
     write_private_json(definition, with_wheel);
     auto accepted_android = good;
     accepted_android["profile_sha256"] = sha256_file(definition);
@@ -2414,7 +2413,21 @@ static void api30_publication_checks(const std::filesystem::path &stage, bool ol
     resource_source_fixture(root, read_private_json(definition));
     std::string descriptor_bytes;
 
-    if (!older) {
+    if (older) {
+        // The shared free-2024 wheel carries control artwork owned by 7.3.1 only; its unmet
+        // input pins must not reach the 6.11.1 publication.
+        write_private_json(
+                root / "profiles/common/wheels/free-2024/control-artwork.json",
+                {{"schema", 1},
+                 {"inputs",
+                  {{"dark",
+                    {{"path", "originals/Setting.apk"}, {"sha256", std::string(64, '0')}}}}},
+                 {"assets", Json::array({Json{{"file", "toggle-track-dark.png"},
+                                              {"input", "dark"},
+                                              {"member", "res/drawable/checkbox_bg.png"},
+                                              {"png_sha256", std::string(64, '0')}}})},
+                 {"ownerProfiles", Json::array({"free-11-chinese-20260731-7.3.1"})}});
+    } else {
         const auto artwork = root / "profiles/common/wheels/free-2024/control-artwork.json";
         write_private_json(artwork,
                            {{"schema", 1},
