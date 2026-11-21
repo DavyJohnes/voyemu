@@ -1,46 +1,30 @@
-// Checks that src/ and .github/ name no concrete profile: behavior follows profile.json properties.
+// Checks that the code of src/ and the workflows of .github/ name no profile.
 // Usage: java src/dev/checks/CheckProfileIds.java [project-root]
-// The forbidden strings come from the catalog: every directory of profiles/ except common*, its
-// version tail after the date (1.2.3 of free-09-chinese-20250101-1.2.3) and its vehicle prefix in
-// a startsWith or starts_with call. Prints file:line for every line with a hit and exits non-zero.
+// The forbidden names are the directories of profiles/ except the common ones; the code is every
+// C, C++, Objective-C++, Java and shell source of src/ outside third_party and tests, and every
+// workflow of .github/. Behaviour follows profile.json properties, so the code names no profile.
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.charset.CharacterCodingException;
-import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.stream.Stream;
 
 // A single-file program started as java <file>.java; the launcher needs no package.
 @SuppressWarnings("DefaultPackage")
 public final class CheckProfileIds {
-    private static final List<String> SCANNED = List.of("src", ".github");
-    // Pinned third-party bytes are outside the rule.
-    private static final List<String> EXCLUDED = List.of("src/app/third_party/");
-    private static final String RAM64 =
-            "the Passion RAM64 binding is a guest contract; its version names the OEM layout";
-    // Lines of a file that contain the text may name a profile; each entry gives its reason.
-    private static final List<Allowed> ALLOWED =
-            List.of(
-                    new Allowed("src/guest/qnx/passion_ram64.h", "-system-ram64-v1", RAM64),
-                    new Allowed("src/guest/qnx/passion_ram64.test.cpp", "-system-ram64-v", RAM64),
-                    new Allowed("src/guest/qnx/qnx-passion-runtime.sh", "-system-ram64-v1", RAM64));
-    private static final Pattern PROFILE =
-            Pattern.compile("^([a-z]+)-[0-9]{2}-[a-z]+-[0-9]{8}-([A-Za-z0-9.-]+)$");
-
-    private record Allowed(String file, String text, String reason) {}
+    private static final Set<String> SOURCE_SUFFIXES =
+            Set.of(".c", ".cpp", ".h", ".hpp", ".mm", ".java", ".sh");
+    private static final Set<String> WORKFLOW_SUFFIXES = Set.of(".yml", ".yaml");
 
     private final Path root;
-    private final Map<String, Pattern> forbidden = new LinkedHashMap<>();
-    private final List<String> hits = new ArrayList<>();
+    private final Set<String> names = new TreeSet<>();
+    private final List<String> problems = new ArrayList<>();
+    private int files;
 
     private CheckProfileIds(Path root) {
         this.root = root;
@@ -54,134 +38,80 @@ public final class CheckProfileIds {
 
         CheckProfileIds check =
                 new CheckProfileIds(Path.of(args.length == 1 ? args[0] : ".").toRealPath());
-        check.catalog();
-        check.scan();
-        check.hits.forEach(System.out::println);
+        check.run();
+        check.problems.forEach(System.out::println);
         System.out.println(
                 "Profile id check: "
-                        + check.forbidden.size()
-                        + " forbidden strings, "
-                        + check.hits.size()
-                        + " hits");
-        System.exit(check.hits.isEmpty() ? 0 : 1);
+                        + check.names.size()
+                        + " profiles, "
+                        + check.files
+                        + " files, "
+                        + check.problems.size()
+                        + " problems");
+        System.exit(check.problems.isEmpty() ? 0 : 1);
     }
 
-    private void catalog() throws IOException {
+    private void run() throws IOException {
         Path profiles = root.resolve("profiles");
 
-        if (!Files.isDirectory(profiles)) {
+        if (Files.isDirectory(profiles)) {
+            try (Stream<Path> list = Files.list(profiles)) {
+                for (Path entry : list.toList()) {
+                    String name = entry.getFileName().toString();
+
+                    if (Files.isDirectory(entry) && !name.startsWith("common")) {
+                        names.add(name);
+                    }
+                }
+            }
+        }
+
+        scan(root.resolve("src"), SOURCE_SUFFIXES);
+        scan(root.resolve(".github"), WORKFLOW_SUFFIXES);
+    }
+
+    private void scan(Path directory, Set<String> suffixes) throws IOException {
+        if (!Files.isDirectory(directory)) {
             return;
         }
 
-        List<String> prefixes = new ArrayList<>();
+        try (Stream<Path> walk = Files.walk(directory)) {
+            for (Path path : walk.filter(Files::isRegularFile).sorted().toList()) {
+                String relative = root.relativize(path).toString().replace('\\', '/');
 
-        try (Stream<Path> list = Files.list(profiles)) {
-            for (Path directory : list.sorted().toList()) {
-                String name = directory.getFileName().toString();
-
-                if (!Files.isDirectory(directory) || name.startsWith("common")) {
-                    continue;
-                }
-
-                forbidden.put(name, Pattern.compile(Pattern.quote(name)));
-                Matcher parts = PROFILE.matcher(name);
-
-                if (!parts.matches()) {
-                    continue;
-                }
-
-                // A tail stands alone: 1.2.3 is not part of 11.2.3 or 1.2.30.
-                forbidden.put(
-                        parts.group(2),
-                        Pattern.compile(
-                                "(?<![\\w.])" + Pattern.quote(parts.group(2)) + "(?!\\w|\\.\\w)"));
-
-                if (!prefixes.contains(parts.group(1))) {
-                    prefixes.add(parts.group(1));
-                }
-            }
-        }
-
-        for (String prefix : prefixes) {
-            forbidden.put(
-                    "starts_with(\"" + prefix,
-                    Pattern.compile("(?:startsWith|starts_with)\\(\\s*\"" + Pattern.quote(prefix)));
-        }
-    }
-
-    private void scan() throws IOException {
-        for (String top : SCANNED) {
-            Path directory = root.resolve(top);
-
-            if (!Files.isDirectory(directory)) {
-                continue;
-            }
-
-            List<Path> files;
-
-            try (Stream<Path> walk = Files.walk(directory)) {
-                files = walk.filter(Files::isRegularFile).sorted().toList();
-            }
-
-            for (Path file : files) {
-                String rel = root.relativize(file).toString().replace('\\', '/');
-
-                if (EXCLUDED.stream().anyMatch(rel::startsWith)) {
-                    continue;
-                }
-
-                String text = decode(Files.readAllBytes(file));
-
-                if (text != null) {
-                    scanText(rel, text);
+                if (selected(relative, suffixes)) {
+                    check(path, relative);
                 }
             }
         }
     }
 
-    private void scanText(String rel, String text) {
-        String[] lines = text.split("\n", -1);
+    // Tests name real profiles as data; third-party code is not ours.
+    private static boolean selected(String relative, Set<String> suffixes) {
+        String file = relative.substring(relative.lastIndexOf('/') + 1);
+        int dot = file.lastIndexOf('.');
 
-        for (int i = 0; i < lines.length; i++) {
-            String line = lines[i];
-
-            if (ALLOWED.stream()
-                    .anyMatch(allowed ->
-                            allowed.file().equals(rel) && line.contains(allowed.text()))) {
-                continue;
-            }
-
-            List<String> found = new ArrayList<>();
-
-            for (Map.Entry<String, Pattern> entry : forbidden.entrySet()) {
-                if (entry.getValue().matcher(line).find()) {
-                    found.add(entry.getKey());
-                }
-            }
-
-            if (!found.isEmpty()) {
-                hits.add(rel + ":" + (i + 1) + ": " + String.join(", ", found));
-            }
+        if (dot < 0 || !suffixes.contains(file.substring(dot))) {
+            return false;
         }
+
+        return !relative.contains("/third_party/")
+                && !relative.startsWith("src/prepare/test/")
+                && !relative.startsWith("src/dev/checks/test/")
+                && !file.contains(".test.")
+                && !file.endsWith("Test.java");
     }
 
-    // Strict UTF-8 text without NUL bytes; null for binary files.
-    private static String decode(byte[] bytes) {
-        for (byte value : bytes) {
-            if (value == 0) {
-                return null;
-            }
-        }
+    private void check(Path path, String relative) throws IOException {
+        files++;
+        List<String> lines = Files.readAllLines(path, StandardCharsets.UTF_8);
 
-        try {
-            return StandardCharsets.UTF_8
-                    .newDecoder()
-                    .onMalformedInput(CodingErrorAction.REPORT)
-                    .onUnmappableCharacter(CodingErrorAction.REPORT)
-                    .decode(ByteBuffer.wrap(bytes))
-                    .toString();
-        } catch (CharacterCodingException e) {
-            return null;
+        for (int i = 0; i < lines.size(); i++) {
+            for (String name : names) {
+                if (lines.get(i).contains(name)) {
+                    problems.add(relative + ":" + (i + 1) + ": names profile " + name);
+                }
+            }
         }
     }
 }

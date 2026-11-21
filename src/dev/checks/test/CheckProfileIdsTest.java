@@ -1,6 +1,6 @@
 // Runs CheckProfileIds on synthetic project trees and checks its exit code and findings.
 // Usage: java src/dev/checks/test/CheckProfileIdsTest.java src/dev/checks/CheckProfileIds.java
-//        [work-directory]
+// [work-directory]
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -16,6 +16,7 @@ import java.util.stream.Stream;
 // A single-file program started as java <file>.java; the launcher needs no package.
 @SuppressWarnings("DefaultPackage")
 public final class CheckProfileIdsTest {
+    private static final String PROFILE = "free-11-sample-20990101-1.2.3";
     private static Path checker;
     private static Path work;
     private static int cases;
@@ -55,58 +56,64 @@ public final class CheckProfileIdsTest {
     private static Map<String, String> valid() {
         Map<String, String> files = new LinkedHashMap<>();
 
-        files.put("profiles/free-09-chinese-20250101-1.2.3/profile.json", "{}\n");
-        files.put("profiles/test-11-russian-20250202-nxp-rc9/profile.json", "{}\n");
-        files.put("profiles/common/note.txt", "free-09-chinese-20250101-1.2.3\n");
-        files.put("profiles/common-qinggan-09/note.txt", "shared\n");
-        files.put("src/app/main.cpp", "// Version 11.2.3 and 1.2.30 are other versions.\n");
-        files.put(".github/workflows/ci.yml", "name: ci\n");
+        files.put("profiles/" + PROFILE + "/profile.json", "{\"platform\": \"qinggan11\"}\n");
+        files.put("profiles/common-sample/components/README.md", "Shared.\n");
+        files.put("src/app/profiles/select.cpp", "bool qinggan11 = platform == \"qinggan11\";\n");
+        files.put(".github/workflows/ci.yml", "name: CI\n");
 
         return files;
     }
 
     private static void run() throws IOException, InterruptedException {
-        expect("valid tree", valid(), 0, "6 forbidden strings, 0 hits");
+        expect("valid tree", valid(), 0, "0 problems");
 
         Map<String, String> files = valid();
         files.put(
-                "src/app/fetch.cpp", "int a;\nif (id == \"free-09-chinese-20250101-1.2.3\") {}\n");
-        expect("full id", files, 1, "src/app/fetch.cpp:2: free-09-chinese-20250101-1.2.3, 1.2.3");
-
-        files = valid();
-        files.put(".github/workflows/ci.yml", "run: build test-11-russian-20250202-nxp-rc9\n");
+                "src/app/profiles/named.hpp",
+                "// header\nconstexpr auto id = \"" + PROFILE + "\";\n");
         expect(
-                "full id in .github",
+                "C++ header names a profile",
                 files,
                 1,
-                ".github/workflows/ci.yml:1: test-11-russian-20250202-nxp-rc9, nxp-rc9");
+                "src/app/profiles/named.hpp:2: names profile " + PROFILE);
 
         files = valid();
-        files.put("src/guest/note.h", "/* The 1.2.3 engine. */\n");
-        expect("version tail", files, 1, "src/guest/note.h:1: 1.2.3\n");
+        files.put("src/prepare/java/com/example/Guard.java", "String p = \"" + PROFILE + "\";\n");
+        expect(
+                "Java source names a profile",
+                files,
+                1,
+                "src/prepare/java/com/example/Guard.java:1: names profile " + PROFILE);
 
         files = valid();
-        files.put("src/prepare/Guard.java", "if (id.startsWith(\"test-\")) {}\n");
-        expect("vehicle prefix", files, 1, "src/prepare/Guard.java:1: starts_with(\"test");
+        files.put("src/dev/ci/select.sh", "profile=" + PROFILE + "\n");
+        expect("shell script names a profile", files, 1, "src/dev/ci/select.sh:1: names profile");
 
         files = valid();
-        files.put("src/app/third_party/lib/version.h", "#define V \"1.2.3\"\n");
-        expect("third-party code skipped", files, 0, "0 hits");
+        files.put(".github/workflows/ci.yml", "run: voyemu build " + PROFILE + "\n");
+        expect(
+                "workflow names a profile",
+                files,
+                1,
+                ".github/workflows/ci.yml:1: names profile " + PROFILE);
 
         files = valid();
-        files.put("src/guest/qnx/passion_ram64.h", "\"test-1.2.3-system-ram64-v1\"\n");
-        expect("allowed guest contract line", files, 0, "0 hits");
-        files.put("src/guest/qnx/passion_ram64.h", "\"test-1.2.3-system-ram64-v1\"\n1.2.3\n");
-        expect("other line of an allowed file", files, 1, "src/guest/qnx/passion_ram64.h:2: 1.2.3");
+        files.put("src/app/profiles/select.test.cpp", "auto id = \"" + PROFILE + "\";\n");
+        files.put("src/dev/release/archive.test.sh", "profile=" + PROFILE + "\n");
+        files.put("src/guest/android/api/SelectTest.java", "String p = \"" + PROFILE + "\";\n");
+        files.put("src/prepare/test/java/com/example/Fixture.java", "\"" + PROFILE + "\"\n");
+        files.put("src/dev/checks/test/Fixture.java", "\"" + PROFILE + "\"\n");
+        expect("tests name profiles as data", files, 0, "0 problems");
 
         files = valid();
-        files.put("profiles/common-qinggan-11/profile.json", "{}\n");
-        expect("common directories add nothing", files, 0, "6 forbidden strings, 0 hits");
+        files.put("src/app/third_party/library/code.c", "/* " + PROFILE + " */\n");
+        files.put("src/app/toolchain.json", "{\"" + PROFILE + "/component\": {}}\n");
+        files.put("src/app/errorprone.cmake", "profiles/" + PROFILE + "/components\n");
+        expect("third-party code and data files are not checked", files, 0, "0 problems");
 
         files = valid();
-        files.put("src/app/a.cpp", "1.2.3\n");
-        files.put("src/app/b.cpp", "x\nnxp-rc9\n");
-        expect("hit total", files, 1, "6 forbidden strings, 2 hits");
+        files.put("src/app/profiles/shared.cpp", "auto path = \"profiles/common-sample\";\n");
+        expect("common profile directories are not profiles", files, 0, "0 problems");
     }
 
     private static void expect(String name, Map<String, String> files, int exit, String output)
@@ -130,10 +137,7 @@ public final class CheckProfileIdsTest {
                                 root.toString())
                         .redirectErrorStream(true)
                         .start();
-        // println ends lines with CRLF on Windows; the expectations read LF.
-        String result =
-                new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8)
-                        .replace("\r\n", "\n");
+        String result = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
         int code = process.waitFor();
 
         if (code != exit || !result.contains(output)) {

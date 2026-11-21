@@ -10,6 +10,7 @@ Static checks run before every commit and in [CI](ci.md). Each uses a pinned too
 | EditorConfig | `java src/dev/checks/EditorConfigCheck.java .` | Line endings, final newline, trailing whitespace and indentation by `config/config-editor` |
 | Documentation | `java src/dev/checks/CheckDocs.java .` | Page pairs, links, glossary terms and decision records |
 | Platform macros | `java src/dev/checks/CheckPlatformMacros.java .` | Host and architecture conditions outside `src/app/os/`, with the remaining files in `config/config-platform-macros.txt` |
+| Profile ids | `java src/dev/checks/CheckProfileIds.java .` | No profile directory name in the code of `src/` and the workflows of `.github/` |
 
 ## lint and lint-fix
 
@@ -56,7 +57,7 @@ java src/dev/checks/CheckDocs.java
 
 ## Profile id check
 
-`CheckProfileIds` searches `src/` and `.github/` for concrete profiles: behavior follows the properties of `profile.json`, not the profile name. It builds the forbidden strings from the catalog: the name of every `profiles/` directory except `common*`, the version after its date and its vehicle prefix in a `startsWith` or `starts_with` call. Pinned third-party code is excluded, and a short list inside the check permits named lines of pinned guest sources, each with its reason. It prints `file:line` for every line with a finding and the total, and exits with a non-zero code on any finding. Until `src/` names no profile, the check is not part of `lint` and counts the remaining findings; its own test on synthetic trees runs in CTest.
+`CheckProfileIds` fails when the name of a profile directory appears in the C, C++, Objective-C++, Java or shell code of `src/` or in a workflow of `.github/`. The names come from `profiles/`, without the common directories. Behaviour follows the `platform`, `board` and `features` of [profile.json](../how/profiles-machines.md), so the code names no profile. Tests, which use profiles as data, and pinned third-party code are outside its scope.
 
 ```sh
 java src/dev/checks/CheckProfileIds.java

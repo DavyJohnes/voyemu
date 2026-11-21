@@ -19,7 +19,9 @@ The `status` field of `profile.json` is `ready` when the multimedia is supported
 
 The `title` field of `profile.json` names the profile in text for people, for example `Free 7.3.1`. `platform` is `qinggan09` or `qinggan11` for the Android 9 or Android 11 generation of the [Free/Dreamer platform](../GLOSSARY.md), or `passion` for Passion. `board` names the multimedia board: `8155` for Qualcomm SA8155 or `nxp` for NXP i.MX 8QuadMax. Voyemu rejects a published profile without these fields or with another value.
 
-The `features` field of `profile.json` turns on optional functions of the firmware. `original_navi` set to `true` installs the OEM navigation app of the firmware together with the recipes it needs; preparation selects them by this field, not by the profile name.
+The `features` field of `profile.json` turns on optional functions of the firmware. `original_navi` set to `true` installs the OEM navigation app of the firmware together with the recipes it needs; preparation selects them by this field, not by the profile name. `system_upgrade` lets a rebuild of an existing machine replace only its Android system and keep the user data, with the packages the machine delivers. `ui_observer_required` makes every Android machine of the profile carry the observer. `measured_disk_reserve` makes preparation reserve the disk space measured for the pinned system image of the profile instead of the larger default.
+
+The `emulator` field of `profile.json` sets the Android emulator of the machine: `port`, `memory`, `gpuMode` and optionally `cores`. `candidatePort` fixes the port of the emulator that preparation boots to build the machine; without it, preparation takes a free port.
 
 The `wheel` field of `profile.json` names the steering-wheel artwork in `assets` and the Android key routes in `androidRoutes`; `provider` set to `com.voyemu.input.wheel` delivers the wheel to Android through that content provider of the profile instead of the routes.
 
