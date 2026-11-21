@@ -1,5 +1,6 @@
 #include "check.hpp"
 #include "machine_preparation_internal.hpp"
+#include "ordinary_path.hpp"
 
 // Drives a booted Android candidate: installs files and packages, configures and wakes its
 // displays.
@@ -284,20 +285,8 @@ std::string black_png(unsigned width, unsigned height) {
 
 namespace machine_preparation_detail {
 void ordinary(const std::filesystem::path &p) {
-    need(p.is_absolute() && p.lexically_normal() == p, "normalized absolute path required");
-
-    for (const auto &at : os::ancestors(p)) {
-#ifdef _WIN32
-        // Windows distinguishes the macOS symlink intent by rejecting every reparse point
-        // (junctions, mount points), not only is_symlink; the volume root is not inspected.
-        const auto attributes = GetFileAttributesW(at.c_str());
-        need(attributes == INVALID_FILE_ATTRIBUTES || !(attributes & FILE_ATTRIBUTE_REPARSE_POINT),
-             "linked path rejected");
-#else
-        need(!std::filesystem::is_symlink(std::filesystem::symlink_status(at)),
-             "linked path rejected");
-#endif
-    }
+    ordinary_path(p, need, PathForm::Normalized, "normalized absolute path required",
+                  "linked path rejected", PathLinks::Reparse);
 }
 
 bool inside(const std::filesystem::path &p, const std::filesystem::path &root) {

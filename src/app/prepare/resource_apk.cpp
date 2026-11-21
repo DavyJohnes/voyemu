@@ -5,6 +5,7 @@
 #include "apk_sign.hpp"
 #include "check.hpp"
 #include "error.hpp"
+#include "ordinary_path.hpp"
 #include "os/fs.hpp"
 #include "process.hpp"
 #include "quickboot.hpp"
@@ -12,29 +13,14 @@
 #include <limits>
 #ifdef __APPLE__
 #include <stdio.h>
-#elif defined(_WIN32)
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <windows.h>
 #endif
 namespace voyemu {
 namespace {
 constexpr Check need{"RESOURCE_APK"};
 
 void ordinary_path(const std::filesystem::path &path) {
-    need(path.is_absolute() && path.lexically_normal() == path &&
-                 std::filesystem::canonical(path) == path,
-         "canonical input required");
-
-    for (const auto &at : os::ancestors(path)) {
-        need(!std::filesystem::is_symlink(std::filesystem::symlink_status(at)), "linked input");
-#ifdef _WIN32
-        const auto attributes = GetFileAttributesW(at.c_str());
-        need(attributes != INVALID_FILE_ATTRIBUTES && !(attributes & FILE_ATTRIBUTE_REPARSE_POINT),
-             "reparse input");
-#endif
-    }
+    voyemu::ordinary_path(path, need, PathForm::NormalizedCanonical, "canonical input required",
+                          "linked input", PathLinks::Reparse);
 }
 
 Json source_snapshot(const std::filesystem::path &root) {

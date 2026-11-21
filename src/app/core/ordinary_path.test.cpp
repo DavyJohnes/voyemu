@@ -109,6 +109,18 @@ int main() {
                     archive(root / "alias" / "new");
                 },
                 "OWNER_ARCHIVE");
+        // Rejecting every reparse point keeps rejecting symbolic links and accepts plain ancestors.
+        const auto unreparsed = [](const std::filesystem::path &path) {
+            ordinary_path(path, Check{"REPARSE_INPUT"}, PathForm::Normalized, "path", "link",
+                          PathLinks::Reparse);
+        };
+        unreparsed(source / "file");
+        unreparsed(root / "missing" / "output");
+        rejects(
+                [&] {
+                    unreparsed(root / "alias" / "file");
+                },
+                "REPARSE_INPUT");
         // CodeCheck callers report their boundary-specific code, rather than a generic one.
         rejects(
                 [&] {
