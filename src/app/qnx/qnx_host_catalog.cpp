@@ -1,5 +1,5 @@
-#include "qnx_host.hpp"
 #include "embedded_data.hpp"
+#include "qnx_host.hpp"
 
 namespace voyemu {
 namespace {
