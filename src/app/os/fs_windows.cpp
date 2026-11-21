@@ -3,6 +3,12 @@
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
+
+#include <fcntl.h>
+
+#include <io.h>
+
+#include <sys/stat.h>
 #include <system_error>
 #include <winioctl.h>
 
@@ -46,6 +52,26 @@ ExclusiveFile::ExclusiveFile(const std::filesystem::path &path, bool share_read)
         const auto error = ::GetLastError();
         exists_ = error == ERROR_FILE_EXISTS || error == ERROR_ALREADY_EXISTS;
     }
+}
+
+std::FILE *open_exclusive_stream(const std::filesystem::path &path) {
+    const auto fd = _wopen(path.c_str(), _O_CREAT | _O_EXCL | _O_RDWR | _O_BINARY,
+                           _S_IREAD | _S_IWRITE);
+    auto *stream = fd >= 0 ? _fdopen(fd, "w+b") : nullptr;
+
+    if (!stream && fd >= 0) {
+        _close(fd);
+    }
+
+    return stream;
+}
+
+bool truncate_stream(std::FILE *stream, std::uint64_t bytes) {
+    return _chsize_s(_fileno(stream), static_cast<long long>(bytes)) == 0;
+}
+
+bool sync_stream(std::FILE *stream) {
+    return _commit(_fileno(stream)) == 0;
 }
 
 ExclusiveFile::~ExclusiveFile() {

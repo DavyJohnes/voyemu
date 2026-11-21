@@ -13,6 +13,8 @@ std::optional<Json> android_presave_snapshot(
         const std::string &session, const std::string &guest_boot, std::uint32_t sequence,
         const std::function<Json(const std::string &)> &presave, const std::function<bool()> &save);
 Json cache_file_identity(const std::filesystem::path &path, std::uintmax_t expected_links = 1);
+// Whether two cache_file_identity values name the same file, whatever its size and times.
+bool same_file_object(const Json &first, const Json &second);
 Json android_quickboot_key(const Json &specification);
 std::string android_quickboot_config(std::string config);
 class AndroidQuickBoot {

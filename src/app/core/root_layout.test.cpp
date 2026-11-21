@@ -1,4 +1,5 @@
 #include "model.hpp"
+#include "os/platform.hpp"
 #include "process.hpp"
 #include <chrono>
 #include <iostream>
@@ -77,12 +78,8 @@ int main(int argc, char **argv) {
             command.directory = root / "unrelated";
             command.output = root / "list.log";
             const auto result = execute(command, 10000);
-#ifdef _WIN32
             // Console text output ends lines with CRLF on Windows.
-            const std::string heading = "Profiles\r\n";
-#else
-            const std::string heading = "Profiles\n";
-#endif
+            const std::string heading = os::host_windows ? "Profiles\r\n" : "Profiles\n";
             check(result.exit_code == 0 && result.output.starts_with(heading),
                   "read-only list returns human profile names");
 
@@ -93,11 +90,7 @@ int main(int argc, char **argv) {
         const auto runtime = root / "runtime";
         ensure_private_directory(runtime / ".local/machines");
         write_private_json(runtime / "profiles/runtime-only/profile.json", {{"schema", 1}});
-#ifdef _WIN32
-        const auto copied = runtime / "voyemu.exe";
-#else
-        const auto copied = runtime / "voyemu";
-#endif
+        const auto copied = runtime / ("voyemu" + std::string(os::executable_suffix));
         check(std::filesystem::copy_file(executable, copied), "owned runtime fixture copy");
         check(inspect(copied).find("runtime-only") != std::string::npos,
               "ready runtime root does not need the native source tree");

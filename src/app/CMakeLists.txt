@@ -112,11 +112,11 @@ set_source_files_properties(core/version.cpp PROPERTIES COMPILE_DEFINITIONS "VOY
 target_include_directories(voyemu_core PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
 # Host primitives behind one os/ interface; each host compiles only its own backend.
 if(APPLE)
-    target_sources(voyemu_core PRIVATE os/curl_macos.cpp os/fs_macos.cpp os/fs_posix.cpp os/https_curl.cpp os/library_posix.cpp os/locale_macos.cpp os/net_macos.cpp os/process_macos.cpp os/volume_macos.cpp)
+    target_sources(voyemu_core PRIVATE os/child_process_posix.cpp os/clock_posix.cpp os/curl_macos.cpp os/fs_macos.cpp os/fs_posix.cpp os/https_curl.cpp os/library_posix.cpp os/locale_macos.cpp os/net_macos.cpp os/process_macos.cpp os/random_posix.cpp os/volume_macos.cpp)
 elseif(WIN32)
-    target_sources(voyemu_core PRIVATE os/fs_windows.cpp os/https_windows.cpp os/library_windows.cpp os/locale_windows.cpp os/process_windows.cpp)
+    target_sources(voyemu_core PRIVATE os/child_process_windows.cpp os/clock_windows.cpp os/fs_windows.cpp os/https_windows.cpp os/library_windows.cpp os/locale_windows.cpp os/process_windows.cpp os/random_windows.cpp)
 else()
-    target_sources(voyemu_core PRIVATE os/curl_linux.cpp os/fs_linux.cpp os/fs_posix.cpp os/https_curl.cpp os/library_posix.cpp os/locale_linux.cpp os/net_linux.cpp os/process_linux.cpp os/volume_linux.cpp)
+    target_sources(voyemu_core PRIVATE os/child_process_posix.cpp os/clock_posix.cpp os/curl_linux.cpp os/fs_linux.cpp os/fs_posix.cpp os/https_curl.cpp os/library_posix.cpp os/locale_linux.cpp os/net_linux.cpp os/process_linux.cpp os/random_posix.cpp os/volume_linux.cpp)
 endif()
 # The parts of Session that differ between Windows and the POSIX hosts.
 if(WIN32)

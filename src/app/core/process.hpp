@@ -28,6 +28,8 @@ struct ProcessSpec {
     bool detached = false;
     std::optional<WineNativeDiagnostic> wine_native_diagnostic;
 };
+// Rejects a process argument or environment string with an embedded NUL as PROCESS_ARGUMENT.
+void check_process_string(const std::string &value);
 struct ProcessResult {
     int exit_code;
     std::string output;
@@ -60,6 +62,10 @@ public:
 private:
     std::unique_ptr<Impl> impl_;
 };
+// Runs spec to completion within timeout_ms, at most maximum_timeout_ms, capturing at most
+// output_limit bytes; execute and execute_artifact_preparation select the maximum.
+ProcessResult execute_capture(const ProcessSpec &spec, int timeout_ms, std::size_t output_limit,
+                              int maximum_timeout_ms);
 ProcessResult execute(const ProcessSpec &spec, int timeout_ms = 10000,
                       std::size_t output_limit = 128 * 1024);
 // Explicit finite lifetime for source artifact preparation, up to the one-hour budget of the Java

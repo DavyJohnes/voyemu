@@ -176,6 +176,20 @@ Json cache_file_identity(const std::filesystem::path &path, std::uintmax_t expec
     return stamp(path, expected_links);
 }
 
+bool same_file_object(const Json &first, const Json &second) {
+    auto a = first, b = second;
+
+    // The size and time fields of both identity forms that stamp writes.
+    for (const char *key :
+         {"size", "size_high", "size_low", "mtime_seconds", "mtime_ns", "mtime_high", "mtime_low",
+          "ctime_seconds", "ctime_ns", "change_time"}) {
+        a.erase(key);
+        b.erase(key);
+    }
+
+    return a == b;
+}
+
 static void normalize_checkpoint_prepared(Json &prepared) {
     prepared.erase("owned_adb");
     prepared.erase("frontend");

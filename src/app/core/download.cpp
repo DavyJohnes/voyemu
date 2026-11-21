@@ -4,6 +4,7 @@
 #include "interruption.hpp"
 #include "logging.hpp"
 #include "model.hpp"
+#include "os/fs.hpp"
 #include "os/https.hpp"
 #include "process.hpp"
 #include "progress.hpp"
@@ -18,21 +19,6 @@
 #include <stdexcept>
 #include <thread>
 #include <vector>
-#ifdef _WIN32
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <windows.h>
-
-#include <fcntl.h>
-
-#include <io.h>
-
-#include <sys/stat.h>
-#else
-#include <fcntl.h>
-#include <unistd.h>
-#endif
 namespace voyemu {
 namespace {
 void validate(const DownloadPin &pin) {
@@ -254,26 +240,9 @@ DownloadedBlob download_pinned(const DownloadPin &pin, const std::filesystem::pa
     require_disk_space("DOWNLOAD_SPACE", cache, 0, reserve);
 
     const auto temporary = cache / (".part-" + random_token());
-#ifdef _WIN32
-    const auto fd = _wopen(temporary.c_str(), _O_CREAT | _O_EXCL | _O_RDWR | _O_BINARY,
-                           _S_IREAD | _S_IWRITE);
-    auto *stream = fd >= 0 ? _fdopen(fd, "w+b") : nullptr;
-#else
-    const auto fd = ::open(temporary.c_str(), O_CREAT | O_EXCL | O_NOFOLLOW | O_RDWR | O_CLOEXEC,
-                           0600);
-    auto *stream = fd >= 0 ? ::fdopen(fd, "w+b") : nullptr;
-#endif
+    auto *stream = os::open_exclusive_stream(temporary);
 
     if (!stream) {
-#ifdef _WIN32
-        if (fd >= 0) {
-            _close(fd);
-        }
-#else
-        if (fd >= 0) {
-            ::close(fd);
-        }
-#endif
         throw VoyemuError("DOWNLOAD_FILE", "exclusive temporary file failed");
     }
 
@@ -294,18 +263,10 @@ DownloadedBlob download_pinned(const DownloadPin &pin, const std::filesystem::pa
                 }
 
                 const auto now = cache_file_identity(path);
-#ifdef _WIN32
-                if (now.at("volume") == initial.at("volume") &&
-                    now.at("index_high") == initial.at("index_high") &&
-                    now.at("index_low") == initial.at("index_low")) {
+
+                if (same_file_object(now, initial)) {
                     std::filesystem::remove(path);
                 }
-#else
-                if (now.at("volume_uuid") == initial.at("volume_uuid") &&
-                    now.at("inode") == initial.at("inode")) {
-                    std::filesystem::remove(path);
-                }
-#endif
             } catch (...) { /* Ignored: an unknown identity is retained rather than removed. */
             }
         }
@@ -410,26 +371,14 @@ DownloadedBlob download_pinned(const DownloadPin &pin, const std::filesystem::pa
             throw VoyemuError("DOWNLOAD_WRITE", "decoded resource incomplete");
         }
 
-#ifdef _WIN32
-        if (_chsize_s(_fileno(stream), decoded.size())) {
+        if (!os::truncate_stream(stream, decoded.size())) {
             throw VoyemuError("DOWNLOAD_WRITE", "decoded extent failed");
         }
-#else
-        if (::ftruncate(::fileno(stream), static_cast<off_t>(decoded.size()))) {
-            throw VoyemuError("DOWNLOAD_WRITE", "decoded extent failed");
-        }
-#endif
     }
 
-#ifdef _WIN32
-    if (_commit(_fileno(stream))) {
+    if (!os::sync_stream(stream)) {
         throw VoyemuError("DOWNLOAD_WRITE", "synchronization failed");
     }
-#else
-    if (::fsync(::fileno(stream))) {
-        throw VoyemuError("DOWNLOAD_WRITE", "synchronization failed");
-    }
-#endif
 
     if (std::fclose(stream)) {
         cleanup.stream = nullptr;
@@ -444,19 +393,10 @@ DownloadedBlob download_pinned(const DownloadPin &pin, const std::filesystem::pa
     }
 
     first_report(destination);
-#ifdef _WIN32
-    if (!MoveFileW(temporary.c_str(), destination.c_str())) {
-        throw VoyemuError("DOWNLOAD_PUBLISH", "fresh cache destination required");
-    }
-#else
-    if (::link(temporary.c_str(), destination.c_str())) {
-        throw VoyemuError("DOWNLOAD_PUBLISH", "fresh cache destination required");
-    }
 
-    if (::unlink(temporary.c_str())) {
-        throw VoyemuError("DOWNLOAD_PUBLISH", "temporary link removal failed");
+    if (!os::rename_exclusive(temporary, destination)) {
+        throw VoyemuError("DOWNLOAD_PUBLISH", "fresh cache destination required");
     }
-#endif
 
     return {destination, bytes, false};
 }

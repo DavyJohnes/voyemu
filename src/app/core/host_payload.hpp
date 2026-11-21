@@ -1,5 +1,6 @@
 #pragma once
 #include "model.hpp"
+#include "os/platform.hpp"
 #include "process.hpp"
 #include <stdexcept>
 namespace voyemu {
@@ -8,11 +9,7 @@ inline std::filesystem::path host_payload_directory(const std::filesystem::path 
 }
 
 inline std::filesystem::path host_program(const std::filesystem::path &root) {
-#ifdef _WIN32
-    return root / "voyemu.exe";
-#else
-    return root / "voyemu";
-#endif
+    return root / ("voyemu" + std::string(os::executable_suffix));
 }
 
 // The program contains its own UI resources. Only the root executable is pinned.

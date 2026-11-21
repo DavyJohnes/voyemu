@@ -30,6 +30,25 @@ ExclusiveFile::ExclusiveFile(const std::filesystem::path &path, bool share_read)
     (void)share_read; // POSIX does not exclude readers of an open file.
 }
 
+std::FILE *open_exclusive_stream(const std::filesystem::path &path) {
+    const auto fd = ::open(path.c_str(), O_CREAT | O_EXCL | O_NOFOLLOW | O_RDWR | O_CLOEXEC, 0600);
+    auto *stream = fd >= 0 ? ::fdopen(fd, "w+b") : nullptr;
+
+    if (!stream && fd >= 0) {
+        ::close(fd);
+    }
+
+    return stream;
+}
+
+bool truncate_stream(std::FILE *stream, std::uint64_t bytes) {
+    return ::ftruncate(::fileno(stream), static_cast<off_t>(bytes)) == 0;
+}
+
+bool sync_stream(std::FILE *stream) {
+    return ::fsync(::fileno(stream)) == 0;
+}
+
 ExclusiveFile::~ExclusiveFile() {
     close();
 }

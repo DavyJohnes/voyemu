@@ -1,5 +1,6 @@
 #include "logging.hpp"
 #include "error.hpp"
+#include "os/clock.hpp"
 #include <algorithm>
 #include <atomic>
 #include <chrono>
@@ -39,12 +40,7 @@ void verbose(bool enabled) {
 std::filesystem::path open_file(const std::filesystem::path &directory, std::string_view command) {
     ensure_private_directory(directory);
     auto time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-    std::tm local{};
-#ifdef _WIN32
-    localtime_s(&local, &time);
-#else
-    localtime_r(&time, &local);
-#endif
+    const auto local = os::local_calendar(time);
     std::ostringstream name;
     name << command << '-' << std::put_time(&local, "%Y%m%d-%H%M%S") << ".log";
     const auto path = directory / name.str();
@@ -148,12 +144,7 @@ Json record(Level level, std::string_view component, std::string_view message, J
     static std::atomic<std::uint64_t> sequence{};
     const auto now = std::chrono::system_clock::now();
     auto time = std::chrono::system_clock::to_time_t(now);
-    std::tm utc{};
-#ifdef _WIN32
-    gmtime_s(&utc, &time);
-#else
-    gmtime_r(&time, &utc);
-#endif
+    const auto utc = os::utc_calendar(time);
     const auto millis =
             std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count() %
             1000;

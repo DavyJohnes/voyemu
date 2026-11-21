@@ -2,6 +2,7 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <cstdio>
 #include <filesystem>
 #include <vector>
 
@@ -88,6 +89,13 @@ private:
     std::uint64_t device_ = 0, inode_ = 0, ticket_ = 0;
 };
 #endif
+// Opens a new private file for reading and writing as a binary stdio stream; null when path
+// already exists or cannot be created.
+std::FILE *open_exclusive_stream(const std::filesystem::path &path);
+// Sets the size of the file behind stream, whose buffer the caller flushed; false on failure.
+bool truncate_stream(std::FILE *stream, std::uint64_t bytes);
+// Flushes the file behind stream, whose buffer the caller flushed, to the device; false on failure.
+bool sync_stream(std::FILE *stream);
 // Adds link as a second name for existing; fails when link exists.
 bool link_exclusive(const std::filesystem::path &existing, const std::filesystem::path &link);
 // Atomically replaces to with from, durably where the host supports it; false on failure.
