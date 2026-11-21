@@ -6,7 +6,7 @@ Voyemu emulates Android-based Voyah vehicles (Free, Dreamer, Passion) on macOS, 
 
 A firmware profile describes the original inputs and their adaptations; a prepared machine contains the guest images, resources and writable disks.
 
-Voyemu runs on macOS 15+ with Apple Silicon, on Windows x64 and on Linux x64 with glibc 2.34+, the system libcurl and OpenSSL 3. All profiles listed below are supported; the Passion cluster is experimental.
+Voyemu runs on macOS 15+ with Apple Silicon, on Windows x64 and on Linux x64 with glibc 2.34+, the system libcurl and OpenSSL 3. The current release is the prerelease 1.0.0-beta1; the table below gives the status of each profile.
 
 [Install](#install) · [Quick start](#quick-start) · [Documentation](#documentation)
 
@@ -25,7 +25,7 @@ Each [profile page](https://github.com/voyemu/voyemu/blob/main/docs/profiles/ind
 
 ## Install
 
-Release archives for macOS arm64 and Linux x64 (`.tar.xz`) and Windows x64 (`.zip`) are on [GitHub Releases](https://github.com/voyemu/voyemu/releases). On macOS and Linux, `brew install voyemu/tap/voyemu` installs the latest stable release with Homebrew; see [release](https://github.com/voyemu/voyemu/blob/main/docs/dev/release.md).
+The 1.0.0-beta1 archive for macOS arm64 (`.tar.xz`) is on [GitHub Releases](https://github.com/voyemu/voyemu/releases); `brew install voyemu/tap/voyemu` installs it with Homebrew. Release 1.0.0 adds the archives for Linux x64 (`.tar.xz`) and Windows x64 (`.zip`) and the Homebrew formula of the stable release; see [release](https://github.com/voyemu/voyemu/blob/main/docs/dev/release.md).
 
 ## Quick start
 

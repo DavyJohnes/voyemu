@@ -6,7 +6,7 @@ Voyemu — эмулятор автомобилей Voyah на базе Android (
 
 Профиль прошивки описывает оригиналы и их адаптацию; подготовленная машина содержит гостевые образы, ресурсы и записываемые диски.
 
-Voyemu работает на macOS 15+ с Apple Silicon, на Windows x64 и на Linux x64 с glibc 2.34+, системными libcurl и OpenSSL 3. Все перечисленные ниже профили поддержаны; приборка Passion экспериментальная.
+Voyemu работает на macOS 15+ с Apple Silicon, на Windows x64 и на Linux x64 с glibc 2.34+, системными libcurl и OpenSSL 3. Текущий релиз — предварительный 1.0.0-beta1; статус каждого профиля указан в таблице ниже.
 
 [Установка](#установка) · [Быстрый старт](#быстрый-старт) · [Документация](#документация)
 
@@ -25,7 +25,7 @@ Voyemu работает на macOS 15+ с Apple Silicon, на Windows x64 и н�
 
 ## Установка
 
-Архивы релиза для macOS arm64 и Linux x64 (`.tar.xz`) и Windows x64 (`.zip`) лежат в [GitHub Releases](https://github.com/voyemu/voyemu/releases). На macOS и Linux последний стабильный релиз устанавливается через Homebrew командой `brew install voyemu/tap/voyemu`; см. [релиз](https://github.com/voyemu/voyemu/blob/main/docs/dev/release.ru.md).
+Архив 1.0.0-beta1 для macOS arm64 (`.tar.xz`) лежит в [GitHub Releases](https://github.com/voyemu/voyemu/releases); через Homebrew его устанавливает команда `brew install voyemu/tap/voyemu`. В релизе 1.0.0 появятся архивы для Linux x64 (`.tar.xz`) и Windows x64 (`.zip`) и формула Homebrew стабильного релиза; см. [релиз](https://github.com/voyemu/voyemu/blob/main/docs/dev/release.ru.md).
 
 ## Быстрый старт
 
