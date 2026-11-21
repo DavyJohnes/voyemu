@@ -25,7 +25,6 @@
 #include <functional>
 #include <map>
 #include <memory>
-#include <optional>
 #include <regex>
 #include <set>
 #include <sstream>
@@ -2025,8 +2024,6 @@ Json fetch_native_inputs(const std::filesystem::path &root, std::string_view pro
         throw VoyemuError("FETCH_IMAGE", "pinned official non-GMS image required");
     }
 
-    const auto retained = root / ".local/toolchains/downloads/archives" /
-                          std::filesystem::path(image_pin.url).filename();
     std::filesystem::path archive;
     const auto base = root / ".local/profiles/common/android-base" / image_pin.sha256;
     bool cached_base = false;
@@ -2034,27 +2031,6 @@ Json fetch_native_inputs(const std::filesystem::path &root, std::string_view pro
     if (std::filesystem::exists(base) || std::filesystem::is_symlink(base)) {
         verify_native_base_image(image, base);
         cached_base = true;
-    } else if (std::filesystem::exists(retained) || std::filesystem::is_symlink(retained)) {
-        std::optional<progress::Meter> meter;
-
-        if (const auto bytes = present_bytes(retained)) {
-            progress::block();
-            meter.emplace("verify", download_names(image_pin));
-            meter->length(bytes);
-        }
-
-        verify_file(retained, image_pin.sha256, image_pin.maximum_bytes,
-                    [&meter](std::uint64_t block) {
-                        if (meter) {
-                            meter->advance(block);
-                        }
-                    });
-
-        if (meter) {
-            meter->finish();
-        }
-
-        archive = retained;
     } else {
         archive = download_pinned(image_pin, root / ".local/toolchains/downloads/native", offline,
                                   reserve)

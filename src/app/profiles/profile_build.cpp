@@ -737,23 +737,14 @@ Json prepare_portable_base(const std::filesystem::path &root, std::string_view p
     root_profile(root, profile);
     const auto definition = read_private_json(authoring_definition(root, profile), 1 << 20),
                descriptor = definition.at("android");
-    const auto api = native_base_api(descriptor);
     const auto pin = descriptor.at("sha256").get<std::string>();
     const auto base = root / ".local/profiles/common/android-base" / pin;
 
     if (!std::filesystem::exists(base)) {
-        const auto legacy = root / ".local/toolchains/downloads/archives/arm64-v8a-28_r02.zip";
-        std::filesystem::path archive;
-
-        if (api == 28 && std::filesystem::exists(legacy)) {
-            need(hash(legacy, 3ULL << 30) == pin, "cached AOSP archive differs");
-            archive = legacy;
-        } else {
-            archive = download_pinned({descriptor.at("url").get<std::string>(), pin, 3ULL << 30},
-                                      root / ".local/toolchains/downloads/native", offline, reserve)
-                              .file;
-        }
-
+        const auto archive =
+                download_pinned({descriptor.at("url").get<std::string>(), pin, 3ULL << 30},
+                                root / ".local/toolchains/downloads/native", offline, reserve)
+                        .file;
         prepare_native_base_image(descriptor, archive, base);
     }
 

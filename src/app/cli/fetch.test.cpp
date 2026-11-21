@@ -238,12 +238,12 @@ static void owner_fetch_sequence(const std::filesystem::path &project) {
     write_private_json(selected / "profile.json", definition);
     write_private_json(selected / "profile-qnx.json", qnx);
     write_private_json(selected / "capture.json", {{"schema", 1}});
-    ensure_private_directory(root / ".local/toolchains/downloads/archives");
+    ensure_private_directory(root / ".local/toolchains/downloads/native");
     {
-        std::ofstream out(root / ".local/toolchains/downloads/archives/fixture.zip");
+        std::ofstream out(root / ".local/toolchains/downloads/native" /
+                          (sha256_bytes("archive") + ".blob"));
         out << "archive";
     }
-    ensure_private_directory(root / ".local/toolchains/downloads/native");
 
     for (const auto *key : {"key", "cert"}) {
         const auto pin = embedded_toolchain_manifest()
