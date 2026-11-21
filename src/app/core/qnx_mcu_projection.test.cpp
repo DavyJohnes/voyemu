@@ -8,11 +8,18 @@ using namespace voyemu;
 int main() try {
     assert(qnx_mcu_request_projection(0, 0, 0).is_null());
     const auto expected = qnx_mcu_projection(QnxGuestAdapter::sa8155_qinggan11_731);
-    assert(qnx_mcu_request_projection(650, 736, 462) == expected);
+    const auto &qinggan11_731 = qnx_adapter(QnxGuestAdapter::sa8155_qinggan11_731);
+    const auto &qinggan11_611 = qnx_adapter(QnxGuestAdapter::sa8155_qinggan11_611);
+    const auto projected = qinggan11_731.mcu_projected_fields;
+    // The adapter of the worker selects the layout among adapters of one projected count.
+    assert(qnx_mcu_request_projection(650, 736, projected, false, qinggan11_731.name) == expected);
+    assert(qnx_mcu_request_projection(650, 736, qinggan11_611.mcu_projected_fields, false,
+                                      qinggan11_611.name) ==
+           qnx_mcu_projection(QnxGuestAdapter::sa8155_qinggan11_611));
 
     for (const auto &args : {std::array<std::uint64_t, 3>{280, 579, 579},
                              {650, 736, 579},
-                             {650, 736, 461},
+                             {650, 736, 1},
                              {650, 0, 462},
                              {0, 736, 462},
                              {650, 736, 0}}) {
@@ -31,13 +38,13 @@ int main() try {
     assert(!qnx_mcu_delivery_scope(Json::object(), expected));
     assert(qnx_mcu_delivery_scope(Json{{"mcu_projection", expected}}, expected));
     auto float_expected = expected;
-    float_expected["projected_fields"] = 462.0;
+    float_expected["projected_fields"] = double(projected);
     assert(!qnx_mcu_delivery_scope(Json{{"mcu_projection", expected}}, float_expected));
     const auto free = qnx_mcu_delivery_scope(Json{{"mcu_projection", expected}});
-    assert(free && free->at("fields") == 462 && free->at("full_wire_verified") == false);
+    assert(free && free->at("fields") == projected && free->at("full_wire_verified") == false);
 
     for (const auto &patch :
-         {Json{{"projected_fields", 462.0}}, Json{{"projected_fields", 579}},
+         {Json{{"projected_fields", double(projected)}}, Json{{"projected_fields", 579}},
           Json{{"wire_fields", 579}}, Json{{"packet_bytes", 280}}, Json{{"unsupported_fields", 0}},
           Json{{"unmapped_wire_bits", "overwritten"}}}) {
         auto wrong = expected;

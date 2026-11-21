@@ -52,9 +52,11 @@ inline bool qnx_mcu_runtime_scope(const QnxAdapterSpec &spec, std::uint64_t fiel
             (spec.mcu_previous_projected_fields && fields == spec.mcu_previous_projected_fields));
 }
 
+// A qinggan11 request names its scope by the projected field count; adapter, when given, selects
+// among adapters whose layouts project the same count.
 inline Json qnx_mcu_request_projection(std::uint64_t packet_bytes, std::uint64_t wire_fields,
-                                       std::uint64_t projected_fields,
-                                       bool passion_topics = false) {
+                                       std::uint64_t projected_fields, bool passion_topics = false,
+                                       std::string_view adapter = {}) {
     if (passion_topics) {
         if (packet_bytes || wire_fields || projected_fields != 3) {
             throw VoyemuError("QNX_MCU_PROJECTION", "unsupported Passion topic scope");
@@ -69,7 +71,8 @@ inline Json qnx_mcu_request_projection(std::uint64_t packet_bytes, std::uint64_t
 
     if (packet_bytes == 650 && wire_fields == 736) {
         for (const auto &spec : qnx_adapter_registry) {
-            if (qnx_mcu_runtime_scope(spec, projected_fields)) {
+            if ((adapter.empty() || spec.name == adapter) &&
+                qnx_mcu_runtime_scope(spec, projected_fields)) {
                 return qnx_mcu_projection(spec.adapter, static_cast<unsigned>(projected_fields));
             }
         }

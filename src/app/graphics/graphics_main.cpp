@@ -69,6 +69,8 @@ int voyemu::graphics_main(int argc, char **argv) {
 
             if (arg == "--session-id") {
                 options.session_id = value;
+            } else if (arg == "--mcu-adapter") {
+                options.mcu_adapter = value;
             } else if (arg == "--guest-pid") {
                 options.guest_pid = number(value);
             } else if (arg == "--producer-incarnation") {

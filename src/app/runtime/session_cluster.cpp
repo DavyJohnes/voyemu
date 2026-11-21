@@ -1057,6 +1057,9 @@ void Session::poll_qnx() {
 
                 spec.arguments.push_back("--passion-vehicle-topics");
             }
+        } else if (!cluster_boot_spec_.value("mcu_projection", Json()).is_null()) {
+            spec.arguments.push_back("--mcu-adapter");
+            spec.arguments.push_back(cluster_boot_spec_.at("hardware_adapter").get<std::string>());
         }
 
         if (cluster_seconds_) {

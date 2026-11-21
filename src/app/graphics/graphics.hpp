@@ -33,6 +33,8 @@ struct Options {
     std::uint64_t guest_pid = 0, producer_incarnation = 0;
     std::string session_id;
     bool passion_vehicle_topics = false;
+    // hardware_adapter of a qinggan11 cluster, which names the MCU layout of its requests.
+    std::string mcu_adapter;
 };
 inline constexpr int rpc_channel_invalidated_exit_code = 70;
 inline constexpr std::uint32_t owner_liveness_request_opcode = 367,
