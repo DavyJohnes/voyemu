@@ -11,10 +11,6 @@
     {
       "path": "src/app/graphics/generator/uniform_names.json",
       "origin": "Observed OEM glGetUniformLocation identifier requests in historical t495; names only, no shaders or executable code."
-    },
-    {
-      "path": "profiles/common/components/canbus/input/oem-mcu-fields.json",
-      "origin": "Profile-owned MCU field names and widths, not proof of 579 visual parameters."
     }
   ],
   "runtime_or_build_dependency": false

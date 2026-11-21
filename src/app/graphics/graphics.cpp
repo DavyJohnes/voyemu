@@ -134,10 +134,6 @@ struct Dyn {
     }
 };
 using GeneratedSpec = detail::CommandSpec;
-struct FieldSpec {
-    const char *name;
-    unsigned width;
-};
 struct GeneratedInvoker {
     Dyn &gl;
 
