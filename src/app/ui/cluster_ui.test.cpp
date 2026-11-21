@@ -2300,8 +2300,15 @@ void lifecycle_glyph_inks(const std::filesystem::path &assets) {
                         const float distance = std::hypot(vertex.pos.x - c.x, vertex.pos.y - c.y) /
                                                r[2];
 
-                        if ((vertex.col >> IM_COL32_A_SHIFT) != 0 && distance >= from &&
-                            distance < to) {
+                        // The light panel background gradient is no glyph ink.
+                        const bool background = std::any_of(light_background.begin(),
+                                                            light_background.end(),
+                                                            [&](const ColorStop &stop) {
+                                                                return vertex.col == stop.color;
+                                                            });
+
+                        if ((vertex.col >> IM_COL32_A_SHIFT) != 0 && !background &&
+                            distance >= from && distance < to) {
                             found.insert(vertex.col);
                         }
                     }
