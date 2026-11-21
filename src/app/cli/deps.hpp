@@ -30,16 +30,6 @@ Json inspect_external_ndk_inventory(const std::filesystem::path &ndk,
 std::string native_ndk_tool(std::string_view name);
 // Returns the selected NDK and verifies a pinned external inventory when configured.
 std::filesystem::path native_ndk_directory(const std::filesystem::path &root);
-// Add a pinned versioned build-tools component while retaining the verified previous payload.
-// The caller owns the SDK installation lock and supplies independently trusted old/new recipes.
-Json upgrade_native_dependency_component(const std::filesystem::path &sdk,
-                                         const std::filesystem::path &staging,
-                                         const std::string &host,
-                                         const std::vector<NativeDependency> &previous,
-                                         const std::vector<NativeDependency> &expected,
-                                         const std::filesystem::path &archive,
-                                         std::uint64_t reserve_bytes = 20ULL << 30,
-                                         const std::function<void()> &before_publish = {});
 Json install_native_dependencies(const std::filesystem::path &root, bool offline = false,
                                  std::uint64_t reserve_bytes = 20ULL << 30);
 } // namespace voyemu

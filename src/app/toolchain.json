@@ -405,11 +405,6 @@
                     "url": "https://dl.google.com/android/repository/build-tools_r36.1_macosx.zip",
                     "sha256": "cc56be1d4ea95041f32f4ebf3a4f5c6b990c7749d706852395006b5654eb82ff"
                 },
-                "previousBuildTools": {
-                    "version": "34.0.0",
-                    "url": "https://dl.google.com/android/repository/build-tools_r34-macosx.zip",
-                    "sha256": "76bf668fe037b1a69197e298ddae5633d4d7f0f41af7ed17e537c80c1ed8a6f3"
-                },
                 "platform": {
                     "url": "https://dl.google.com/android/repository/platform-34-ext7_r03.zip",
                     "sha256": "16fdb74c55e59ae3ef52def135aec713508467bd56d7dabcd8c9be31fa8b20f3"
@@ -473,11 +468,6 @@
                 "buildTools": {
                     "url": "https://dl.google.com/android/repository/build-tools_r36.1_windows.zip",
                     "sha256": "23189d2d52b40a070a05e9cf7e497c9563f67fee76902e8fd3135ef29ef4dbeb"
-                },
-                "previousBuildTools": {
-                    "version": "34.0.0",
-                    "url": "https://dl.google.com/android/repository/build-tools_r34-windows.zip",
-                    "sha256": "9be665ad74ef22bf0e489b37db465074484df79b95f26d759945d5c25a47b326"
                 },
                 "platform": {
                     "url": "https://dl.google.com/android/repository/platform-34-ext7_r03.zip",
