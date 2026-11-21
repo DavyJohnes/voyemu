@@ -4,7 +4,7 @@
   "map_sha256": "255335b86bb5fd782d23086018dcfc3874d088364ad5f15b264cfb12020d800e",
   "packet_bytes": 650,
   "wire_fields": 736,
-  "projected_fields": 56,
+  "projected_fields": 88,
   "source_parser_sha256": "a830d876d9091190096025f4f4eb81294078b3002d955283b3a9dec296414f05",
   "source_engine_sha256": "faeb580b46c5c92d7ecd5b707be15b85874c838471f5cb9ca010b9a90e9ae195",
   "fields": [
@@ -398,7 +398,17 @@
       "position": 46,
       "name": "overspdWarning",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 47,
+        "start_bit": 94,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_lightitems_struct",
+        "case_address": "0x4ec4",
+        "output_bit": 96,
+        "output_width": 2
+      }
     },
     {
       "position": 47,
@@ -452,7 +462,17 @@
       "position": 53,
       "name": "mrr_fcwSts",
       "normalized_width": 3,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 54,
+        "start_bit": 113,
+        "width": 3,
+        "order": 1,
+        "named_consumer": "_lightitems_struct",
+        "case_address": "0x4e64",
+        "output_bit": 112,
+        "output_width": 3
+      }
     },
     {
       "position": 54,
@@ -464,7 +484,17 @@
       "position": 55,
       "name": "esc_hbbSts",
       "normalized_width": 3,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 56,
+        "start_bit": 119,
+        "width": 3,
+        "order": 1,
+        "named_consumer": "_lightitems_struct",
+        "case_address": "0x4e44",
+        "output_bit": 118,
+        "output_width": 3
+      }
     },
     {
       "position": 56,
@@ -686,7 +716,17 @@
       "position": 92,
       "name": "mrr_r1_rearCollisionWarning",
       "normalized_width": 1,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 93,
+        "start_bit": 166,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x34ac",
+        "output_bit": 140,
+        "output_width": 1
+      }
     },
     {
       "position": 93,
@@ -728,7 +768,17 @@
       "position": 99,
       "name": "mrr_r1_systemErrorSts",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 99,
+        "start_bit": 178,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_lightitems_struct",
+        "case_address": "0x4bb4",
+        "output_bit": 176,
+        "output_width": 2
+      }
     },
     {
       "position": 100,
@@ -908,7 +958,17 @@
       "position": 119,
       "name": "icm_dmsWearyLeverSts",
       "normalized_width": 3,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 119,
+        "start_bit": 202,
+        "width": 3,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x332c",
+        "output_bit": 174,
+        "output_width": 3
+      }
     },
     {
       "position": 120,
@@ -920,7 +980,17 @@
       "position": 121,
       "name": "gsm_faultLevel",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 121,
+        "start_bit": 207,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x331c",
+        "output_bit": 177,
+        "output_width": 2
+      }
     },
     {
       "position": 122,
@@ -1346,7 +1416,17 @@
       "position": 177,
       "name": "las_status",
       "normalized_width": 3,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 179,
+        "start_bit": 452,
+        "width": 3,
+        "order": 1,
+        "named_consumer": "_lightitems_struct",
+        "case_address": "0x4a1c",
+        "output_bit": 232,
+        "output_width": 3
+      }
     },
     {
       "position": 178,
@@ -1370,7 +1450,17 @@
       "position": 181,
       "name": "mpc_laneAssitType",
       "normalized_width": 3,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 182,
+        "start_bit": 459,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_lightitems_struct",
+        "case_address": "0x4a0c",
+        "output_bit": 235,
+        "output_width": 2
+      }
     },
     {
       "position": 182,
@@ -1622,7 +1712,17 @@
       "position": 223,
       "name": "mpc_text_infor",
       "normalized_width": 5,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 220,
+        "start_bit": 678,
+        "width": 5,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2d8c",
+        "output_bit": 571,
+        "output_width": 5
+      }
     },
     {
       "position": 224,
@@ -1646,13 +1746,33 @@
       "position": 227,
       "name": "mrr_text_info",
       "normalized_width": 5,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 225,
+        "start_bit": 696,
+        "width": 5,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2d44",
+        "output_bit": 589,
+        "output_width": 5
+      }
     },
     {
       "position": 228,
       "name": "pebs_warning",
       "normalized_width": 3,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 226,
+        "start_bit": 701,
+        "width": 3,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2d34",
+        "output_bit": 594,
+        "output_width": 3
+      }
     },
     {
       "position": 229,
@@ -1718,25 +1838,65 @@
       "position": 239,
       "name": "icm_dmsCameraSts",
       "normalized_width": 3,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 236,
+        "start_bit": 729,
+        "width": 3,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2c94",
+        "output_bit": 623,
+        "output_width": 3
+      }
     },
     {
       "position": 240,
       "name": "icm_dmsSts",
       "normalized_width": 3,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 237,
+        "start_bit": 732,
+        "width": 3,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2c84",
+        "output_bit": 626,
+        "output_width": 3
+      }
     },
     {
       "position": 241,
       "name": "icm_dmsDistractLeverSts",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 238,
+        "start_bit": 735,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2c74",
+        "output_bit": 629,
+        "output_width": 2
+      }
     },
     {
       "position": 242,
       "name": "icm_dmsDrvBehaviorMon",
       "normalized_width": 3,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 239,
+        "start_bit": 737,
+        "width": 3,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2c64",
+        "output_bit": 631,
+        "output_width": 3
+      }
     },
     {
       "position": 243,
@@ -2172,31 +2332,81 @@
       "position": 304,
       "name": "nvs_displayReq",
       "normalized_width": 3,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 306,
+        "start_bit": 1215,
+        "width": 3,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2844",
+        "output_bit": 1255,
+        "output_width": 3
+      }
     },
     {
       "position": 305,
       "name": "nvs_Sts",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 307,
+        "start_bit": 1218,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2834",
+        "output_bit": 1258,
+        "output_width": 2
+      }
     },
     {
       "position": 306,
       "name": "nvs_cameraSts",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 308,
+        "start_bit": 1220,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2824",
+        "output_bit": 1260,
+        "output_width": 2
+      }
     },
     {
       "position": 307,
       "name": "nvs_warnningSts",
       "normalized_width": 1,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 309,
+        "start_bit": 1222,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2814",
+        "output_bit": 1262,
+        "output_width": 1
+      }
     },
     {
       "position": 308,
       "name": "nvs_textPrompt",
       "normalized_width": 4,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 310,
+        "start_bit": 1223,
+        "width": 4,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2804",
+        "output_bit": 1263,
+        "output_width": 4
+      }
     },
     {
       "position": 309,
@@ -2316,7 +2526,17 @@
       "position": 318,
       "name": "IHBC_status",
       "normalized_width": 3,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 7,
+        "start_bit": 6,
+        "width": 3,
+        "order": 1,
+        "named_consumer": "_lightitems_struct",
+        "case_address": "0x513c",
+        "output_bit": 6,
+        "output_width": 3
+      }
     },
     {
       "position": 319,
@@ -2466,19 +2686,49 @@
       "position": 333,
       "name": "nvs_warningXCoordinate",
       "normalized_width": 12,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 335,
+        "start_bit": 1320,
+        "width": 12,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2704",
+        "output_bit": 1325,
+        "output_width": 12
+      }
     },
     {
       "position": 334,
       "name": "nvs_warningYCoordinate",
       "normalized_width": 10,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 336,
+        "start_bit": 1332,
+        "width": 10,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x26f4",
+        "output_bit": 1344,
+        "output_width": 10
+      }
     },
     {
       "position": 335,
       "name": "nvs_warningType",
       "normalized_width": 3,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 337,
+        "start_bit": 1342,
+        "width": 3,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x26e4",
+        "output_bit": 1354,
+        "output_width": 3
+      }
     },
     {
       "position": 336,
@@ -2802,7 +3052,17 @@
       "position": 374,
       "name": "gsm_warnInformation",
       "normalized_width": 3,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 376,
+        "start_bit": 1473,
+        "width": 3,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x24e4",
+        "output_bit": 1440,
+        "output_width": 3
+      }
     },
     {
       "position": 375,
@@ -2910,37 +3170,97 @@
       "position": 392,
       "name": "mrr_r1_leftBSDLCAWarning",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 394,
+        "start_bit": 1549,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x247c",
+        "output_bit": 1487,
+        "output_width": 2
+      }
     },
     {
       "position": 393,
       "name": "mrr_r1_rightBSDLCAWarning",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 395,
+        "start_bit": 1551,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x246c",
+        "output_bit": 1489,
+        "output_width": 2
+      }
     },
     {
       "position": 394,
       "name": "mrr_r1_leftDOWWarnning",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 396,
+        "start_bit": 1553,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x245c",
+        "output_bit": 1491,
+        "output_width": 2
+      }
     },
     {
       "position": 395,
       "name": "mrr_r1_rightDOWWarnning",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 397,
+        "start_bit": 1555,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x244c",
+        "output_bit": 1493,
+        "output_width": 2
+      }
     },
     {
       "position": 396,
       "name": "mrr_r1_leftRCTAWarnning",
       "normalized_width": 1,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 398,
+        "start_bit": 1557,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x243c",
+        "output_bit": 1495,
+        "output_width": 1
+      }
     },
     {
       "position": 397,
       "name": "mrr_r1_rightRCTAWarnning",
       "normalized_width": 1,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 399,
+        "start_bit": 1558,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x242c",
+        "output_bit": 1496,
+        "output_width": 1
+      }
     },
     {
       "position": 398,

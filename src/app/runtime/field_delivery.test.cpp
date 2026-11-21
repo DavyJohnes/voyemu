@@ -45,8 +45,11 @@ int main() try {
     const auto qinggan11_611 = cluster(
             {{"hardware_adapter", "sa8155-qinggan11-611"},
              {"mcu_projection", qnx_mcu_projection(QnxGuestAdapter::sa8155_qinggan11_611)}});
-    check(qinggan11_611.size() == 56 && qinggan11_611.contains("remain_mileage_e") &&
-                  !qinggan11_611.contains("epb_parking") && !qinggan11_611.contains("rpm"),
+    check(qinggan11_611.size() ==
+                          qnx_adapter(QnxGuestAdapter::sa8155_qinggan11_611).mcu_projected_fields &&
+                  qinggan11_611.contains("remain_mileage_e") &&
+                  qinggan11_611.contains("mrr_fcwSts") && !qinggan11_611.contains("acc_mode") &&
+                  !qinggan11_611.contains("ivi_languageSet"),
           "qinggan11 6.11.1 delivers the fields of its MCU layout");
     check(cluster({{"hardware_adapter", "sa8155-qinggan11-611"},
                    {"mcu_projection",

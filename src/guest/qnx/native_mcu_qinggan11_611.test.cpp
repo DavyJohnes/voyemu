@@ -153,7 +153,7 @@ int main(int argc, char **argv) {
             }
         }
 
-        assert(mapped == 56 && qinggan11_fields[37].bit == 69 &&
+        assert(mapped == qinggan11_projected_fields && qinggan11_fields[37].bit == 69 &&
                qinggan11_fields[287].bit == 1111 && qinggan11_fields[288].bit == 1112 &&
                qinggan11_fields[290].bit == 1144 && qinggan11_fields[154].bit == 335 &&
                qinggan11_fields[154].width == 1);
@@ -215,49 +215,86 @@ int main(int argc, char **argv) {
             std::string_view name;
             unsigned bit, width, value;
         };
-        const Case added[] = {{"pos_lamp", 3, 1, 1},
-                              {"low_beam", 4, 1, 1},
-                              {"high_beam", 5, 1, 1},
-                              {"rear_fog", 10, 1, 1},
-                              {"bcm_DRLStatus", 13, 1, 1},
-                              {"hood", 184, 1, 1},
-                              {"door_fr", 186, 1, 1},
-                              {"door_rl", 187, 1, 1},
-                              {"door_rr", 188, 1, 1},
-                              {"tail_gate", 189, 1, 1},
-                              {"remain_mileage_e", 1090, 11, 280},
-                              {"remain_mileage_f", 2218, 11, 420},
-                              {"odo", 1120, 24, 12346},
-                              {"fuel_percent", 1236, 7, 68},
-                              {"actual_power", 1262, 7, 12},
-                              {"allowed_power", 1255, 7, 80},
-                              {"actual_power10x", 1407, 12, 120},
-                              {"allowed_power10x", 1395, 12, 800},
-                              {"vcu_remainingMileageReal", 1433, 11, 280},
-                              {"vcu_remainingMileageCLTCWLTC", 1571, 11, 280},
-                              {"remain_mileage_f_nedc", 1463, 10, 420},
-                              {"remain_mileage_f_wltc", 2229, 11, 420}};
+        // Each written field reaches its OEM wire bits and leaves on the next revision.
+        auto deliver_cases = [&](std::initializer_list<Case> cases) {
+            for (const auto &signal : cases) {
+                const auto field = std::find_if(fields.begin(), fields.end(), [&](const auto &f) {
+                    return f.name == signal.name;
+                });
+                assert(field != fields.end());
+                const auto position = static_cast<unsigned>(field - fields.begin());
+                const auto previous = normal[position];
+                normal[position] = signal.value;
+                ++offered;
+                assert(dataParser_makedumydata(out, 650) == 650 && qinggan11_ack == offered &&
+                       packed(signal.bit, signal.width) == signal.value);
+                normal[position] = previous;
+                ++offered;
+                assert(dataParser_makedumydata(out, 650) == 650 && qinggan11_ack == offered &&
+                       packed(signal.bit, signal.width) == previous);
+            }
+        };
+        deliver_cases({{"pos_lamp", 3, 1, 1},
+                       {"low_beam", 4, 1, 1},
+                       {"high_beam", 5, 1, 1},
+                       {"rear_fog", 10, 1, 1},
+                       {"bcm_DRLStatus", 13, 1, 1},
+                       {"hood", 184, 1, 1},
+                       {"door_fr", 186, 1, 1},
+                       {"door_rl", 187, 1, 1},
+                       {"door_rr", 188, 1, 1},
+                       {"tail_gate", 189, 1, 1},
+                       {"remain_mileage_e", 1090, 11, 280},
+                       {"remain_mileage_f", 2218, 11, 420},
+                       {"odo", 1120, 24, 12346},
+                       {"fuel_percent", 1236, 7, 68},
+                       {"actual_power", 1262, 7, 12},
+                       {"allowed_power", 1255, 7, 80},
+                       {"actual_power10x", 1407, 12, 120},
+                       {"allowed_power10x", 1395, 12, 800},
+                       {"vcu_remainingMileageReal", 1433, 11, 280},
+                       {"vcu_remainingMileageCLTCWLTC", 1571, 11, 280},
+                       {"remain_mileage_f_nedc", 1463, 10, 420},
+                       {"remain_mileage_f_wltc", 2229, 11, 420}});
+        // Start bits and widths from the OEM 6.11.1 parser descriptors, one list per group.
+        deliver_cases({
+                {"overspdWarning", 94, 2, 3},
+                {"mrr_fcwSts", 113, 3, 3},
+                {"esc_hbbSts", 119, 3, 3},
+                {"mrr_r1_rearCollisionWarning", 166, 1, 1},
+                {"mrr_r1_systemErrorSts", 178, 2, 3},
+                {"icm_dmsWearyLeverSts", 202, 3, 3},
+                {"gsm_faultLevel", 207, 2, 3},
+                {"las_status", 452, 3, 3},
+                {"mpc_laneAssitType", 459, 2, 3},
+                {"mpc_text_infor", 678, 5, 11},
+                {"mrr_text_info", 696, 5, 11},
+                {"pebs_warning", 701, 3, 3},
+                {"icm_dmsCameraSts", 729, 3, 3},
+                {"icm_dmsSts", 732, 3, 3},
+                {"icm_dmsDistractLeverSts", 735, 2, 3},
+                {"icm_dmsDrvBehaviorMon", 737, 3, 3},
+                {"nvs_displayReq", 1215, 3, 3},
+                {"nvs_Sts", 1218, 2, 3},
+                {"nvs_cameraSts", 1220, 2, 3},
+                {"nvs_warnningSts", 1222, 1, 1},
+                {"nvs_textPrompt", 1223, 4, 11},
+                {"IHBC_status", 6, 3, 3},
+                {"nvs_warningXCoordinate", 1320, 12, 2731},
+                {"nvs_warningYCoordinate", 1332, 10, 683},
+                {"nvs_warningType", 1342, 3, 3},
+                {"gsm_warnInformation", 1473, 3, 3},
+                {"mrr_r1_leftBSDLCAWarning", 1549, 2, 3},
+                {"mrr_r1_rightBSDLCAWarning", 1551, 2, 3},
+                {"mrr_r1_leftDOWWarnning", 1553, 2, 3},
+                {"mrr_r1_rightDOWWarnning", 1555, 2, 3},
+                {"mrr_r1_leftRCTAWarnning", 1557, 1, 1},
+                {"mrr_r1_rightRCTAWarnning", 1558, 1, 1},
+        });
 
-        for (const auto &signal : added) {
-            const auto field = std::find_if(fields.begin(), fields.end(), [&](const auto &f) {
-                return f.name == signal.name;
-            });
-            assert(field != fields.end());
-            const auto position = static_cast<unsigned>(field - fields.begin());
-            const auto previous = normal[position];
-            normal[position] = signal.value;
-            ++offered;
-            assert(dataParser_makedumydata(out, 650) == 650 && qinggan11_ack == offered &&
-                   packed(signal.bit, signal.width) == signal.value);
-            normal[position] = previous;
-            ++offered;
-            assert(dataParser_makedumydata(out, 650) == 650 && qinggan11_ack == offered &&
-                   packed(signal.bit, signal.width) == previous);
-        }
-
-        // AdasEcu acc and cancel, the parking brake, the engine speed and the language write
-        // fields that this layout does not project. The guest rejects the logical revision as a
-        // whole, and the host state for the guest carries their initial values and the new speed.
+        // AdasEcu acc and cancel, the power-off request, the lane departure lamp and the language
+        // write fields that this layout does not project. The guest rejects the logical revision as
+        // a whole, and the host state for the guest carries their initial values and the new speed.
         {
             auto state = voyemu::apply_patch(voyemu::initial_state(),
                                              {{"speed", 80}, {"gear", 3}, {"gear_valid", 1}});
@@ -276,7 +313,7 @@ int main(int argc, char **argv) {
             press("cancel");
             state = voyemu::apply_patch(
                     state,
-                    {{"speed", 60}, {"epb_parking", 1}, {"rpm", 1500}, {"ivi_languageSet", 1}});
+                    {{"speed", 60}, {"poweroff_req", 1}, {"ldws_lamp", 1}, {"ivi_languageSet", 1}});
             const auto &raw = state.at("raw_oem");
             assert(raw.at("acc_mode") == 0 && raw.at("mpc_icaSts") == 1 &&
                    raw.at("mrr_vSetDis") == 160 && raw.at("time_gap_set") == 1);
@@ -296,7 +333,7 @@ int main(int argc, char **argv) {
             const auto guest = voyemu::qnx_qinggan11_guest_state(source, raw);
 
             for (const auto *name : {"acc_mode", "mpc_icaSts", "mrr_vSetDis", "time_gap_set",
-                                     "epb_parking", "rpm", "ivi_languageSet"}) {
+                                     "poweroff_req", "ldws_lamp", "ivi_languageSet"}) {
                 assert(guest.at(name) == 0);
             }
 
@@ -374,7 +411,8 @@ int main(int argc, char **argv) {
                 voyemu::qnx_mcu_projection(voyemu::QnxGuestAdapter::sa8155_qinggan11_611)));
         const auto projection =
                 voyemu::qnx_mcu_projection(voyemu::QnxGuestAdapter::sa8155_qinggan11_611);
-        assert(voyemu::qnx_mcu_request_projection(650, 736, 56) == projection);
+        assert(voyemu::qnx_mcu_request_projection(650, 736, qinggan11_projected_fields) ==
+               projection);
         assert(voyemu::qnx_mcu_delivery_scope(Json{{"mcu_projection", projection}}, projection));
         assert(!voyemu::qnx_mcu_delivery_scope(Json{{"mcu_projection", projection}}, previous));
         assert(!voyemu::qnx_mcu_delivery_scope(
@@ -394,9 +432,9 @@ int main(int argc, char **argv) {
 
         assert(rejected);
         assert(!projection.at("settings_feedback_supported").get<bool>() &&
-               projection.at("unsupported_fields") == 523);
+               projection.at("unsupported_fields") == 579 - qinggan11_projected_fields);
         std::cout
-                << "sa8155-qinggan11-611 source56, stock controls, range sentinels, scoped RPC and unchanged unsupported bits passed\n";
+                << "sa8155-qinggan11-611 source layout, stock controls, range sentinels, scoped RPC and unchanged unsupported bits passed\n";
 
         return 0;
     } catch (const std::exception &e) {

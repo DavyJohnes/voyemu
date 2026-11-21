@@ -212,8 +212,10 @@ int main() try {
 
     const auto accepted_scoped = qnx_portable_layout(scoped_profile, portable_scoped);
     assert(accepted_scoped.images.size() == 10 &&
-           accepted_scoped.projection.at("projected_fields") == 56 &&
-           accepted_scoped.projection.at("unsupported_fields") == 523);
+           accepted_scoped.projection.at("projected_fields") ==
+                   qnx_adapter(QnxGuestAdapter::sa8155_qinggan11_611).mcu_projected_fields &&
+           accepted_scoped.projection.at("unsupported_fields") ==
+                   579 - qnx_adapter(QnxGuestAdapter::sa8155_qinggan11_611).mcu_projected_fields);
     auto scope34 = portable_scoped;
     scope34["mcu_projection"] = qnx_mcu_projection(
             QnxGuestAdapter::sa8155_qinggan11_611,
