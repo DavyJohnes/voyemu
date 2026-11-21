@@ -138,7 +138,7 @@ int main() try {
     assert(last == 1 && state[0] == 2);
     assert(api.before(Gate::Phase::down, 1) == Gate::Result::pass);
     api.before(Gate::Phase::up, 1);
-    Gate disabled({false, "free-09-chinese", "", "", ""}, cache, wake, recheck, now);
+    Gate disabled({false, "", "", ""}, cache, wake, recheck, now);
     assert(disabled.before(Gate::Phase::down, 0) == Gate::Result::pass);
 } catch (const std::exception &error) {
     std::cerr << error.what() << '\n';
