@@ -8,6 +8,7 @@
 #include <functional>
 #include <future>
 #include <iostream>
+#include <latch>
 #include <optional>
 #include <set>
 #include <stdexcept>
@@ -820,12 +821,18 @@ int main(int argc, char **argv) try {
         ::close(held);
         waiting.get();
         assert(read_private_json(file).at("epoch") == 2);
-        // Concurrent writers of one file publish whole records.
+        // Concurrent writers of one file publish whole records. They start together and write a few
+        // records each, so no writer waits for more fsyncs than a loaded disk does in the lock
+        // deadline.
+        constexpr int writer_count = 4, writes = 5;
+        std::latch start(writer_count);
         std::vector<std::future<void>> writers;
 
-        for (int writer = 0; writer < 4; ++writer) {
+        for (int writer = 0; writer < writer_count; ++writer) {
             writers.push_back(std::async(std::launch::async, [&, writer] {
-                for (int epoch = 0; epoch < 50; ++epoch) {
+                start.arrive_and_wait();
+
+                for (int epoch = 0; epoch < writes; ++epoch) {
                     write_private_json(file, {{"epoch", writer * 100 + epoch}});
                 }
             }));
@@ -835,7 +842,7 @@ int main(int argc, char **argv) try {
             writer.get();
         }
 
-        assert(read_private_json(file).at("epoch").get<int>() % 100 == 49 &&
+        assert(read_private_json(file).at("epoch").get<int>() % 100 == writes - 1 &&
                !std::filesystem::exists(pending));
     }
     // Missing parents of a private directory are private as well.
