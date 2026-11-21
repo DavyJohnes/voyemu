@@ -101,6 +101,11 @@ function(voyemu_media_dependencies)
         foreach(protocol DICT FILE FTP GOPHER IMAP IPFS LDAP LDAPS MQTT POP3 RTSP SMTP TELNET TFTP WEBSOCKETS)
             voyemu_media_option(CURL_DISABLE_${protocol} ON)
         endforeach()
+        # The media client posts gRPC over plain HTTP/2 to loopback without a proxy, authentication,
+        # cookies, forms or the option lookup API.
+        foreach(feature ALTSVC AWS BASIC_AUTH BEARER_AUTH BINDLOCAL COOKIES DIGEST_AUTH DOH FORM_API GETOPTIONS HEADERS_API HSTS HTTP_AUTH KERBEROS_AUTH LIBCURL_OPTION MIME NEGOTIATE_AUTH NETRC PARSEDATE PROGRESS_METER PROXY SHA512_256 SHUFFLE_DNS)
+            voyemu_media_option(CURL_DISABLE_${feature} ON)
+        endforeach()
         voyemu_media_option(CURL_DISABLE_HTTP OFF)
         voyemu_media_option(USE_NGHTTP2 ON)
         voyemu_media_option(NGHTTP2_USE_STATIC_LIBS ON)
