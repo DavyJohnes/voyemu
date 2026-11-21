@@ -16,6 +16,23 @@ static void require(bool value, const std::string &message) {
     }
 }
 
+// The Windows console writes CRLF line ends; the assertions read LF.
+static auto execute_lf(const ProcessSpec &spec) {
+    auto result = execute(spec, 15000);
+    std::string output;
+
+    for (std::size_t i = 0; i < result.output.size(); ++i) {
+        if (result.output[i] != '\r' || i + 1 == result.output.size() ||
+            result.output[i + 1] != '\n') {
+            output += result.output[i];
+        }
+    }
+
+    result.output = output;
+
+    return result;
+}
+
 int main(int argc, char **argv) {
     try {
         require(argc == 2, "CLI binary required");
@@ -152,20 +169,7 @@ int main(int argc, char **argv) {
                 command.arguments.emplace_back("--lang=en");
                 command.directory = root;
 
-                auto result = execute(command, 15000);
-                std::string output;
-
-                // The Windows console writes CRLF line ends; the assertions read LF.
-                for (std::size_t i = 0; i < result.output.size(); ++i) {
-                    if (result.output[i] != '\r' || i + 1 == result.output.size() ||
-                        result.output[i + 1] != '\n') {
-                        output += result.output[i];
-                    }
-                }
-
-                result.output = output;
-
-                return result;
+                return execute_lf(command);
             };
             const auto disabled =
                     run({"build", profile, "--cluster=off", "--multimedia=off", "--offline"});
@@ -241,7 +245,7 @@ int main(int argc, char **argv) {
             spec.executable = installed;
             spec.arguments = {"build", profile, "--offline", "--lang=en"};
             spec.directory = root;
-            const auto existing = execute(spec, 15000);
+            const auto existing = execute_lf(spec);
             require(!existing.timed_out && existing.exit_code == 4 &&
                             existing.output.starts_with(
                                     "Voyemu: PROFILE_BUILD: machine " + machine +
