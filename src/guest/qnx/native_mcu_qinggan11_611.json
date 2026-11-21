@@ -4,7 +4,7 @@
   "map_sha256": "255335b86bb5fd782d23086018dcfc3874d088364ad5f15b264cfb12020d800e",
   "packet_bytes": 650,
   "wire_fields": 736,
-  "projected_fields": 316,
+  "projected_fields": 376,
   "source_parser_sha256": "a830d876d9091190096025f4f4eb81294078b3002d955283b3a9dec296414f05",
   "source_engine_sha256": "faeb580b46c5c92d7ecd5b707be15b85874c838471f5cb9ca010b9a90e9ae195",
   "fields": [
@@ -6272,361 +6272,961 @@
       "position": 515,
       "name": "cfg_driver_mode",
       "normalized_width": 2,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 572,
+        "start_bit": 2080,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1d44",
+        "output_bit": 1818,
+        "output_width": 2
+      }
     },
     {
       "position": 516,
       "name": "cfg_tbox",
       "normalized_width": 2,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 573,
+        "start_bit": 2082,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1d34",
+        "output_bit": 1820,
+        "output_width": 2
+      }
     },
     {
       "position": 517,
       "name": "cfg_driver_style",
       "normalized_width": 3,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 574,
+        "start_bit": 2084,
+        "width": 3,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1d24",
+        "output_bit": 1824,
+        "output_width": 3
+      }
     },
     {
       "position": 518,
       "name": "cfg_hud",
       "normalized_width": 1,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 575,
+        "start_bit": 2087,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1d14",
+        "output_bit": 1827,
+        "output_width": 1
+      }
     },
     {
       "position": 519,
       "name": "cfg_driver_source",
       "normalized_width": 4,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 576,
+        "start_bit": 2088,
+        "width": 4,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1d04",
+        "output_bit": 1828,
+        "output_width": 4
+      }
     },
     {
       "position": 520,
       "name": "cfg_wireless_charge",
       "normalized_width": 2,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 577,
+        "start_bit": 2092,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1cf4",
+        "output_bit": 1832,
+        "output_width": 2
+      }
     },
     {
       "position": 521,
       "name": "cfg_glass_cover",
       "normalized_width": 2,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 578,
+        "start_bit": 2094,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1ce4",
+        "output_bit": 1834,
+        "output_width": 2
+      }
     },
     {
       "position": 522,
       "name": "cfg_sunroof_type",
       "normalized_width": 2,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 579,
+        "start_bit": 2096,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1cd4",
+        "output_bit": 1836,
+        "output_width": 2
+      }
     },
     {
       "position": 523,
       "name": "cfg_child_lock",
       "normalized_width": 2,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 580,
+        "start_bit": 2098,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1cc4",
+        "output_bit": 1838,
+        "output_width": 2
+      }
     },
     {
       "position": 524,
       "name": "cfg_driver_seat_heat",
       "normalized_width": 1,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 581,
+        "start_bit": 2100,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1cb4",
+        "output_bit": 1840,
+        "output_width": 1
+      }
     },
     {
       "position": 525,
       "name": "cfg_driver_seat_air",
       "normalized_width": 1,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 582,
+        "start_bit": 2101,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1ca4",
+        "output_bit": 1841,
+        "output_width": 1
+      }
     },
     {
       "position": 526,
       "name": "cfg_driver_seat_massage",
       "normalized_width": 1,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 583,
+        "start_bit": 2102,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1c94",
+        "output_bit": 1842,
+        "output_width": 1
+      }
     },
     {
       "position": 527,
       "name": "cfg_driver_seat_memory",
       "normalized_width": 1,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 584,
+        "start_bit": 2103,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1c84",
+        "output_bit": 1843,
+        "output_width": 1
+      }
     },
     {
       "position": 528,
       "name": "cfg_copilot_seat_heat",
       "normalized_width": 1,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 585,
+        "start_bit": 2104,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1c74",
+        "output_bit": 1844,
+        "output_width": 1
+      }
     },
     {
       "position": 529,
       "name": "cfg_copilot_seat_air",
       "normalized_width": 1,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 586,
+        "start_bit": 2105,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1c64",
+        "output_bit": 1845,
+        "output_width": 1
+      }
     },
     {
       "position": 530,
       "name": "cfg_copilot_seat_massage",
       "normalized_width": 1,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 587,
+        "start_bit": 2106,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1c54",
+        "output_bit": 1846,
+        "output_width": 1
+      }
     },
     {
       "position": 531,
       "name": "cfg_copilot_seat_memory",
       "normalized_width": 1,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 588,
+        "start_bit": 2107,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1c44",
+        "output_bit": 1847,
+        "output_width": 1
+      }
     },
     {
       "position": 532,
       "name": "cfg_seat",
       "normalized_width": 3,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 589,
+        "start_bit": 2108,
+        "width": 3,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1c34",
+        "output_bit": 1848,
+        "output_width": 3
+      }
     },
     {
       "position": 533,
       "name": "cfg_sound_band",
       "normalized_width": 1,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 590,
+        "start_bit": 2111,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1c24",
+        "output_bit": 1851,
+        "output_width": 1
+      }
     },
     {
       "position": 534,
       "name": "cfg_charge_port_type",
       "normalized_width": 2,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 591,
+        "start_bit": 2112,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1c14",
+        "output_bit": 1852,
+        "output_width": 2
+      }
     },
     {
       "position": 535,
       "name": "cfg_gas_port_type",
       "normalized_width": 2,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 592,
+        "start_bit": 2114,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1c04",
+        "output_bit": 1854,
+        "output_width": 2
+      }
     },
     {
       "position": 536,
       "name": "cfg_speaker",
       "normalized_width": 3,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 593,
+        "start_bit": 2116,
+        "width": 3,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1bf4",
+        "output_bit": 1856,
+        "output_width": 3
+      }
     },
     {
       "position": 537,
       "name": "cfg_air_suspension",
       "normalized_width": 1,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 594,
+        "start_bit": 2119,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1be4",
+        "output_bit": 1859,
+        "output_width": 1
+      }
     },
     {
       "position": 538,
       "name": "cfg_vehicle_color",
       "normalized_width": 4,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 595,
+        "start_bit": 2120,
+        "width": 4,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1bd4",
+        "output_bit": 1860,
+        "output_width": 4
+      }
     },
     {
       "position": 539,
       "name": "cfg_maintain",
       "normalized_width": 2,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 596,
+        "start_bit": 2124,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1bc4",
+        "output_bit": 1864,
+        "output_width": 2
+      }
     },
     {
       "position": 540,
       "name": "cfg_auto_beam",
       "normalized_width": 1,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 597,
+        "start_bit": 2126,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1bb4",
+        "output_bit": 1866,
+        "output_width": 1
+      }
     },
     {
       "position": 541,
       "name": "cfg_auto_beam_height",
       "normalized_width": 1,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 598,
+        "start_bit": 2127,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1ba4",
+        "output_bit": 1867,
+        "output_width": 1
+      }
     },
     {
       "position": 542,
       "name": "cfg_env_lamp",
       "normalized_width": 3,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 599,
+        "start_bit": 2128,
+        "width": 3,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1b94",
+        "output_bit": 1868,
+        "output_width": 3
+      }
     },
     {
       "position": 543,
       "name": "cfg_left_right_hand",
       "normalized_width": 1,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 600,
+        "start_bit": 2131,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1b84",
+        "output_bit": 1871,
+        "output_width": 1
+      }
     },
     {
       "position": 544,
       "name": "cfg_auto_headlight",
       "normalized_width": 1,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 601,
+        "start_bit": 2132,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1b74",
+        "output_bit": 1872,
+        "output_width": 1
+      }
     },
     {
       "position": 545,
       "name": "cfg_matrix_lamp",
       "normalized_width": 1,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 602,
+        "start_bit": 2133,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1b64",
+        "output_bit": 1873,
+        "output_width": 1
+      }
     },
     {
       "position": 546,
       "name": "cfg_auto_parking",
       "normalized_width": 1,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 603,
+        "start_bit": 2134,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1b54",
+        "output_bit": 1874,
+        "output_width": 1
+      }
     },
     {
       "position": 547,
       "name": "cfg_ar",
       "normalized_width": 1,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 604,
+        "start_bit": 2135,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1b44",
+        "output_bit": 1875,
+        "output_width": 1
+      }
     },
     {
       "position": 548,
       "name": "cfg_sound_position",
       "normalized_width": 2,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 605,
+        "start_bit": 2136,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1b34",
+        "output_bit": 1876,
+        "output_width": 2
+      }
     },
     {
       "position": 549,
       "name": "cfg_iaqc",
       "normalized_width": 1,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 606,
+        "start_bit": 2138,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1b24",
+        "output_bit": 1878,
+        "output_width": 1
+      }
     },
     {
       "position": 550,
       "name": "cfg_air_filter",
       "normalized_width": 1,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 607,
+        "start_bit": 2139,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1b14",
+        "output_bit": 1879,
+        "output_width": 1
+      }
     },
     {
       "position": 551,
       "name": "cfg_air_flesh",
       "normalized_width": 1,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 608,
+        "start_bit": 2140,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1b04",
+        "output_bit": 1880,
+        "output_width": 1
+      }
     },
     {
       "position": 552,
       "name": "cfg_dvr",
       "normalized_width": 1,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 609,
+        "start_bit": 2141,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1af4",
+        "output_bit": 1881,
+        "output_width": 1
+      }
     },
     {
       "position": 553,
       "name": "cfg_etc_cfg",
       "normalized_width": 1,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 610,
+        "start_bit": 2142,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1ae4",
+        "output_bit": 1882,
+        "output_width": 1
+      }
     },
     {
       "position": 554,
       "name": "cfg_ac_auto_cycle",
       "normalized_width": 1,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 611,
+        "start_bit": 2143,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1ad4",
+        "output_bit": 1883,
+        "output_width": 1
+      }
     },
     {
       "position": 555,
       "name": "cfg_nvs",
       "normalized_width": 1,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 612,
+        "start_bit": 2144,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1ac4",
+        "output_bit": 1884,
+        "output_width": 1
+      }
     },
     {
       "position": 556,
       "name": "cfg_backmonitor",
       "normalized_width": 1,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 613,
+        "start_bit": 2145,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1ab4",
+        "output_bit": 1885,
+        "output_width": 1
+      }
     },
     {
       "position": 557,
       "name": "cfg_blis",
       "normalized_width": 1,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 614,
+        "start_bit": 2146,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1aa4",
+        "output_bit": 1886,
+        "output_width": 1
+      }
     },
     {
       "position": 558,
       "name": "cfg_ldw",
       "normalized_width": 1,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 615,
+        "start_bit": 2147,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1a94",
+        "output_bit": 1887,
+        "output_width": 1
+      }
     },
     {
       "position": 559,
       "name": "cfg_pre_crash",
       "normalized_width": 2,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 616,
+        "start_bit": 2148,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1a84",
+        "output_bit": 1888,
+        "output_width": 2
+      }
     },
     {
       "position": 560,
       "name": "cfg_lka",
       "normalized_width": 1,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 617,
+        "start_bit": 2150,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1a74",
+        "output_bit": 1890,
+        "output_width": 1
+      }
     },
     {
       "position": 561,
       "name": "cfg_lca",
       "normalized_width": 1,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 618,
+        "start_bit": 2151,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1a64",
+        "output_bit": 1891,
+        "output_width": 1
+      }
     },
     {
       "position": 562,
       "name": "cfg_acc",
       "normalized_width": 2,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 619,
+        "start_bit": 2152,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1a54",
+        "output_bit": 1892,
+        "output_width": 2
+      }
     },
     {
       "position": 563,
       "name": "cfg_aeb",
       "normalized_width": 1,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 620,
+        "start_bit": 2154,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1a44",
+        "output_bit": 1894,
+        "output_width": 1
+      }
     },
     {
       "position": 564,
       "name": "cfg_door_warning",
       "normalized_width": 1,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 621,
+        "start_bit": 2155,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1a34",
+        "output_bit": 1895,
+        "output_width": 1
+      }
     },
     {
       "position": 565,
       "name": "cfg_traffic_sign",
       "normalized_width": 1,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 622,
+        "start_bit": 2156,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1a24",
+        "output_bit": 1896,
+        "output_width": 1
+      }
     },
     {
       "position": 566,
       "name": "cfg_isa",
       "normalized_width": 1,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 623,
+        "start_bit": 2157,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1a14",
+        "output_bit": 1897,
+        "output_width": 1
+      }
     },
     {
       "position": 567,
       "name": "cfg_rcta",
       "normalized_width": 1,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 624,
+        "start_bit": 2158,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1a04",
+        "output_bit": 1898,
+        "output_width": 1
+      }
     },
     {
       "position": 568,
       "name": "cfg_tja_assis",
       "normalized_width": 1,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 625,
+        "start_bit": 2159,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x19f4",
+        "output_bit": 1899,
+        "output_width": 1
+      }
     },
     {
       "position": 569,
       "name": "cfg_dms_id",
       "normalized_width": 1,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 626,
+        "start_bit": 2160,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x19e4",
+        "output_bit": 1900,
+        "output_width": 1
+      }
     },
     {
       "position": 570,
       "name": "cfg_gesture",
       "normalized_width": 1,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 627,
+        "start_bit": 2161,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x19d4",
+        "output_bit": 1901,
+        "output_width": 1
+      }
     },
     {
       "position": 571,
       "name": "cfg_sale_area",
       "normalized_width": 6,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 628,
+        "start_bit": 2162,
+        "width": 6,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x19c4",
+        "output_bit": 1902,
+        "output_width": 6
+      }
     },
     {
       "position": 572,
       "name": "cfg_screen",
       "normalized_width": 2,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 629,
+        "start_bit": 2168,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x19b4",
+        "output_bit": 1908,
+        "output_width": 2
+      }
     },
     {
       "position": 573,
       "name": "cfg_mrr",
       "normalized_width": 1,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 630,
+        "start_bit": 2170,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x19a4",
+        "output_bit": 1910,
+        "output_width": 1
+      }
     },
     {
       "position": 574,
       "name": "cfg_mpc",
       "normalized_width": 1,
-      "unsupported_initial": 1
+      "unsupported_initial": 1,
+      "wire": {
+        "index": 631,
+        "start_bit": 2171,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1994",
+        "output_bit": 1911,
+        "output_width": 1
+      }
     },
     {
       "position": 575,
