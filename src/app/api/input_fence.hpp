@@ -1,6 +1,8 @@
 #pragma once
 #include "model.hpp"
 #include <algorithm>
+#include <cstdint>
+#include <limits>
 #include <set>
 #include <stdexcept>
 namespace voyemu::api {
@@ -12,23 +14,30 @@ public:
         : VoyemuError(code, message), details(std::move(diagnostic)) {}
 };
 
+// Unsigned values are compared as unsigned, so values above the range never wrap into it.
+inline bool fence_integer(const Json &value, std::int64_t minimum, std::int64_t maximum) {
+    return value.is_number_integer() &&
+           (value.is_number_unsigned()
+                    ? value.get<std::uint64_t>() <= static_cast<std::uint64_t>(maximum) &&
+                              static_cast<std::int64_t>(value.get<std::uint64_t>()) >= minimum
+                    : value.get<std::int64_t>() >= minimum && value.get<std::int64_t>() <= maximum);
+}
+
+inline bool fence_int(const Json &value) {
+    return fence_integer(value, std::numeric_limits<int>::min(), std::numeric_limits<int>::max());
+}
+
 // Only numeric public window geometry is projected; arbitrary observer/request strings never
 // escape.
 inline Json fence_window(const Json &window) {
     Json result = Json::object();
-    auto integer = [](const Json &value) {
-        return value.is_number_integer() &&
-               (value.is_number_unsigned() ? value.get<std::uint64_t>() <= 2147483647ULL
-                                           : (value.get<std::int64_t>() >= -2147483648LL &&
-                                              value.get<std::int64_t>() <= 2147483647LL));
-    };
 
     if (!window.is_object()) {
         return result;
     }
 
     for (const char *key : {"id", "type", "layer"}) {
-        if (window.contains(key) && integer(window.at(key))) {
+        if (window.contains(key) && fence_int(window.at(key))) {
             result[key] = window.at(key);
         }
     }
@@ -38,7 +47,7 @@ inline Json fence_window(const Json &window) {
         bool valid = true;
 
         for (const char *key : {"x", "y", "width", "height"}) {
-            if (!bounds.contains(key) || !integer(bounds.at(key))) {
+            if (!bounds.contains(key) || !fence_int(bounds.at(key))) {
                 valid = false;
             }
         }
@@ -444,6 +453,12 @@ inline Json fenced_point(const Json &request, const Json &observation,
         blocked();
     }
 
+    for (const char *key : {"x", "y", "width", "height"}) {
+        if (!bounds.contains(key) || !fence_integer(bounds.at(key), 0, 3840)) {
+            blocked();
+        }
+    }
+
     const auto x = bounds.at("x").get<int>(), y = bounds.at("y").get<int>(),
                width = bounds.at("width").get<int>(), height = bounds.at("height").get<int>();
 
@@ -460,9 +475,7 @@ inline Json fenced_point(const Json &request, const Json &observation,
         }
 
         for (const char *key : {"x", "y", "width", "height"}) {
-            if (!rectangle.contains(key) || !rectangle.at(key).is_number_integer() ||
-                rectangle.at(key).get<std::int64_t>() < 0 ||
-                rectangle.at(key).get<std::int64_t>() > 3840) {
+            if (!rectangle.contains(key) || !fence_integer(rectangle.at(key), 0, 3840)) {
                 blocked();
             }
         }
@@ -479,8 +492,8 @@ inline Json fenced_point(const Json &request, const Json &observation,
     int px = x + width / 2, py = y + height / 2;
 
     if (request.contains("x") || request.contains("y")) {
-        if (!request.contains("x") || !request.contains("y") ||
-            !request.at("x").is_number_integer() || !request.at("y").is_number_integer()) {
+        if (!request.contains("x") || !request.contains("y") || !fence_int(request.at("x")) ||
+            !fence_int(request.at("y"))) {
             argument();
         }
 
@@ -503,8 +516,16 @@ inline Json fenced_point(const Json &request, const Json &observation,
             }
 
             const auto &b = other.at("bounds");
-            const auto left = b.at("x").get<int>(), top = b.at("y").get<int>(),
-                       w = b.at("width").get<int>(), h = b.at("height").get<int>();
+
+            for (const char *key : {"x", "y", "width", "height"}) {
+                if (!b.contains(key) || !fence_int(b.at(key))) {
+                    blocked();
+                }
+            }
+
+            const auto left = b.at("x").get<std::int64_t>(), top = b.at("y").get<std::int64_t>(),
+                       w = b.at("width").get<std::int64_t>(),
+                       h = b.at("height").get<std::int64_t>();
 
             if (px < left || py < top || px >= left + w || py >= top + h) {
                 continue;

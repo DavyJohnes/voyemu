@@ -1,5 +1,6 @@
 #include "input_fence.hpp"
 #include <cassert>
+#include <cstdint>
 #include <exception>
 #include <fstream>
 #include <iostream>
@@ -113,6 +114,19 @@ int main() try {
         assert(fenced_point(r, observation)["x"] == 11);
         r["x"] = 110;
         rejects(r, observation);
+        r["x"] = 4294967396ULL;
+        rejects(r, observation);
+        r["x"] = std::int64_t{4294967306};
+        rejects(r, observation);
+        r["x"] = Json::parse("18446744073709551615");
+        rejects(r, observation);
+    }
+    {
+        auto r = request;
+        auto o = observation;
+        r["expected"]["target"]["clipped_bounds"]["x"] = 4294967306ULL;
+        o["screens"][0]["nodes"][0]["clipped_bounds"]["x"] = 4294967306ULL;
+        rejects(r, o);
     }
     {
         auto o = observation;
