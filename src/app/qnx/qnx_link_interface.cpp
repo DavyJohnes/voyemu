@@ -1,6 +1,7 @@
 #include "qnx_link_interface.hpp"
 #include "check.hpp"
 #include "error.hpp"
+#include "little_endian.hpp"
 #include <algorithm>
 #include <array>
 #include <cstdint>
@@ -13,14 +14,7 @@ namespace {
 constexpr CodeCheck need{"invalid QNX link interface"};
 
 std::uint64_t field(std::string_view bytes, std::uint64_t at, unsigned width) {
-    need(at <= bytes.size() && width <= 8 && width <= bytes.size() - at, "QNX_LINK_ELF_BOUNDS");
-    std::uint64_t value = 0;
-
-    for (unsigned i = 0; i < width; ++i) {
-        value |= std::uint64_t(static_cast<unsigned char>(bytes[at + i])) << (i * 8);
-    }
-
-    return value;
+    return le_read(bytes, at, width, need, "QNX_LINK_ELF_BOUNDS");
 }
 
 void aarch64_elf(std::string_view bytes) {

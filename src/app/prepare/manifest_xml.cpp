@@ -1,6 +1,7 @@
 #include "manifest_xml.hpp"
 #include "check.hpp"
 #include "error.hpp"
+#include "little_endian.hpp"
 #include <algorithm>
 #include <cstdint>
 #include <set>
@@ -13,37 +14,19 @@ constexpr std::size_t maximum = 32 * 1024 * 1024;
 constexpr Check require{"MANIFEST_XML_INVALID"};
 
 std::uint16_t u16(std::string_view data, std::size_t at) {
-    require(at <= data.size() && data.size() - at >= 2, "uint16 extent");
-
-    return static_cast<unsigned char>(data[at]) |
-           (std::uint16_t(static_cast<unsigned char>(data[at + 1])) << 8);
+    return std::uint16_t(le_read(data, at, 2, require, "uint16 extent"));
 }
 
 std::uint32_t u32(std::string_view data, std::size_t at) {
-    require(at <= data.size() && data.size() - at >= 4, "uint32 extent");
-    std::uint32_t value = 0;
-
-    for (unsigned i = 0; i < 4; ++i) {
-        value |= std::uint32_t(static_cast<unsigned char>(data[at + i])) << (i * 8);
-    }
-
-    return value;
+    return std::uint32_t(le_read(data, at, 4, require, "uint32 extent"));
 }
 
 void w16(std::string &data, std::size_t at, std::uint16_t value) {
-    require(at <= data.size() && data.size() - at >= 2, "write uint16 extent");
-
-    for (unsigned i = 0; i < 2; ++i) {
-        data[at + i] = static_cast<char>(value >> (i * 8));
-    }
+    le_write(data, at, value, 2, require, "write uint16 extent");
 }
 
 void w32(std::string &data, std::size_t at, std::uint32_t value) {
-    require(at <= data.size() && data.size() - at >= 4, "write uint32 extent");
-
-    for (unsigned i = 0; i < 4; ++i) {
-        data[at + i] = static_cast<char>(value >> (i * 8));
-    }
+    le_write(data, at, value, 4, require, "write uint32 extent");
 }
 
 std::u16string ascii(std::string_view value) {

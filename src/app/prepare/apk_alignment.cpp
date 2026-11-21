@@ -1,5 +1,6 @@
 #include "apk_alignment.hpp"
 #include "check.hpp"
+#include "little_endian.hpp"
 #include "model.hpp"
 #include "os/fs.hpp"
 #include "os/process.hpp"
@@ -31,17 +32,18 @@ namespace {
     throw VoyemuError("APK_ALIGNMENT", "invalid classic ZIP or unaligned stored payload");
 }
 
-unsigned u16(std::string_view bytes, std::size_t at) {
-    if (at > bytes.size() || bytes.size() - at < 2) {
+void valid(bool condition, const char *) {
+    if (!condition) {
         invalid();
     }
+}
 
-    return static_cast<unsigned char>(bytes[at]) |
-           unsigned(static_cast<unsigned char>(bytes[at + 1])) << 8;
+unsigned u16(std::string_view bytes, std::size_t at) {
+    return unsigned(le_read(bytes, at, 2, valid, nullptr));
 }
 
 std::uint64_t u32(std::string_view bytes, std::size_t at) {
-    return u16(bytes, at) | std::uint64_t(u16(bytes, at + 2)) << 16;
+    return le_read(bytes, at, 4, valid, nullptr);
 }
 } // namespace
 

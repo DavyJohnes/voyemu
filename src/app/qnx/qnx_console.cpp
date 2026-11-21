@@ -1,6 +1,7 @@
 #include "qnx_console.hpp"
 #include "check.hpp"
 #include "error.hpp"
+#include "little_endian.hpp"
 #include "model.hpp"
 #include "process.hpp"
 #include <array>
@@ -11,22 +12,11 @@ namespace {
 constexpr CodeCheck need{"QNX console check failed"};
 
 std::uint64_t field(std::string_view b, std::size_t at, unsigned n = 4) {
-    need(n <= 8 && at + n <= b.size(), "QNX_CONSOLE_BOUNDS");
-    std::uint64_t v = 0;
-
-    for (unsigned i = 0; i < n; ++i) {
-        v |= std::uint64_t(static_cast<unsigned char>(b[at + i])) << (i * 8);
-    }
-
-    return v;
+    return le_read(b, at, n, need, "QNX_CONSOLE_BOUNDS");
 }
 
 void put(std::string &b, std::size_t at, std::uint64_t v, unsigned n = 4) {
-    need(at + n <= b.size(), "QNX_CONSOLE_BOUNDS");
-
-    for (unsigned i = 0; i < n; ++i) {
-        b[at + i] = static_cast<char>(v >> (i * 8));
-    }
+    le_write(b, at, v, n, need, "QNX_CONSOLE_BOUNDS");
 }
 } // namespace
 

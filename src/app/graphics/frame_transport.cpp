@@ -1,5 +1,7 @@
 #include "frame_transport.hpp"
+#include "check.hpp"
 #include "error.hpp"
+#include "little_endian.hpp"
 #include <array>
 #include <atomic>
 #include <cstring>
@@ -244,19 +246,11 @@ struct Mapping {
 };
 
 std::uint32_t u32(std::span<const std::byte> b, std::size_t at) {
-    if (at + 4 > b.size()) {
-        throw VoyemuError("FRAME_TRANSPORT", "Screen header extent");
-    }
-
-    const auto *p = reinterpret_cast<const unsigned char *>(b.data() + at);
-
-    return std::uint32_t(p[0]) | std::uint32_t(p[1]) << 8 | std::uint32_t(p[2]) << 16 |
-           std::uint32_t(p[3]) << 24;
+    return std::uint32_t(le_read(b, at, 4, Check{"FRAME_TRANSPORT"}, "Screen header extent"));
 }
 
 std::uint16_t u16(std::span<const std::byte> b, std::size_t at) {
-    return std::uint16_t(std::to_integer<unsigned char>(b[at]) |
-                         std::to_integer<unsigned char>(b[at + 1]) << 8);
+    return std::uint16_t(le_read(b, at, 2, Check{"FRAME_TRANSPORT"}, "Screen header extent"));
 }
 } // namespace
 struct Writer::Impl {

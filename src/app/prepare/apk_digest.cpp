@@ -1,6 +1,7 @@
 #include "apk_digest.hpp"
 #include "apk_alignment.hpp"
 #include "error.hpp"
+#include "little_endian.hpp"
 #include "process.hpp"
 #include <algorithm>
 #include <fstream>
@@ -12,16 +13,18 @@ namespace {
     throw VoyemuError("APK_DIGEST", "bounded unsigned APK required");
 }
 
-unsigned u16(std::string_view s, std::size_t p) {
-    if (p > s.size() || s.size() - p < 2) {
+void valid(bool condition, const char *) {
+    if (!condition) {
         invalid();
     }
+}
 
-    return static_cast<unsigned char>(s[p]) | unsigned(static_cast<unsigned char>(s[p + 1])) << 8;
+unsigned u16(std::string_view s, std::size_t p) {
+    return unsigned(le_read(s, p, 2, valid, nullptr));
 }
 
 std::uint64_t u32(std::string_view s, std::size_t p) {
-    return u16(s, p) | std::uint64_t(u16(s, p + 2)) << 16;
+    return le_read(s, p, 4, valid, nullptr);
 }
 
 std::string le32(unsigned value) {

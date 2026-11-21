@@ -1,6 +1,7 @@
 #include "qnx_host_adapt.hpp"
 #include "check.hpp"
 #include "error.hpp"
+#include "little_endian.hpp"
 #include "process.hpp"
 #include <array>
 #include <cstdint>
@@ -13,22 +14,11 @@ using namespace std::string_view_literals;
 constexpr CodeCheck need{"QNX host adaptation check failed"};
 
 std::uint64_t field(std::string_view bytes, std::size_t at, unsigned width) {
-    need(at + width <= bytes.size() && width <= 8, "QNX_HOST_BOUNDS");
-    std::uint64_t value = 0;
-
-    for (unsigned i = 0; i < width; ++i) {
-        value |= std::uint64_t(static_cast<unsigned char>(bytes[at + i])) << (i * 8);
-    }
-
-    return value;
+    return le_read(bytes, at, width, need, "QNX_HOST_BOUNDS");
 }
 
 void put(std::string &bytes, std::size_t at, std::uint64_t value, unsigned width) {
-    need(at + width <= bytes.size(), "QNX_HOST_BOUNDS");
-
-    for (unsigned i = 0; i < width; ++i) {
-        bytes[at + i] = static_cast<char>(value >> (i * 8));
-    }
+    le_write(bytes, at, value, width, need, "QNX_HOST_BOUNDS");
 }
 
 void replace(std::string &bytes, std::string_view before, std::string_view after, unsigned expected,

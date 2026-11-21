@@ -1,6 +1,7 @@
 #pragma once
 #include "check.hpp"
 #include "graphics.hpp"
+#include "little_endian.hpp"
 #include <cstring>
 
 namespace voyemu::graphics::detail {
@@ -8,19 +9,11 @@ inline constexpr std::size_t max_blob = 64 * 1024 * 1024;
 inline constexpr Check need{"GRAPHICS"};
 
 inline std::uint32_t u32(std::span<const std::byte> data, std::size_t at) {
-    need(at <= data.size() && data.size() - at >= 4, "Protocol u32 extent");
-    std::uint32_t value;
-    std::memcpy(&value, data.data() + at, 4);
-
-    return value;
+    return std::uint32_t(le_read(data, at, 4, need, "Protocol u32 extent"));
 }
 
 inline std::uint64_t u64(std::span<const std::byte> data, std::size_t at) {
-    need(at <= data.size() && data.size() - at >= 8, "Protocol u64 extent");
-    std::uint64_t value;
-    std::memcpy(&value, data.data() + at, 8);
-
-    return value;
+    return le_read(data, at, 8, need, "Protocol u64 extent");
 }
 
 struct CommandSpec {

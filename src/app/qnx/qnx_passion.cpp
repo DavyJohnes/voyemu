@@ -1,6 +1,7 @@
 #include "qnx_passion.hpp"
 #include "check.hpp"
 #include "error.hpp"
+#include "little_endian.hpp"
 #include "process.hpp"
 #include "qnx_guest_shell.hpp"
 #include "qnx_imagefs.hpp"
@@ -18,22 +19,11 @@ constexpr std::string_view original_sha =
 constexpr CodeCheck need{"Passion QNX input differs"};
 
 std::uint64_t field(std::string_view bytes, std::size_t at, unsigned width) {
-    need(at + width <= bytes.size() && width <= 8, "QNX_PASSION_FIELD");
-    std::uint64_t value = 0;
-
-    for (unsigned i = 0; i < width; ++i) {
-        value |= std::uint64_t(static_cast<unsigned char>(bytes[at + i])) << (8 * i);
-    }
-
-    return value;
+    return le_read(bytes, at, width, need, "QNX_PASSION_FIELD");
 }
 
 void put(std::string &bytes, std::size_t at, std::uint64_t value, unsigned width) {
-    need(at + width <= bytes.size(), "QNX_PASSION_FIELD");
-
-    for (unsigned i = 0; i < width; ++i) {
-        bytes[at + i] = static_cast<char>(value >> (8 * i));
-    }
+    le_write(bytes, at, value, width, need, "QNX_PASSION_FIELD");
 }
 
 void original_layout(std::string_view bytes) {
