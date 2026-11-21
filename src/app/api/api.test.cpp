@@ -3883,8 +3883,9 @@ int main(int argc, char **argv) try {
         lifecycle_transport.control = [&](const auto &, const Json &op, int timeout) {
             if (op.at("op") != "status") {
                 assert(op.at("op") == "cluster_power" || op.at("op") == "cluster_restart");
+                // The bound includes the guest sync of the host QNX engine, longer under TCG.
                 assert(op.at("ownership_id") == active_owner && op.at("expected_generation") == 1 &&
-                       timeout == 90000);
+                       timeout == request_timeout_limit_ms(op.at("op").get<std::string>()));
                 ++mutations;
             }
 
