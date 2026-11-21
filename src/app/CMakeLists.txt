@@ -17,6 +17,12 @@ foreach(lang C CXX OBJC OBJCXX)
     set(CMAKE_${lang}_FLAGS_RELEASE "-Os -DNDEBUG")
 endforeach()
 add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX,OBJC,OBJCXX>:-ffunction-sections;-fdata-sections>")
+# The C sources are the pinned SDL3, curl, nghttp2 and miniz, and no exception unwinds through them:
+# the callbacks they call are noexcept or catch. On Linux they carry no unwind tables; Windows x64
+# requires them and the Mach-O linker keeps its compact unwind.
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    add_compile_options("$<$<COMPILE_LANGUAGE:C>:-fno-asynchronous-unwind-tables;-fno-unwind-tables>")
+endif()
 set(voyemu_frame_path_sources graphics/frame_transport.cpp graphics/graphics.cpp graphics/graphics_main.cpp
     graphics/graphics_protocol.cpp graphics/graphics_ram.cpp os/graphics_ram_posix.cpp os/graphics_ram_windows.cpp
     runtime/media_wire.cpp runtime/media_rpc.cpp platform/media_view.cpp platform/window_image.cpp
