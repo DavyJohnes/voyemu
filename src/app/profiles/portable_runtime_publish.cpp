@@ -5,6 +5,68 @@
 namespace voyemu {
 using namespace portable_detail;
 
+namespace {
+// Same OS exclusion as CLI OperationLock, independent of API library dependencies: an exclusive
+// lock on an owned single-link regular file; refusal names the operation which needs the profile
+// stopped.
+class StoppedProfileLock {
+public:
+#ifdef _WIN32
+    StoppedProfileLock(const std::filesystem::path &path, const char *refusal) {
+        file_ = voyemu::detail::open_private_state_lock(
+                path, GENERIC_READ | GENERIC_WRITE, OPEN_ALWAYS,
+                FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OPEN_REPARSE_POINT);
+
+        if (file_ == INVALID_HANDLE_VALUE) {
+            const auto error = GetLastError();
+            throw VoyemuError("SESSION_LOCK",
+                              std::string(refusal) + "; win32=" + std::to_string(error));
+        }
+
+        BY_HANDLE_FILE_INFORMATION info{};
+
+        if (!GetFileInformationByHandle(file_, &info) ||
+            (info.dwFileAttributes & (FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_REPARSE_POINT)) ||
+            info.nNumberOfLinks != 1) {
+            CloseHandle(file_);
+            throw VoyemuError("SESSION_LOCK", refusal);
+        }
+    }
+
+    ~StoppedProfileLock() {
+        CloseHandle(file_);
+    }
+#else
+    StoppedProfileLock(const std::filesystem::path &path, const char *refusal) {
+        file_ = ::open(path.c_str(), O_CREAT | O_RDWR | O_CLOEXEC | O_NOFOLLOW, 0600);
+        struct stat info{};
+
+        if (file_ < 0 || ::fstat(file_, &info) || !S_ISREG(info.st_mode) ||
+            info.st_uid != ::geteuid() || info.st_nlink != 1 || ::flock(file_, LOCK_EX | LOCK_NB)) {
+            if (file_ >= 0) {
+                ::close(file_);
+            }
+
+            throw VoyemuError("SESSION_LOCK", refusal);
+        }
+    }
+
+    ~StoppedProfileLock() {
+        ::close(file_);
+    }
+#endif
+    StoppedProfileLock(const StoppedProfileLock &) = delete;
+    StoppedProfileLock &operator=(const StoppedProfileLock &) = delete;
+
+private:
+#ifdef _WIN32
+    HANDLE file_ = INVALID_HANDLE_VALUE;
+#else
+    int file_ = -1;
+#endif
+};
+} // namespace
+
 Json refresh_machine_ui_observer(const std::filesystem::path &root, std::string_view profile,
                                  const MachineIdentity &machine, const std::filesystem::path &seed,
                                  const std::function<Json()> &prepare, bool refresh_configuration) {
@@ -16,65 +78,11 @@ Json refresh_machine_ui_observer(const std::filesystem::path &root, std::string_
          "exact observer profile and named machine required");
     ordinary(root);
     ordinary(seed);
-    // Same OS exclusion as CLI OperationLock, independent of API library dependencies.
-    struct Lock {
-#ifdef _WIN32
-        HANDLE file = INVALID_HANDLE_VALUE;
-
-        explicit Lock(const std::filesystem::path &path) {
-            file = voyemu::detail::open_private_state_lock(
-                    path, GENERIC_READ | GENERIC_WRITE, OPEN_ALWAYS,
-                    FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OPEN_REPARSE_POINT);
-
-            if (file == INVALID_HANDLE_VALUE) {
-                const auto error = GetLastError();
-                throw VoyemuError("SESSION_LOCK",
-                                  "observer refresh requires stopped profile; win32=" +
-                                          std::to_string(error));
-            }
-
-            BY_HANDLE_FILE_INFORMATION info{};
-
-            if (!GetFileInformationByHandle(file, &info) ||
-                (info.dwFileAttributes &
-                 (FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_REPARSE_POINT)) ||
-                info.nNumberOfLinks != 1) {
-                CloseHandle(file);
-                throw VoyemuError("SESSION_LOCK", "observer refresh requires stopped profile");
-            }
-        }
-
-        ~Lock() {
-            CloseHandle(file);
-        }
-#else
-        int file = -1;
-
-        explicit Lock(const std::filesystem::path &path) {
-            file = ::open(path.c_str(), O_CREAT | O_RDWR | O_CLOEXEC | O_NOFOLLOW, 0600);
-            struct stat info{};
-
-            if (file < 0 || ::fstat(file, &info) || !S_ISREG(info.st_mode) ||
-                info.st_uid != ::geteuid() || info.st_nlink != 1 ||
-                ::flock(file, LOCK_EX | LOCK_NB)) {
-                if (file >= 0) {
-                    ::close(file);
-                }
-
-                throw VoyemuError("SESSION_LOCK", "observer refresh requires stopped profile");
-            }
-        }
-
-        ~Lock() {
-            ::close(file);
-        }
-#endif
-        Lock(const Lock &) = delete;
-    };
+    const char *const refusal = "observer refresh requires stopped profile";
     const auto active = native_current_active_directory(root, profile, machine);
     ensure_private_directory(active);
-    Lock launch_lock(active / (std::string(profile) + ".launch.lock")),
-            supervisor_lock(active / (std::string(profile) + ".supervisor.lock"));
+    StoppedProfileLock launch_lock(active / (std::string(profile) + ".launch.lock"), refusal),
+            supervisor_lock(active / (std::string(profile) + ".supervisor.lock"), refusal);
 
     const auto stopped = [&] {
         const auto file = active / (std::string(profile) + ".json");
@@ -360,59 +368,11 @@ Json publish_machine_android_system(const std::filesystem::path &root, std::stri
     ordinary(root);
     const auto seed = seed_directory(root, profile, machine);
     ordinary(seed);
-    struct Lock {
-#ifdef _WIN32
-        HANDLE file = INVALID_HANDLE_VALUE;
-
-        explicit Lock(const std::filesystem::path &path) {
-            file = voyemu::detail::open_private_state_lock(
-                    path, GENERIC_READ | GENERIC_WRITE, OPEN_ALWAYS,
-                    FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OPEN_REPARSE_POINT);
-            BY_HANDLE_FILE_INFORMATION info{};
-
-            if (file == INVALID_HANDLE_VALUE || !GetFileInformationByHandle(file, &info) ||
-                (info.dwFileAttributes &
-                 (FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_REPARSE_POINT)) ||
-                info.nNumberOfLinks != 1) {
-                if (file != INVALID_HANDLE_VALUE) {
-                    CloseHandle(file);
-                }
-
-                throw VoyemuError("SESSION_LOCK", "system upgrade requires stopped profile");
-            }
-        }
-
-        ~Lock() {
-            CloseHandle(file);
-        }
-#else
-        int file = -1;
-
-        explicit Lock(const std::filesystem::path &path) {
-            file = ::open(path.c_str(), O_CREAT | O_RDWR | O_CLOEXEC | O_NOFOLLOW, 0600);
-            struct stat info{};
-
-            if (file < 0 || ::fstat(file, &info) || !S_ISREG(info.st_mode) ||
-                info.st_uid != ::geteuid() || info.st_nlink != 1 ||
-                ::flock(file, LOCK_EX | LOCK_NB)) {
-                if (file >= 0) {
-                    ::close(file);
-                }
-
-                throw VoyemuError("SESSION_LOCK", "system upgrade requires stopped profile");
-            }
-        }
-
-        ~Lock() {
-            ::close(file);
-        }
-#endif
-        Lock(const Lock &) = delete;
-    };
+    const char *const refusal = "system upgrade requires stopped profile";
     const auto active = native_current_active_directory(root, profile, machine);
     ensure_private_directory(active);
-    Lock launch_lock(active / (std::string(profile) + ".launch.lock")),
-            supervisor_lock(active / (std::string(profile) + ".supervisor.lock"));
+    StoppedProfileLock launch_lock(active / (std::string(profile) + ".launch.lock"), refusal),
+            supervisor_lock(active / (std::string(profile) + ".supervisor.lock"), refusal);
 
     const auto stopped = [&] {
         const auto owner_file = active / (std::string(profile) + ".json");
@@ -970,62 +930,15 @@ static Json publish_machine_qnx_impl(const std::filesystem::path &root, std::str
     ordinary(seed);
     ordinary(source);
     inside(root / ".local", source);
-    struct Lock {
-#ifdef _WIN32
-        HANDLE file = INVALID_HANDLE_VALUE;
-
-        explicit Lock(const std::filesystem::path &path) {
-            file = voyemu::detail::open_private_state_lock(
-                    path, GENERIC_READ | GENERIC_WRITE, OPEN_ALWAYS,
-                    FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OPEN_REPARSE_POINT);
-            BY_HANDLE_FILE_INFORMATION info{};
-
-            if (file == INVALID_HANDLE_VALUE || !GetFileInformationByHandle(file, &info) ||
-                (info.dwFileAttributes &
-                 (FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_REPARSE_POINT)) ||
-                info.nNumberOfLinks != 1) {
-                if (file != INVALID_HANDLE_VALUE) {
-                    CloseHandle(file);
-                }
-
-                throw VoyemuError("SESSION_LOCK", "system upgrade requires stopped profile");
-            }
-        }
-
-        ~Lock() {
-            CloseHandle(file);
-        }
-#else
-        int file = -1;
-
-        explicit Lock(const std::filesystem::path &path) {
-            file = ::open(path.c_str(), O_CREAT | O_RDWR | O_CLOEXEC | O_NOFOLLOW, 0600);
-            struct stat info{};
-
-            if (file < 0 || ::fstat(file, &info) || !S_ISREG(info.st_mode) ||
-                info.st_uid != ::geteuid() || info.st_nlink != 1 ||
-                ::flock(file, LOCK_EX | LOCK_NB)) {
-                if (file >= 0) {
-                    ::close(file);
-                }
-
-                throw VoyemuError("SESSION_LOCK", "system upgrade requires stopped profile");
-            }
-        }
-
-        ~Lock() {
-            ::close(file);
-        }
-#endif
-        Lock(const Lock &) = delete;
-    };
+    const char *const refusal = "system upgrade requires stopped profile";
     const auto seed_locks = root / ".local/build/qnx-upgrades";
     ensure_private_directory(seed_locks);
-    Lock seed_lock(seed_locks / (sha256_bytes(seed.generic_string()) + ".lock"));
+    StoppedProfileLock seed_lock(seed_locks / (sha256_bytes(seed.generic_string()) + ".lock"),
+                                 refusal);
     const auto active = native_current_active_directory(root, profile, machine);
     ensure_private_directory(active);
-    Lock launch_lock(active / (std::string(profile) + ".launch.lock")),
-            supervisor_lock(active / (std::string(profile) + ".supervisor.lock"));
+    StoppedProfileLock launch_lock(active / (std::string(profile) + ".launch.lock"), refusal),
+            supervisor_lock(active / (std::string(profile) + ".supervisor.lock"), refusal);
 
     const auto stopped = [&] {
         const auto owner_file = active / (std::string(profile) + ".json");
