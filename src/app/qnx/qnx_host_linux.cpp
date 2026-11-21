@@ -380,7 +380,6 @@ Json install_qnx_host_linux(const std::filesystem::path &root, bool offline, std
                                        payload / "licenses" / (name + "-" + file));
         }
     }
-
     return host.publish(payload, engine);
 #endif
 }

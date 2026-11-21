@@ -408,6 +408,7 @@ int main() {
             check(item.path().filename().string().find(".pending-") == std::string::npos,
                   "rewrite leaves no staging files");
         }
+
         // Portable rewriter scenario: replace, remove, add and preserve entries; every result is
         // read back through the independent reader and the structural index.
         {

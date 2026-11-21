@@ -491,6 +491,7 @@ static void export_android_machine_parts(const std::filesystem::path &root,
                                          const MachineStage &machine,
                                          const std::string &profile_pin, Json &runtime) {
     const auto &stage = machine.stage;
+
     export_built_owned_package(root, profile, candidate, android, stage, runtime,
                                android_candidate_reserve_bytes(definition, profile), machine.final);
     export_can_model_receipt(definition, candidate, android, stage, runtime, std::string(profile),

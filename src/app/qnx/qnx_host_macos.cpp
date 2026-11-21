@@ -191,6 +191,7 @@ Json install_qnx_host_macos(const std::filesystem::path &root, bool offline, std
     }
 
     std::filesystem::copy_file(sources / "COPYING.LIB", payload / "licenses/LGPL-2.1.txt");
+
     return host.publish(payload, executable);
 #endif
 }

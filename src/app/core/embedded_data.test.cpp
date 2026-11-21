@@ -29,6 +29,7 @@ std::vector<unsigned char> deflate(const std::string &bytes) {
     std::size_t length = 0;
     auto *stream = static_cast<unsigned char *>(tdefl_compress_mem_to_heap(
             bytes.data(), bytes.size(), &length, TDEFL_DEFAULT_MAX_PROBES));
+
     check(stream != nullptr, "fixture deflate");
     std::vector<unsigned char> result(stream, stream + length);
     mz_free(stream);

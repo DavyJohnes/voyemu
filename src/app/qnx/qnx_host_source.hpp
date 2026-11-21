@@ -124,6 +124,7 @@ public:
                     const std::filesystem::path &cwd, int timeout) {
         constexpr Check require{"QNX_HOST"};
         ProcessSpec spec;
+
         spec.executable = program;
         spec.arguments = std::move(args);
         spec.directory = cwd;
