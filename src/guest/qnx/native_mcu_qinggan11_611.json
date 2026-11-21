@@ -4,7 +4,7 @@
   "map_sha256": "255335b86bb5fd782d23086018dcfc3874d088364ad5f15b264cfb12020d800e",
   "packet_bytes": 650,
   "wire_fields": 736,
-  "projected_fields": 211,
+  "projected_fields": 218,
   "source_parser_sha256": "a830d876d9091190096025f4f4eb81294078b3002d955283b3a9dec296414f05",
   "source_engine_sha256": "faeb580b46c5c92d7ecd5b707be15b85874c838471f5cb9ca010b9a90e9ae195",
   "fields": [
@@ -350,37 +350,97 @@
       "position": 23,
       "name": "acu_driverSeatBeltSts",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 24,
+        "start_bit": 35,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_lightitems_struct",
+        "case_address": "0x502c",
+        "output_bit": 36,
+        "output_width": 2
+      }
     },
     {
       "position": 24,
       "name": "acu_passengerSeatBeltSts",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 25,
+        "start_bit": 37,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_lightitems_struct",
+        "case_address": "0x501c",
+        "output_bit": 38,
+        "output_width": 2
+      }
     },
     {
       "position": 25,
       "name": "RearLeftSeatBelt",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 26,
+        "start_bit": 39,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_lightitems_struct",
+        "case_address": "0x500c",
+        "output_bit": 40,
+        "output_width": 2
+      }
     },
     {
       "position": 26,
       "name": "RearMidSeatBelt",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 27,
+        "start_bit": 41,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_lightitems_struct",
+        "case_address": "0x4ffc",
+        "output_bit": 42,
+        "output_width": 2
+      }
     },
     {
       "position": 27,
       "name": "RearRightSeatBelt",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 28,
+        "start_bit": 43,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_lightitems_struct",
+        "case_address": "0x4fec",
+        "output_bit": 44,
+        "output_width": 2
+      }
     },
     {
       "position": 28,
       "name": "acu_warning",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 29,
+        "start_bit": 45,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_lightitems_struct",
+        "case_address": "0x4fdc",
+        "output_bit": 46,
+        "output_width": 2
+      }
     },
     {
       "position": 29,
@@ -4348,7 +4408,17 @@
       "position": 390,
       "name": "SeatBeltLamp",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 392,
+        "start_bit": 1546,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_lightitems_struct",
+        "case_address": "0x477c",
+        "output_bit": 371,
+        "output_width": 2
+      }
     },
     {
       "position": 391,
