@@ -94,9 +94,8 @@ public:
         launch_sha_ = sha256_file(scoped_ / "android-launch.json");
         const bool configured = activation_.value("kind", std::string{}) == "runtime-configuration";
         const auto processes = supervisor_.value("android_processes", Json::object());
-        const auto transport = launch_.value("adb_transport", std::string{});
-        require(transport.empty() || transport == "direct", "unknown Android transport");
-        const bool direct = processes.contains("adbd_port") || transport == "direct";
+        require(launch_.value("adb_transport", std::string{}) == "direct",
+                "direct Android transport required");
         require(activation_.at("profile") == profile, "activation profile differs");
 
         if (!configured) {
@@ -146,12 +145,6 @@ public:
             require(std::filesystem::equivalent(path(launch_, "executable"),
                                                 android_sdk_program(sdk, true)),
                     "configured SDK paths differ");
-
-            if (!direct) {
-                require(std::filesystem::equivalent(path(launch_, "adb"),
-                                                    sdk / "platform-tools/adb.exe"),
-                        "legacy configured ADB path differs");
-            }
         } else {
             const auto runtime_parent = root / ".local/machines" / machine.name / "portable";
             const auto runtime_root = runtime_parent / ("portable-" + manifest_sha);
@@ -176,10 +169,6 @@ public:
                 "bounded SDK ports required");
         ports_ = {console, console + 1, grpc};
 
-        if (!direct) {
-            ports_.push_back(android_owned_adb(console, grpc, id).server);
-        }
-
         require(std::set<unsigned>(ports_.begin(), ports_.end()).size() == ports_.size(),
                 "distinct owned ports required");
         pids_.insert(pid(supervisor_, "creator_pid", true));
@@ -203,16 +192,9 @@ public:
             require(processes.at("console_port") == console && processes.at("grpc_port") == grpc,
                     "process ports differ");
 
-            if (direct) {
-                require(processes.at("adbd_port") == console + 1 &&
-                                !processes.contains("adb_pid") &&
-                                !processes.contains("adb_server_port"),
-                        "direct adbd receipt differs");
-            } else {
-                require(processes.at("adb_server_port") == ports_.back(),
-                        "legacy adb server port differs");
-                pids_.insert(pid(processes, "adb_pid", false));
-            }
+            require(processes.at("adbd_port") == console + 1 && !processes.contains("adb_pid") &&
+                            !processes.contains("adb_server_port"),
+                    "direct adbd receipt differs");
 
             for (const auto *key : {"sdk_pid", "frontend_pid"}) {
                 pids_.insert(pid(processes, key, false));
@@ -226,10 +208,6 @@ public:
         const auto backend = android_sdk_program(path(launch_, "android_sdk_root"), true);
         std::vector<std::filesystem::path> images{path(launch_, "executable"), backend,
                                                   frontend_image_};
-
-        if (!direct) {
-            images.push_back(path(launch_, "adb"));
-        }
 
         for (const auto &file : images) {
             const auto relative = file.lexically_relative(root);

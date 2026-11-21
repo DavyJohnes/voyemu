@@ -3577,24 +3577,6 @@ int main(int argc, char **argv) {
                 check(entry.at("path") != adb.string(), "ready configuration pins SDK adb");
             }
 
-            auto legacy = adb_launch;
-            legacy.erase("adb_transport");
-            legacy["adb"] = adb.string();
-            legacy["pins"].push_back({{"path", adb.string()}, {"sha256", std::string(64, '0')}});
-            write_private_json(adb_launch_file, legacy);
-            const auto legacy_id = cache_file_identity(adb_launch_file);
-            const auto activation_id = cache_file_identity(adb_cache / "activation.json");
-            check(bind_machine_configuration(app, profile, adb_cache_machine, external, program,
-                                             true, false) == adb_cache &&
-                          cache_file_identity(adb_launch_file) == legacy_id &&
-                          cache_file_identity(adb_cache / "activation.json") == activation_id,
-                  "legacy configuration required absent SDK adb or was republished");
-
-            for (const auto &[name, identity] : original_ids) {
-                check(cache_file_identity(external / "android" / name) == identity,
-                      "legacy binding changed guest image identity");
-            }
-
             write_private_json(qnx_host_bindings_path(app), {{"android_port", 5578}});
             const auto override_cache = bind_machine_configuration(
                     app, profile, machine_identity(profile, "explicit-port"), external, program,
@@ -3915,10 +3897,7 @@ int main(int argc, char **argv) {
                     auto foreign = original_activation;
                     foreign["machine"] = profile;
                     foreign["seed"] = foreign_path(canonical);
-                    auto foreign_android = original_android;
-                    foreign_android["adb"] =
-                            foreign_path(sdk / "platform-tools" / ("adb" + tool_suffix));
-                    write_private_json(android_path, foreign_android);
+                    const auto foreign_android = original_android;
                     const auto unrelated = fixture / "unrelated" / "machines" / profile;
                     ensure_private_directory(unrelated);
                     auto wrong = foreign;

@@ -37,26 +37,20 @@ int main(int argc, char **argv) try {
 
         assert(failed);
     };
-    auto legacy = launch;
-    legacy["android_sdk_root"] = root.string();
-#ifdef _WIN32
-    const auto adb = root / "platform-tools" / "adb.exe";
-#else
-    const auto adb = root / "platform-tools" / "adb";
-#endif
-    const auto adb_pin = Json{{"path", adb.string()}, {"sha256", std::string(64, 'b')}};
-    legacy["adb"] = adb.string();
-    legacy["pins"].push_back(adb_pin);
-    reject(legacy);
-    auto ready = legacy;
+    auto ready = launch;
     normalize_ready_android_adb(ready);
     audit_launch_pins(ready);
-    assert(ready.at("adb_transport") == "direct" && !ready.contains("adb") &&
-           ready.at("pins") == launch.at("pins"));
-    auto unrelated = legacy;
-    unrelated["adb"] = (root / "foreign-adb").string();
-    normalize_ready_android_adb(unrelated);
-    reject(unrelated);
+    assert(ready.at("adb_transport") == "direct" && ready.at("pins") == launch.at("pins"));
+    auto sdk_adb = launch;
+    sdk_adb["adb"] = (root / "platform-tools" / "adb").string();
+    bool sdk_adb_rejected = false;
+    try {
+        normalize_ready_android_adb(sdk_adb);
+    } catch (const std::exception &error) {
+        sdk_adb_rejected = std::string(error.what()).starts_with("LAUNCH_SCHEMA:");
+    }
+
+    assert(sdk_adb_rejected);
     std::ofstream(asset) << "changed";
     reject(ready);
     reject(launch);

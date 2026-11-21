@@ -334,28 +334,10 @@ int main() try {
     auto boot = random_token();
     cache.commit(boot);
     assert(cache.inspect().resume && cache.inspect().boot_nonce == boot);
-    const auto checkpoint_path = machine / "voyemu-quickboot.json";
-    const auto direct_checkpoint = read_private_json(checkpoint_path, 32768);
-    auto legacy_checkpoint = direct_checkpoint;
-    auto &legacy_launch = legacy_checkpoint["key"]["prepared"];
-    const auto adb_path = root / "sdk" / "platform-tools" /
-#ifdef _WIN32
-                          "adb.exe";
-#else
-                          "adb";
-#endif
-    legacy_launch["adb"] = adb_path.string();
-    legacy_launch["pins"].push_back(
-            {{"path", adb_path.string()}, {"sha256", std::string(64, 'a')}});
-    write_private_json(checkpoint_path, legacy_checkpoint);
     auto direct_launch = spec;
     direct_launch["adb_transport"] = "direct";
     AndroidQuickBoot direct_cache(machine, android_quickboot_key(direct_launch));
     assert(direct_cache.inspect().resume && direct_cache.runtime_checkpoint().boot_nonce == boot);
-    legacy_launch["pins"].back()["path"] = (root / "unrelated").string();
-    write_private_json(checkpoint_path, legacy_checkpoint);
-    assert(direct_cache.runtime_checkpoint().reason == "prepared_inputs_changed");
-    write_private_json(checkpoint_path, direct_checkpoint);
     const auto fresh_sid_checkpoint =
             AndroidQuickBoot(machine, android_quickboot_key(spec)).runtime_checkpoint();
     assert(fresh_sid_checkpoint.resume && fresh_sid_checkpoint.boot_nonce == boot);

@@ -1,7 +1,6 @@
 #include "quickboot.hpp"
 #include "android_audio_startup.hpp"
 #include "android_engine.hpp"
-#include "android_launch_adb.hpp"
 #include "android_system_binding.hpp"
 #include "check.hpp"
 #include "error.hpp"
@@ -180,11 +179,6 @@ Json cache_file_identity(const std::filesystem::path &path, std::uintmax_t expec
 static void normalize_checkpoint_prepared(Json &prepared) {
     prepared.erase("owned_adb");
     prepared.erase("frontend");
-
-    // The SDK ADB executable is a host tool and does not change the guest snapshot format.
-    if (legacy_android_sdk_adb(prepared)) {
-        normalize_ready_android_adb(prepared);
-    }
 
     if (prepared.value("adb_transport", std::string{}) == "direct") {
         prepared.erase("adb_transport");

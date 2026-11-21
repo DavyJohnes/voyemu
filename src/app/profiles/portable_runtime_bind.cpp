@@ -484,10 +484,6 @@ std::filesystem::path bind_machine_configuration(const std::filesystem::path &ro
             return false;
         }
 
-        if (launch.contains("adb") && !legacy_android_sdk_adb(launch)) {
-            return false;
-        }
-
         if (!development_kernel.is_null()) {
             if (launch.value("machine", std::string{}) != (seed / "android").string() ||
                 launch.value("base", std::string{}) != (seed / "android").string() ||

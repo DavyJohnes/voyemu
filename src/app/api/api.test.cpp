@@ -97,14 +97,11 @@ void owned_recovery_tests(const std::filesystem::path &base, const std::filesyst
         out << "fixture";
     };
     const auto sdk_root = root / "sdk", sdk = android_sdk_program(sdk_root, true),
-               adb = sdk_root / "platform-tools/adb.exe", frontend = root / "voyemu.exe",
-               wrapper = sdk_root / "emulator/emulator.exe";
+               frontend = root / "voyemu.exe", wrapper = sdk_root / "emulator/emulator.exe";
     put(sdk);
-    put(adb);
     put(frontend);
     put(wrapper);
     const unsigned port = 5626, grpc = 42626;
-    const auto binding = android_owned_adb(port, grpc, id);
     const auto endpoint = "\\\\.\\pipe\\voyemu-" + id;
     const Json selection{{"schema", 1},
                          {"session_id", id},
@@ -127,12 +124,11 @@ void owned_recovery_tests(const std::filesystem::path &base, const std::filesyst
             {"base", (runtime_root / "android-machine/base").string()},
             {"android_sdk_root", sdk_root.string()},
             {"pins", Json::array({{{"path", sdk.string()}, {"sha256", sha256_file(sdk)}},
-                                  {{"path", adb.string()}, {"sha256", sha256_file(adb)}},
                                   {{"path", wrapper.string()}, {"sha256", sha256_file(wrapper)}}})},
             {"port", port},
             {"sdk_control", {{"grpc_port", grpc}}},
             {"executable", wrapper.string()},
-            {"adb", adb.string()},
+            {"adb_transport", "direct"},
             {"frontend", {{"executable", frontend.string()}}}};
     const Json runtime{{"schema", 1},
                        {"session_id", id},
@@ -221,7 +217,7 @@ void owned_recovery_tests(const std::filesystem::path &base, const std::filesyst
         if (family == AF_INET) {
             sockaddr_in address{};
             address.sin_family = AF_INET;
-            address.sin_port = htons(binding.server);
+            address.sin_port = htons(port);
             address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
             assert(bind(listener, reinterpret_cast<const sockaddr *>(&address), sizeof(address)) ==
                    0);
@@ -230,7 +226,7 @@ void owned_recovery_tests(const std::filesystem::path &base, const std::filesyst
                               reinterpret_cast<const char *>(&yes), sizeof(yes)) == 0);
             sockaddr_in6 address{};
             address.sin6_family = AF_INET6;
-            address.sin6_port = htons(binding.server);
+            address.sin6_port = htons(port);
             address.sin6_addr = in6addr_loopback;
             assert(bind(listener, reinterpret_cast<const sockaddr *>(&address), sizeof(address)) ==
                    0);
@@ -292,7 +288,7 @@ void owned_recovery_tests(const std::filesystem::path &base, const std::filesyst
     {
         api::StoppedAndroidLease lease(root, profile, machine_identity(profile, {}), id, ownership);
 
-        for (const auto value : {port, port + 1, grpc, binding.server}) {
+        for (const auto value : {port, port + 1, grpc}) {
             assert(!tcp_port_free(value));
         }
 
@@ -326,20 +322,12 @@ void owned_recovery_tests(const std::filesystem::path &base, const std::filesyst
                result.at("host_recovery").at("guest_shutdown_unverified") == true);
     }
 
-    for (const auto value : {port, port + 1, grpc, binding.server}) {
+    for (const auto value : {port, port + 1, grpc}) {
         assert(tcp_port_free(value));
     }
 
     {
-        // A direct supervisor owns the SDK listeners and no adb image or server port.
-        auto direct_launch = launch;
-        direct_launch.erase("adb");
-        direct_launch["adb_transport"] = "direct";
-        direct_launch["pins"].erase(1);
-        write_private_json(scoped / "android-launch.json", direct_launch);
-        auto direct_activation = activation;
-        direct_activation["android_launch_sha256"] = sha256_file(scoped / "android-launch.json");
-        write_private_json(scoped / "activation.json", direct_activation);
+        // A recorded process receipt names the adbd port and no adb server.
         auto direct_owner = supervisor;
         direct_owner["android_processes"] = {{"phase", "recorded"},  {"generation", 1},
                                              {"sdk_pid", 0},         {"frontend_pid", 0},
@@ -347,7 +335,6 @@ void owned_recovery_tests(const std::filesystem::path &base, const std::filesyst
                                              {"adbd_port", port + 1}};
         write_private_json(directory / "session-owner.json", direct_owner);
         write_private_json(directory / "runtime.json", runtime);
-        std::filesystem::remove(adb);
         {
             api::StoppedAndroidLease lease(root, profile, machine_identity(profile, {}), id,
                                            ownership);
@@ -356,17 +343,12 @@ void owned_recovery_tests(const std::filesystem::path &base, const std::filesyst
             for (const auto value : {port, port + 1, grpc}) {
                 assert(!tcp_port_free(value));
             }
-
-            assert(tcp_port_free(binding.server));
         }
         auto inconsistent = direct_owner;
         inconsistent["android_processes"]["adb_pid"] = 0;
         write_private_json(directory / "session-owner.json", inconsistent);
         refused();
-        put(adb);
         write_private_json(directory / "session-owner.json", supervisor);
-        write_private_json(scoped / "android-launch.json", launch);
-        write_private_json(scoped / "activation.json", activation);
     }
     {
         // Ordinary runtime configurations intentionally have no persisted host
@@ -401,7 +383,7 @@ void owned_recovery_tests(const std::filesystem::path &base, const std::filesyst
                                            ownership);
             lease.verify();
 
-            for (const auto value : {port, port + 1, grpc, binding.server}) {
+            for (const auto value : {port, port + 1, grpc}) {
                 assert(!tcp_port_free(value));
             }
         }
