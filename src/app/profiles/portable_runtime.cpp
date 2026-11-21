@@ -1437,7 +1437,7 @@ Json portable_android_launch(const std::filesystem::path &root,
     }
 
     // The window names the machine by the title of its profile, such as "Voyemu Free 7.3.1".
-    android["profile_title"] = portable_launch_title(definition, verified_profile);
+    android["profile_title"] = profile_title(definition);
     android["api"] = definition.contains("android") ? native_base_api(definition.at("android"))
                                                     : 28;
 

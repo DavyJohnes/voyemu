@@ -1,5 +1,4 @@
 #pragma once
-#include "../android/qinggan11_startup.hpp"
 #include "error.hpp"
 #include "model.hpp"
 #include "profile_catalog.hpp"

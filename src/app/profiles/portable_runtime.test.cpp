@@ -280,6 +280,7 @@ void observer_configuration_checks(const std::filesystem::path &stage, bool a9 =
             {"sha256", "cb50112cf2dd234a71e2a29b0241c23dbb37dd5fc3156c68cc9c49d0f58ad304"},
             {"clean_base", android_base(30).at("clean_base")}};
     Json definition = {{"id", profile},
+                       {"title", "Synthetic Observer 1.0"},
                        {"platform", a9 ? "qinggan09" : "passion"},
                        {"board", "8155"},
                        {"android", android30}};
@@ -501,6 +502,7 @@ void observer_build_snapshot_checks(const std::filesystem::path &stage) {
                                                     ? "passion"
                                                     : "qinggan11"},
                                {"board", "8155"},
+                               {"title", "Synthetic Observer Build 1.0"},
                                {"android", android}};
 
             if (!a9) {
@@ -644,7 +646,9 @@ void qnx_upgrade_checks(const std::filesystem::path &stage, bool older = false) 
 
     ensure_private_directory(data);
     ensure_private_directory(scoped);
-    write_private_json(seed / "profile.json", {{"id", profile}, {"android", {{"api", 30}}}});
+    write_private_json(
+            seed / "profile.json",
+            {{"id", profile}, {"title", "Synthetic QNX Upgrade 1.0"}, {"android", {{"api", 30}}}});
     write_private_json(seed / "runtime.json",
                        {{"schema", 1},
                         {"kind", "portable-guest-runtime"},
@@ -784,7 +788,9 @@ void qnx_persistent_upgrade_checks(const std::filesystem::path &stage, bool exte
 
     ensure_private_directory(data);
     ensure_private_directory(scoped);
-    write_private_json(seed / "profile.json", {{"id", profile}, {"android", {{"api", 28}}}});
+    write_private_json(
+            seed / "profile.json",
+            {{"id", profile}, {"title", "Synthetic QNX Upgrade 1.0"}, {"android", {{"api", 28}}}});
     write_private_json(seed / "runtime.json",
                        {{"schema", 1},
                         {"kind", "portable-guest-runtime"},
@@ -958,6 +964,7 @@ void system_upgrade_checks(const std::filesystem::path &stage,
     write_private_json(
             seed / "profile.json",
             {{"id", profile},
+             {"title", "Synthetic System Upgrade 1.0"},
              {"android",
               {{"package", "system-images;android-30;default;arm64-v8a"},
                {"revision", "1"},
@@ -1255,6 +1262,7 @@ void passion_wheel_refresh_checks(const std::filesystem::path &stage) {
     const auto root = stage / "passion-wheel", seed = root / "machines" / profile;
     Json definition = {
             {"id", profile},
+            {"title", "Synthetic Passion 1.0"},
             {"platform", "passion"},
             {"board", "8155"},
             {"status", "incomplete"},
@@ -1563,6 +1571,7 @@ void passion_system_upgrade_checks(const std::filesystem::path &stage,
                data = seed / "android", scoped = root / ".local/machines" / profile;
     Json definition = {
             {"id", profile},
+            {"title", "Synthetic Passion 1.0"},
             {"platform", "passion"},
             {"board", "8155"},
             {"status", "incomplete"},
@@ -1971,6 +1980,7 @@ void qinggan11_development_activation_checks(const std::filesystem::path &root,
                   {"configuration_deviations", Json::array()}}}};
     Json def = {{"schema", 1},
                 {"id", profile},
+                {"title", "Synthetic Free 1.0"},
                 {"android",
                  {{"package", "system-images;android-30;default;arm64-v8a"},
                   {"revision", "1"},
@@ -2832,6 +2842,7 @@ int main(int argc, char **argv) {
         {
             const auto sha = std::string(64, 'a');
             Json definition = {
+                    {"title", "Synthetic Kernel 1.0"},
                     {"android",
                      {{"development_kernel",
                        {{"url",
@@ -3054,7 +3065,8 @@ int main(int argc, char **argv) {
             ensure_private_directory(app / "profiles/common/wheels/test");
             write_private_json(
                     app / "profiles" / profile / "profile.json",
-                    {{"wheel", {{"assets", "profiles/common/wheels/test"}}},
+                    {{"title", "Synthetic Free 1.0"},
+                     {"wheel", {{"assets", "profiles/common/wheels/test"}}},
                      {"android",
                       {{"package", "system-images;android-28;default;arm64-v8a"},
                        {"revision", "1"},
@@ -4459,6 +4471,7 @@ int main(int argc, char **argv) {
                     android_port_leasable);
             const Json definition30{
                     {"schema", 1},
+                    {"title", "Synthetic Free 1.0"},
                     {"components",
                      {{"canbus", "components/canbus"},
                       {"qg-runtime", "components/qg-runtime"},
@@ -5224,8 +5237,20 @@ int main(int argc, char **argv) {
                               launch.at("platform") == "qinggan09" && launch.at("board") == "nxp",
                       "declared NXP platform and board did not select the NXP presentation");
                 check(launch.at("profile_title") == "Synthetic NXP 1.0" &&
-                              nxp_launch.at("profile_title") == nxp_definition.at("id"),
+                              nxp_launch.at("profile_title") == "Synthetic Free 1.0",
                       "the window does not name the machine by the title of its profile");
+                auto untitled = declared;
+                untitled.erase("title");
+                bool denied = false;
+                try {
+                    portable_android_launch(app, PortableRuntimeHostBindings{}, seed30 / "android",
+                                            clean30, bound30 / "config-template.ini",
+                                            "synthetic-untitled", Json::array(), untitled);
+                } catch (const VoyemuError &error) {
+                    denied = std::string(error.what()).starts_with("PROFILE_INVALID: ");
+                }
+
+                check(denied, "a profile without a title named the window by its id");
             }
             {
                 auto wheel_definition = nxp_definition;
@@ -6439,7 +6464,9 @@ int main(int argc, char **argv) {
                      "https://dl.google.com/android/repository/sys-img/android/arm64-v8a-30_r02.zip"},
                     {"sha256", "cb50112cf2dd234a71e2a29b0241c23dbb37dd5fc3156c68cc9c49d0f58ad304"},
                     {"clean_base", android_base(30).at("clean_base")}};
-            write_private_json(free_definition, {{"id", qinggan11_731}, {"android", free_android}});
+            write_private_json(free_definition, {{"id", qinggan11_731},
+                                                 {"title", "Synthetic Free 1.0"},
+                                                 {"android", free_android}});
             auto free_manifest = valid;
             free_manifest["profile"] = qinggan11_731;
             free_manifest["profile_sha256"] = sha256_file(free_definition);

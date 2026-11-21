@@ -523,14 +523,16 @@ int main(int argc, char **argv) try {
         auto profile = root / "profiles" / qinggan09_profile();
         ensure_private_directory(profile);
         ensure_private_directory(root / "profiles/common/wheels/free-2021");
-        write_private_json(profile / "profile.json",
-                           {{"schema", 1},
-                            {"initial_state", embedded_profile(qinggan09_profile())
-                                                      .at("definition")
-                                                      .value("initial_state", Json::object())},
-                            {"displays",
-                             embedded_profile(qinggan09_profile()).at("definition").at("displays")},
-                            {"wheel", {{"assets", "profiles/common/wheels/free-2021"}}}});
+        write_private_json(
+                profile / "profile.json",
+                {{"schema", 1},
+                 {"title", embedded_profile(qinggan09_profile()).at("definition").at("title")},
+                 {"initial_state", embedded_profile(qinggan09_profile())
+                                           .at("definition")
+                                           .value("initial_state", Json::object())},
+                 {"displays",
+                  embedded_profile(qinggan09_profile()).at("definition").at("displays")},
+                 {"wheel", {{"assets", "profiles/common/wheels/free-2021"}}}});
         auto help = run({"help"});
         require(help.exit_code == 0 && help.output.find("--cluster=on|off") != std::string::npos &&
                         help.output.find("Run and control") != std::string::npos,

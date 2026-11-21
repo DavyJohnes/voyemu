@@ -28,14 +28,6 @@ inline std::string portable_system_image_file(const Json &descriptor, unsigned a
     return file;
 }
 
-// The title of the profile of a machine; a definition embedded before profiles declared titles
-// names the machine by its id.
-inline std::string portable_launch_title(const Json &definition,
-                                         std::string_view verified_profile) {
-    return definition.contains("title") ? profile_title(definition)
-                                        : definition.value("id", std::string(verified_profile));
-}
-
 // A bundled API30 profile that declares the view-observation component takes the UI observer
 // bound to it.
 inline bool portable_api30_ui_observer_profile(std::string_view profile) {
