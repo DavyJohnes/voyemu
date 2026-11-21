@@ -1,11 +1,11 @@
 #include "check.hpp"
 #include "deps.hpp"
 #include "error.hpp"
+#include "little_endian.hpp"
 #include "process.hpp"
 #include "qnx_host.hpp"
 #include "qnx_host_prebuilt.hpp"
 #include "qnx_host_source.hpp"
-#include <cstring>
 #include <fstream>
 #include <set>
 namespace voyemu {
@@ -36,11 +36,7 @@ std::vector<std::string> qnx_host_elf_needed(const std::filesystem::path &file) 
     const std::string bytes((std::istreambuf_iterator<char>(input)),
                             std::istreambuf_iterator<char>());
     const auto read = [&](std::uint64_t at, unsigned size) {
-        require(at <= bytes.size() && bytes.size() - at >= size, "ELF extent");
-        std::uint64_t value = 0;
-        std::memcpy(&value, bytes.data() + at, size);
-
-        return value;
+        return le_read(bytes, at, size, require, "ELF extent");
     };
 
     require(bytes.size() > 64 &&
