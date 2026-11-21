@@ -98,6 +98,7 @@ inline std::string qnx_qinggan11_mcu_layout(const Json &definition,
              row.at("normalized_width") == common.width &&
              row.at("unsupported_initial") == initial.at(common.name));
         unsigned bit = 65535, width = 0;
+        std::uint64_t unknown_input = 0, unknown_wire = 0;
 
         if (row.contains("wire")) {
             const auto &wire = row.at("wire");
@@ -109,6 +110,16 @@ inline std::string qnx_qinggan11_mcu_layout(const Json &definition,
                  wire.at("output_width") == width);
             indices[id] = true;
 
+            // An OEM slot wider than its normalized field whose engine tests the wire all-ones.
+            if (wire.contains("unknown")) {
+                const auto &unknown = wire.at("unknown");
+                unknown_input = unknown.at("input").get<std::uint64_t>();
+                unknown_wire = unknown.at("wire").get<std::uint64_t>();
+                need(unknown.size() == 2 && unknown_input < (std::uint64_t{1} << common.width) &&
+                     unknown_wire != 0 && unknown_wire != unknown_input &&
+                     unknown_wire < (std::uint64_t{1} << width));
+            }
+
             for (unsigned b = bit; b < bit + width; b++) {
                 need(!used[b]);
                 used[b] = true;
@@ -118,7 +129,8 @@ inline std::string qnx_qinggan11_mcu_layout(const Json &definition,
         }
 
         result += "{" + std::to_string(bit) + "," + std::to_string(width) + "," +
-                  row.at("unsupported_initial").dump() + "U},\n";
+                  row.at("unsupported_initial").dump() + "U," + std::to_string(unknown_input) +
+                  "U," + std::to_string(unknown_wire) + "U},\n";
     }
 
     need(projected == projected_count);

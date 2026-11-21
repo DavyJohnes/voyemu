@@ -2019,7 +2019,11 @@
         "named_consumer": "_gauteitems_struct",
         "case_address": "0x1934",
         "output_bit": 1924,
-        "output_width": 11
+        "output_width": 11,
+        "unknown": {
+          "input": 1023,
+          "wire": 2047
+        }
       }
     },
     {
@@ -2997,7 +3001,11 @@
         "named_consumer": "_gauteitems_struct",
         "case_address": "0x1924",
         "output_bit": 1935,
-        "output_width": 11
+        "output_width": 11,
+        "unknown": {
+          "input": 1023,
+          "wire": 2047
+        }
       }
     },
     {

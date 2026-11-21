@@ -94,22 +94,11 @@ static int qinggan11_pack(void *output, unsigned capacity, int result) {
         }
     }
 
-#ifdef QGFX_QINGGAN11_611
-    /* The common ICE-range unknown is 10-bit all-ones. These two OEM slots
-       are 11 bits and the 6.11.1 engine tests their full-width all-ones. */
-    enum {
-        ice_range = 286,
-        ice_range_wltc = 404
-    };
-
-    if (applied[ice_range] == 1023) {
-        applied[ice_range] = 2047;
+    for (unsigned i = 0; i < 579; i++) {
+        if (qinggan11_fields[i].unknown_wire && applied[i] == qinggan11_fields[i].unknown_input) {
+            applied[i] = qinggan11_fields[i].unknown_wire;
+        }
     }
-
-    if (applied[ice_range_wltc] == 1023) {
-        applied[ice_range_wltc] = 2047;
-    }
-#endif
 
     if (!qinggan11_mcu_project((unsigned char *)output, capacity, result, qinggan11_fields,
                                applied)) {

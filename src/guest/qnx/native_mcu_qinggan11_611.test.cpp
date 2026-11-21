@@ -100,7 +100,6 @@ static u64 call(u32 op, const u64 *args, unsigned count, const void *, unsigned)
     return offered;
 }
 
-#define QGFX_QINGGAN11_611 1
 #define getenv test_getenv
 #define dlopen test_dlopen
 #define dlsym test_dlsym
@@ -144,6 +143,12 @@ int main(int argc, char **argv) {
             if (row.contains("wire")) {
                 qinggan11_fields[i].bit = row.at("wire").at("start_bit");
                 qinggan11_fields[i].width = row.at("wire").at("width");
+
+                if (row.at("wire").contains("unknown")) {
+                    qinggan11_fields[i].unknown_input = row.at("wire").at("unknown").at("input");
+                    qinggan11_fields[i].unknown_wire = row.at("wire").at("unknown").at("wire");
+                }
+
                 mapped++;
             }
         }
@@ -309,6 +314,8 @@ int main(int argc, char **argv) {
         ++offered;
         assert(dataParser_makedumydata(out, 650) == 650 && qinggan11_ack == offered);
         assert(packed(2218, 11) == 2047 && packed(1463, 10) == 1023 && packed(2229, 11) == 2047);
+        assert(voyemu::qnx_qinggan11_mcu_layout(source).find("{2218,11,0U,1023U,2047U}") !=
+               std::string::npos);
         normal[286] = normal[373] = normal[404] = 0;
         offered++;
         bad = true;
@@ -337,6 +344,9 @@ int main(int argc, char **argv) {
         reject(wrong);
         wrong = source;
         wrong["fields"][37]["wire"]["start_bit"] = 0;
+        reject(wrong);
+        wrong = source;
+        wrong["fields"][286]["wire"]["unknown"]["wire"] = 4095;
         reject(wrong);
         bool old_scope_rejected = false;
         try {

@@ -1,10 +1,11 @@
 #ifndef VOYEMU_NATIVE_MCU_QINGGAN11_H
 #define VOYEMU_NATIVE_MCU_QINGGAN11_H
 /* Only proven named Free A11 7.3.1 signals are writable. Unmapped bits retain each OEM packet. */
+/* A nonzero unknown_wire replaces the normalized unknown value unknown_input on the wire. */
 typedef struct {
     unsigned short bit;
     unsigned char width;
-    unsigned initial;
+    unsigned initial, unknown_input, unknown_wire;
 } Qinggan11McuField;
 
 static int qinggan11_mcu_valid(const Qinggan11McuField *fields, const unsigned *values) {
