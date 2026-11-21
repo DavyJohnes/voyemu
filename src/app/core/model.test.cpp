@@ -3,6 +3,7 @@
 #include "process.hpp"
 #include <atomic>
 #include <cassert>
+#include <fstream>
 #include <functional>
 #include <future>
 #include <iostream>
@@ -282,6 +283,12 @@ static void state_replace_regressions(const std::filesystem::path &directory) {
     check(failed.empty() && metadata_checks > 0 && read_private_json(file).at("epoch") == 103 &&
                   !std::filesystem::exists(pending),
           "transient filesystem metadata exact publication");
+    // A writer terminated after creating its staging file leaves it behind.
+    { std::ofstream(pending, std::ios::binary) << "{\"epoch\":"; }
+    const auto recovered = attempted({{"epoch", 104}});
+    check(recovered.empty() && read_private_json(file).at("epoch") == 104 &&
+                  !std::filesystem::exists(pending) && state_private(file, false),
+          "staging file of a terminated writer blocked publication");
 }
 #endif
 

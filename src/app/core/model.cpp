@@ -1159,6 +1159,14 @@ static void write_private_json_text(const std::filesystem::path &path, const std
     HANDLE file = CreateFileW(os::win32_file_path(pending).c_str(), GENERIC_WRITE, 0,
                               &security.attributes, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, nullptr);
 
+    // Every writer of path holds its lock, so an existing staging file is the remainder of a
+    // writer that died before publishing it.
+    if (file == INVALID_HANDLE_VALUE && GetLastError() == ERROR_FILE_EXISTS &&
+        DeleteFileW(os::win32_file_path(pending).c_str())) {
+        file = CreateFileW(os::win32_file_path(pending).c_str(), GENERIC_WRITE, 0,
+                           &security.attributes, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, nullptr);
+    }
+
     if (file == INVALID_HANDLE_VALUE) {
         throw VoyemuError("STATE_WRITE", "exclusive temporary file failed");
     }
