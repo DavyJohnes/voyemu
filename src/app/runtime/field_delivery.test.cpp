@@ -72,19 +72,25 @@ int main() try {
         check(names.contains(name), "every canbus field is a catalog field");
     }
 
-    check(multimedia({{"presentation_adapter", nxp_presentation_contract()},
+    check(multimedia({{"presentation_adapter", nxp_presentation_contract("test-nxp")},
+                      {"reference_profile", "test-nxp"},
+                      {"platform", "qinggan09"},
+                      {"board", "nxp"},
                       {"api", 28},
                       {"home", {{"package", "com.qinggan.app.launcher"}, {"component", nxp_home}}}})
                   .empty(),
           "the NXP multimedia receives no field");
     const Json passion = {
-            {"presentation_adapter", passion_presentation_contract()},
+            {"presentation_adapter", passion_presentation_contract("test-passion")},
+            {"reference_profile", "test-passion"},
+            {"platform", "passion"},
+            {"board", "8155"},
             {"api", 30},
             {"home", {{"package", "com.voyah.os.carlauncher"}, {"component", passion_home}}}};
     check(multimedia(passion).empty(), "Passion without its MCU property receives no field");
 #ifndef _WIN32
     auto passion_mcu = passion;
-    passion_mcu["presentation_adapter"] = passion_presentation_contract(true);
+    passion_mcu["presentation_adapter"] = passion_presentation_contract("test-passion", true);
     passion_mcu["mcu_property_adapter"] = passion_mcu_capability();
     check(multimedia(passion_mcu) == std::set<std::string>{"soc"},
           "Passion with its MCU property receives SOC");
