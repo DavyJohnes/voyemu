@@ -527,6 +527,9 @@ int main(int argc, char **argv) try {
                 profile / "profile.json",
                 {{"schema", 1},
                  {"title", embedded_profile(qinggan09_profile()).at("definition").at("title")},
+                 {"platform",
+                  embedded_profile(qinggan09_profile()).at("definition").at("platform")},
+                 {"board", embedded_profile(qinggan09_profile()).at("definition").at("board")},
                  {"initial_state", embedded_profile(qinggan09_profile())
                                            .at("definition")
                                            .value("initial_state", Json::object())},
