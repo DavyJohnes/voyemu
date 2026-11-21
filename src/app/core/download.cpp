@@ -198,10 +198,14 @@ DownloadHttpError network_error(const os::HttpsFailure &failure, const DownloadP
 }
 } // namespace
 
-bool download_unpublished(const std::exception &error) {
-    const auto *failure = dynamic_cast<const DownloadHttpError *>(&error);
-
-    return failure && failure->status() == 404;
+bool download_unpublished(const std::exception_ptr &failure) {
+    try {
+        std::rethrow_exception(failure);
+    } catch (const DownloadHttpError &error) {
+        return error.status() == 404;
+    } catch (...) {
+        return false;
+    }
 }
 
 std::string download_name(const DownloadPin &pin) {

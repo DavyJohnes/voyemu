@@ -161,7 +161,8 @@ int main() try {
            reports_interruption(true, VoyemuError("JAVA_HELPER", "helper exited 130")) &&
            !reports_interruption(false, VoyemuError("INTERRUPTED", "start interrupted")) &&
            !reports_interruption(true, survived));
-    assert(human_cli_error(survived, cli::Language::english, "/logs/start.log") ==
+    assert(human_cli_error(std::make_exception_ptr(survived), cli::Language::english,
+                           "/logs/start.log") ==
            "Voyemu: PROCESS_STOP: the interrupted session did not stop; its supervisor may still "
            "hold the machine.\nSession log: /session/supervisor.log\nLog: /logs/start.log\n");
     std::cout << "Human CLI summaries, tables and errors remain plain text\n";

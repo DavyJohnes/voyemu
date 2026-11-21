@@ -1,6 +1,7 @@
 #pragma once
 #include "progress.hpp"
 #include <cstdint>
+#include <exception>
 #include <filesystem>
 #include <functional>
 #include <string>
@@ -41,9 +42,9 @@ public:
 private:
     long status_;
 };
-// Whether a failed download means that its asset is not published, HTTP 404; only then may a
-// caller build the asset from its recipe, while a network failure stays an error.
-bool download_unpublished(const std::exception &error);
+// Whether a thrown download failure means that its asset is not published, HTTP 404; only then may
+// a caller build the asset from its recipe, while a network failure stays an error.
+bool download_unpublished(const std::exception_ptr &failure);
 struct DownloadedBlob {
     std::filesystem::path file;
     std::uint64_t bytes{};

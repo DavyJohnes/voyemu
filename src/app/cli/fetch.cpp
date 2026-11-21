@@ -1549,7 +1549,7 @@ std::filesystem::path install_development_kernel(const std::filesystem::path &ro
                 .file;
     } catch (const std::runtime_error &error) {
         // An asset that is not published names the release it needs; a network failure stays.
-        if (!download_unpublished(error)) {
+        if (!download_unpublished(std::current_exception())) {
             throw;
         }
 

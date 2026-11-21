@@ -171,8 +171,8 @@ Json Api::dispatch_observe(const std::string &op, const Json &request, Clock::ti
                 if (observed.at("ready").get<bool>()) {
                     return observed;
                 }
-            } catch (const std::exception &exception) {
-                const auto code = error(exception).at("code").get<std::string>();
+            } catch (const std::exception &) {
+                const auto code = error(std::current_exception()).at("code").get<std::string>();
 
                 if (code != "IPC_TIMEOUT_UNKNOWN" && code != "IPC_CONNECT" &&
                     code != "IPC_READ_UNKNOWN" && code != "IPC_WRITE_UNKNOWN") {

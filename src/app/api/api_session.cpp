@@ -795,8 +795,8 @@ Json Api::run(const Json &request) {
                     failed = true;
                     break;
                 }
-            } catch (const std::exception &exception) {
-                auto failure = operation_error(exception);
+            } catch (const std::exception &) {
+                auto failure = operation_error(std::current_exception());
                 report["cases"][index].update(
                         {{"status",
                           failure.at("code") == "TEST_UNSUPPORTED" ? "unavailable" : "failed"},
@@ -807,16 +807,17 @@ Json Api::run(const Json &request) {
                 break;
             }
         }
-    } catch (const std::exception &exception) {
+    } catch (const std::exception &) {
         failed = true;
 
         if (report.at("preflight").at("status") == "not-run") {
-            report["preflight"] = {{"status", "failed"}, {"error", operation_error(exception)}};
+            report["preflight"] = {{"status", "failed"},
+                                   {"error", operation_error(std::current_exception())}};
         } else if (index < report.at("cases").size()) {
             report["cases"][index].update(
-                    {{"status", "failed"}, {"error", operation_error(exception)}});
+                    {{"status", "failed"}, {"error", operation_error(std::current_exception())}});
         } else {
-            report["error"] = operation_error(exception);
+            report["error"] = operation_error(std::current_exception());
         }
     }
 
@@ -859,8 +860,8 @@ Json Api::run(const Json &request) {
                               Json::object());
             new_json(output / "logs.json", logs);
             report["logs"] = (output / "logs.json").string();
-        } catch (const std::exception &exception) {
-            report["logs_unavailable"] = error(exception);
+        } catch (const std::exception &) {
+            report["logs_unavailable"] = error(std::current_exception());
         }
     }
 
@@ -889,9 +890,10 @@ Json Api::run(const Json &request) {
             if (!clean) {
                 failed = true;
             }
-        } catch (const std::exception &exception) {
+        } catch (const std::exception &) {
             failed = true;
-            report["cleanup"] = {{"status", "failed"}, {"error", operation_error(exception)}};
+            report["cleanup"] = {{"status", "failed"},
+                                 {"error", operation_error(std::current_exception())}};
         }
     } else {
         report["cleanup"] = {

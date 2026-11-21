@@ -149,8 +149,24 @@ std::string terminal_outcome(const Json &response) {
     return "unknown";
 }
 
-Json error(const std::exception &exception, bool contacted, bool dispatched) {
-    std::string message = exception.what(), code(failure_code(exception));
+Json error(const std::exception_ptr &failure, bool contacted, bool dispatched) {
+    std::string message, code(failure_code(failure));
+    std::optional<Json> details;
+
+    try {
+        std::rethrow_exception(failure);
+    } catch (const InputFenceError &fence) {
+        message = fence.what();
+        details = fence.details;
+    } catch (const MachineIdentityError &identity) {
+        message = identity.what();
+
+        if (!identity.details.empty()) {
+            details = identity.details;
+        }
+    } catch (const std::exception &exception) {
+        message = exception.what();
+    }
 
     // An exception without its own CODE is classified by the progress of the operation. Before
     // any supervisor exchange a JSON exception reads the request shape, which the client
@@ -185,13 +201,8 @@ Json error(const std::exception &exception, bool contacted, bool dispatched) {
             {"retryable", code == "TEST_BUSY" || code == "CLUSTER_UI_NOT_READY" || tree_retry},
             {"outcome", unknown ? "unknown" : "not_started"}};
 
-    if (const auto *fence = dynamic_cast<const InputFenceError *>(&exception)) {
-        result["details"] = fence->details;
-    }
-
-    if (const auto *identity = dynamic_cast<const MachineIdentityError *>(&exception);
-        identity && !identity->details.empty()) {
-        result["details"] = identity->details;
+    if (details) {
+        result["details"] = *details;
     }
 
     return result;
@@ -1552,13 +1563,13 @@ Json Api::call(const Json &supplied) {
             response["elapsed_ms"] = (monotonic_us() - start) / 1000.;
             bound_session_ui_response(response, qnx_kanzi_ui_response_bytes, ui_deadline);
         }
-    } catch (const std::exception &exception) {
+    } catch (const std::exception &) {
         if (public_ui) {
             response.erase("result");
             response["ok"] = false;
         }
 
-        response["error"] = operation_error(exception);
+        response["error"] = operation_error(std::current_exception());
         logging::write(logging::Level::error, "test-api", "operation.failed",
                        {{"operation_id", response.at("operation_id")},
                         {"code", response.at("error").at("code")}});
@@ -1603,8 +1614,8 @@ Json Api::call(const Json &supplied) {
     return response;
 }
 
-Json Api::operation_error(const std::exception &exception) const {
-    return error(exception, contacted_, dispatched_);
+Json Api::operation_error(const std::exception_ptr &failure) const {
+    return error(failure, contacted_, dispatched_);
 }
 
 Json Api::dispatch(const Json &request, Clock::time_point deadline) {

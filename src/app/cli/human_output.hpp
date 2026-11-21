@@ -3,6 +3,7 @@
 #include "logging.hpp"
 #include "model.hpp"
 #include "progress.hpp"
+#include <exception>
 #include <filesystem>
 #include <sstream>
 #include <stdexcept>
@@ -23,15 +24,13 @@ inline std::string failure_reason(std::string text) {
     return text;
 }
 
-// The catalog text of an exception without a CODE, by its kind, with its cause; empty for an
-// exception with a CODE.
-inline std::string uncoded_failure(const std::exception &error, cli::Language language) {
-    const auto code = failure_code(error);
-    std::string_view text = error.what();
-
-    if (code == "FILESYSTEM") {
-        const auto &failure = static_cast<const std::filesystem::filesystem_error &>(error);
-        const auto reason = failure.code().message();
+// The catalog text of an exception by code, its failure_code(), with the cause from its what() text
+// and, for a filesystem exception, its paths; empty for an exception with a CODE.
+inline std::string uncoded_failure(std::string_view code, std::string_view text,
+                                   const std::filesystem::filesystem_error *filesystem,
+                                   cli::Language language) {
+    if (code == "FILESYSTEM" && filesystem) {
+        const auto reason = filesystem->code().message();
         // what() is "filesystem error: OPERATION: REASON [PATH]...", libc++ prefixes OPERATION with
         // "in ".
         constexpr std::string_view prefix = "filesystem error: ";
@@ -52,10 +51,10 @@ inline std::string uncoded_failure(const std::exception &error, cli::Language la
             operation.remove_prefix(3);
         }
 
-        auto path = failure.path1().string();
+        auto path = filesystem->path1().string();
 
-        if (!failure.path2().empty()) {
-            path += ", " + failure.path2().string();
+        if (!filesystem->path2().empty()) {
+            path += ", " + filesystem->path2().string();
         }
 
         return "FILESYSTEM: " + cli::message(language, "error.filesystem",
@@ -87,31 +86,47 @@ inline std::string uncoded_failure(const std::exception &error, cli::Language la
     return {};
 }
 
-// A catalog error in language. With the log file of the command, its path follows. An exception
-// without a CODE shows FILESYSTEM, SYSTEM or JSON by its kind, else INTERNAL_ERROR, with its cause.
-// Another error outside the catalog shows only its CODE with the log file and leaves its English
-// text to the log, or keeps its English "CODE: message" without a log file.
-inline std::string human_cli_error(const std::exception &error, cli::Language language,
+// The catalog text of a thrown exception without a CODE, by its kind, with its cause; empty for an
+// exception with a CODE.
+inline std::string uncoded_failure(const std::exception_ptr &failure, cli::Language language) {
+    const auto code = failure_code(failure);
+
+    try {
+        std::rethrow_exception(failure);
+    } catch (const std::filesystem::filesystem_error &error) {
+        return uncoded_failure(code, error.what(), &error, language);
+    } catch (const std::exception &error) {
+        return uncoded_failure(code, error.what(), nullptr, language);
+    }
+}
+
+// A catalog error in language for a thrown exception. With the log file of the command, its path
+// follows. An exception without a CODE shows FILESYSTEM, SYSTEM or JSON by its kind, else
+// INTERNAL_ERROR, with its cause. Another error outside the catalog shows only its CODE with the
+// log file and leaves its English text to the log, or keeps its English "CODE: message" without a
+// log file.
+inline std::string human_cli_error(const std::exception_ptr &failure, cli::Language language,
                                    const std::filesystem::path &log = {}) {
-    const auto *localized = dynamic_cast<const cli::LocalizedError *>(&error);
     const auto log_line =
             log.empty() ? std::string{}
                         : cli::message(language, "error.log", {{"path", log.string()}}) + "\n";
 
-    if (localized) {
-        return human_cli_error(localized->render(language)) + log_line;
-    }
+    try {
+        std::rethrow_exception(failure);
+    } catch (const cli::LocalizedError &localized) {
+        return human_cli_error(localized.render(language)) + log_line;
+    } catch (const std::exception &error) {
+        if (const auto uncoded = uncoded_failure(failure, language); !uncoded.empty()) {
+            return human_cli_error(uncoded) + log_line;
+        }
 
-    if (const auto uncoded = uncoded_failure(error, language); !uncoded.empty()) {
-        return human_cli_error(uncoded) + log_line;
-    }
+        if (log.empty()) {
+            return human_cli_error(error.what());
+        }
 
-    if (log.empty()) {
-        return human_cli_error(error.what());
+        return human_cli_error(std::string(message_code(error.what())) + ": " +
+                               cli::message(language, "error.unexpected", {{"log", log.string()}}));
     }
-
-    return human_cli_error(std::string(message_code(error.what())) + ": " +
-                           cli::message(language, "error.unexpected", {{"log", log.string()}}));
 }
 
 // Ctrl+C ends a command as interrupted unless an owned process survived it: that process may still

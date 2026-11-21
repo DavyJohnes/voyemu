@@ -127,7 +127,7 @@ install_java_runtime(const std::filesystem::path &root, const Json &pins, bool o
         const std::string message = error.what();
 
         // Only an asset that is not published falls back; a network failure stays an error.
-        if (offline || !download_unpublished(error)) {
+        if (offline || !download_unpublished(std::current_exception())) {
             throw;
         }
 

@@ -5,6 +5,7 @@
 #include "process.hpp"
 #include "supervisor_failure.hpp"
 #include <algorithm>
+#include <exception>
 #include <fstream>
 #include <iostream>
 #include <set>
@@ -86,7 +87,7 @@ std::string parse_error(std::vector<std::string> words, Language language) {
     try {
         parse_command(std::move(words));
     } catch (const std::exception &error) {
-        return human_cli_error(error, language);
+        return human_cli_error(std::current_exception(), language);
     }
 
     return {};
@@ -253,30 +254,32 @@ void errors() {
 
     check(std::string(error.what()) == "CLI_ARGUMENT: unknown --x",
           "what() keeps the English JSON message");
-    check(human_cli_error(error, Language::russian) ==
+    check(human_cli_error(std::make_exception_ptr(error), Language::russian) ==
                   "Voyemu: CLI_ARGUMENT: неизвестный параметр --x\n",
           "human error renders the selected language with its code");
-    check(human_cli_error(std::runtime_error("PIN_PATH: retained input missing"),
-                          Language::chinese) == "Voyemu: PIN_PATH: retained input missing\n",
+    check(human_cli_error(
+                  std::make_exception_ptr(std::runtime_error("PIN_PATH: retained input missing")),
+                  Language::chinese) == "Voyemu: PIN_PATH: retained input missing\n",
           "uncatalogued errors keep English");
     // With the log file of the command, a catalog error names it, and an uncatalogued error shows
     // only its code and points to the log, which keeps its English text.
     const std::filesystem::path log = "/root/.local/build/logs/build-20261120-101512.log";
-    check(human_cli_error(error, Language::russian, log) ==
+    check(human_cli_error(std::make_exception_ptr(error), Language::russian, log) ==
                   "Voyemu: CLI_ARGUMENT: неизвестный параметр --x\nЛог: " + log.string() + "\n",
           "a catalog error names the log");
-    check(human_cli_error(std::runtime_error("PIN_PATH: retained input missing"), Language::english,
-                          log) ==
-                  "Voyemu: PIN_PATH: the operation failed.\nDetails are in the log: " +
-                          log.string() +
-                          ". If the error persists, attach the log to a problem report.\n",
+    check(human_cli_error(
+                  std::make_exception_ptr(std::runtime_error("PIN_PATH: retained input missing")),
+                  Language::english,
+                  log) == "Voyemu: PIN_PATH: the operation failed.\nDetails are in the log: " +
+                                  log.string() +
+                                  ". If the error persists, attach the log to a problem report.\n",
           "an uncatalogued error keeps its code and names the log");
     // An exception without a code shows its kind and its cause, then the log.
     const auto denied = std::make_error_code(std::errc::permission_denied);
     const std::filesystem::path machine = "/machines/car";
-    check(human_cli_error(
-                  std::filesystem::filesystem_error("resize_file", machine / "qnx-ram.bin", denied),
-                  Language::russian, log) ==
+    check(human_cli_error(std::make_exception_ptr(std::filesystem::filesystem_error(
+                                  "resize_file", machine / "qnx-ram.bin", denied)),
+                          Language::russian, log) ==
                   "Voyemu: FILESYSTEM: файловая операция не выполнена: resize_file " +
                           (machine / "qnx-ram.bin").string() + ": " + denied.message() +
                           ".\nПроверьте путь, права доступа и свободное место на томе, затем "
@@ -290,7 +293,7 @@ void errors() {
         std::filesystem::rename(machine / "absent-source", machine / "absent-target");
         check(false, "a missing rename source throws");
     } catch (const std::filesystem::filesystem_error &error) {
-        check(human_cli_error(error, Language::english) ==
+        check(human_cli_error(std::current_exception(), Language::english) ==
                       "Voyemu: FILESYSTEM: a file operation failed: rename " +
                               (machine / "absent-source").string() + ", " +
                               (machine / "absent-target").string() + ": " +
@@ -301,7 +304,7 @@ void errors() {
     }
 
     const std::system_error refused(std::make_error_code(std::errc::connection_refused), "connect");
-    check(human_cli_error(refused, Language::english, log) ==
+    check(human_cli_error(std::make_exception_ptr(refused), Language::english, log) ==
                   "Voyemu: SYSTEM: a system operation failed: " + std::string(refused.what()) +
                           ".\nIf the error persists, attach the log to a problem report.\nLog: " +
                           log.string() + "\n",
@@ -311,7 +314,7 @@ void errors() {
         check(false, "malformed JSON throws");
     } catch (const Json::exception &error) {
         const std::string text = error.what();
-        const auto rendered = human_cli_error(error, Language::chinese);
+        const auto rendered = human_cli_error(std::current_exception(), Language::chinese);
         check(rendered.starts_with("Voyemu: JSON: 无法读取 JSON 数据：parse error at line 1") &&
                       rendered.find("[json.exception.") == std::string::npos &&
                       rendered.ends_with("。\n如果错误再次出现，请在问题报告中附上日志。\n"),
@@ -319,14 +322,16 @@ void errors() {
                       " from " + text);
     }
 
-    check(human_cli_error(std::logic_error("vector index out of range."), Language::russian, log) ==
+    check(human_cli_error(std::make_exception_ptr(std::logic_error("vector index out of range.")),
+                          Language::russian, log) ==
                   "Voyemu: INTERNAL_ERROR: непредвиденный сбой: vector index out of range.\nЕсли "
                   "ошибка повторится, приложите лог к сообщению о проблеме.\nЛог: " +
                           log.string() + "\n",
           "another error without a code shows its text with INTERNAL_ERROR");
-    check(human_cli_error(cli::LocalizedError("INTERRUPTED", "error.interrupted"),
-                          Language::chinese,
-                          log) == "Voyemu: INTERRUPTED: 命令已中断。\n日志：" + log.string() + "\n",
+    check(human_cli_error(
+                  std::make_exception_ptr(cli::LocalizedError("INTERRUPTED", "error.interrupted")),
+                  Language::chinese,
+                  log) == "Voyemu: INTERRUPTED: 命令已中断。\n日志：" + log.string() + "\n",
           "an interruption names the log");
     // A start whose supervisor exited names the cause from its log, or its exit status, and the
     // session log.

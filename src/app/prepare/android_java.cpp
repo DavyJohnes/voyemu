@@ -38,7 +38,8 @@ std::filesystem::path install_android_java(const std::filesystem::path &root, co
 
         // Only an asset that is not published or not cached offline falls back; a network failure
         // stays an error.
-        if (!download_unpublished(error) && !message.starts_with("DOWNLOAD_OFFLINE:")) {
+        if (!download_unpublished(std::current_exception()) &&
+            !message.starts_with("DOWNLOAD_OFFLINE:")) {
             throw;
         }
 

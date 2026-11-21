@@ -980,8 +980,8 @@ Json Api::session_ui(const Json &request, Clock::time_point deadline) {
     const auto read = [this](auto observation) {
         try {
             return observation();
-        } catch (const std::exception &failure) {
-            auto detail = operation_error(failure);
+        } catch (const std::exception &) {
+            auto detail = operation_error(std::current_exception());
             const auto &code = detail.at("code");
 
             if (code == "TEST_SESSION" || code == "TEST_OWNERSHIP" || code == "PROFILE_NAME") {

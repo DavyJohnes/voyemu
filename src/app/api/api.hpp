@@ -6,6 +6,7 @@
 #include "process.hpp"
 #include <atomic>
 #include <chrono>
+#include <exception>
 #include <functional>
 #include <memory>
 namespace voyemu::api {
@@ -54,8 +55,8 @@ private:
     Json cluster_tree(const Json &request, std::chrono::steady_clock::time_point deadline = {});
     Json session_ui(const Json &request, std::chrono::steady_clock::time_point deadline = {});
     Json run(const Json &request);
-    // The API error of a failure of the current operation, classified by its progress.
-    Json operation_error(const std::exception &exception) const;
+    // The API error of a thrown failure of the current operation, classified by its progress.
+    Json operation_error(const std::exception_ptr &failure) const;
     std::filesystem::path root_, executable_;
     Transports transports_;
     // Whether the current operation exchanged a message with its supervisor and whether it

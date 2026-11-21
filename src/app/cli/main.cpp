@@ -196,14 +196,15 @@ int main(int argc, char **argv) {
             // Ctrl+C ends a command with the shell code of SIGINT, whichever step it stopped.
             voyemu::progress::separate();
             std::cerr << voyemu::human_cli_error(
-                    voyemu::cli::LocalizedError("INTERRUPTED", "error.interrupted"), language,
-                    log_file);
+                    std::make_exception_ptr(
+                            voyemu::cli::LocalizedError("INTERRUPTED", "error.interrupted")),
+                    language, log_file);
 
             return 130;
         } else {
             // An empty line separates the error from the progress before it.
             voyemu::progress::separate();
-            std::cerr << voyemu::human_cli_error(error, language, log_file);
+            std::cerr << voyemu::human_cli_error(std::current_exception(), language, log_file);
         }
 
         return 4;

@@ -14,7 +14,7 @@ int main() try {
     const std::filesystem::filesystem_error denied(
             "resize_file", std::filesystem::path("/machines/car/qnx-ram.bin"),
             std::make_error_code(std::errc::permission_denied));
-    const auto filesystem_failure = error(denied);
+    const auto filesystem_failure = error(std::make_exception_ptr(denied));
 
     assert(filesystem_failure.at("code") == "FILESYSTEM" &&
            filesystem_failure.at("message") == denied.what() &&
@@ -22,7 +22,7 @@ int main() try {
                    std::string::npos &&
            not_started(filesystem_failure));
     const std::system_error refused(std::make_error_code(std::errc::connection_refused), "connect");
-    const auto system_failure = error(refused);
+    const auto system_failure = error(std::make_exception_ptr(refused));
     assert(system_failure.at("code") == "SYSTEM" &&
            system_failure.at("message") == refused.what() && not_started(system_failure));
     // Before any supervisor exchange a JSON exception reads the request shape, which the client
@@ -31,10 +31,10 @@ int main() try {
 
     try {
         static_cast<void>(Json::parse("{"));
-    } catch (const Json::exception &json) {
-        request_failure = error(json);
-        response_failure = error(json, true);
-        dispatched_response = error(json, true, true);
+    } catch (const Json::exception &) {
+        request_failure = error(std::current_exception());
+        response_failure = error(std::current_exception(), true);
+        dispatched_response = error(std::current_exception(), true, true);
     }
 
     assert(request_failure.at("code") == "TEST_ARGUMENT" &&
@@ -47,7 +47,8 @@ int main() try {
            dispatched_response.at("outcome") == "unknown" &&
            dispatched_response.at("retryable") == false);
 
-    const auto unknown = error(std::logic_error("vector index out of range"));
+    const auto unknown =
+            error(std::make_exception_ptr(std::logic_error("vector index out of range")));
     assert(unknown.at("code") == "INTERNAL_ERROR" &&
            unknown.at("message") == "vector index out of range" && not_started(unknown));
     // After an action was dispatched, a failure without its own CODE leaves its effect unknown;
@@ -55,23 +56,24 @@ int main() try {
     const auto unknown_outcome = [](const Json &failure) {
         return failure.at("outcome") == "unknown" && failure.at("retryable") == false;
     };
-    const auto dispatched_filesystem = error(denied, true, true);
+    const auto dispatched_filesystem = error(std::make_exception_ptr(denied), true, true);
     assert(dispatched_filesystem.at("code") == "FILESYSTEM_UNKNOWN" &&
            dispatched_filesystem.at("message") == denied.what() &&
            unknown_outcome(dispatched_filesystem));
-    const auto dispatched_system = error(refused, true, true);
+    const auto dispatched_system = error(std::make_exception_ptr(refused), true, true);
     assert(dispatched_system.at("code") == "SYSTEM_UNKNOWN" && unknown_outcome(dispatched_system));
-    const auto dispatched_internal = error(std::logic_error("vector index out of range"), true,
-                                           true);
+    const auto dispatched_internal = error(
+            std::make_exception_ptr(std::logic_error("vector index out of range")), true, true);
     assert(dispatched_internal.at("code") == "INTERNAL_ERROR_UNKNOWN" &&
            dispatched_internal.at("message") == "vector index out of range" &&
            unknown_outcome(dispatched_internal));
     // A failure with its own CODE keeps its classification after dispatch.
-    const auto busy = error(std::runtime_error("TEST_BUSY: writer active"), true, true);
+    const auto busy = error(std::make_exception_ptr(std::runtime_error("TEST_BUSY: writer active")),
+                            true, true);
     assert(busy.at("code") == "TEST_BUSY" && busy.at("outcome") == "not_started");
     // An own CODE wins over the kind of the exception that carries it.
-    const auto coded = error(std::system_error(std::make_error_code(std::errc::timed_out),
-                                               "CAN_TIMEOUT_UNKNOWN: read"));
+    const auto coded = error(std::make_exception_ptr(std::system_error(
+            std::make_error_code(std::errc::timed_out), "CAN_TIMEOUT_UNKNOWN: read")));
     assert(coded.at("code") == "CAN_TIMEOUT_UNKNOWN" && coded.at("outcome") == "unknown" &&
            coded.at("retryable") == true);
 } catch (const std::exception &failure) {

@@ -1,6 +1,7 @@
 #pragma once
 #include "error.hpp"
 #include <cstdint>
+#include <exception>
 #include <filesystem>
 #include <nlohmann/json.hpp>
 #include <optional>
@@ -13,26 +14,29 @@
 namespace voyemu {
 using Json = nlohmann::json;
 
-// The CODE of an exception: its own CODE, else FILESYSTEM, SYSTEM or JSON by the kind of a
-// standard filesystem, system or JSON exception, else empty.
-inline std::string_view failure_code(const std::exception &error) noexcept {
-    if (const auto code = message_code(error.what()); !code.empty()) {
-        return code;
+// The CODE of a thrown exception: its own CODE, else FILESYSTEM, SYSTEM or JSON by the kind of a
+// standard filesystem, system or JSON exception, else empty. The handler that catches the exception
+// tells its kind, which needs no RTTI.
+inline std::string failure_code(const std::exception_ptr &failure) {
+    std::string code;
+    std::string_view kind;
+
+    try {
+        std::rethrow_exception(failure);
+    } catch (const std::filesystem::filesystem_error &error) {
+        code = message_code(error.what());
+        kind = "FILESYSTEM";
+    } catch (const std::system_error &error) {
+        code = message_code(error.what());
+        kind = "SYSTEM";
+    } catch (const Json::exception &error) {
+        code = message_code(error.what());
+        kind = "JSON";
+    } catch (const std::exception &error) {
+        code = message_code(error.what());
     }
 
-    if (dynamic_cast<const std::filesystem::filesystem_error *>(&error)) {
-        return "FILESYSTEM";
-    }
-
-    if (dynamic_cast<const std::system_error *>(&error)) {
-        return "SYSTEM";
-    }
-
-    if (dynamic_cast<const Json::exception *>(&error)) {
-        return "JSON";
-    }
-
-    return {};
+    return code.empty() ? std::string(kind) : code;
 }
 
 bool valid_profile_name(std::string_view name);
