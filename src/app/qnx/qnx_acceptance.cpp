@@ -330,9 +330,8 @@ Json run(const std::filesystem::path &root, const std::string &profile,
     std::unique_ptr<Session> session;
     try {
         const auto definition = read_private_json(profile_file, 1 << 20);
-        session = std::make_unique<Session>(
-                directory, nonce, std::filesystem::path{},
-                vehicle_catalog(definition.at("platform").get<std::string>()));
+        session = std::make_unique<Session>(directory, nonce, std::filesystem::path{},
+                                            profile_vehicle_catalog(definition));
         const auto profile_values = definition.value("initial_state", Json::object());
 
         if (!profile_values.empty()) {

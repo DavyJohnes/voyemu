@@ -388,10 +388,10 @@ voyemu::Json startup_vehicle_state(const Arguments &args) {
         saved = voyemu::read_private_json(path);
     }
 
-    return voyemu::select_vehicle_startup(
-            args.resume ? voyemu::VehicleStartup::resume : voyemu::VehicleStartup::fresh,
-            voyemu::vehicle_catalog(definition.at("platform").get<std::string>()), profile_values,
-            args.resume ? &saved : nullptr);
+    return voyemu::select_vehicle_startup(args.resume ? voyemu::VehicleStartup::resume
+                                                      : voyemu::VehicleStartup::fresh,
+                                          voyemu::profile_vehicle_catalog(definition),
+                                          profile_values, args.resume ? &saved : nullptr);
 }
 } // namespace
 

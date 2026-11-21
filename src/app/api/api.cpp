@@ -1721,10 +1721,7 @@ Json Api::dispatch_catalog(const std::string &op, const Json &request, Clock::ti
             catalog = state_catalog(status.at("state"));
             delivery = field_delivery_from_status(status.at("field_delivery"));
         } else if (request.contains("profile")) {
-            catalog = vehicle_catalog(embedded_profile(profile(request))
-                                              .at("definition")
-                                              .at("platform")
-                                              .get<std::string>());
+            catalog = profile_vehicle_catalog(embedded_profile(profile(request)).at("definition"));
         } else {
             throw VoyemuError("TEST_ARGUMENT", "vehicle.fields needs a session or a profile");
         }

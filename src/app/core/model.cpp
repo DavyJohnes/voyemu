@@ -56,6 +56,15 @@ VehicleCatalog vehicle_catalog(std::string_view platform) {
     throw VoyemuError("VEHICLE_CATALOG", "unknown platform");
 }
 
+VehicleCatalog profile_vehicle_catalog(const Json &definition) {
+    if (!definition.is_object() || !definition.contains("platform") ||
+        !definition.at("platform").is_string()) {
+        throw VoyemuError("PROFILE_INVALID", "profile platform required");
+    }
+
+    return vehicle_catalog(definition.at("platform").get<std::string>());
+}
+
 const char *catalog_map_sha256(VehicleCatalog catalog) {
     return catalog == VehicleCatalog::qinggan11 ? qinggan11_map_sha256 : qinggan09_map_sha256;
 }

@@ -49,6 +49,8 @@ enum class VehicleCatalog {
 };
 // The catalogue of a platform value of profile.json.
 VehicleCatalog vehicle_catalog(std::string_view platform);
+// The catalogue of the platform a profile definition declares; PROFILE_INVALID without one.
+VehicleCatalog profile_vehicle_catalog(const Json &definition);
 const std::vector<Field> &catalog(VehicleCatalog catalog);
 Json catalog_json(VehicleCatalog catalog);
 // The identity of a catalogue in map_sha256 of a vehicle state: for qinggan09 the pinned

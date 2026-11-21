@@ -472,6 +472,18 @@ int main(int argc, char **argv) try {
     rejects([] {
         vehicle_catalog("unknown");
     });
+    // A profile definition names its catalogue by its platform; one without a platform is
+    // reported with a code instead of a raw JSON exception.
+    assert(profile_vehicle_catalog(Json{{"platform", "qinggan11"}}) == VehicleCatalog::qinggan11);
+    bool missing_platform = false;
+
+    try {
+        (void)profile_vehicle_catalog(Json{{"schema", 1}});
+    } catch (const VoyemuError &error) {
+        missing_platform = error.code() == "PROFILE_INVALID";
+    }
+
+    assert(missing_platform);
     std::set<std::string> platform_names;
 
     for (std::size_t i = 0; i < platform.size(); ++i) {
