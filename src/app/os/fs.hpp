@@ -126,6 +126,42 @@ struct OwnedFileObject {
     std::optional<FileObject> object;
 };
 OwnedFileObject owned_file_object(const std::filesystem::path &path, bool directory);
+// Whether path is owned by the effective user and closed to group and others, and a directory when
+// directory is set; true on Windows, whose callers check owners on handles.
+bool private_to_user(const std::filesystem::path &path, bool directory);
+// Whether path lies on a volume that clones files by reference: APFS on macOS, none elsewhere.
+bool cloning_volume(const std::filesystem::path &path);
+// Clones the file at from to the fresh name to without following links; false when the host or
+// volume cannot clone.
+bool clone_file(const std::filesystem::path &from, const std::filesystem::path &to);
+// A file opened for positional reads and writes, closed with the object.
+class PositionalFile {
+public:
+    PositionalFile(const std::filesystem::path &path, bool writable);
+    ~PositionalFile();
+    PositionalFile(const PositionalFile &) = delete;
+    PositionalFile &operator=(const PositionalFile &) = delete;
+    bool open() const;
+    // The FileObject of the opened file; none when it cannot be read.
+    std::optional<FileObject> object() const;
+    // Reads or writes exactly size bytes at offset, retrying interruptions.
+    bool read(std::uint64_t offset, char *data, std::size_t size) const;
+    bool write(std::uint64_t offset, const char *data, std::size_t size);
+    bool sync();
+
+private:
+    std::intptr_t handle_;
+};
+// The outcome of create_sparse_file.
+enum class SparseFile {
+    created,
+    // The name exists or cannot be created.
+    create_failed,
+    // The file was created but could not take its extent; it is removed again.
+    extent_failed
+};
+// Creates a new private sparse file of bytes at path and flushes it to the device.
+SparseFile create_sparse_file(const std::filesystem::path &path, std::uint64_t bytes);
 // The outcome of sync_file.
 enum class FileSync {
     synced,

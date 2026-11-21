@@ -5,6 +5,7 @@
 #include "frame_transport.hpp"
 #include "ordinary_path.hpp"
 #include "os/fs.hpp"
+#include "os/platform.hpp"
 #include "process.hpp"
 #include "progress.hpp"
 #include "project_files.hpp"
@@ -140,11 +141,10 @@ Json run(const std::filesystem::path &root, const std::string &profile,
     need(output.parent_path() == root / ".local/build" && !output.filename().empty() &&
                  !std::filesystem::exists(output) && !std::filesystem::is_symlink(output),
          "fresh own build output required");
-#ifndef _WIN32
-    need(std::filesystem::canonical(std::filesystem::temp_directory_path()) ==
-                 root / ".local/build/tmp",
+    // The QMP Unix socket of POSIX hosts needs a short owned directory.
+    need(os::host_windows || std::filesystem::canonical(std::filesystem::temp_directory_path()) ==
+                                     root / ".local/build/tmp",
          "TMPDIR must be project .local/build/tmp for short owned sockets");
-#endif
     need(request.at("images").is_object() && request.at("images").size() == layout.images.size(),
          "exact QNX image roles required");
 
@@ -166,16 +166,10 @@ Json run(const std::filesystem::path &root, const std::string &profile,
     const auto qemu = std::filesystem::path(tools.at("qemu").at("file").get<std::string>()),
                graphics = std::filesystem::path(tools.at("graphics").at("file").get<std::string>()),
                angle = std::filesystem::path(tools.at("angle").get<std::string>());
-#ifdef _WIN32
-    const std::string executable_suffix = ".exe";
-    const std::array<const char *, 2> angle_libraries{"libEGL.dll", "libGLESv2.dll"};
-#elif defined(__APPLE__)
-    const std::string executable_suffix;
-    const std::array<const char *, 2> angle_libraries{"libEGL.dylib", "libGLESv2.dylib"};
-#else
-    const std::string executable_suffix;
-    const std::array<const char *, 2> angle_libraries{"libEGL.so", "libGLESv2.so"};
-#endif
+    const std::string executable_suffix(os::executable_suffix),
+            library_suffix(os::shared_library_suffix);
+    const std::array<std::string, 2> angle_libraries{"libEGL" + library_suffix,
+                                                     "libGLESv2" + library_suffix};
     constexpr bool windows = os::host_windows;
     need(qemu.is_absolute() && qemu.filename() == "qemu-system-aarch64" + executable_suffix,
          "explicit pinned installed QNX engine required");
@@ -189,18 +183,17 @@ Json run(const std::filesystem::path &root, const std::string &profile,
             {{{"path", qemu.string()}, {"sha256", qemu_pin}},
              {{"path", graphics.string()}, {"sha256", tools.at("graphics").at("sha256")}}});
 
-    for (const auto *lib : angle_libraries) {
+    for (const auto &lib : angle_libraries) {
         const auto file = angle / lib;
         const auto pin = tools.at("libraries").at(lib).get<std::string>();
         checked(file, pin, 256ULL << 20);
         pins.push_back({{"path", file.string()}, {"sha256", pin}});
     }
 
-#ifdef _WIN32
-    const unsigned qmp_port = request.value("qmp_port", 5678u);
-    need(qmp_port >= 1024 && qmp_port <= 65535 && tcp_port_free(qmp_port),
+    // Windows reaches QMP over a loopback TCP port, POSIX hosts over a Unix socket.
+    const unsigned qmp_port = os::host_windows ? request.value("qmp_port", 5678u) : 0;
+    need(!os::host_windows || (qmp_port >= 1024 && qmp_port <= 65535 && tcp_port_free(qmp_port)),
          "fresh owned QMP port required");
-#endif
     const auto capability = tools.at("qemu").value("qnx_file_backend", Json::object());
     const bool verified_file_backend = windows && qnx_file_backend_supported(capability, qemu_pin);
     need(!windows || verified_file_backend,
@@ -256,13 +249,11 @@ Json run(const std::filesystem::path &root, const std::string &profile,
                               host_qnx_engine, (output / "qnx/sysla-gpt-ramdisk-v3.img").string(),
                               (output / "qnx/userdata-qnx6.img").string(), verified_file_backend);
     std::vector<std::string> args{"-machine", ram_launch.machine};
-#ifdef _WIN32
-    const Json qmp = {{"host", "127.0.0.1"}, {"port", qmp_port}};
-    const auto qmp_argument = "tcp:127.0.0.1:" + std::to_string(qmp_port) + ",server=on,wait=off";
-#else
-    const Json qmp = "${RUNTIME}/${TOKEN}-qmp.sock";
-    const std::string qmp_argument = "unix:${RUNTIME}/${TOKEN}-qmp.sock,server=on,wait=off";
-#endif
+    const Json qmp = os::host_windows ? Json{{"host", "127.0.0.1"}, {"port", qmp_port}}
+                                      : Json("${RUNTIME}/${TOKEN}-qmp.sock");
+    const std::string qmp_argument =
+            os::host_windows ? "tcp:127.0.0.1:" + std::to_string(qmp_port) + ",server=on,wait=off"
+                             : std::string("unix:${RUNTIME}/${TOKEN}-qmp.sock,server=on,wait=off");
     args.insert(args.end(),
                 {"-accel", ram_launch.accelerator, "-cpu", qnx_engine_cpu(host_qnx_engine)});
     args.insert(args.end(), {"-m", std::to_string(layout.memory_mib), "-smp", "8", "-nodefaults",

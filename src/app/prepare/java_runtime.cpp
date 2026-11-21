@@ -8,9 +8,7 @@ namespace voyemu {
 namespace {} // namespace
 
 std::filesystem::path java_developer_jdk(const std::filesystem::path &root) {
-    const auto host = os::host_windows               ? "windowsBuild"
-                      : os::platform_name == "macOS" ? "macosBuild"
-                                                     : "linuxBuild";
+    const auto host = std::string(os::build_tools_host);
     auto home = root / embedded_toolchain_manifest()
                                .at("optionalTools")
                                .at(host)

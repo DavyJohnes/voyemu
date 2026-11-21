@@ -1,6 +1,8 @@
 #include "qnx_checkpoint.hpp"
 #include "check.hpp"
 #include "error.hpp"
+#include "os/fs.hpp"
+#include "os/platform.hpp"
 #include "process.hpp"
 #include "qnx_interguest_contract.hpp"
 #include "quickboot.hpp"
@@ -14,15 +16,6 @@
 #include <regex>
 #include <set>
 #include <sstream>
-#ifdef __APPLE__
-#include <fcntl.h>
-#include <sys/clonefile.h>
-#include <sys/mount.h>
-#endif
-#ifndef _WIN32
-#include <sys/stat.h>
-#include <unistd.h>
-#endif
 namespace voyemu {
 namespace {
 void owned_file(const std::filesystem::path &path) {
@@ -31,13 +24,9 @@ void owned_file(const std::filesystem::path &path) {
         throw VoyemuError("QNX_CACHE", "ordinary owned file required");
     }
 
-#ifndef _WIN32
-    struct stat st{};
-
-    if (::lstat(path.c_str(), &st) || st.st_uid != ::geteuid() || (st.st_mode & 0077)) {
+    if (!os::private_to_user(path, false)) {
         throw VoyemuError("QNX_CACHE", "private file required");
     }
-#endif
 }
 
 constexpr const char *verification_name = "verified-files.json";
@@ -77,14 +66,9 @@ void private_directory(const std::filesystem::path &path) {
         throw VoyemuError("QNX_CACHE_RAM", "ordinary absolute directory required");
     }
 
-#ifndef _WIN32
-    struct stat st{};
-
-    if (::lstat(path.c_str(), &st) || !S_ISDIR(st.st_mode) || st.st_uid != ::geteuid() ||
-        (st.st_mode & 0077)) {
+    if (!os::private_to_user(path, true)) {
         throw VoyemuError("QNX_CACHE_RAM", "private owned directory required");
     }
-#endif
 }
 
 // Only v1 virt RAM is restored here; all other device/address-space shapes keep their loaders.
@@ -433,12 +417,14 @@ QnxCheckpoint runtime_qnx_checkpoint(const Json &cold, const std::string &profil
                 throw VoyemuError("QNX_CACHE_RAM", "unsupported memory configuration");
             }
 
-#ifdef __APPLE__
-            private_directory(result.directory);
-            struct statfs storage{};
+            // The RAM of a checkpoint is an APFS clone.
+            if (os::platform_name != "macOS") {
+                throw VoyemuError("QNX_CACHE_RAM", "APFS restore requires macOS");
+            }
 
-            if (::statfs(result.directory.c_str(), &storage) ||
-                std::string_view(storage.f_fstypename) != "apfs") {
+            private_directory(result.directory);
+
+            if (!os::cloning_volume(result.directory)) {
                 throw VoyemuError("QNX_CACHE_RAM", "APFS storage required");
             }
 
@@ -451,9 +437,6 @@ QnxCheckpoint runtime_qnx_checkpoint(const Json &cold, const std::string &profil
 
             retain("ram.bin", memory.at("ram"));
             result.external_ram = true;
-#else
-            throw VoyemuError("QNX_CACHE_RAM", "APFS restore requires macOS");
-#endif
         }
 
         result.launch["qemu"]["args"].push_back("-incoming");
@@ -642,14 +625,14 @@ QnxCheckpoint inspect_qnx_checkpoint(const Json &cold, const std::string &profil
                 throw VoyemuError("QNX_CACHE_RAM", "unsupported memory format or machine");
             }
 
-#ifndef __APPLE__
-            throw VoyemuError("QNX_CACHE_RAM", "APFS restore requires macOS");
-#else
-            private_directory(result.directory);
-            struct statfs storage{};
+            // The RAM of a checkpoint is an APFS clone.
+            if (os::platform_name != "macOS") {
+                throw VoyemuError("QNX_CACHE_RAM", "APFS restore requires macOS");
+            }
 
-            if (::statfs(result.directory.c_str(), &storage) ||
-                std::string_view(storage.f_fstypename) != "apfs") {
+            private_directory(result.directory);
+
+            if (!os::cloning_volume(result.directory)) {
                 throw VoyemuError("QNX_CACHE_RAM", "APFS storage required");
             }
 
@@ -663,7 +646,6 @@ QnxCheckpoint inspect_qnx_checkpoint(const Json &cold, const std::string &profil
             verify(result.directory / "ram.bin", memory.at("ram"), ram_bytes, "ram.bin", previous,
                    files, reused);
             result.external_ram = true;
-#endif
         }
 
         result.launch["qemu"]["args"].push_back("-incoming");
@@ -820,11 +802,10 @@ void checkpoint_ram_epoch(const QnxCheckpoint &saved) {
 } // namespace
 
 Json clone_qnx_checkpoint_ram(const QnxCheckpoint &saved, const std::filesystem::path &target) {
-#ifndef __APPLE__
-    (void)saved;
-    (void)target;
-    throw VoyemuError("QNX_CACHE_RAM", "APFS restore requires macOS");
-#else
+    if (os::platform_name != "macOS") {
+        throw VoyemuError("QNX_CACHE_RAM", "APFS restore requires macOS");
+    }
+
     checkpoint_ram_epoch(saved);
     private_directory(saved.directory);
     private_directory(target.parent_path());
@@ -834,25 +815,22 @@ Json clone_qnx_checkpoint_ram(const QnxCheckpoint &saved, const std::filesystem:
         throw VoyemuError("QNX_CACHE_RAM", "exact fresh target required");
     }
 
-    if (::clonefile((saved.directory / "ram.bin").c_str(), target.c_str(), CLONE_NOFOLLOW_ANY)) {
+    if (!os::clone_file(saved.directory / "ram.bin", target)) {
         throw VoyemuError("QNX_CACHE_RAM", "APFS clone failed");
     }
 
     owned_file(target);
 
     return cache_file_identity(target);
-#endif
 }
 
 void restore_qnx_checkpoint_boot_roms(const QnxCheckpoint &saved,
                                       const std::filesystem::path &target,
                                       std::string_view actual_roms) {
-#ifndef __APPLE__
-    (void)saved;
-    (void)target;
-    (void)actual_roms;
-    throw VoyemuError("QNX_CACHE_RAM", "APFS restore requires macOS");
-#else
+    if (os::platform_name != "macOS") {
+        throw VoyemuError("QNX_CACHE_RAM", "APFS restore requires macOS");
+    }
+
     checkpoint_ram_epoch(saved);
     validate_boot_roms(saved.boot_roms);
 
@@ -867,27 +845,17 @@ void restore_qnx_checkpoint_boot_roms(const QnxCheckpoint &saved,
         throw VoyemuError("QNX_CACHE_RAM", "exact owned RAM required");
     }
 
-    struct File {
-        int fd;
+    const os::PositionalFile source(saved.directory / "ram.bin", false);
+    os::PositionalFile destination(target, true);
+    const auto source_object = source.object(), destination_object = destination.object();
 
-        ~File() {
-            if (fd >= 0) {
-                ::close(fd);
-            }
-        }
-    };
-    File source{::open((saved.directory / "ram.bin").c_str(), O_RDONLY | O_NOFOLLOW | O_CLOEXEC)},
-            destination{::open(target.c_str(), O_RDWR | O_NOFOLLOW | O_CLOEXEC)};
-    struct stat src{}, dst{};
-
-    if (source.fd < 0 || destination.fd < 0 || ::fstat(source.fd, &src) ||
-        ::fstat(destination.fd, &dst) ||
-        src.st_ino != saved.verified_files.at("files")
-                              .at("ram.bin")
-                              .at("identity")
-                              .at("inode")
-                              .get<ino_t>() ||
-        dst.st_ino != cache_file_identity(target).at("inode").get<ino_t>()) {
+    if (!source_object || !destination_object ||
+        source_object->index != saved.verified_files.at("files")
+                                        .at("ram.bin")
+                                        .at("identity")
+                                        .at("inode")
+                                        .get<std::uint64_t>() ||
+        destination_object->index != cache_file_identity(target).at("inode").get<std::uint64_t>()) {
         throw VoyemuError("QNX_CACHE_RAM", "opened RAM identity changed");
     }
 
@@ -895,61 +863,35 @@ void restore_qnx_checkpoint_boot_roms(const QnxCheckpoint &saved,
         const auto bytes = item.at("bytes").get<std::size_t>();
         const auto offset = item.at("address").get<std::uint64_t>() - ram_base;
         std::vector<char> original(bytes), readback(bytes);
-        auto read = [&](int fd, std::vector<char> &data) {
-            std::size_t done = 0;
 
-            while (done < data.size()) {
-                const auto count = ::pread(fd, data.data() + done, data.size() - done,
-                                           offset + done);
-
-                if (count < 0 && errno == EINTR) {
-                    continue;
-                }
-
-                if (count <= 0) {
-                    throw VoyemuError("QNX_CACHE_RAM", "incomplete ROM read");
-                }
-
-                done += count;
-            }
-        };
-        read(source.fd, original);
-        std::size_t done = 0;
-
-        while (done < bytes) {
-            const auto count = ::pwrite(destination.fd, original.data() + done, bytes - done,
-                                        offset + done);
-
-            if (count < 0 && errno == EINTR) {
-                continue;
-            }
-
-            if (count <= 0) {
-                throw VoyemuError("QNX_CACHE_RAM", "incomplete ROM write");
-            }
-
-            done += count;
+        if (!source.read(offset, original.data(), bytes)) {
+            throw VoyemuError("QNX_CACHE_RAM", "incomplete ROM read");
         }
 
-        read(destination.fd, readback);
+        if (!destination.write(offset, original.data(), bytes)) {
+            throw VoyemuError("QNX_CACHE_RAM", "incomplete ROM write");
+        }
+
+        if (!destination.read(offset, readback.data(), bytes)) {
+            throw VoyemuError("QNX_CACHE_RAM", "incomplete ROM read");
+        }
 
         if (readback != original) {
             throw VoyemuError("QNX_CACHE_RAM", "ROM readback mismatch");
         }
     }
 
-    if (::fsync(destination.fd)) {
+    if (!destination.sync()) {
         throw VoyemuError("QNX_CACHE_RAM", "ROM synchronization failed");
     }
 
     checkpoint_ram_epoch(saved);
-    struct stat current{};
+    const auto current = os::owned_file_object(target, false);
 
-    if (::lstat(target.c_str(), &current) || current.st_ino != dst.st_ino ||
-        current.st_dev != dst.st_dev) {
+    if (!current.object || current.object->index != destination_object->index ||
+        current.object->volume != destination_object->volume) {
         throw VoyemuError("QNX_CACHE_RAM", "repaired target changed");
     }
-#endif
 }
 
 void reject_qnx_checkpoint(const QnxCheckpoint &saved, std::string_view reason,

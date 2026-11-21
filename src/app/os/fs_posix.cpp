@@ -100,6 +100,101 @@ std::filesystem::path home_directory() {
     return home ? std::filesystem::path(home) : std::filesystem::path();
 }
 
+bool private_to_user(const std::filesystem::path &path, bool directory) {
+    struct stat st{};
+
+    return !::lstat(path.c_str(), &st) && (!directory || S_ISDIR(st.st_mode)) &&
+           st.st_uid == ::geteuid() && !(st.st_mode & 0077);
+}
+
+PositionalFile::PositionalFile(const std::filesystem::path &path, bool writable)
+    : handle_(::open(path.c_str(), (writable ? O_RDWR : O_RDONLY) | O_NOFOLLOW | O_CLOEXEC)) {}
+
+PositionalFile::~PositionalFile() {
+    if (handle_ >= 0) {
+        ::close(static_cast<int>(handle_));
+    }
+}
+
+bool PositionalFile::open() const {
+    return handle_ >= 0;
+}
+
+std::optional<FileObject> PositionalFile::object() const {
+    struct stat st{};
+
+    if (handle_ < 0 || ::fstat(static_cast<int>(handle_), &st)) {
+        return std::nullopt;
+    }
+
+    return FileObject{std::uint64_t(st.st_dev), std::uint64_t(st.st_ino)};
+}
+
+bool PositionalFile::read(std::uint64_t offset, char *data, std::size_t size) const {
+    std::size_t done = 0;
+
+    while (done < size) {
+        const auto count = ::pread(static_cast<int>(handle_), data + done, size - done,
+                                   static_cast<off_t>(offset + done));
+
+        if (count < 0 && errno == EINTR) {
+            continue;
+        }
+
+        if (count <= 0) {
+            return false;
+        }
+
+        done += static_cast<std::size_t>(count);
+    }
+
+    return true;
+}
+
+bool PositionalFile::write(std::uint64_t offset, const char *data, std::size_t size) {
+    std::size_t done = 0;
+
+    while (done < size) {
+        const auto count = ::pwrite(static_cast<int>(handle_), data + done, size - done,
+                                    static_cast<off_t>(offset + done));
+
+        if (count < 0 && errno == EINTR) {
+            continue;
+        }
+
+        if (count <= 0) {
+            return false;
+        }
+
+        done += static_cast<std::size_t>(count);
+    }
+
+    return true;
+}
+
+bool PositionalFile::sync() {
+    return ::fsync(static_cast<int>(handle_)) == 0;
+}
+
+SparseFile create_sparse_file(const std::filesystem::path &path, std::uint64_t bytes) {
+    const int fd = ::open(path.c_str(), O_RDWR | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, 0600);
+
+    if (fd < 0) {
+        return SparseFile::create_failed;
+    }
+
+    const bool okay = ::ftruncate(fd, static_cast<off_t>(bytes)) == 0 && ::fsync(fd) == 0;
+    ::close(fd);
+
+    if (!okay) {
+        ::unlink(path.c_str());
+
+        return SparseFile::extent_failed;
+    }
+
+    return SparseFile::created;
+}
+
 FileSync sync_file(const std::filesystem::path &path) {
     const int fd = ::open(path.c_str(), O_RDONLY | O_NOFOLLOW);
 

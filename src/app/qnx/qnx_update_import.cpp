@@ -16,10 +16,6 @@
 #include <limits>
 #include <map>
 #include <set>
-#ifdef __APPLE__
-#include <archive.h>
-#include <archive_entry.h>
-#endif
 namespace voyemu {
 namespace {
 constexpr CodeCheck need{"invalid QNX update import"};
@@ -38,7 +34,6 @@ void space(const std::filesystem::path &directory, std::uint64_t reserve) {
     require_disk_space("QNX_IMPORT_DISK_RESERVE", directory, 0, reserve);
 }
 
-#ifndef __APPLE__
 void append(std::ifstream &source, std::ofstream &output, std::uint64_t bytes,
             const std::filesystem::path &directory, std::uint64_t reserve) {
     std::array<char, 65536> buffer{};
@@ -61,79 +56,6 @@ void append(std::ifstream &source, std::ofstream &output, std::uint64_t bytes,
 
     need(source.peek() == std::char_traits<char>::eof(), "QNX_IMPORT_ENTRY_EXTENT");
 }
-#endif
-
-#ifdef __APPLE__
-void selected_entry(const std::filesystem::path &file, const std::string &selected,
-                    std::uint64_t bytes, std::ofstream &output, const std::filesystem::path &stage,
-                    std::uint64_t reserve) {
-    struct archive *reader = archive_read_new();
-
-    need(reader != nullptr, "QNX_IMPORT_READER");
-    struct Cleanup {
-        archive *value;
-
-        ~Cleanup() {
-            archive_read_free(value);
-        }
-    } cleanup{reader};
-    need(archive_read_support_format_zip(reader) == ARCHIVE_OK &&
-                 archive_read_open_filename(reader, file.c_str(), 65536) == ARCHIVE_OK,
-         "QNX_IMPORT_ZIP_OPEN");
-    archive_entry *header = nullptr;
-    bool found = false;
-
-    for (;;) {
-        const auto status = archive_read_next_header(reader, &header);
-
-        if (status == ARCHIVE_EOF) {
-            break;
-        }
-
-        need(status == ARCHIVE_OK, "QNX_IMPORT_ZIP_HEADER");
-        const auto *raw = archive_entry_pathname_utf8(header);
-        need(raw != nullptr, "QNX_IMPORT_ZIP_NAME");
-
-        if (selected != raw) {
-            need(archive_read_data_skip(reader) == ARCHIVE_OK, "QNX_IMPORT_ZIP_SKIP");
-            continue;
-        }
-
-        need(!found && archive_entry_filetype(header) == AE_IFREG &&
-                     !archive_entry_is_encrypted(header) && !archive_entry_hardlink(header) &&
-                     !archive_entry_symlink(header) && archive_entry_size_is_set(header) &&
-                     archive_entry_size(header) >= 0 &&
-                     static_cast<std::uint64_t>(archive_entry_size(header)) == bytes,
-             "QNX_IMPORT_ZIP_ENTRY");
-        found = true;
-        std::array<char, 65536> buffer{};
-        std::uint64_t copied = 0;
-
-        for (;;) {
-            interruption::check();
-            const auto count = archive_read_data(reader, buffer.data(), buffer.size());
-            need(count >= 0, "QNX_IMPORT_ZIP_CRC");
-
-            if (!count) {
-                break;
-            }
-
-            need(static_cast<std::uint64_t>(count) <= bytes - copied, "QNX_IMPORT_ZIP_EXTENT");
-            output.write(buffer.data(), count);
-            need(bool(output), "QNX_IMPORT_WRITE");
-            copied += count;
-
-            if (copied % (64ULL << 20) == 0) {
-                space(stage, reserve);
-            }
-        }
-
-        need(copied == bytes, "QNX_IMPORT_ZIP_TRUNCATED");
-    }
-
-    need(found, "QNX_IMPORT_ENTRY_MISSING");
-}
-#endif
 } // namespace
 
 Json import_qnx_update(const std::filesystem::path &file, std::string_view archive_sha256,
@@ -270,7 +192,6 @@ Json import_qnx_update(const std::filesystem::path &file, std::string_view archi
             }
         }
     } cleanup{output, published};
-#ifndef __APPLE__
     // Validate and stream the entire selected set in one pass over the pinned ZIP.
     std::map<std::string, std::filesystem::path> staged_entries;
     std::vector<ZipTreeEntry> batch;
@@ -280,18 +201,10 @@ Json import_qnx_update(const std::filesystem::path &file, std::string_view archi
         staged_entries.emplace(name, path);
         batch.push_back({name, path, entries.at(name).bytes});
     }
+
     extract_pinned_zip_tree(file, std::string(archive_sha256), batch, reserve);
-#endif
     const auto materialize_entry = [&](const std::string &name, const std::filesystem::path &path) {
-#ifdef __APPLE__
-        std::ofstream extracted(path, std::ios::binary);
-        need(bool(extracted), "QNX_IMPORT_ENTRY_OPEN");
-        selected_entry(file, name, entries.at(name).bytes, extracted, stage, reserve);
-        extracted.close();
-        need(bool(extracted), "QNX_IMPORT_ENTRY_CLOSE");
-#else
         std::filesystem::rename(staged_entries.at(name), path);
-#endif
     };
     Json records = Json::object();
 
@@ -342,16 +255,12 @@ Json import_qnx_update(const std::filesystem::path &file, std::string_view archi
 
             for (const auto &name : names) {
                 const auto value = name.get<std::string>();
-#ifdef __APPLE__
-                selected_entry(file, value, entries.at(value).bytes, stream, stage, reserve);
-#else
                 const auto &part = staged_entries.at(value);
                 std::ifstream input(part, std::ios::binary);
                 need(bool(input), "QNX_IMPORT_ENTRY_OPEN");
                 append(input, stream, entries.at(value).bytes, stage, reserve);
                 input.close();
                 std::filesystem::remove(part);
-#endif
             }
 
             stream.close();

@@ -1,3 +1,4 @@
+#include "../core/private_state_security.hpp"
 #include "cli_messages.hpp"
 #include "fs.hpp"
 #include <cstdlib>
@@ -138,6 +139,122 @@ std::filesystem::path home_directory() {
     const auto *home = _wgetenv(L"USERPROFILE");
 
     return home ? std::filesystem::path(home) : std::filesystem::path();
+}
+
+bool private_to_user(const std::filesystem::path &, bool) {
+    return true;
+}
+
+bool cloning_volume(const std::filesystem::path &) {
+    return false;
+}
+
+bool clone_file(const std::filesystem::path &, const std::filesystem::path &) {
+    return false;
+}
+
+PositionalFile::PositionalFile(const std::filesystem::path &path, bool writable)
+    : handle_(reinterpret_cast<std::intptr_t>(
+              CreateFileW(path.c_str(), GENERIC_READ | (writable ? GENERIC_WRITE : 0),
+                          FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING,
+                          FILE_FLAG_OPEN_REPARSE_POINT, nullptr))) {}
+
+PositionalFile::~PositionalFile() {
+    if (open()) {
+        CloseHandle(reinterpret_cast<HANDLE>(handle_));
+    }
+}
+
+bool PositionalFile::open() const {
+    return reinterpret_cast<HANDLE>(handle_) != INVALID_HANDLE_VALUE;
+}
+
+std::optional<FileObject> PositionalFile::object() const {
+    BY_HANDLE_FILE_INFORMATION info{};
+
+    if (!open() || !GetFileInformationByHandle(reinterpret_cast<HANDLE>(handle_), &info)) {
+        return std::nullopt;
+    }
+
+    return FileObject{info.dwVolumeSerialNumber,
+                      (std::uint64_t(info.nFileIndexHigh) << 32) | info.nFileIndexLow};
+}
+
+bool PositionalFile::read(std::uint64_t offset, char *data, std::size_t size) const {
+    std::size_t done = 0;
+
+    while (done < size) {
+        OVERLAPPED at{};
+        at.Offset = static_cast<DWORD>(offset + done);
+        at.OffsetHigh = static_cast<DWORD>((offset + done) >> 32);
+        DWORD count = 0;
+
+        if (!ReadFile(reinterpret_cast<HANDLE>(handle_), data + done,
+                      static_cast<DWORD>(std::min<std::size_t>(size - done, 1U << 30)), &count,
+                      &at) ||
+            !count) {
+            return false;
+        }
+
+        done += count;
+    }
+
+    return true;
+}
+
+bool PositionalFile::write(std::uint64_t offset, const char *data, std::size_t size) {
+    std::size_t done = 0;
+
+    while (done < size) {
+        OVERLAPPED at{};
+        at.Offset = static_cast<DWORD>(offset + done);
+        at.OffsetHigh = static_cast<DWORD>((offset + done) >> 32);
+        DWORD count = 0;
+
+        if (!WriteFile(reinterpret_cast<HANDLE>(handle_), data + done,
+                       static_cast<DWORD>(std::min<std::size_t>(size - done, 1U << 30)), &count,
+                       &at) ||
+            !count) {
+            return false;
+        }
+
+        done += count;
+    }
+
+    return true;
+}
+
+bool PositionalFile::sync() {
+    return FlushFileBuffers(reinterpret_cast<HANDLE>(handle_)) != 0;
+}
+
+SparseFile create_sparse_file(const std::filesystem::path &path, std::uint64_t bytes) {
+    detail::PrivateStateSecurity security;
+    const HANDLE file = CreateFileW(path.c_str(), GENERIC_READ | GENERIC_WRITE | DELETE,
+                                    FILE_SHARE_READ | FILE_SHARE_WRITE, &security.attributes,
+                                    CREATE_NEW,
+                                    FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OPEN_REPARSE_POINT, nullptr);
+
+    if (file == INVALID_HANDLE_VALUE) {
+        return SparseFile::create_failed;
+    }
+
+    DWORD returned = 0;
+    LARGE_INTEGER length{};
+    length.QuadPart = static_cast<LONGLONG>(bytes);
+    const bool sparse = DeviceIoControl(file, FSCTL_SET_SPARSE, nullptr, 0, nullptr, 0, &returned,
+                                        nullptr) != 0;
+    const bool okay = sparse && SetFilePointerEx(file, length, nullptr, FILE_BEGIN) &&
+                      SetEndOfFile(file) && FlushFileBuffers(file);
+
+    if (!okay) {
+        FILE_DISPOSITION_INFO disposition{TRUE};
+        SetFileInformationByHandle(file, FileDispositionInfo, &disposition, sizeof(disposition));
+    }
+
+    CloseHandle(file);
+
+    return okay ? SparseFile::created : SparseFile::extent_failed;
 }
 
 FileSync sync_file(const std::filesystem::path &path) {

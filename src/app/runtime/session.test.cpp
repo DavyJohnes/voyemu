@@ -1185,7 +1185,8 @@ struct SessionPersistenceFixture {
             std::filesystem::rename(root / "retained-userdata", userdata);
             // Exercise an actual fsync syscall failure after quiescence/pause, then restore the
             // retained capability.
-            const int disk_fd = session.qnx_persistent_storage_->disks_[0].fd,
+            const int disk_fd = static_cast<int>(
+                              session.qnx_persistent_storage_->disks_[0].native_handle()),
                       saved = ::dup(disk_fd), null_fd = ::open("/dev/null", O_RDWR);
             assert(saved >= 0 && null_fd >= 0 && ::dup2(null_fd, disk_fd) == disk_fd);
             ::close(null_fd);
@@ -1252,7 +1253,8 @@ struct SessionPersistenceFixture {
             assert(terminal.cluster_requested_ && std::filesystem::exists(ram));
             std::filesystem::remove(userdata);
             std::filesystem::rename(root / "retained-userdata", userdata);
-            const int disk_fd = terminal.qnx_persistent_storage_->disks_[0].fd,
+            const int disk_fd = static_cast<int>(
+                              terminal.qnx_persistent_storage_->disks_[0].native_handle()),
                       saved = ::dup(disk_fd), null_fd = ::open("/dev/null", O_RDWR);
             assert(saved >= 0 && null_fd >= 0 && ::dup2(null_fd, disk_fd) == disk_fd);
             ::close(null_fd);
@@ -1998,7 +2000,9 @@ struct SessionPersistenceFixture {
 
 #ifndef _WIN32
                     if (test == "fsync-failure") {
-                        const int disk_fd = session.qnx_persistent_storage_->disks_[0].fd,
+                        const int disk_fd = static_cast<int>(
+                                          session.qnx_persistent_storage_->disks_[0]
+                                                  .native_handle()),
                                   saved = ::dup(disk_fd), null_fd = ::open("/dev/null", O_RDWR);
                         assert(saved >= 0 && null_fd >= 0 && ::dup2(null_fd, disk_fd) == disk_fd);
                         ::close(null_fd);

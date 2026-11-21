@@ -7,7 +7,9 @@
 #include "../core/private_state_security.hpp"
 #include <winioctl.h>
 #else
+#include <fcntl.h>
 #include <sys/mman.h>
+#include <unistd.h>
 #endif
 #include <algorithm>
 #include <cassert>

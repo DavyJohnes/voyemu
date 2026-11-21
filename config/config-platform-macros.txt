@@ -61,31 +61,22 @@ src/app/profiles/profile_build_internal.hpp later: data-out and profile-sweep br
 src/app/profiles/profile_preparation.cpp group 11 profiles: candidate transport and image clone
 src/app/profiles/profile_runtime.test.cpp group 11 profiles: candidate transport and image clone
 src/app/profiles/wine_native_root_guard.test.cpp group 11 profiles: candidate transport and image clone
-src/app/qnx/qnx_acceptance.cpp group 9 qnx: checkpoint, storage, update and shutdown
-src/app/qnx/qnx_checkpoint.cpp group 9 qnx: checkpoint, storage, update and shutdown
 src/app/qnx/qnx_checkpoint.test.cpp group 9 qnx: checkpoint, storage, update and shutdown
-src/app/qnx/qnx_guest_build.cpp group 9 qnx: checkpoint, storage, update and shutdown
 src/app/qnx/qnx_guest_build.test.cpp group 9 qnx: checkpoint, storage, update and shutdown
 src/app/qnx/qnx_guest_shell.test.cpp group 9 qnx: checkpoint, storage, update and shutdown
 src/app/qnx/qnx_host.test.cpp group 9 qnx: checkpoint, storage, update and shutdown
 src/app/qnx/qnx_host_windows.test.cpp group 9 qnx: checkpoint, storage, update and shutdown
 src/app/qnx/qnx_lifecycle.test.cpp group 9 qnx: checkpoint, storage, update and shutdown
 src/app/qnx/qnx_native_runtime.test.cpp group 9 qnx: checkpoint, storage, update and shutdown
-src/app/qnx/qnx_persistent_storage.hpp group 9 qnx: checkpoint, storage, update and shutdown
 src/app/qnx/qnx_prepare.test.cpp group 9 qnx: checkpoint, storage, update and shutdown
-src/app/qnx/qnx_process_ram.cpp group 9 qnx: checkpoint, storage, update and shutdown
-src/app/qnx/qnx_process_ram.hpp group 9 qnx: checkpoint, storage, update and shutdown
 src/app/qnx/qnx_process_ram.test.cpp group 9 qnx: checkpoint, storage, update and shutdown
 src/app/qnx/qnx_qinggan11.test.cpp group 9 qnx: checkpoint, storage, update and shutdown
-src/app/qnx/qnx_ready_collector.hpp group 9 qnx: checkpoint, storage, update and shutdown
+src/app/qnx/qnx_ready_collector.hpp group 10 runtime: the session includes this POSIX ready collector on every host
 src/app/qnx/qnx_serial_lines.test.cpp group 9 qnx: checkpoint, storage, update and shutdown
-src/app/qnx/qnx_shutdown_monitor.cpp group 9 qnx: checkpoint, storage, update and shutdown
 src/app/qnx/qnx_shutdown_monitor.test.cpp group 9 qnx: checkpoint, storage, update and shutdown
-src/app/qnx/qnx_update.cpp group 9 qnx: checkpoint, storage, update and shutdown
 src/app/qnx/qnx_update.test.cpp group 9 qnx: checkpoint, storage, update and shutdown
-src/app/qnx/qnx_update_import.cpp group 9 qnx: checkpoint, storage, update and shutdown
 src/app/qnx/qnx_update_import.test.cpp group 9 qnx: checkpoint, storage, update and shutdown
-src/app/qnx/shutdown_fixture.hpp group 9 qnx: checkpoint, storage, update and shutdown
+src/app/qnx/shutdown_fixture.hpp group 9 qnx tests: the shutdown fixture of both hosts
 src/app/runtime/android_port_lease.test.cpp group 10 runtime: interguest link, media, providers and sessions
 src/app/runtime/cli_flow.test.cpp group 10 runtime: interguest link, media, providers and sessions
 src/app/runtime/field_delivery.test.cpp group 10 runtime: interguest link, media, providers and sessions

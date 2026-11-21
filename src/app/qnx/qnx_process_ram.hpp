@@ -17,11 +17,8 @@ enum class QnxEngine {
     hvf,
     tcg_file
 };
-#if defined(__APPLE__)
-inline constexpr QnxEngine host_qnx_engine = QnxEngine::hvf;
-#else
-inline constexpr QnxEngine host_qnx_engine = QnxEngine::tcg_file;
-#endif
+inline constexpr QnxEngine host_qnx_engine = os::platform_name == "macOS" ? QnxEngine::hvf
+                                                                          : QnxEngine::tcg_file;
 // The file backend of the Windows engine maps only an existing file of the full RAM extent.
 inline constexpr bool host_qnx_ram_precreated = os::host_windows;
 

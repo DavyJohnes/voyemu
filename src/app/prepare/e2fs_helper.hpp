@@ -34,9 +34,8 @@ inline void build_e2fs_helpers(const std::filesystem::path &project,
                 "the helper recipe needs a POSIX shell and make; publish the release asset");
     }
 
-    const bool macos = os::platform_name == "macOS";
-    const auto host = macos ? "macosBuild" : "linuxBuild",
-               binary = macos ? "CMake.app/Contents/bin/cmake" : "bin/cmake";
+    const auto host = std::string(os::build_tools_host);
+    const auto binary = os::platform_name == "macOS" ? "CMake.app/Contents/bin/cmake" : "bin/cmake";
     ProcessSpec spec;
     spec.executable = project /
                       embedded_toolchain_manifest()

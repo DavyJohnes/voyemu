@@ -5,22 +5,14 @@
 #include "ordinary_path.hpp"
 #include "os/digest.hpp"
 #include "os/fs.hpp"
+#include "os/library.hpp"
+#include "os/zero_view.hpp"
 #include "process.hpp"
 #include <algorithm>
 #include <array>
 #include <fstream>
 #include <stdexcept>
 #include <vector>
-#ifdef _WIN32
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <windows.h>
-#include <winioctl.h>
-#else
-#include <dlfcn.h>
-#include <sys/mman.h>
-#endif
 namespace voyemu {
 namespace {
 constexpr CodeCheck need{"invalid OEM update"};
@@ -30,118 +22,48 @@ void ordinary(const std::filesystem::path &path) {
 }
 
 struct Library {
-#ifdef _WIN32
-    HMODULE handle{};
+    os::Library library;
 
-    explicit Library(const std::filesystem::path &file)
-        : handle(LoadLibraryExW(file.c_str(), nullptr,
-                                LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR |
-                                        LOAD_LIBRARY_SEARCH_DEFAULT_DIRS)) {}
-
-    ~Library() {
-        if (handle) {
-            FreeLibrary(handle);
-        }
-    }
-
-    void *get(const char *name) {
-        return reinterpret_cast<void *>(GetProcAddress(handle, name));
-    }
-#else
-    void *handle{};
-
-    explicit Library(const std::filesystem::path &file)
-        : handle(dlopen(file.c_str(), RTLD_NOW | RTLD_LOCAL)) {}
-
-    ~Library() {
-        if (handle) {
-            dlclose(handle);
-        }
-    }
-
-    void *get(const char *name) {
-        return dlsym(handle, name);
-    }
-#endif
+    explicit Library(const std::filesystem::path &file) : library(file) {}
 
     template <class Function> Function symbol(const char *name) {
-        auto value = reinterpret_cast<Function>(get(name));
+        auto value = reinterpret_cast<Function>(library.symbol(name));
         need(value != nullptr, "QNX_UPDATE_CODEC_SYMBOL");
 
         return value;
     }
 };
 struct ZeroReference {
-    void *data{};
+    os::ZeroView view;
+    const void *data{};
     std::size_t bytes{};
-#ifdef _WIN32
-    HANDLE file = INVALID_HANDLE_VALUE, mapping{};
-#endif
 
     explicit ZeroReference(std::size_t count, const std::filesystem::path &directory)
         : bytes(count) {
-#ifdef _WIN32
-        try {
-            const auto name = directory / ("qnx-zero-reference-" + random_token() + ".bin");
-            file = CreateFileW(name.c_str(), GENERIC_READ | GENERIC_WRITE, 0, nullptr, CREATE_NEW,
-                               FILE_ATTRIBUTE_TEMPORARY | FILE_FLAG_DELETE_ON_CLOSE, nullptr);
-            need(file != INVALID_HANDLE_VALUE, "QNX_UPDATE_REFERENCE_FILE");
-            DWORD returned = 0;
-            need(DeviceIoControl(file, FSCTL_SET_SPARSE, nullptr, 0, nullptr, 0, &returned,
-                                 nullptr) != 0,
-                 "QNX_UPDATE_REFERENCE_SPARSE");
-            LARGE_INTEGER end{};
-            end.QuadPart = static_cast<LONGLONG>(bytes);
-            need(SetFilePointerEx(file, end, nullptr, FILE_BEGIN) && SetEndOfFile(file),
-                 "QNX_UPDATE_REFERENCE_EXTENT");
-            mapping = CreateFileMappingW(file, nullptr, PAGE_READONLY, 0, 0, nullptr);
-            need(mapping != nullptr, "QNX_UPDATE_REFERENCE_MAPPING");
-            data = MapViewOfFile(mapping, FILE_MAP_READ, 0, 0, bytes);
-            need(data != nullptr, "QNX_UPDATE_REFERENCE_MAP");
-        } catch (...) {
-            if (data) {
-                UnmapViewOfFile(data);
-            }
+        using Opening = os::ZeroView::Opening;
 
-            if (mapping) {
-                CloseHandle(mapping);
-            }
+        switch (view.open(count, directory)) {
+        case Opening::mapped:
+            data = view.data();
 
-            if (file != INVALID_HANDLE_VALUE) {
-                CloseHandle(file);
-            }
-
-            throw;
-        }
-#else
-        (void)directory;
-        data = mmap(nullptr, bytes, PROT_READ, MAP_PRIVATE | MAP_ANON, -1, 0);
-
-        if (data == MAP_FAILED) {
-            data = nullptr;
-        }
-#endif
-        need(data != nullptr, "QNX_UPDATE_REFERENCE_MAP");
-    }
-
-    ~ZeroReference() {
-#ifdef _WIN32
-        if (data) {
-            UnmapViewOfFile(data);
+            return;
+        case Opening::file_failed:
+            need(false, "QNX_UPDATE_REFERENCE_FILE");
+            break;
+        case Opening::sparse_failed:
+            need(false, "QNX_UPDATE_REFERENCE_SPARSE");
+            break;
+        case Opening::extent_failed:
+            need(false, "QNX_UPDATE_REFERENCE_EXTENT");
+            break;
+        case Opening::mapping_failed:
+            need(false, "QNX_UPDATE_REFERENCE_MAPPING");
+            break;
+        case Opening::view_failed:
+            break;
         }
 
-        if (mapping) {
-            CloseHandle(mapping);
-        }
-
-        if (file != INVALID_HANDLE_VALUE) {
-            CloseHandle(file);
-        }
-#else
-        if (data) {
-            munmap(data, bytes);
-        }
-#endif
+        need(false, "QNX_UPDATE_REFERENCE_MAP");
     }
 };
 struct InBuffer {
@@ -178,7 +100,7 @@ static void decode_patch(const std::filesystem::path &patch, std::string_view pa
          "QNX_UPDATE_FRESH_OUTPUT");
     const auto patch_size = std::filesystem::file_size(patch);
     Library codec(library);
-    need(codec.handle != nullptr, "QNX_UPDATE_CODEC_LOAD");
+    need(codec.library.loaded(), "QNX_UPDATE_CODEC_LOAD");
     const auto create = codec.symbol<void *(*)()>("ZSTD_createDCtx");
     const auto release = codec.symbol<std::size_t (*)(void *)>("ZSTD_freeDCtx");
     const auto prefix =

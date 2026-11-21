@@ -58,6 +58,10 @@ inline constexpr std::string_view shared_library_suffix = ".so";
 #endif
 // Whether the host is Windows, for interfaces that take the host as a value.
 inline constexpr bool host_windows = platform_name == "Windows";
+// The key of the build tools of this host in the optionalTools of toolchain.json.
+inline constexpr std::string_view build_tools_host = host_windows               ? "windowsBuild"
+                                                     : platform_name == "macOS" ? "macosBuild"
+                                                                                : "linuxBuild";
 // The separator of the entries of a path list such as PATH or a Java class path.
 inline constexpr char path_list_separator = host_windows ? ';' : ':';
 } // namespace voyemu::os

@@ -3,6 +3,7 @@
 #include "download.hpp"
 #include "error.hpp"
 #include "logging.hpp"
+#include "os/platform.hpp"
 #include "process.hpp"
 #include "project_files.hpp"
 #include "qnx_link_interface.hpp"
@@ -715,13 +716,8 @@ install_qnx_guest_modules(const std::filesystem::path &root, QnxGuestAdapter ada
         if (build) {
             build(job);
         } else {
-#ifdef _WIN32
-            const auto host = "windowsBuild", binary = "zig.exe";
-#elif defined(__APPLE__)
-            const auto host = "macosBuild", binary = "zig";
-#else
-            const auto host = "linuxBuild", binary = "zig";
-#endif
+            const auto host = std::string(os::build_tools_host),
+                       binary = "zig" + std::string(os::executable_suffix);
             const auto zig = root /
                              embedded_toolchain_manifest()
                                      .at("optionalTools")

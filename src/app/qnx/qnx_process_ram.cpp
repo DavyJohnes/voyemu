@@ -1,19 +1,9 @@
 #include "qnx_process_ram.hpp"
 #include "error.hpp"
+#include "os/fs.hpp"
 #include <array>
 #include <stdexcept>
 #include <string>
-#ifdef _WIN32
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include "private_state_security.hpp"
-#include <windows.h>
-#include <winioctl.h>
-#else
-#include <fcntl.h>
-#include <unistd.h>
-#endif
 namespace voyemu {
 namespace {
 // MTTCG stalls the OEM SMP bootstrap before timer setup; single-thread TCG reaches periodic PPI27
@@ -100,50 +90,14 @@ void create_qnx_ram(const std::filesystem::path &path, std::uint64_t bytes) {
                           "exact guest extent and canonical session RAM path required");
     }
 
-#ifdef _WIN32
-    detail::PrivateStateSecurity security;
-    const HANDLE file = CreateFileW(path.c_str(), GENERIC_READ | GENERIC_WRITE | DELETE,
-                                    FILE_SHARE_READ | FILE_SHARE_WRITE, &security.attributes,
-                                    CREATE_NEW,
-                                    FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OPEN_REPARSE_POINT, nullptr);
-
-    if (file == INVALID_HANDLE_VALUE) {
+    switch (os::create_sparse_file(path, bytes)) {
+    case os::SparseFile::created:
+        break;
+    case os::SparseFile::create_failed:
         throw VoyemuError("QNX_RAM_CREATE", "exclusive sparse RAM creation failed");
-    }
-
-    DWORD returned = 0;
-    LARGE_INTEGER length{};
-    length.QuadPart = static_cast<LONGLONG>(bytes);
-    const bool sparse = DeviceIoControl(file, FSCTL_SET_SPARSE, nullptr, 0, nullptr, 0, &returned,
-                                        nullptr) != 0;
-    const bool okay = sparse && SetFilePointerEx(file, length, nullptr, FILE_BEGIN) &&
-                      SetEndOfFile(file) && FlushFileBuffers(file);
-
-    if (!okay) {
-        FILE_DISPOSITION_INFO disposition{TRUE};
-        SetFileInformationByHandle(file, FileDispositionInfo, &disposition, sizeof(disposition));
-    }
-
-    CloseHandle(file);
-
-    if (!okay) {
+    case os::SparseFile::extent_failed:
         throw VoyemuError("QNX_RAM_CREATE", "sparse RAM extent creation failed");
     }
-#else
-    const int fd = ::open(path.c_str(), O_RDWR | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, 0600);
-
-    if (fd < 0) {
-        throw VoyemuError("QNX_RAM_CREATE", "exclusive sparse RAM creation failed");
-    }
-
-    const bool okay = ::ftruncate(fd, static_cast<off_t>(bytes)) == 0 && ::fsync(fd) == 0;
-    ::close(fd);
-
-    if (!okay) {
-        ::unlink(path.c_str());
-        throw VoyemuError("QNX_RAM_CREATE", "sparse RAM extent creation failed");
-    }
-#endif
 }
 
 bool qnx_ram_clock_options_current(QnxEngine engine, const std::vector<std::string> &arguments) {
