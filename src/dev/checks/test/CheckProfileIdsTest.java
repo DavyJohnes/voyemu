@@ -130,7 +130,10 @@ public final class CheckProfileIdsTest {
                                 root.toString())
                         .redirectErrorStream(true)
                         .start();
-        String result = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        // println ends lines with CRLF on Windows; the expectations read LF.
+        String result =
+                new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8)
+                        .replace("\r\n", "\n");
         int code = process.waitFor();
 
         if (code != exit || !result.contains(output)) {
