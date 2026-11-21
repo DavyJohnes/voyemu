@@ -1034,56 +1034,45 @@ void Session::poll_oem_settings() {
         deliveries_["android"]["appearance"]["status"] = "unavailable";
     }
 
-    auto get = [&](int ordinal, int value) {
-        auto result = adb({"shell", "service", "call", "qg.canbus", "57", "i32", "1", "i32",
-                           std::to_string(ordinal), "i32", std::to_string(value)},
-                          1500);
+    std::vector<std::string> replies;
+
+    for (const auto &query : oem_theme_queries(android_spec_)) {
+        auto result = adb(query, 1500);
 
         if (result.exit_code || result.timed_out) {
+            // An unavailable cluster skin is observed again at the next poll.
+            if (qinggan11_presentation(android_spec_)) {
+                return;
+            }
+
             throw VoyemuError("ANDROID_THEME", "Binder unavailable");
         }
 
-        return binder_integer(result.output);
-    };
-    std::optional<ThemeState> current;
-    const bool qinggan11_611 = qinggan11_cluster_presentation(android_spec_);
-    const bool qinggan11_731 =
-            !qinggan11_611 &&
-            qinggan11_presentation(android_spec_.value("reference_profile", std::string{}),
-                                   android_spec_);
-
-    if (qinggan11_611 || qinggan11_731) {
-        current = read_qinggan11_cluster_theme([&](const std::vector<std::string> &args) {
-            return adb(args, 1500);
-        });
-    } else {
-        current = ThemeState{get(599, 818), get(978, 1195)};
+        replies.push_back(result.output);
     }
 
-    if (!current) {
+    if (const auto current = oem_theme_state(android_spec_, replies)) {
+        observe_oem_theme(*current);
+    }
+}
+
+void Session::observe_oem_theme(ThemeState current) {
+    auto change = oem_theme_command(android_spec_, theme_, current);
+    theme_ = current;
+
+    if (!change) {
         return;
     }
 
-    auto change = qinggan11_611 ? qinggan11_theme_change(theme_, *current)
-                                : theme_change(theme_, *current);
-    theme_ = *current;
+    (*change)["seq"] = ++theme_sequence_;
+    write_private_json(directory_ / "theme-command.json", *change);
+    deliveries_["qnx"]["theme"] = {{"sequence", theme_sequence_},
+                                   {"status", "queued"},
+                                   {"theme_id", (*change)["theme_id"]},
+                                   {"source", (*change)["source"]}};
 
-    if (change && qinggan11_731) {
-        (*change)["source"] = "qg.cluster.service/SKIN";
-    }
-
-    if (change) {
-        (*change)["seq"] = ++theme_sequence_;
-        write_private_json(directory_ / "theme-command.json", *change);
-        deliveries_["qnx"]["theme"] = {{"sequence", theme_sequence_},
-                                       {"status", "queued"},
-                                       {"theme_id", (*change)["theme_id"]},
-                                       {"source", (*change)["source"]}};
-
-        if (qinggan11_611) {
-            deliveries_["qnx"]["theme"]["contract"] = (*change)["contract"];
-            deliveries_["qnx"]["theme"]["theme_skin"] = (*change)["theme_skin"];
-        }
+    if (change->contains("theme_skin")) {
+        deliveries_["qnx"]["theme"]["theme_skin"] = (*change)["theme_skin"];
     }
 }
 

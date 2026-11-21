@@ -465,10 +465,7 @@ static void qinggan11_theme_requests(const std::filesystem::path &parent,
     Backend backend({ram, directory, angle, {}, address, true, false});
     auto command = [&](unsigned seq, unsigned mode, unsigned skin) {
         write_private_json(directory / "theme-command.json",
-                           {{"seq", seq},
-                            {"contract", "qinggan11-611-theme-v1"},
-                            {"theme_id", mode},
-                            {"theme_skin", skin}});
+                           {{"seq", seq}, {"theme_id", mode}, {"theme_skin", skin}});
     };
     std::ostringstream name;
     name << "producer-" << std::hex << address;
@@ -477,9 +474,11 @@ static void qinggan11_theme_requests(const std::filesystem::path &parent,
     report[1] = 1;
     report[7] = 1;
     command(1, 2, 1001);
-    assert(!backend.dispatch(355, report, {}).result);
+    // Any other guest takes the mode of the same command.
+    auto mode_only = backend.dispatch(355, report, {});
+    assert(mode_only.result == 1 && mode_only.payload == std::vector<std::byte>{std::byte{2}});
     report[6] = 0x6110002;
-    assert(!backend.dispatch(355, report, {}).result);
+    assert(backend.dispatch(355, report, {}).result == 1);
     report[6] = 0x6110001;
     write_private_json(directory / "theme-command.json", {{"seq", 1u}, {"theme_id", 2}});
     assert(!backend.dispatch(355, report, {}).result);
@@ -525,18 +524,9 @@ static void qinggan11_theme_requests(const std::filesystem::path &parent,
            partial.at("native_outcome") == "getter_mismatch");
     assert(read_private_json(producer / "theme-ack.json") == ack);
 
-    for (const auto &bad : {Json{{"seq", 4u},
-                                 {"contract", "qinggan11-611-theme-v1"},
-                                 {"theme_id", 4},
-                                 {"theme_skin", 1002}},
-                            Json{{"seq", 4u},
-                                 {"contract", "qinggan11-611-theme-v1"},
-                                 {"theme_id", 2},
-                                 {"theme_skin", 3001}},
-                            Json{{"seq", 4u},
-                                 {"contract", "qinggan11-611-theme-v1"},
-                                 {"theme_id", 4},
-                                 {"theme_skin", 4294970297ULL}}}) {
+    for (const auto &bad : {Json{{"seq", 4u}, {"theme_id", 4}, {"theme_skin", 1002}},
+                            Json{{"seq", 4u}, {"theme_id", 2}, {"theme_skin", 3001}},
+                            Json{{"seq", 4u}, {"theme_id", 4}, {"theme_skin", 4294970297ULL}}}) {
         write_private_json(directory / "theme-command.json", bad);
         bool denied = false;
         try {

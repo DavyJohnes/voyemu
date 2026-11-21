@@ -93,24 +93,25 @@ int main() try {
         assert(voyemu::qinggan11_startup_values(ready) == ready.at("initial_state"));
     }
     const Json free_presentation = {
+            {"reference_profile", voyemu::qinggan11_731_profile_id},
             {"api", 30},
             {"home",
              {{"package", "com.qinggan.app.launcher"},
               {"component",
                "com.qinggan.app.launcher/com.qinggan.app.launcher.activity.MainActivity"}}}};
-    assert(voyemu::qinggan11_presentation(voyemu::qinggan11_731_profile_id, free_presentation));
-    assert(!voyemu::qinggan11_presentation("free-09-chinese-20260106-6.0.3", free_presentation));
-    assert(!voyemu::qinggan11_presentation(voyemu::passion_profile_id, free_presentation));
+    assert(voyemu::qinggan11_presentation(free_presentation));
 
     for (const auto &update :
-         Json::array({{{"api", 28}},
+         Json::array({{{"reference_profile", "free-09-chinese-20260106-6.0.3"}},
+                      {{"reference_profile", voyemu::passion_profile_id}},
+                      {{"api", 28}},
                       {{"home",
                         {{"package", "com.qinggan.app.launcher"},
                          {"component", "com.qinggan.app.launcher/.activity.MainActivity"}}}},
                       {{"home", {{"package", "other"}, {"component", "other/.Main"}}}}})) {
         auto invalid = free_presentation;
         invalid.update(update);
-        assert(!voyemu::qinggan11_presentation(voyemu::qinggan11_731_profile_id, invalid));
+        assert(!voyemu::qinggan11_presentation(invalid));
     }
 
     {

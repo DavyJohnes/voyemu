@@ -1,6 +1,7 @@
 #pragma once
 #include "api30_framework_boot.hpp"
 #include "model.hpp"
+#include "profile_catalog.hpp"
 #include <algorithm>
 #include <stdexcept>
 
@@ -101,8 +102,12 @@ inline bool qinggan11_profile_id(std::string_view profile) {
     return profile == qinggan11_731_profile_id || profile == qinggan11_ru_profile;
 }
 
-inline bool qinggan11_presentation(std::string_view profile, const Json &android) {
-    return qinggan11_profile_id(profile) && android.value("api", 0) == 30 &&
+// A qinggan11 Android of API 30 with the OEM HOME; the platform is the one the embedded reference
+// profile declares.
+inline bool qinggan11_presentation(const Json &android) {
+    return embedded_profile_declares(android.value("reference_profile", std::string{}),
+                                     ProfilePlatform::qinggan11, ProfileBoard::sa8155) &&
+           android.value("api", 0) == 30 &&
            android.value("home", Json::object()) ==
                    Json{{"package", "com.qinggan.app.launcher"},
                         {"component",
@@ -498,7 +503,7 @@ inline bool qinggan11_wheel_unsupported(const Json &android) {
             android.at("wheel_capability").value("profile", std::string{});
 
     if (android.at("wheel_capability").value("status", std::string{}) == "partial") {
-        if (!qinggan11_presentation(capability_profile, android) ||
+        if (!qinggan11_profile_id(capability_profile) || !qinggan11_presentation(android) ||
             android.at("wheel_capability") !=
                     qinggan11_partial_wheel_capability(capability_profile) ||
             android.value("wheel_adapter", Json{}) != qinggan11_wheel_adapter() ||
@@ -524,7 +529,7 @@ inline bool qinggan11_wheel_unsupported(const Json &android) {
                            {"reason", reason},
                            {"authority", "com.voyemu.input.wheel"}};
 
-    if (!qinggan11_presentation(capability_profile, android) ||
+    if (!qinggan11_profile_id(capability_profile) || !qinggan11_presentation(android) ||
         android.at("wheel_capability") != expected || android.contains("wheel_adapter") ||
         android.value("vehicle_adapter", Json{}) !=
                 Json{{"authority", "com.voyemu.output.vehicle"}}) {

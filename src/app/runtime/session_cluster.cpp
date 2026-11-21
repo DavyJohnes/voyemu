@@ -1146,10 +1146,14 @@ void Session::poll_qnx() {
 
     if (theme_sequence_ && deliveries_["qnx"].contains("theme") &&
         deliveries_["qnx"]["theme"].value("status", std::string{}) != "guest_acknowledged") {
+        // Only the 6.11.1 guest sets the skin and reports both OEM getters back.
+        const bool skin_receipt = cluster_boot_spec_.value("hardware_adapter", std::string{}) ==
+                                  qnx_adapter(QnxGuestAdapter::sa8155_qinggan11_611).name;
+
         if (auto receipt = find_qnx_theme_receipt(
                     directory_, producers_, theme_sequence_,
                     deliveries_["qnx"]["theme"].at("theme_id").get<unsigned>(),
-                    deliveries_["qnx"]["theme"].value("theme_skin", 0u))) {
+                    skin_receipt ? deliveries_["qnx"]["theme"].value("theme_skin", 0u) : 0u)) {
             deliveries_["qnx"]["theme"].update(*receipt);
         }
     }

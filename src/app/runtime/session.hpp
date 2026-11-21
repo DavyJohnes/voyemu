@@ -192,10 +192,15 @@ std::optional<Json> android_wheel_delivery_receipt(const Json &receipt,
                                                    const WheelEvent &event);
 std::optional<Json> theme_change(std::optional<ThemeState> previous, ThemeState current);
 std::optional<ThemeState> qinggan11_cluster_skin_theme(std::string_view reply);
-bool qinggan11_cluster_presentation(const Json &android);
-std::optional<ThemeState> read_qinggan11_cluster_theme(
-        const std::function<ProcessResult(const std::vector<std::string> &)> &run);
 std::optional<Json> qinggan11_theme_change(std::optional<ThemeState> previous, ThemeState current);
+// The adb arguments of the Binder queries that read the OEM theme of this Android, in order.
+std::vector<std::vector<std::string>> oem_theme_queries(const Json &android);
+// The OEM theme from the replies to oem_theme_queries; nullopt for an unknown cluster skin.
+std::optional<ThemeState> oem_theme_state(const Json &android,
+                                          const std::vector<std::string> &replies);
+// The cluster theme command for the observed OEM theme; nullopt when it is unchanged.
+std::optional<Json> oem_theme_command(const Json &android, std::optional<ThemeState> previous,
+                                      ThemeState current);
 std::optional<bool> host_light_theme(std::string_view oem_title);
 std::optional<unsigned> oem_language_setting(std::string_view query);
 std::optional<Json> oem_language_change(std::optional<unsigned> previous, unsigned current);
@@ -360,6 +365,8 @@ private:
     Json wheel_provider(const std::string &method, const std::vector<std::string> &extras = {},
                         const std::string &argument = {});
     void poll_oem_settings();
+    // Records the observed OEM theme and queues the cluster theme command when it changed.
+    void observe_oem_theme(ThemeState current);
     void poll_qnx();
     Json cluster_ui_sample(bool diagnostics, std::chrono::steady_clock::time_point deadline);
     void attach_cluster(const Json &specification, std::optional<unsigned> seconds,

@@ -1509,6 +1509,12 @@ void Session::advance_windows_android_transaction() {
                         android_spec_.contains("features") &&
                         android_spec_.at("features").value("MultiDisplay", std::string{}) == "on";
                 const auto default_home = home_args(false);
+                const auto theme_queries = oem_theme_queries(android_spec_);
+                auto theme_query = [&](std::size_t index) {
+                    const auto &query = theme_queries.at(index);
+
+                    return startup_shell(std::vector<std::string>(query.begin() + 1, query.end()));
+                };
                 std::vector<std::pair<std::string, std::string>> actions{
                         {"uid", startup_shell({"id", "-u"})},
                         {"selinux", startup_shell({"getenforce"})},
@@ -1532,21 +1538,8 @@ void Session::advance_windows_android_transaction() {
                                         "content://qinggan.settings/system/system_language_setting",
                                         "--projection", "value"})},
                         {"appearance", startup_shell({"getprop", "persist.sys.qg.currenttheme"})},
-                        {"theme_first",
-                         qinggan11_presentation(
-                                 android_spec_.value("reference_profile", std::string{}),
-                                 android_spec_)
-                                 ? "true"
-                                 : startup_shell({"service", "call", "qg.canbus", "57", "i32", "1",
-                                                  "i32", "599", "i32", "818"})},
-                        {"theme_second",
-                         qinggan11_presentation(
-                                 android_spec_.value("reference_profile", std::string{}),
-                                 android_spec_)
-                                 ? startup_shell({"service", "call", "qg.cluster.service", "7",
-                                                  "i32", "1", "i32", "27", "i32", "28"})
-                                 : startup_shell({"service", "call", "qg.canbus", "57", "i32", "1",
-                                                  "i32", "978", "i32", "1195"})}};
+                        {"theme_first", theme_queries.size() > 1 ? theme_query(0) : "true"},
+                        {"theme_second", theme_query(theme_queries.size() - 1)}};
                 std::vector<std::string> names;
                 std::string body;
 
@@ -1683,29 +1676,14 @@ void Session::advance_windows_android_transaction() {
                                              {"source", "persist.sys.qg.currenttheme"}};
                 }
 
-                const bool qinggan11_731 = qinggan11_presentation(
-                        android_spec_.value("reference_profile", std::string{}), android_spec_);
-                auto value = qinggan11_731 ? qinggan11_cluster_skin_theme(sections[11])
-                                           : std::optional<ThemeState>{
-                                                     ThemeState{binder_integer(sections[10]),
-                                                                binder_integer(sections[11])}};
-                auto change = value ? theme_change(theme_, *value) : std::nullopt;
+                std::vector<std::string> theme_replies{sections[11]};
 
-                if (value) {
-                    theme_ = *value;
+                if (oem_theme_queries(android_spec_).size() > 1) {
+                    theme_replies.insert(theme_replies.begin(), sections[10]);
                 }
 
-                if (change && qinggan11_731) {
-                    (*change)["source"] = "qg.cluster.service/SKIN";
-                }
-
-                if (change) {
-                    (*change)["seq"] = ++theme_sequence_;
-                    write_private_json(directory_ / "theme-command.json", *change);
-                    deliveries_["qnx"]["theme"] = {{"sequence", theme_sequence_},
-                                                   {"status", "queued"},
-                                                   {"theme_id", (*change)["theme_id"]},
-                                                   {"source", (*change)["source"]}};
+                if (const auto value = oem_theme_state(android_spec_, theme_replies)) {
+                    observe_oem_theme(*value);
                 }
 
                 if (android_revision_ != model_.state().at("sequence").get<std::uint32_t>()) {
@@ -2416,57 +2394,35 @@ void Session::advance_windows_android_transaction() {
                 break;
             }
             case Phase::theme_first: {
-                if (qinggan11_presentation(android_spec_.value("reference_profile", std::string{}),
-                                           android_spec_)) {
+                const auto queries = oem_theme_queries(android_spec_);
+                transaction.theme_replies.clear();
+
+                if (queries.size() == 1) {
                     transaction.phase = Phase::theme_second;
                     break;
                 }
 
-                auto result = read({"shell", "service", "call", "qg.canbus", "57", "i32", "1",
-                                    "i32", "599", "i32", "818"});
+                auto result = read(queries.front());
 
                 if (!result) {
                     return;
                 }
 
-                transaction.first_theme = binder_integer(result->output);
+                transaction.theme_replies.push_back(result->output);
                 transaction.phase = Phase::theme_second;
                 break;
             }
             case Phase::theme_second: {
-                const bool qinggan11_731 = qinggan11_presentation(
-                        android_spec_.value("reference_profile", std::string{}), android_spec_);
-                auto result = qinggan11_731
-                                      ? read({"shell", "service", "call", "qg.cluster.service", "7",
-                                              "i32", "1", "i32", "27", "i32", "28"})
-                                      : read({"shell", "service", "call", "qg.canbus", "57", "i32",
-                                              "1", "i32", "978", "i32", "1195"});
+                auto result = read(oem_theme_queries(android_spec_).back());
 
                 if (!result) {
                     return;
                 }
 
-                auto value = qinggan11_731 ? qinggan11_cluster_skin_theme(result->output)
-                                           : std::optional<ThemeState>{
-                                                     ThemeState{transaction.first_theme,
-                                                                binder_integer(result->output)}};
-                auto change = value ? theme_change(theme_, *value) : std::nullopt;
+                transaction.theme_replies.push_back(result->output);
 
-                if (value) {
-                    theme_ = *value;
-                }
-
-                if (change && qinggan11_731) {
-                    (*change)["source"] = "qg.cluster.service/SKIN";
-                }
-
-                if (change) {
-                    (*change)["seq"] = ++theme_sequence_;
-                    write_private_json(directory_ / "theme-command.json", *change);
-                    deliveries_["qnx"]["theme"] = {{"sequence", theme_sequence_},
-                                                   {"status", "queued"},
-                                                   {"theme_id", (*change)["theme_id"]},
-                                                   {"source", (*change)["source"]}};
+                if (const auto value = oem_theme_state(android_spec_, transaction.theme_replies)) {
+                    observe_oem_theme(*value);
                 }
 
                 if (android_revision_ != model_.state().at("sequence").get<std::uint32_t>()) {

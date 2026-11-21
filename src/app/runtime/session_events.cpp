@@ -436,15 +436,6 @@ std::optional<Json> android_wheel_delivery_receipt(const Json &receipt,
     }
 }
 
-bool qinggan11_cluster_presentation(const Json &android) {
-    return android.value("reference_profile", std::string{}) == "free-11-chinese-20250710-6.11.1" &&
-           android.value("api", 0) == 30 &&
-           android.value("home", Json::object()) ==
-                   Json{{"package", "com.qinggan.app.launcher"},
-                        {"component",
-                         "com.qinggan.app.launcher/com.qinggan.app.launcher.activity.MainActivity"}};
-}
-
 static bool qinggan11_skin_valid(int skin) {
     return skin == 1 || skin == 1001 || skin == 3001 || skin == 3002 || skin == 3003;
 }
@@ -465,18 +456,8 @@ std::optional<ThemeState> qinggan11_cluster_skin_theme(std::string_view reply) {
     return ThemeState{(skin + 999) / 1000, skin};
 }
 
-std::optional<ThemeState> read_qinggan11_cluster_theme(
-        const std::function<ProcessResult(const std::vector<std::string> &)> &run) {
-    const auto result = run({"shell", "service", "call", "qg.cluster.service", "7", "i32", "1",
-                             "i32", "27", "i32", "28"});
-
-    if (result.exit_code || result.timed_out) {
-        return std::nullopt;
-    }
-
-    return qinggan11_cluster_skin_theme(result.output);
-}
-
+// A guest that sets the qinggan11 theme through the OEM mode and skin setters reads theme_skin, any
+// other guest reads theme_id.
 std::optional<Json> qinggan11_theme_change(std::optional<ThemeState> previous, ThemeState current) {
     if (!qinggan11_skin_valid(current.skin) || current.mode != (current.skin + 999) / 1000) {
         throw VoyemuError("QINGGAN11_THEME", "exact OEM mode and skin required");
@@ -486,10 +467,42 @@ std::optional<Json> qinggan11_theme_change(std::optional<ThemeState> previous, T
         return std::nullopt;
     }
 
-    return Json{{"contract", "qinggan11-611-theme-v1"},
-                {"theme_id", current.mode},
+    return Json{{"theme_id", current.mode},
                 {"theme_skin", current.skin},
                 {"source", "qg.cluster.service/SKIN"}};
+}
+
+// qg.canbus transaction 57 reads one IPK property by its ordinal and value id; qg.cluster.service
+// transaction 7 reads the cluster skin.
+static const std::vector<std::string> canbus_theme_mode_query{
+        "shell", "service", "call", "qg.canbus", "57", "i32", "1", "i32", "599", "i32", "818"};
+static const std::vector<std::string> canbus_theme_skin_query{
+        "shell", "service", "call", "qg.canbus", "57", "i32", "1", "i32", "978", "i32", "1195"};
+static const std::vector<std::string> cluster_theme_skin_query{
+        "shell", "service", "call", "qg.cluster.service", "7", "i32", "1", "i32",
+        "27",    "i32",     "28"};
+
+std::vector<std::vector<std::string>> oem_theme_queries(const Json &android) {
+    if (qinggan11_presentation(android)) {
+        return {cluster_theme_skin_query};
+    }
+
+    return {canbus_theme_mode_query, canbus_theme_skin_query};
+}
+
+std::optional<ThemeState> oem_theme_state(const Json &android,
+                                          const std::vector<std::string> &replies) {
+    if (qinggan11_presentation(android)) {
+        return qinggan11_cluster_skin_theme(replies.at(0));
+    }
+
+    return ThemeState{binder_integer(replies.at(0)), binder_integer(replies.at(1))};
+}
+
+std::optional<Json> oem_theme_command(const Json &android, std::optional<ThemeState> previous,
+                                      ThemeState current) {
+    return qinggan11_presentation(android) ? qinggan11_theme_change(previous, current)
+                                           : theme_change(previous, current);
 }
 
 std::optional<Json> theme_change(std::optional<ThemeState> previous, ThemeState current) {

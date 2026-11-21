@@ -1278,12 +1278,11 @@ struct Backend::Impl {
 
             if (std::filesystem::exists(theme_path)) {
                 const auto value = read_json(theme_path, 1024);
-                const bool contract611 = value.value("contract", std::string{}) ==
-                                         "qinggan11-611-theme-v1",
-                           guest611 = a[6] == 0x6110001;
 
-                if (contract611 || guest611) {
-                    if (!contract611 || !guest611) {
+                // The 6.11.1 guest sets the mode and the skin; any other guest takes theme_id
+                // alone.
+                if (a[6] == 0x6110001) {
+                    if (!value.contains("theme_skin")) {
                         return {0, {}, "owned-theme-contract-mismatch"};
                     }
 
@@ -1375,10 +1374,6 @@ struct Backend::Impl {
                     append(out.payload, skin);
 
                     return out;
-                }
-
-                if (value.contains("contract")) {
-                    return {0, {}, "owned-theme-contract-mismatch"};
                 }
             }
 

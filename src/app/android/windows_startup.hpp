@@ -691,7 +691,9 @@ struct WindowsAndroidTransaction {
     std::int64_t observed_utc = 0, observed_host_utc_ms = 0;
     Clock::time_point observed_arrival{};
     std::uint64_t root_proof_operation = 0, settings_revision = 0;
-    int first_theme = 0, clock_exit_code = -1;
+    // Replies to the OEM theme queries read so far.
+    std::vector<std::string> theme_replies;
+    int clock_exit_code = -1;
     std::uint32_t wheel_pair_up_sequence = 0;
     int wheel_pair_hold_ms = 0;
     bool wheel_pair_cleanup = false, wheel_pair_down_receipt_available = false;

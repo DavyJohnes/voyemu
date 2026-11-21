@@ -6049,42 +6049,50 @@ int main(int argc, char **argv) try {
              {{"package", "com.qinggan.app.launcher"},
               {"component",
                "com.qinggan.app.launcher/com.qinggan.app.launcher.activity.MainActivity"}}}};
-    assert(qinggan11_cluster_presentation(android611));
-    // The Windows Android transaction selects the cluster skin query and command by this test.
-    assert(qinggan11_presentation(android611.value("reference_profile", std::string{}),
-                                  android611));
-    auto foreign611 = android611;
-    foreign611["reference_profile"] = "free-11-chinese-20260731-7.3.1";
-    assert(!qinggan11_cluster_presentation(foreign611));
-    foreign611 = android611;
-    foreign611["api"] = 28;
-    assert(!qinggan11_cluster_presentation(foreign611));
-    unsigned calls611 = 0;
-    auto query611 = [&](const std::vector<std::string> &args) {
-        ++calls611;
-        assert(args == std::vector<std::string>({"shell", "service", "call", "qg.cluster.service",
-                                                 "7", "i32", "1", "i32", "27", "i32", "28"}));
+    const std::vector<std::vector<std::string>> cluster_query{{"shell", "service", "call",
+                                                               "qg.cluster.service", "7", "i32",
+                                                               "1", "i32", "27", "i32", "28"}};
+    auto android731 = android611;
+    android731["reference_profile"] = "free-11-chinese-20260731-7.3.1";
 
-        return ProcessResult{0, "Result: Parcel(00000000 00000bba   '........')", false};
-    };
-    assert(read_qinggan11_cluster_theme(query611) == std::optional<ThemeState>({4, 3002}) &&
-           calls611 == 1);
+    // Both firmwares read the cluster skin and queue the same command with it on every host.
+    for (const auto &presentation : {android611, android731}) {
+        assert(qinggan11_presentation(presentation));
+        assert(oem_theme_queries(presentation) == cluster_query);
+        assert(oem_theme_state(presentation, {"Result: Parcel(00000000 00000bba   '........')"}) ==
+               std::optional<ThemeState>({4, 3002}));
+        assert(oem_theme_command(presentation, std::nullopt, {4, 3002}).value() ==
+               Json({{"theme_id", 4},
+                     {"theme_skin", 3002},
+                     {"source", "qg.cluster.service/SKIN"}}));
+        assert(!oem_theme_command(presentation, ThemeState{4, 3002}, {4, 3002}));
 
-    for (const auto &reply :
-         {ProcessResult{1, "Result: Parcel(00000000 00000bba   '........')", false},
-          ProcessResult{0, "Result: Parcel(00000000 00000bba   '........')", true},
-          ProcessResult{0, "Result: Parcel(ffffffff 00000bba   '........')", false},
-          ProcessResult{0, "missing", false},
-          ProcessResult{0, "Result: Parcel(00000000 000003ea   '........')", false}}) {
-        assert(!read_qinggan11_cluster_theme([&](const auto &) {
-            return reply;
-        }));
+        for (const auto *reply : {"Result: Parcel(ffffffff 00000bba   '........')", "missing",
+                                  "Result: Parcel(00000000 000003ea   '........')"}) {
+            assert(!oem_theme_state(presentation, {reply}));
+        }
     }
+
+    auto foreign611 = android611;
+    foreign611["api"] = 28;
+    assert(!qinggan11_presentation(foreign611));
+    foreign611 = android611;
+    foreign611["reference_profile"] = "free-09-chinese-20260106-6.0.3";
+    assert(!qinggan11_presentation(foreign611));
+    assert(oem_theme_queries(foreign611) ==
+           std::vector<std::vector<std::string>>({{"shell", "service", "call", "qg.canbus", "57",
+                                                   "i32", "1", "i32", "599", "i32", "818"},
+                                                  {"shell", "service", "call", "qg.canbus", "57",
+                                                   "i32", "1", "i32", "978", "i32", "1195"}}));
+    assert(oem_theme_state(foreign611, {"Result: Parcel(00000000 00000002   '........')",
+                                        "Result: Parcel(00000000 000003e9   '........')"}) ==
+           std::optional<ThemeState>({2, 1001}));
+    assert(oem_theme_command(foreign611, std::nullopt, {2, 1001})->at("source") ==
+           "IPK_THEME_SKIN");
 
     for (int skin : {1, 1001, 3001, 3002, 3003}) {
         auto value = qinggan11_theme_change(std::nullopt, {(skin + 999) / 1000, skin});
-        assert(value->at("theme_skin") == skin &&
-               value->at("contract") == "qinggan11-611-theme-v1");
+        assert(value->at("theme_id") == (skin + 999) / 1000 && value->at("theme_skin") == skin);
     }
 
     for (int skin : {0, 1002, 2999, 3004, 6000}) {
