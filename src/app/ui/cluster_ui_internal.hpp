@@ -1,6 +1,7 @@
 #pragma once
 #include "cluster_font.hpp"
 #include "cluster_ui.hpp"
+#include "control_drawing.hpp"
 #include "error.hpp"
 #include "imgui.h"
 #include "imgui_internal.h"
@@ -8,7 +9,6 @@
 #include "logging.hpp"
 #include "parameters_layout.hpp"
 #include "qinggan11_startup.hpp"
-#include "radio_patch.hpp"
 #include "ui_localization.hpp"
 #include "vector_artwork.hpp"
 #include "wheel_geometry.hpp"
@@ -29,6 +29,17 @@
 namespace voyemu::cluster::cluster_ui_detail {
 ImU32 control_ink(ImU32 color);
 ImU32 alpha_ink(ImU32 color, unsigned alpha);
+// Recolours the vertices added from `first` on by their height in a vertical gradient. Shapes are
+// drawn opaque white, so the anti-aliased fringe keeps its transparency.
+template <typename Color>
+void shade_vertical(ImDrawList *draw, int first, float top, float height, Color color) {
+    for (int i = first; i < draw->VtxBuffer.Size; ++i) {
+        auto &vertex = draw->VtxBuffer[i];
+        const ImU32 ink = control_ink(color((vertex.pos.y - top) / height));
+        vertex.col = alpha_ink(
+                ink, ((ink >> IM_COL32_A_SHIFT) * (vertex.col >> IM_COL32_A_SHIFT) + 127) / 255);
+    }
+}
 bool event_name(std::string_view name);
 std::string lower(std::string value);
 float sample_ink_height(ImFont *font, float size, float density, const char *sample);

@@ -557,25 +557,17 @@ void Window::checkbox(const char *label, const std::string &name, float width) {
     const bool available = raw && other && *raw <= 1 && *other <= 1;
     const bool checked = available && *raw == 1 && *other == 1;
     const auto origin = ImGui::GetCursorScreenPos();
-    const auto track_texture = light_theme_ ? light_toggle_track_ : toggle_track_,
-               knob_texture = light_theme_ ? light_toggle_knob_ : toggle_knob_;
-    const int knob_pixels = light_theme_ ? 34 : 40;
-    const bool artwork = track_texture.id && track_texture.width == 83 &&
-                         track_texture.height == 42 && knob_texture.id &&
-                         knob_texture.width == knob_pixels && knob_texture.height == knob_pixels;
+    const auto ink = toggle_ink(light_theme_);
 
     ImGui::PushID(name.c_str());
     ImGui::BeginDisabled(!available);
-    // Exact prepared RLE reference assets are decoded/uploaded once by the backend.
     // Hover never modifies a toggle; InvisibleButton retains release/cancel semantics.
     const auto layout = parameters_layout(closed_width, closed_height, editor_height,
                                           screen_scale_);
     const float column_width = width > 0 ? width : layout.content_column(2, 0).width;
     constexpr float caption_x = 49.f;
     const float caption_width = column_width - caption_x;
-    bool fallback_checked = checked;
-    const bool changed = artwork ? ImGui::InvisibleButton("##toggle", ImVec2(column_width, 26))
-                                 : ImGui::Checkbox("##toggle", &fallback_checked);
+    const bool changed = ImGui::InvisibleButton("##toggle", ImVec2(column_width, 26));
     record_item(name, "checkbox");
 
     if (changed) {
@@ -584,43 +576,40 @@ void Window::checkbox(const char *label, const std::string &name, float width) {
     }
 
     auto *draw = ImGui::GetWindowDrawList();
-    const ImVec2 track(origin.x, origin.y + 2.5f);
-    const auto tint = ImGui::GetColorU32(ImVec4(1, 1, 1, 1));
+    const ImVec2 track(origin.x, origin.y + 2.5f), track_end(track.x + 41.5f, track.y + 21);
     const float animated = toggle_animations_[name].value(checked, ImGui::GetTime());
     const float progress = available ? animated : 0;
 
-    if (artwork) {
-        draw->AddImage(ImTextureRef(track_texture.id), track, ImVec2(track.x + 41.5f, track.y + 21),
-                       ImVec2(track_texture.uv[0], track_texture.uv[1]),
-                       ImVec2(track_texture.uv[2], track_texture.uv[3]), tint);
+    draw->AddRectFilled(track, track_end, control_ink(ink.track), 10.5f);
 
-        if (progress > 0) {
-            draw->AddRectFilled(
-                    ImVec2(track.x, track.y + .5f), ImVec2(track.x + 41, track.y + 20.5f),
-                    control_ink(
-                            alpha_ink(IM_COL32(64, 153, 243, 255),
-                                      static_cast<unsigned>(255 * std::clamp(progress, 0.f, 1.f)))),
-                    10);
-        }
-
-        const float knob_size = knob_pixels * .5f;
-        const ImVec2 knob(track.x + 11 + 19 * progress - knob_size / 2,
-                          track.y + (21 - knob_size) / 2);
-        draw->AddImage(ImTextureRef(knob_texture.id), knob,
-                       ImVec2(knob.x + knob_size, knob.y + knob_size),
-                       ImVec2(knob_texture.uv[0], knob_texture.uv[1]),
-                       ImVec2(knob_texture.uv[2], knob_texture.uv[3]), tint);
+    if (ink.border != 0) {
+        draw->AddRect(ImVec2(track.x + .5f, track.y + .5f),
+                      ImVec2(track_end.x - .5f, track_end.y - .5f), control_ink(ink.border), 10,
+                      ImDrawFlags(0), 1.f);
     }
+
+    if (progress > 0) {
+        draw->AddRectFilled(
+                ImVec2(track.x, track.y + .5f), ImVec2(track.x + 41, track.y + 20.5f),
+                control_ink(alpha_ink(ink.on,
+                                      static_cast<unsigned>(255 * std::clamp(progress, 0.f, 1.f)))),
+                10);
+    }
+
+    const ImVec2 knob(track.x + 11 + 19 * progress, track.y + 10.5f);
+    const int first = draw->VtxBuffer.Size;
+    draw->AddCircleFilled(knob, ink.knob / 2, IM_COL32(255, 255, 255, 255));
+    shade_vertical(draw, first, knob.y - ink.knob / 2, ink.knob, [&](float fraction) {
+        return toggle_knob_color(light_theme_, fraction);
+    });
 
     const float label_height = std::max(26.f, checkbox_font_size_);
     caption(name, "checkbox_label", label, origin.x + caption_x, origin.y + (26 - label_height) / 2,
             caption_width, label_height, checkbox_font_size_,
             control_ink(control_palette(light_theme_).text));
 
-    if (artwork) {
-        ImGui::RenderNavCursor(ImRect(track, ImVec2(track.x + 41.5f, track.y + 21)),
-                               ImGui::GetItemID(), ImGuiNavRenderCursorFlags_Compact, 10.5f);
-    }
+    ImGui::RenderNavCursor(ImRect(track, track_end), ImGui::GetItemID(),
+                           ImGuiNavRenderCursorFlags_Compact, 10.5f);
 
     ImGui::EndDisabled();
     ImGui::PopID();
@@ -1244,7 +1233,7 @@ void Window::artwork(ui::Resource id, const ParameterRect &bounds, std::uint32_t
                    ImVec2(1, 1), IM_COL32(255, 255, 255, 255));
 }
 
-// The one segmented radio of the gear, scale and language choices: track, selection artwork,
+// The one segmented radio of the gear, scale and language choices: track, selected capsule,
 // animation, hit regions and bold captions. Without a selection (-1) only the track and captions
 // are drawn.
 int Window::choice(const char *id, const ParameterRect &bounds, float cell, float font,
@@ -1279,26 +1268,13 @@ int Window::choice(const char *id, const ParameterRect &bounds, float cell, floa
         draw->PushClipRect(
                 ImVec2(std::floor(bounds.x - padding), std::floor(bounds.y - 1)),
                 ImVec2(std::ceil(bounds.right() + padding), std::ceil(bounds.bottom() + 1)), true);
-        const auto selection = light_theme_ ? light_radio_selection_ : radio_selection_;
-
-        if (selection.id && selection.width == 94 && selection.height == 70) {
-            for (const auto &patch : radio_patches({selection_left, bounds.y, cell, bounds.height},
-                                                   bounds.height / 70)) {
-                if (patch.bounds.width > 0 && patch.bounds.height > 0) {
-                    draw->AddImage(
-                            ImTextureRef(selection.id), ImVec2(patch.bounds.x, patch.bounds.y),
-                            ImVec2(patch.bounds.right(), patch.bounds.bottom()),
-                            ImVec2(patch.uv[0], patch.uv[1]), ImVec2(patch.uv[2], patch.uv[3]));
-                }
-            }
-        } else {
-            draw->AddRectFilled(
-                    ImVec2(selection_left, bounds.y),
-                    ImVec2(selection_left + cell, bounds.bottom()),
-                    control_ink(light_theme_ ? palette.accent : IM_COL32(39, 129, 221, 255)),
-                    bounds.height / 2);
-        }
-
+        const int first = draw->VtxBuffer.Size;
+        draw->AddRectFilled(ImVec2(selection_left, bounds.y),
+                            ImVec2(selection_left + cell, bounds.bottom()),
+                            IM_COL32(255, 255, 255, 255), bounds.height / 2);
+        shade_vertical(draw, first, bounds.y, bounds.height, [&](float fraction) {
+            return radio_selection_color(light_theme_, fraction);
+        });
         draw->PopClipRect();
     }
 
@@ -1907,11 +1883,16 @@ void Window::draw(Texture frame, Texture left, Texture right, unsigned screen_sc
     draw->AddRectFilled(ImVec2(0, 0), ImVec2(geometry.frame.width, geometry.frame.height),
                         IM_COL32(0, 0, 0, 255));
 
-    // One OEM screen background spans both control columns with the original aspect ratio.
-    if (light_theme_ && light_background_.id && light_background_.width == 1920 &&
-        light_background_.height == 720) {
-        draw->AddImage(ImTextureRef(light_background_.id), ImVec2(geometry.frame.right(), 0),
-                       ImVec2(geometry.top_width, geometry.top_height));
+    // One light background spans both control columns.
+    if (light_theme_) {
+        for (std::size_t i = 1; i < light_background.size(); ++i) {
+            const auto &top = light_background[i - 1], &bottom = light_background[i];
+            const auto top_ink = control_ink(top.color), bottom_ink = control_ink(bottom.color);
+            draw->AddRectFilledMultiColor(
+                    ImVec2(geometry.frame.right(), top.fraction * geometry.top_height),
+                    ImVec2(geometry.top_width, bottom.fraction * geometry.top_height), top_ink,
+                    top_ink, bottom_ink, bottom_ink);
+        }
     }
 
     if (frame.id && frame.width == 1920 && frame.height == 720) {

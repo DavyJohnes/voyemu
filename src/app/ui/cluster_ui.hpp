@@ -115,9 +115,7 @@ private:
 struct Texture {
     std::uint64_t id{};
     int width{}, height{};
-    std::array<float, 4> uv{0, 0, 1, 1};
 };
-Texture cropped_control_texture(Texture source, const std::array<int, 4> &crop);
 class Window {
 public:
     explicit Window(Options options, Client::Transport transport = {});
@@ -147,23 +145,6 @@ public:
     }
 
     void draw(Texture frame, Texture left, Texture right, unsigned screen_scale = 100);
-
-    void set_radio_texture(Texture texture, Texture light = {}) {
-        radio_selection_ = texture;
-        light_radio_selection_ = light;
-    }
-
-    void set_light_background(Texture texture) {
-        light_background_ = texture;
-    }
-
-    void set_control_textures(Texture track, Texture knob, Texture light_track = {},
-                              Texture light_knob = {}) {
-        toggle_track_ = track;
-        toggle_knob_ = knob;
-        light_toggle_track_ = light_track;
-        light_toggle_knob_ = light_knob;
-    }
 
     void set_light_wheel_textures(Texture left, Texture right) {
         light_wheel_left_ = left;
@@ -270,8 +251,7 @@ private:
     void hold(const std::string &id, const std::string &token);
     void release(const std::string &token, bool cancel = false);
     std::optional<std::uint64_t> value(const std::string &name) const;
-    Texture toggle_track_, toggle_knob_, light_toggle_track_, light_toggle_knob_, radio_selection_,
-            light_radio_selection_, light_background_, light_wheel_left_, light_wheel_right_;
+    Texture light_wheel_left_, light_wheel_right_;
     Options options_;
     Client client_;
     ViewState view_;

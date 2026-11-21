@@ -1010,23 +1010,6 @@ void Window::close() {
     }
 }
 
-Texture cropped_control_texture(Texture source, const std::array<int, 4> &crop) {
-    const auto [x, y, width, height] = crop;
-
-    if (!source.id || source.width <= 0 || source.height <= 0 || x < 0 || y < 0 || width <= 0 ||
-        height <= 0 || width > source.width || height > source.height || x > source.width - width ||
-        y > source.height - height || source.uv != std::array<float, 4>{0, 0, 1, 1}) {
-        throw VoyemuError("CONTROL_ARTWORK", "invalid original PNG crop");
-    }
-
-    source.uv = {float(x) / source.width, float(y) / source.height, float(x + width) / source.width,
-                 float(y + height) / source.height};
-    source.width = width;
-    source.height = height;
-
-    return source;
-}
-
 bool Window::animation_active(double now) const {
     if (tab_indicator_.active(now) || gear_indicator_.active(now) || scale_indicator_.active(now) ||
         language_indicator_.active(now)) {

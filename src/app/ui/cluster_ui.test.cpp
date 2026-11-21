@@ -1,11 +1,11 @@
 #include "cluster_ui.hpp"
 #include "cluster_font.hpp"
+#include "control_drawing.hpp"
 #include "imgui.h"
 #include "imgui_internal.h"
 #include "media_imgui_input.hpp"
 #include "parameters_layout.hpp"
 #include "qinggan11_startup.hpp"
-#include "radio_patch.hpp"
 #include "ui_localization.hpp"
 #include "wheel_geometry.hpp"
 #include "window_image.hpp"
@@ -54,33 +54,25 @@ template <class Predicate> void wait(Predicate predicate, const char *message) {
     }
 }
 
-void control_texture_guards() {
-    const auto cropped = cropped_control_texture({1, 85, 48}, {1, 3, 83, 42});
+bool same_rgb(ImU32 a, ImU32 b) {
+    return (a & ~IM_COL32_A_MASK) == (b & ~IM_COL32_A_MASK);
+}
 
-    check(cropped.width == 83 && cropped.height == 42 &&
-                  std::abs(cropped.uv[0] - 1.f / 85) < 1e-6f && cropped.uv[3] == 45.f / 48,
-          "raw OEM PNG exposes the original cropped pixels without resampling");
-
-    for (const auto crop : {std::array<int, 4>{-1, 3, 83, 42}, std::array<int, 4>{1, 3, 85, 42},
-                            std::array<int, 4>{1, 3, 0, 42}, std::array<int, 4>{1, 30, 83, 42}}) {
-        bool rejected = false;
-        try {
-            (void)cropped_control_texture({1, 85, 48}, crop);
-        } catch (...) {
-            rejected = true;
+// Calls visit for every indexed vertex of the current draw data with its draw command.
+template <class Visit> void each_vertex(Visit visit) {
+    for (const auto *list : ImGui::GetDrawData()->CmdLists) {
+        for (const auto &command : list->CmdBuffer) {
+            for (unsigned i = 0; i < command.ElemCount; ++i) {
+                visit(list->VtxBuffer[command.VtxOffset + list->IdxBuffer[command.IdxOffset + i]],
+                      command);
+            }
         }
-
-        check(rejected, "invalid source crop rejects");
     }
+}
 
-    bool rejected = false;
-    try {
-        (void)cropped_control_texture(cropped, {0, 0, 83, 42});
-    } catch (...) {
-        rejected = true;
-    }
-
-    check(rejected, "a PNG crop cannot be applied twice");
+// A vertex of the selected radio capsule, whose colour follows its height in the segment.
+bool selection_vertex(const ImDrawVert &vertex, bool light, float top, float height) {
+    return same_rgb(vertex.col, radio_selection_color(light, (vertex.pos.y - top) / height));
 }
 
 void appearance_following(const std::filesystem::path &assets) {
@@ -271,7 +263,7 @@ void startup_frame_gate(const std::filesystem::path &assets) {
     window.close();
 }
 
-void radio_patch_guards() {
+void control_drawing_guards() {
     const ParameterRect track{10, 20, 200, 40};
     const auto left = radio_background_clip(track, 10, 50),
                right = radio_background_clip(track, 160, 50),
@@ -283,37 +275,31 @@ void radio_patch_guards() {
     check(middle.x == 10 && middle.right() == 210 && overshoot.x == 31,
           "white middle and animated edge track remain covered without a fringe");
 
-    const auto patches = radio_patches({10, 20, 60, 35}, .5f);
-    float area = 0;
+    check(radio_selection_color(true, 0) == IM_COL32(66, 158, 253, 255) &&
+                  radio_selection_color(true, 1) == radio_selection_color(true, 0),
+          "the light selected capsule is the flat light accent");
+    check(radio_selection_color(false, 0) == IM_COL32(85, 162, 239, 255) &&
+                  radio_selection_color(false, .5f) == IM_COL32(38, 129, 221, 255) &&
+                  radio_selection_color(false, 1) == IM_COL32(25, 117, 210, 255) &&
+                  radio_selection_color(false, -1) == radio_selection_color(false, 0) &&
+                  radio_selection_color(false, 2) == radio_selection_color(false, 1),
+          "the dark selected capsule darkens from its lit top and clamps outside the segment");
+    check(toggle_ink(false).knob == 20 && toggle_ink(true).knob == 17 &&
+                  toggle_ink(false).on == toggle_ink(true).on && toggle_ink(false).border != 0 &&
+                  toggle_ink(true).border == 0,
+          "toggle knobs keep the 40 and 34 pixel sizes with one blue on fill");
+    check((toggle_knob_color(false, .5f) >> IM_COL32_A_SHIFT) <
+                          (toggle_knob_color(false, 0) >> IM_COL32_A_SHIFT) &&
+                  toggle_knob_color(true, .5f) == toggle_knob_color(true, 0),
+          "the dark knob is shaded and the light knob is flat");
+    bool ascending = light_background.front().fraction == 0 &&
+                     light_background.back().fraction == 1;
 
-    for (const auto &patch : patches) {
-        check(patch.bounds.width >= 0 && patch.bounds.height >= 0,
-              "nine-patch never inverts a slice");
-        area += patch.bounds.width * patch.bounds.height;
-        check(patch.uv[0] >= 0 && patch.uv[1] >= 0 && patch.uv[2] <= 1 && patch.uv[3] <= 1,
-              "radio UV stays inside source artwork");
+    for (std::size_t i = 1; i < light_background.size(); ++i) {
+        ascending &= light_background[i].fraction > light_background[i - 1].fraction;
     }
 
-    check(area == 60 * 35, "nine-patch covers the selected segment exactly");
-    check(patches[0].bounds.width == 23 && patches[0].bounds.height == 17,
-          "native radio caps preserve source pixels at Retina2");
-    check(patches[8].bounds.right() == 70 && patches[8].bounds.bottom() == 55,
-          "radio reaches the requested bottom-right edge");
-
-    for (const auto &patch : radio_patches({0, 0, 20, 10}, .5f)) {
-        check(patch.bounds.width >= 0 && patch.bounds.height >= 0,
-              "undersized legacy segment cannot invert fixed caps");
-    }
-
-    const float density = 1920.f / 1336.f, scale = .5f / density;
-    const auto fifty = radio_patches({0, 0, 35.5f, 70 * scale}, scale);
-    check(std::abs(fifty[0].bounds.width * density - 23) < .001f &&
-                  std::abs(fifty[0].bounds.height * density - 17) < .001f,
-          "50percent radio preserves the original 46x34pixel nine-patch corner at the actual framebuffer density");
-    const auto taller = radio_patches({0, 0, 35.5f, 80 * scale}, scale);
-    check(std::abs(taller[0].bounds.height * density - 40.f * 34 / 70) < .001f &&
-                  std::abs(taller[4].bounds.height * density - 40.f / 70) < .001f,
-          "40pixel radio scales every vertical slice uniformly so its cap has no stretched straight seam");
+    check(ascending, "the light background gradient covers the whole panel height in order");
 }
 
 void localized_tab_layout() {
@@ -1860,7 +1846,6 @@ void wheel_column_controls(const std::filesystem::path &assets) {
                 },
                 "wheel column fixture did not establish a canonical session");
         unsigned scale = 100;
-        window.set_radio_texture({1012, 94, 70}, {1013, 94, 70});
         const auto frame = [&](ImVec2 mouse, bool pressed = false) {
             io.AddMousePosEvent(mouse.x, mouse.y);
             io.AddMouseButtonEvent(ImGuiMouseButton_Left, pressed);
@@ -2045,32 +2030,24 @@ void wheel_column_controls(const std::filesystem::path &assets) {
         const auto selection_left = [&](const char *name) {
             const auto bounds =
                     window.inspection().at("wheel_column").at(name).get<std::array<float, 4>>();
-            float left = FLT_MAX;
+            float left = FLT_MAX, right = -FLT_MAX;
 
-            for (const auto *list : ImGui::GetDrawData()->CmdLists) {
-                for (const auto &command : list->CmdBuffer) {
-                    if (command.TexRef._TexData ||
-                        (command.TexRef._TexID != 1012 && command.TexRef._TexID != 1013)) {
-                        continue;
-                    }
-
-                    for (unsigned i = 0; i < command.ElemCount; ++i) {
-                        const auto &vertex =
-                                list->VtxBuffer[list->IdxBuffer[command.IdxOffset + i] +
-                                                command.VtxOffset];
-
-                        if (vertex.pos.y >= bounds[1] && vertex.pos.y <= bounds[1] + bounds[3] &&
-                            vertex.pos.x >= bounds[0] - bounds[2] / 10 &&
-                            vertex.pos.x <= bounds[0] + bounds[2] * 1.1f) {
-                            left = std::min(left, vertex.pos.x);
-                        }
-                    }
+            each_vertex([&](const ImDrawVert &vertex, const ImDrawCmd &) {
+                if (vertex.pos.y >= bounds[1] && vertex.pos.y <= bounds[1] + bounds[3] &&
+                    vertex.pos.x >= bounds[0] - bounds[2] / 10 &&
+                    vertex.pos.x <= bounds[0] + bounds[2] * 1.1f &&
+                    (selection_vertex(vertex, false, bounds[1], bounds[3]) ||
+                     selection_vertex(vertex, true, bounds[1], bounds[3]))) {
+                    left = std::min(left, vertex.pos.x);
+                    right = std::max(right, vertex.pos.x);
                 }
-            }
+            });
 
-            check(left != FLT_MAX, "choice selection uses actual OEM artwork vertices");
+            check(left < right, "choice selection draws its own capsule");
+            const float cell = bounds[2] / 3;
 
-            return (left - bounds[0]) / (bounds[2] / 3);
+            // The anti-aliased fringe widens the capsule equally on both sides.
+            return ((left + right) / 2 - cell / 2 - bounds[0]) / cell;
         };
         scale = 75;
         frame(ImVec2(5, 5));
@@ -2992,7 +2969,6 @@ void unavailable_toggle(const std::filesystem::path &assets) {
         options.inspect_panel = 2;
         options.smoke_seconds = .25;
         Window window(options, transport);
-        window.set_control_textures({1010, 83, 42}, {1011, 40, 40}, {1013, 83, 42}, {1014, 34, 34});
         auto render = [&](ImVec2 mouse, bool down) {
             io.AddMousePosEvent(mouse.x, mouse.y);
             io.AddMouseButtonEvent(ImGuiMouseButton_Left, down);
@@ -3018,111 +2994,85 @@ void unavailable_toggle(const std::filesystem::path &assets) {
 
         check(found, "unknown toggle is rendered");
         bool track = false, knob = false;
+        const auto ink = toggle_ink(false);
 
-        for (const auto *list : ImGui::GetDrawData()->CmdLists) {
-            for (const auto &command : list->CmdBuffer) {
-                if (!command.TexRef._TexData &&
-                    (command.TexRef._TexID == 1010 || command.TexRef._TexID == 1011)) {
-                    for (unsigned index = 0; index < command.ElemCount; ++index) {
-                        const auto &vertex =
-                                list->VtxBuffer[command.VtxOffset +
-                                                list->IdxBuffer[command.IdxOffset + index]];
-
-                        if (vertex.pos.x >= rect[0] - 1 && vertex.pos.x <= rect[0] + 42 &&
-                            vertex.pos.y >= rect[1] && vertex.pos.y <= rect[1] + 26) {
-                            check((vertex.col >> 24) == 77,
-                                  "unavailable toggle uses the established 0.3 alpha");
-
-                            if (command.TexRef._TexID == 1010) {
-                                track = true;
-                            } else {
-                                knob = true;
-                                check(vertex.pos.x <= rect[0] + 22,
-                                      "unavailable knob stays on the left");
-                            }
-                        }
-                    }
+        each_vertex([&](const ImDrawVert &vertex, const ImDrawCmd &) {
+            if (vertex.pos.x >= rect[0] - 1 && vertex.pos.x <= rect[0] + 43 &&
+                vertex.pos.y >= rect[1] && vertex.pos.y <= rect[1] + 26 &&
+                (vertex.col >> IM_COL32_A_SHIFT) != 0) {
+                if (same_rgb(vertex.col, ink.track)) {
+                    track = true;
+                    check((vertex.col >> IM_COL32_A_SHIFT) ==
+                                  unsigned(std::lround((ink.track >> IM_COL32_A_SHIFT) * .3f)),
+                          "unavailable toggle track uses the established 0.3 alpha");
+                } else if (same_rgb(vertex.col, IM_COL32(255, 255, 255, 255))) {
+                    knob = true;
+                    check((vertex.col >> IM_COL32_A_SHIFT) <= 77,
+                          "unavailable toggle knob uses the established 0.3 alpha");
+                    check(vertex.pos.x <= rect[0] + 22, "unavailable knob stays on the left");
                 }
             }
-        }
+        });
 
-        check(track && knob, "unavailable toggle draws the established track and knob textures");
+        check(track && knob, "unavailable toggle draws its own track and knob");
         render(ImVec2(rect[0] + 20, rect[1] + 13), false);
         render(ImVec2(rect[0] + 20, rect[1] + 13), true);
         render(ImVec2(rect[0] + 20, rect[1] + 13), false);
         check(patches == 0, "clicking an unknown toggle sends no patch");
-        window.set_control_textures({}, {});
-        render(ImVec2(0, 0), false);
-        found = false;
-
-        for (const auto &item : window.inspection().at("fields")) {
-            if (item.at("name") == "door_fl") {
-                found = true;
-                check(!item.at("enabled").get<bool>(), "unknown fallback checkbox is disabled");
-                rect = item.at("rect_points").get<std::array<float, 4>>();
-            }
-        }
-
-        check(found && rect[2] > 0 && rect[3] > 0, "unknown fallback checkbox is visible");
-        const ImVec2 unavailable_center(rect[0] + rect[2] / 2, rect[1] + rect[3] / 2);
-        render(unavailable_center, false);
-        render(unavailable_center, true);
-        render(unavailable_center, false);
-        check(patches == 0, "clicking an unknown checkbox without artwork sends no patch");
         window.close();
         const auto canonical = initial_state();
-        std::atomic_size_t missing_patches{};
+        std::atomic_size_t known_patches{};
         auto ready_transport = [&](const Json &operation) -> Json {
             if (operation.at("op") == "patch") {
-                ++missing_patches;
+                ++known_patches;
             }
 
             return Json{{"ok", true},
-                        {"session_id", "missing-artwork-fixture"},
+                        {"session_id", "known-toggle-fixture"},
                         {"revision", canonical.at("sequence")},
                         {"state", canonical},
                         {"catalog", catalog_json()}};
         };
-        options.endpoint = "missing-artwork-fixture";
-        Window missing(options, ready_transport);
+        options.endpoint = "known-toggle-fixture";
+        Window known(options, ready_transport);
         wait(
                 [&] {
-                    return missing.client().state().ready;
+                    return known.client().state().ready;
                 },
-                "missing artwork fixture must have a canonical state");
-        auto render_missing = [&](ImVec2 mouse, bool down) {
+                "known toggle fixture must have a canonical state");
+        auto render_known = [&](ImVec2 mouse, bool down) {
             io.AddMousePosEvent(mouse.x, mouse.y);
             io.AddMouseButtonEvent(ImGuiMouseButton_Left, down);
             ImGui::NewFrame();
-            missing.draw({1001, 1920, 720}, {1002, 360, 308}, {1003, 360, 308}, canonical_ui_scale);
+            known.draw({1001, 1920, 720}, {1002, 360, 308}, {1003, 360, 308}, canonical_ui_scale);
             ImGui::Render();
         };
 
         for (int frame = 0; frame < 60; ++frame) {
-            render_missing(ImVec2(0, 0), false);
+            render_known(ImVec2(0, 0), false);
         }
 
         found = false;
 
-        for (const auto &item : missing.inspection().at("fields")) {
+        for (const auto &item : known.inspection().at("fields")) {
             if (item.at("name") == "door_fl") {
                 found = true;
-                check(item.at("enabled").get<bool>(), "known fallback checkbox remains enabled");
+                check(item.at("enabled").get<bool>(), "known toggle is enabled");
                 rect = item.at("rect_points").get<std::array<float, 4>>();
             }
         }
 
-        check(found && rect[2] > 0 && rect[3] > 0, "missing artwork renders a standard checkbox");
+        check(found && rect[2] > 0 && rect[3] > 0, "known toggle is rendered");
         const ImVec2 center(rect[0] + rect[2] / 2, rect[1] + rect[3] / 2);
-        render_missing(center, false);
-        render_missing(center, true);
-        render_missing(center, false);
+        render_known(center, false);
+        render_known(center, true);
+        render_known(center, false);
         wait(
                 [&] {
-                    return missing_patches == 1;
+                    return known_patches == 1;
                 },
-                "clicking a known checkbox without artwork sends a patch");
-        missing.close();
+                "clicking a known toggle sends a patch");
+        known.close();
         ImGui::DestroyContext();
     } catch (...) {
         ImGui::DestroyContext();
@@ -3260,9 +3210,6 @@ void editor_sections_fill_available_height(const std::filesystem::path &assets,
                                 return window.client().state().ready;
                             },
                             "editor fixture must have a canonical state");
-                    window.set_control_textures({1010, 83, 42}, {1011, 40, 40}, {1013, 83, 42},
-                                                {1014, 34, 34});
-                    window.set_radio_texture({1012, 94, 70});
                     io.DisplaySize = ImVec2(geometry.canvas_width, geometry.canvas_height);
                     const float density = scale == canonical_ui_scale ? 1920.f / canonical_ui_width
                                                                       : 2.f;
@@ -3745,27 +3692,30 @@ void editor_sections_fill_available_height(const std::filesystem::path &assets,
                               "both lifecycle buttons are present in every geometry matrix case");
                     }
 
-                    for (const auto *list : ImGui::GetDrawData()->CmdLists) {
-                        for (const auto &command : list->CmdBuffer) {
-                            if (!command.TexRef._TexData &&
-                                command.TexRef._TexID == (light ? 1013 : 1010)) {
-                                ImVec2 a(FLT_MAX, FLT_MAX), b(-FLT_MAX, -FLT_MAX);
-
-                                for (unsigned index = 0; index < command.ElemCount; ++index) {
-                                    const auto p =
-                                            list->VtxBuffer[command.VtxOffset +
-                                                            list->IdxBuffer[command.IdxOffset +
-                                                                            index]]
-                                                    .pos;
-                                    a = ImMin(a, p);
-                                    b = ImMax(b, p);
-                                }
-
-                                check(std::abs(b.x - a.x - 41.5f) < .001f &&
-                                              std::abs(b.y - a.y - 21) < .001f,
-                                      "actual OEM track image vertices preserve83x42physical pixels at every scale and locale");
-                            }
+                    for (const auto &item : fields) {
+                        if (item.at("kind") != "checkbox" ||
+                            !item.at("fully_inside_clip").get<bool>()) {
+                            continue;
                         }
+
+                        const auto r = item.at("rect_points").get<std::array<float, 4>>();
+                        ImVec2 a(FLT_MAX, FLT_MAX), b(-FLT_MAX, -FLT_MAX);
+
+                        each_vertex([&](const ImDrawVert &vertex, const ImDrawCmd &) {
+                            if (vertex.pos.x >= r[0] - 1 && vertex.pos.x <= r[0] + 43 &&
+                                vertex.pos.y >= r[1] && vertex.pos.y <= r[1] + 26 &&
+                                same_rgb(vertex.col, toggle_ink(light).track)) {
+                                a = ImMin(a, vertex.pos);
+                                b = ImMax(b, vertex.pos);
+                            }
+                        });
+
+                        // The anti-aliased fringe widens the track equally on every side.
+                        check(std::abs((a.x + b.x) / 2 - r[0] - 41.5f / 2) < .001f &&
+                                      std::abs((a.y + b.y) / 2 - r[1] - 13) < .001f &&
+                                      std::abs(b.x - a.x - 41.5f) <= 1.001f &&
+                                      std::abs(b.y - a.y - 21) <= 1.001f,
+                              "own toggle tracks keep 83x42 physical pixels at every scale and locale");
                     }
 
                     if (section == 2) {
@@ -4100,29 +4050,22 @@ void editor_sections_fill_available_height(const std::filesystem::path &assets,
                                       std::abs(checked_rect[3] - 26) < .001f,
                               "door toggle uses its measured column width and fixed hit height");
                         bool track = false, knob = false, blue_fill = false;
+                        const auto ink = toggle_ink(light);
 
-                        for (const auto *draw : ImGui::GetDrawData()->CmdLists) {
-                            for (const auto &command : draw->CmdBuffer) {
-                                if (command.TexRef._TexData) {
-                                    continue;
-                                }
-
-                                track |= command.TexRef._TexID == (light ? 1013 : 1010);
-                                knob |= command.TexRef._TexID == (light ? 1014 : 1011);
+                        each_vertex([&](const ImDrawVert &vertex, const ImDrawCmd &) {
+                            if (vertex.pos.x >= checked_rect[0] &&
+                                vertex.pos.x <= checked_rect[0] + 41.5f &&
+                                vertex.pos.y >= checked_rect[1] &&
+                                vertex.pos.y <= checked_rect[1] + 26) {
+                                track |= vertex.col == ink.track;
+                                knob |= same_rgb(vertex.col, IM_COL32(255, 255, 255, 255)) &&
+                                        (vertex.col >> IM_COL32_A_SHIFT) != 0;
+                                blue_fill |= vertex.col == ink.on;
                             }
-
-                            for (const auto &vertex : draw->VtxBuffer) {
-                                if (vertex.pos.x >= checked_rect[0] &&
-                                    vertex.pos.x <= checked_rect[0] + 41.5f &&
-                                    vertex.pos.y >= checked_rect[1] &&
-                                    vertex.pos.y <= checked_rect[1] + 26) {
-                                    blue_fill |= vertex.col == IM_COL32(64, 153, 243, 255);
-                                }
-                            }
-                        }
+                        });
 
                         check(track && knob && blue_fill,
-                              "actual toggle draws prepared RLE track and knob with OEM blue ON mask");
+                              "own toggle draws its track and knob with the blue on fill");
                         const auto toggle_vertices = [&] {
                             std::vector<std::array<float, 5>> result;
 
@@ -4608,8 +4551,6 @@ void radio_transition_colors(const std::filesystem::path &assets,
             options.capture_ui = "radio-animation-inspection";
             options.smoke_seconds = .25;
             Window window(options, transport);
-            window.set_radio_texture({1012, 94, 70}, {1013, 94, 70});
-            window.set_light_background({1014, 1920, 720});
             wait(
                     [&] {
                         return window.client().state().ready;
@@ -4655,6 +4596,24 @@ void radio_transition_colors(const std::filesystem::path &assets,
 
                 return found_white;
             };
+            // The selected capsule vertices of the gear radio, right of the wheel column choices.
+            const auto gear_selection = [&](bool light, float parameters_x, auto visit) {
+                std::array<float, 4> r{};
+
+                for (const auto &field : window.inspection().at("fields")) {
+                    if (field.at("name") == "gear_P") {
+                        r = field.at("rect_points").get<std::array<float, 4>>();
+                    }
+                }
+
+                each_vertex([&](const ImDrawVert &vertex, const ImDrawCmd &command) {
+                    if (vertex.pos.x >= parameters_x && vertex.pos.y >= r[1] - 1 &&
+                        vertex.pos.y <= r[1] + r[3] + 1 &&
+                        selection_vertex(vertex, light, r[1], r[3])) {
+                        visit(vertex, command);
+                    }
+                });
+            };
             frame();
             frame();
             check(white("gear_P") && !white("gear_D"),
@@ -4688,34 +4647,36 @@ void radio_transition_colors(const std::filesystem::path &assets,
             for (int sample = 0; sample < 26; ++sample) {
                 frame();
 
-                for (const auto *list : ImGui::GetDrawData()->CmdLists) {
-                    for (const auto &command : list->CmdBuffer) {
-                        if (!command.TexRef._TexData && command.TexRef._TexID == 1012) {
-                            for (unsigned index = 0; index < command.ElemCount; ++index) {
-                                const auto pos =
-                                        list->VtxBuffer[command.VtxOffset +
-                                                        list->IdxBuffer[command.IdxOffset + index]]
-                                                .pos;
+                bool drawn = false;
 
-                                if (pos.x < command.ClipRect.x - .001f ||
-                                    pos.x > command.ClipRect.z + .001f ||
-                                    pos.y < command.ClipRect.y - .001f ||
-                                    pos.y > command.ClipRect.w + .001f) {
-                                    std::cerr << "radio clipped vertex " << pos.x << "," << pos.y
-                                              << " clip " << command.ClipRect.x << ","
-                                              << command.ClipRect.y << "," << command.ClipRect.z
-                                              << "," << command.ClipRect.w << "\n";
-                                }
+                gear_selection(
+                        false, geometry.parameters.x,
+                        [&](const ImDrawVert &vertex, const ImDrawCmd &command) {
+                            const auto pos = vertex.pos;
+                            drawn = true;
 
-                                check(pos.x >= command.ClipRect.x - .001f &&
-                                              pos.x <= command.ClipRect.z + .001f &&
-                                              pos.y >= command.ClipRect.y - .001f &&
-                                              pos.y <= command.ClipRect.w + .001f,
-                                      "actual animated radio pixels must fit the draw-command clip at the left extreme");
+                            // The transparent anti-aliased fringe may leave the clip.
+                            if ((vertex.col >> IM_COL32_A_SHIFT) == 0) {
+                                return;
                             }
-                        }
-                    }
-                }
+
+                            if (pos.x < command.ClipRect.x - .001f ||
+                                pos.x > command.ClipRect.z + .001f ||
+                                pos.y < command.ClipRect.y - .001f ||
+                                pos.y > command.ClipRect.w + .001f) {
+                                std::cerr << "radio clipped vertex " << pos.x << "," << pos.y
+                                          << " clip " << command.ClipRect.x << ","
+                                          << command.ClipRect.y << "," << command.ClipRect.z << ","
+                                          << command.ClipRect.w << "\n";
+                            }
+
+                            check(pos.x >= command.ClipRect.x - .001f &&
+                                          pos.x <= command.ClipRect.z + .001f &&
+                                          pos.y >= command.ClipRect.y - .001f &&
+                                          pos.y <= command.ClipRect.w + .001f,
+                                  "actual animated radio pixels must fit the draw-command clip at the left extreme");
+                        });
+                check(drawn, "the animated gear radio draws its own selected capsule");
             }
 
             {
@@ -4731,38 +4692,32 @@ void radio_transition_colors(const std::filesystem::path &assets,
                     "light theme reaches the live renderer");
             frame();
             frame();
-            bool original_background = false, light_radio = false, dark_radio = false;
+            ImVec2 a(FLT_MAX, FLT_MAX), b(-FLT_MAX, -FLT_MAX);
+            std::set<ImU32> stops;
 
-            for (const auto *list : ImGui::GetDrawData()->CmdLists) {
-                for (const auto &command : list->CmdBuffer) {
-                    if (!command.TexRef._TexData) {
-                        dark_radio |= command.TexRef._TexID == 1012;
-                        light_radio |= command.TexRef._TexID == 1013;
-
-                        if (command.TexRef._TexID == 1014) {
-                            ImVec2 a(FLT_MAX, FLT_MAX), b(-FLT_MAX, -FLT_MAX);
-
-                            for (unsigned i = 0; i < command.ElemCount; ++i) {
-                                const auto pos =
-                                        list->VtxBuffer[command.VtxOffset +
-                                                        list->IdxBuffer[command.IdxOffset + i]]
-                                                .pos;
-                                a = ImMin(a, pos);
-                                b = ImMax(b, pos);
-                            }
-
-                            check(a.x == geometry.frame.right() && a.y == 0 &&
-                                          b.x == geometry.top_width && b.y == geometry.top_height,
-                                  "one original background spans wheel and controls without a seam");
-                            original_background = true;
-                        }
+            each_vertex([&](const ImDrawVert &vertex, const ImDrawCmd &) {
+                for (const auto &stop : light_background) {
+                    if (vertex.col == stop.color && vertex.pos.x >= geometry.frame.right()) {
+                        a = ImMin(a, vertex.pos);
+                        b = ImMax(b, vertex.pos);
+                        stops.insert(stop.color);
                     }
                 }
-            }
+            });
 
-            check(original_background, "light theme draws the owner-supplied OEM background");
+            check(stops.size() == light_background.size() && a.x == geometry.frame.right() &&
+                          a.y == 0 && b.x == geometry.top_width && b.y == geometry.top_height,
+                  "one light background gradient spans wheel and controls without a seam");
+            bool light_radio = false, dark_radio = false;
+            gear_selection(true, geometry.parameters.x, [&](const ImDrawVert &, const ImDrawCmd &) {
+                light_radio = true;
+            });
+            gear_selection(false, geometry.parameters.x,
+                           [&](const ImDrawVert &, const ImDrawCmd &) {
+                               dark_radio = true;
+                           });
             check(light_radio && !dark_radio,
-                  "light theme uses the flat original radio PNG, never the dark gradient");
+                  "light theme draws the flat light capsule, never the dark gradient");
             const auto off_icon = wheel_column(scale, {}, {}, 130, 0).media_power;
             bool original_disabled_ink = false;
 
@@ -4782,7 +4737,7 @@ void radio_transition_colors(const std::filesystem::path &assets,
                 if (child->Active &&
                     std::string(child->Name).find("/parameters") != std::string::npos) {
                     check(child->Flags & ImGuiWindowFlags_NoBackground,
-                          "parameter child cannot cover OEM background with an approximate flat fill");
+                          "parameter child cannot cover the light background with a flat fill");
                 }
             }
 
@@ -4805,24 +4760,22 @@ void radio_transition_colors(const std::filesystem::path &assets,
                 for (unsigned sample = 0; sample < 30; ++sample) {
                     frame();
 
-                    for (const auto *list : ImGui::GetDrawData()->CmdLists) {
-                        for (const auto &command : list->CmdBuffer) {
-                            if (!command.TexRef._TexData && command.TexRef._TexID == 1013) {
-                                for (unsigned index = 0; index < command.ElemCount; ++index) {
-                                    const auto pos =
-                                            list->VtxBuffer[command.VtxOffset +
-                                                            list->IdxBuffer[command.IdxOffset +
-                                                                            index]]
-                                                    .pos;
-                                    check(pos.x >= command.ClipRect.x - .001f &&
-                                                  pos.x <= command.ClipRect.z + .001f &&
-                                                  pos.y >= command.ClipRect.y - .001f &&
-                                                  pos.y <= command.ClipRect.w + .001f,
-                                          "both light radio edge transitions preserve the complete nine-patch inside the actual clip");
+                    gear_selection(
+                            true, geometry.parameters.x,
+                            [&](const ImDrawVert &vertex, const ImDrawCmd &command) {
+                                const auto pos = vertex.pos;
+
+                                // The transparent anti-aliased fringe may leave the clip.
+                                if ((vertex.col >> IM_COL32_A_SHIFT) == 0) {
+                                    return;
                                 }
-                            }
-                        }
-                    }
+
+                                check(pos.x >= command.ClipRect.x - .001f &&
+                                              pos.x <= command.ClipRect.z + .001f &&
+                                              pos.y >= command.ClipRect.y - .001f &&
+                                              pos.y <= command.ClipRect.w + .001f,
+                                      "both light radio edge transitions keep the complete capsule inside the actual clip");
+                            });
                 }
             }
 
@@ -4847,33 +4800,24 @@ void radio_transition_colors(const std::filesystem::path &assets,
                 ImGui::NewFrame();
                 window.draw({1001, 1920, 720}, {1002, 360, 308}, {1003, 360, 308}, zoom);
                 ImGui::Render();
-                float expected = FLT_MAX, actual = FLT_MAX;
+                std::array<float, 4> expected{};
+                float left = FLT_MAX, right = -FLT_MAX;
 
                 for (const auto &field : window.inspection().at("fields")) {
                     if (field.at("name") == "gear_D") {
-                        expected = field.at("rect_points").at(0).get<float>();
+                        expected = field.at("rect_points").get<std::array<float, 4>>();
                     }
                 }
 
-                for (const auto *list : ImGui::GetDrawData()->CmdLists) {
-                    for (const auto &command : list->CmdBuffer) {
-                        if (!command.TexRef._TexData && command.TexRef._TexID == 1013) {
-                            for (unsigned index = 0; index < command.ElemCount; ++index) {
-                                const float x =
-                                        list->VtxBuffer[command.VtxOffset +
-                                                        list->IdxBuffer[command.IdxOffset + index]]
-                                                .pos.x;
+                // The wheel column choices share the selected capsule colours.
+                gear_selection(true, zoom_view.parameters.x,
+                               [&](const ImDrawVert &vertex, const ImDrawCmd &) {
+                                   left = std::min(left, vertex.pos.x);
+                                   right = std::max(right, vertex.pos.x);
+                               });
 
-                                // The wheel column choices share the selection artwork.
-                                if (x >= zoom_view.parameters.x) {
-                                    actual = std::min(actual, x);
-                                }
-                            }
-                        }
-                    }
-                }
-
-                check(std::abs(actual - expected) < .001f,
+                // The anti-aliased fringe widens the capsule equally on both sides.
+                check(std::abs((left + right) / 2 - expected[0] - expected[2] / 2) < .001f,
                       "changing zoom snaps the radio to its selected cell in the very first frame");
             }
 
@@ -5122,8 +5066,7 @@ int main(int argc, char **argv) {
         check(toggle.value(false, 2) == 1, "reverse starts at the current endpoint");
         const auto interrupted = toggle.value(false, 2.15);
         check(toggle.value(true, 2.15) == interrupted, "rapid retarget has no position jump");
-        control_texture_guards();
-        radio_patch_guards();
+        control_drawing_guards();
         localized_tab_layout();
         music_tab_animation();
         parsing();

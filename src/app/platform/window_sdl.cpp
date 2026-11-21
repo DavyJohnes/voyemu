@@ -1,6 +1,5 @@
 #include "cluster_font.hpp"
 #include "cluster_ui.hpp"
-#include "control_artwork.hpp"
 #include "error.hpp"
 #include "imgui.h"
 #include "imgui_impl_sdl3.h"
@@ -476,60 +475,6 @@ void App::load_textures() {
         ui_->set_light_wheel_textures(
                 view(own(load_wheel(renderer_, options_.assets / "wheel-left-light.png"))),
                 view(own(load_wheel(renderer_, options_.assets / "wheel-right-light.png"))));
-    }
-
-    const auto artwork = cluster::control_artwork_directory(options_.assets, options_.profile);
-    Json provenance = Json::object();
-
-    if (std::filesystem::is_regular_file(artwork / "source-provenance.json")) {
-        std::ifstream source(artwork / "source-provenance.json");
-        source >> provenance;
-    }
-
-    const auto control = [&](std::string_view name) {
-        if (!std::filesystem::is_regular_file(artwork / name)) {
-            return cluster::Texture{};
-        }
-
-        auto result = view(own(load_wheel(renderer_, artwork / name)));
-
-        for (const auto &entry : provenance.value("assets", Json::array())) {
-            if (entry.value("file", std::string{}) == name && entry.contains("crop_pixels")) {
-                const auto &crop = entry.at("crop_pixels");
-
-                if (!crop.is_array() || crop.size() != 4 ||
-                    !std::all_of(crop.begin(), crop.end(), [](const auto &value) {
-                        return value.is_number_integer();
-                    })) {
-                    throw voyemu::VoyemuError("CONTROL_ARTWORK", "integer crop required");
-                }
-
-                return cluster::cropped_control_texture(result, crop.get<std::array<int, 4>>());
-            }
-        }
-
-        return result;
-    };
-
-    if (std::filesystem::is_regular_file(artwork / "toggle-track-dark.png") &&
-        std::filesystem::is_regular_file(artwork / "toggle-knob-dark.png")) {
-        const bool light = std::filesystem::is_regular_file(artwork / "toggle-track-light.png") &&
-                           std::filesystem::is_regular_file(artwork / "toggle-knob-light.png");
-        ui_->set_control_textures(control("toggle-track-dark.png"), control("toggle-knob-dark.png"),
-                                  light ? control("toggle-track-light.png") : cluster::Texture{},
-                                  light ? control("toggle-knob-light.png") : cluster::Texture{});
-    }
-
-    const auto plain = [&](std::string_view name) {
-        return std::filesystem::is_regular_file(artwork / name)
-                       ? view(own(load_wheel(renderer_, artwork / name)))
-                       : cluster::Texture{};
-    };
-    ui_->set_radio_texture(plain("radio-selection.png"), plain("radio-selection-light.png"));
-
-    if (std::filesystem::is_regular_file(artwork / "panel-background-light.png")) {
-        ui_->set_light_background(
-                view(own(load_screen(renderer_, artwork / "panel-background-light.png"))));
     }
 
     if (media_options_) {
