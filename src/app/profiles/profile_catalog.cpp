@@ -141,8 +141,8 @@ Json declared_patch_plan(const Json &definition) {
                 profile_id == "free-11-chinese-20260731-7.3.1" && id == "QGAPI" &&
                 android.value("package", std::string{}) ==
                         "system-images;android-30;default;arm64-v8a" &&
-                qinggan11_731_qgapi_original(definition.value("original", Json::object())
-                                                     .value("QGAPI", Json::object())) &&
+                qinggan11_pinned_original(definition.value("original", Json::object())
+                                                  .value("QGAPI", Json::object())) &&
                 patch == Json{{"type", "jar"},
                               {"input", "original:QGAPI"},
                               {"steps", Json::array({"api30-audio-consumer.json"})}};
@@ -156,8 +156,8 @@ Json declared_patch_plan(const Json &definition) {
                  patch == Json{{"type", "jar"},
                                {"input", "patched:api30-secondary-navigation"},
                                {"steps", Json::array({"original-navi-libraries.json"})}} ||
-                 (qinggan11_731_qgapi_original(definition.value("original", Json::object())
-                                                       .value("QGAPI", Json::object())) &&
+                 (qinggan11_pinned_original(definition.value("original", Json::object())
+                                                    .value("QGAPI", Json::object())) &&
                   patch == Json{{"type", "jar"},
                                 {"input", "original:QGAPI"},
                                 {"steps", Json::array({"api30-audio-consumer.json",

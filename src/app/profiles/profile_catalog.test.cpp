@@ -1312,7 +1312,7 @@ int main(int argc, char **argv) {
                 }
 
                 if (mode == 2) {
-                    bad["original"]["QGAPI"]["sha256"] = std::string(64, '0');
+                    bad["original"]["QGAPI"]["sha256"] = "unpinned";
                 }
 
                 if (mode == 3) {
@@ -1324,11 +1324,11 @@ int main(int argc, char **argv) {
                 }
 
                 if (mode == 5) {
-                    bad["original"]["QGAPI"]["file"] = "foreign.jar";
+                    bad["original"]["QGAPI"].erase("acquisition");
                 }
 
                 if (mode == 6) {
-                    bad["original"]["QGAPI"]["source"]["path"] = "/vendor/framework/QGAPI.jar";
+                    bad["original"]["QGAPI"]["acquisition"]["path"] = "/vendor/framework/QGAPI.jar";
                 }
 
                 if (mode == 7) {
@@ -1666,7 +1666,7 @@ int main(int argc, char **argv) {
                 }
 
                 if (mode == 1) {
-                    bad["original"]["QGAPI"]["sha256"] = std::string(64, '0');
+                    bad["original"]["QGAPI"]["sha256"] = "unpinned";
                 }
 
                 if (mode == 2) {
@@ -1724,7 +1724,7 @@ int main(int argc, char **argv) {
             auto invalid = a11;
 
             if (mode == 0) {
-                invalid["original"]["KeyManagerService"]["sha256"] = std::string(64, '0');
+                invalid["original"]["KeyManagerService"]["sha256"] = "unpinned";
             }
 
             if (mode == 1) {
@@ -1770,7 +1770,7 @@ int main(int argc, char **argv) {
             }
 
             if (mode == 2) {
-                bad["original"]["Gallery"]["sha256"] = std::string(64, '0');
+                bad["original"]["Gallery"]["sha256"] = "unpinned";
             }
 
             if (mode == 3) {

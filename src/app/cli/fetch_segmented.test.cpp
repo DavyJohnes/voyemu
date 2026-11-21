@@ -630,40 +630,47 @@ int main(int argc, char **argv) {
             check(denied, "second adapter mixed or invalid acquisition accepted");
         }
 
+        // The pins, sizes and paths of an OEM original are the profile's own data.
         const Json qgapi = {
                 {"file", "framework/QGAPI.jar"},
-                {"sha256", "c178682be164be4872697dbb5accdc6ea28446941b6d681ddb736f2fdb627c07"},
-                {"source", {{"path", "/system/framework/QGAPI.jar"}}}};
-        check(qinggan11_731_qgapi_original(qgapi), "legacy QGAPI rejected");
-        auto acquired = qgapi;
-        acquired["bytes"] = 1968298u;
-        acquired["acquisition"] = {{"image", "system"}, {"path", "/system/framework/QGAPI.jar"}};
-        check(qinggan11_731_qgapi_original(acquired), "exact acquisition metadata rejected");
+                {"sha256", std::string(64, 'a')},
+                {"bytes", 7u},
+                {"acquisition", {{"image", "system"}, {"path", "/system/framework/QGAPI.jar"}}}};
+        check(qinggan11_pinned_original(qgapi), "profile-pinned QGAPI rejected");
+        auto other = qgapi;
+        other["sha256"] = std::string(64, 'b');
+        other["bytes"] = 8u;
+        other["acquisition"]["path"] = "/system/priv-app/KeyManagerService-release/Key.apk";
+        check(qinggan11_pinned_original(other), "another profile-pinned original rejected");
 
-        for (unsigned fault = 0; fault < 5; ++fault) {
-            auto bad = acquired;
+        for (unsigned fault = 0; fault < 6; ++fault) {
+            auto bad = qgapi;
 
             if (fault == 0) {
-                bad["bytes"] = 1968298.0;
+                bad["bytes"] = 7.0;
             }
 
             if (fault == 1) {
-                bad["bytes"] = 1u;
+                bad.erase("bytes");
             }
 
             if (fault == 2) {
-                bad["acquisition"]["path"] = "/system/framework/foreign.jar";
+                bad["acquisition"]["path"] = "framework/QGAPI.jar";
             }
 
             if (fault == 3) {
-                bad["extra"] = true;
+                bad["acquisition"]["image"] = "vendor";
             }
 
             if (fault == 4) {
-                bad["sha256"] = std::string(64, '0');
+                bad["sha256"] = std::string(63, '0');
             }
 
-            check(!qinggan11_731_qgapi_original(bad), "QGAPI metadata widened exact donor");
+            if (fault == 5) {
+                bad["file"] = "";
+            }
+
+            check(!qinggan11_pinned_original(bad), "unpinned QGAPI original accepted");
         }
 
         std::cout

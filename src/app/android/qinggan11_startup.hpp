@@ -1,5 +1,6 @@
 #pragma once
 #include "api30_framework_boot.hpp"
+#include "check.hpp"
 #include "model.hpp"
 #include "profile_catalog.hpp"
 #include <algorithm>
@@ -8,66 +9,22 @@
 namespace voyemu {
 inline constexpr const char *qinggan11_731_profile_id = "free-11-chinese-20260731-7.3.1";
 
-inline bool qinggan11_731_qgapi_original(const Json &original) {
-    const Json legacy =
-            Json{{"file", "framework/QGAPI.jar"},
-                 {"sha256", "c178682be164be4872697dbb5accdc6ea28446941b6d681ddb736f2fdb627c07"},
-                 {"source", {{"path", "/system/framework/QGAPI.jar"}}}};
-
-    if (original == legacy) {
-        return true;
+// A pinned OEM original of a profile: its file, size, SHA-256 and system image path are the
+// profile's own data.
+inline bool qinggan11_pinned_original(const Json &original) {
+    if (!original.is_object()) {
+        return false;
     }
 
-    auto acquired = legacy;
-    acquired["bytes"] = 1968298u;
-    acquired["acquisition"] = {{"image", "system"}, {"path", "/system/framework/QGAPI.jar"}};
+    const auto file = original.value("file", Json{}), bytes = original.value("bytes", Json{}),
+               sha256 = original.value("sha256", Json{}),
+               acquisition = original.value("acquisition", Json{});
 
-    if (original.is_object() && original.contains("bytes") &&
-        original.at("bytes").is_number_unsigned() && original == acquired) {
-        return true;
-    }
-
-    // Russian snapshot QGAPI: same OEM path, its own pinned bytes.
-    auto russian = legacy;
-    russian["sha256"] = "e46d3e5db0cf932cd3a39654a2f95620f2668ada8fb32b904c1684f936eca510";
-    russian["bytes"] = 1968146u;
-    russian["acquisition"] = {{"image", "system"}, {"path", "/system/framework/QGAPI.jar"}};
-
-    return original == russian;
-}
-
-inline bool qinggan11_731_keymanager_original(const Json &original) {
-    const Json legacy =
-            Json{{"file", "KeyManagerService.apk"},
-                 {"sha256", "951abb4f86540663fd654138b7e58cd0226d5dfa0470a4f5e85384bcdedbb78e"},
-                 {"source",
-                  {{"path",
-                    "/system/priv-app/KeyManagerService-release/KeyManagerService-release.apk"}}}};
-
-    if (original == legacy) {
-        return true;
-    }
-
-    auto acquired = legacy;
-    acquired["bytes"] = 4898541u;
-    acquired["acquisition"] = {
-            {"image", "system"},
-            {"path", "/system/priv-app/KeyManagerService-release/KeyManagerService-release.apk"}};
-
-    if (original.is_object() && original.contains("bytes") &&
-        original.at("bytes").is_number_unsigned() && original == acquired) {
-        return true;
-    }
-
-    // Russian snapshot KeyManagerService: same OEM path, its own pinned bytes.
-    auto russian = legacy;
-    russian["sha256"] = "701227c1d5a36c483ed7d9d050049e2a7a5bb72332bb0bbca4687bff5b198116";
-    russian["bytes"] = 4898632u;
-    russian["acquisition"] = {
-            {"image", "system"},
-            {"path", "/system/priv-app/KeyManagerService-release/KeyManagerService-release.apk"}};
-
-    return original == russian;
+    return file.is_string() && !file.get<std::string>().empty() && bytes.is_number_unsigned() &&
+           sha256.is_string() && sha256_text(sha256.get<std::string>()) &&
+           acquisition.is_object() && acquisition.value("image", Json{}) == "system" &&
+           acquisition.value("path", Json{}).is_string() &&
+           acquisition.at("path").get<std::string>().starts_with("/system/");
 }
 
 inline Json qinggan11_startup_values(const Json &definition) {
@@ -212,7 +169,7 @@ inline Json qinggan11_wheel_capability(const Json &definition) {
                    start = definition.value("configure", Json::object()).value("start", Json{});
 
         if (declared.at("oem-power") != "components/oem-power" ||
-            !qinggan11_731_qgapi_original(
+            !qinggan11_pinned_original(
                     definition.value("original", Json::object()).value("QGAPI", Json{})) ||
             !nodes.is_array() || std::count(nodes.begin(), nodes.end(), install) != 1 ||
             std::count_if(nodes.begin(), nodes.end(),
@@ -313,10 +270,8 @@ inline Json qinggan11_wheel_capability(const Json &definition) {
     if (declared.is_object() && declared.contains("gallery-arm64-libraries")) {
         if (declared.size() != (can_early_gallery ? 9 : 6) ||
             declared.at("gallery-arm64-libraries") != "components/gallery-arm64-libraries" ||
-            definition.value("original", Json::object())
-                            .value("Gallery", Json::object())
-                            .value("sha256", std::string{}) !=
-                    "c30633d39bb4127ac7fcd79300f00f2be608ff6b59cb24ebf855471e967be537" ||
+            !qinggan11_pinned_original(
+                    definition.value("original", Json::object()).value("Gallery", Json{})) ||
             definition.value("patches", Json::object()).value("Gallery", Json{}) !=
                     Json{{"type", "apk"},
                          {"input", "original:Gallery"},
@@ -438,7 +393,7 @@ inline Json qinggan11_wheel_capability(const Json &definition) {
         expected["wheel-input"] = "apk";
         expected["wheel-platform"] = "file";
 
-        if (!qinggan11_731_keymanager_original(definition.at("original").at("KeyManagerService")) ||
+        if (!qinggan11_pinned_original(definition.at("original").at("KeyManagerService")) ||
             (definition.at("patches").at("KeyManagerService") !=
                      Json{{"input", "original:KeyManagerService"},
                           {"type", "apk"},

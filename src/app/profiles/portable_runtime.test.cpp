@@ -4753,8 +4753,10 @@ int main(int argc, char **argv) {
                         {"file", "KeyManagerService.apk"},
                         {"sha256",
                          "951abb4f86540663fd654138b7e58cd0226d5dfa0470a4f5e85384bcdedbb78e"},
-                        {"source",
-                         {{"path",
+                        {"bytes", 4898541u},
+                        {"acquisition",
+                         {{"image", "system"},
+                          {"path",
                            "/system/priv-app/KeyManagerService-release/KeyManagerService-release.apk"}}}};
                 installed["patches"]["KeyManagerService"] = {
                         {"input", "original:KeyManagerService"},
