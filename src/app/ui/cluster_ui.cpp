@@ -468,60 +468,6 @@ std::vector<Region> read_regions(const std::filesystem::path &path) {
     return read_wheel_geometry(path).regions;
 }
 
-Json related_patch(std::string_view name, std::uint64_t value, const Json &canonical) {
-    Json patch = {{std::string(name), value}};
-    auto related = [&](const char *key, std::uint64_t v) {
-        if (canonical.contains(key)) {
-            patch[key] = v;
-        }
-    };
-
-    if (name == "speed") {
-        related("speed10x", value * 10);
-    }
-
-    if (name == "speed10x" && value % 10 == 0) {
-        related("speed", value / 10);
-    }
-
-    if (name == "actual_power") {
-        related("actual_power10x", value * 10);
-    }
-
-    if (name == "allowed_power") {
-        related("allowed_power10x", value * 10);
-    }
-
-    if (name == "remain_mileage_e") {
-        related("vcu_remainingMileageReal", value);
-        related("vcu_remainingMileageCLTCWLTC", value);
-    }
-
-    if (name == "remain_mileage_f") {
-        related("remain_mileage_f_nedc", value);
-        related("remain_mileage_f_wltc", value);
-    }
-
-    for (const char *corner : {"LF", "RF", "LR", "RR"}) {
-        const auto prefix = std::string("bcm_tyre") + corner;
-
-        if (name == prefix + "Pressure" || name == prefix + "Temp") {
-            const auto local = std::string("bcm_tpms") + corner + "Sts",
-                       bus = std::string("can_v1_5_bcm_tpms") + corner + "Sts";
-
-            if (canonical.contains(local)) {
-                patch[local] = 1;
-            }
-
-            if (canonical.contains(bus)) {
-                patch[bus] = 1;
-            }
-        }
-    }
-
-    return patch;
-}
-
 Client::Client(std::filesystem::path endpoint, std::string owner, Transport transport)
     : endpoint_(std::move(endpoint)), owner_(std::move(owner)), transport_(std::move(transport)) {
     if (owner_.empty() || owner_.size() > 128) {

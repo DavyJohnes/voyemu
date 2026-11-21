@@ -472,7 +472,7 @@ void Window::numeric(const char *label, const std::string &name, double divisor,
 
             if ((name == "soc" && raw > 100) || (name == "speed10x" && (raw > 2550 || raw % 10))) {
                 draft.error = "Ограничение профиля";
-            } else if (client_.patch(related_patch(name, raw, view_.raw))) {
+            } else if (client_.patch({{name, raw}})) {
                 draft.submitted = raw;
                 draft.error.clear();
             } else {

@@ -437,6 +437,43 @@ int main(int argc, char **argv) try {
     auto raw = apply_patch(speed, {{"speed10x", 900}, {"gear", 255}});
     assert(raw["raw_oem"]["speed"] == 90 && raw["raw_oem"]["gear"] == 255);
     assert(initial["raw_oem"]["speed"] == 0);
+    // One written field keeps its coupled fields consistent for every writer.
+    const auto power = apply_patch(initial, {{"actual_power", 30}, {"allowed_power", 80}});
+    assert(power["raw_oem"]["actual_power10x"] == 300 &&
+           power["raw_oem"]["allowed_power10x"] == 800);
+    const auto ev = apply_patch(initial, {{"remain_mileage_e", 420}});
+    assert(ev["raw_oem"]["vcu_remainingMileageReal"] == 420 &&
+           ev["raw_oem"]["vcu_remainingMileageCLTCWLTC"] == 420);
+    const auto ice = apply_patch(initial, {{"remain_mileage_f", 610}});
+    assert(ice["raw_oem"]["remain_mileage_f_nedc"] == 610 &&
+           ice["raw_oem"]["remain_mileage_f_wltc"] == 610);
+    auto unknown_tyres = initial;
+
+    for (const std::string corner : {"LF", "RF", "LR", "RR"}) {
+        unknown_tyres["raw_oem"]["bcm_tpms" + corner + "Sts"] = 0;
+        unknown_tyres["raw_oem"]["can_v1_5_bcm_tpms" + corner + "Sts"] = 0;
+    }
+
+    const auto pressure = apply_patch(unknown_tyres, {{"bcm_tyreLFPressure", 25}});
+    assert(pressure["raw_oem"]["bcm_tpmsLFSts"] == 1 &&
+           pressure["raw_oem"]["can_v1_5_bcm_tpmsLFSts"] == 1 &&
+           pressure["raw_oem"]["bcm_tpmsRFSts"] == 0);
+    const auto temperature = apply_patch(unknown_tyres, {{"bcm_tyreRRTemp", 81}});
+    assert(temperature["raw_oem"]["bcm_tpmsRRSts"] == 1 &&
+           temperature["raw_oem"]["can_v1_5_bcm_tpmsRRSts"] == 1);
+    // A coupled field named in the same patch keeps its own value.
+    const auto explicit_target =
+            apply_patch(initial, {{"remain_mileage_e", 420}, {"vcu_remainingMileageReal", 400}});
+    assert(explicit_target["raw_oem"]["vcu_remainingMileageReal"] == 400 &&
+           explicit_target["raw_oem"]["vcu_remainingMileageCLTCWLTC"] == 420);
+    const auto explicit_status = apply_patch(unknown_tyres,
+                                             {{"bcm_tyreLFPressure", 25}, {"bcm_tpmsLFSts", 2}});
+    assert(explicit_status["raw_oem"]["bcm_tpmsLFSts"] == 2 &&
+           explicit_status["raw_oem"]["can_v1_5_bcm_tpmsLFSts"] == 1);
+    // A target alone changes nothing else, and validation of saved states stays as it was.
+    const auto target_only = apply_patch(initial, {{"actual_power10x", 123}});
+    assert(target_only["raw_oem"]["actual_power"] == initial["raw_oem"]["actual_power"]);
+    validate_state(target_only);
     rejects([&] {
         apply_patch(initial, {{"speed", 10}, {"speed10x", 90}});
     });

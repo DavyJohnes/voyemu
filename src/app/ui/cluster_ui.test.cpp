@@ -534,27 +534,6 @@ void parsing() {
     check(rejected, "replay cannot silently override live frame");
 }
 
-void projections() {
-    Json raw = {{"speed", 5}, {"speed10x", 50},     {"soc", 60},
-                {"gear", 2},  {"actual_power", 20}, {"actual_power10x", 200}};
-    const auto speed = related_patch("speed", 65, raw);
-
-    check(speed.size() == 2 && speed.at("speed10x") == 650,
-          "speed units share one canonical source");
-    check(!speed.contains("soc") && !speed.contains("gear"), "unrelated fields never reset");
-    check(related_patch("actual_power", 30, raw).at("actual_power10x") == 300, "power projection");
-    check(related_patch("soc", 70, raw).size() == 1, "unrelated percentage patch");
-    auto tyres = initial_state().at("raw_oem");
-    tyres["bcm_tpmsLFSts"] = 0;
-    tyres["can_v1_5_bcm_tpmsLFSts"] = 0;
-    const auto pressure = related_patch("bcm_tyreLFPressure", 25, tyres);
-    check(pressure.size() == 3 && pressure.at("bcm_tpmsLFSts") == 1 &&
-                  pressure.at("can_v1_5_bcm_tpmsLFSts") == 1,
-          "entering a tyre reading makes the original measurement valid without a checkbox");
-    check(related_patch("bcm_tyreRFTemp", 81, tyres).at("bcm_tpmsRFSts") == 1,
-          "temperature entry also publishes a valid tyre reading");
-}
-
 void profile_wheel_layout(const std::filesystem::path &assets) {
     const char *qinggan11_env = std::getenv("VOYEMU_QINGGAN11_FIXTURE");
     const auto other = qinggan11_env ? std::filesystem::path(qinggan11_env)
@@ -4923,13 +4902,13 @@ void asynchronous_client() {
         check(client.state().raw.size() == 579, "all579canonical values");
         check(!client.patch({{"swm_menu", 1}}), "transient SWM must never be persisted");
         check(!client.patch({{"invented", 1}}), "unknown field cannot be persisted");
-        check(client.patch(related_patch("speed", 65, client.state().raw)), "valid patch enqueued");
+        check(client.patch({{"speed", 65}}), "valid patch enqueued");
         wait(
                 [&] {
                     return client.state().raw.at("speed") == 65;
                 },
                 "patch canonical acknowledgement");
-        check(client.state().raw.at("speed10x") == 650, "related projection delivered together");
+        check(client.state().raw.at("speed10x") == 650, "the model couples the written field");
         ViewState snapshot;
         std::uint64_t version = 0;
         check(client.copy_state(snapshot, version) && snapshot.raw.at("speed") == 65,
@@ -5102,7 +5081,6 @@ int main(int argc, char **argv) {
         localized_tab_layout();
         music_tab_animation();
         parsing();
-        projections();
         parameter_layout_guards();
         input_transform_guards();
 

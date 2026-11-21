@@ -65,7 +65,6 @@ WheelGeometry read_wheel_geometry(const std::filesystem::path &file);
 std::vector<Region> read_regions(const std::filesystem::path &file);
 std::optional<std::uint64_t> parse_unsigned(std::string_view text, unsigned width);
 std::optional<double> parse_number(std::string_view text);
-Json related_patch(std::string_view name, std::uint64_t value, const Json &canonical);
 struct ViewState {
     bool ready{};
     std::uint64_t revision{};

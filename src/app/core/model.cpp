@@ -802,6 +802,43 @@ Json select_vehicle_startup(VehicleStartup mode, const Json &profile_values, con
     return selected;
 }
 
+// A field that a patch of its source field also sets unless the patch names it itself: to the
+// source value times scale, or to value when scale is 0. Writers send one field and every writer
+// keeps the coupled fields consistent.
+namespace {
+struct FieldCoupling {
+    std::string source, target;
+    std::uint64_t scale, value;
+};
+
+const std::vector<FieldCoupling> &field_couplings() {
+    static const auto couplings = [] {
+        std::vector<FieldCoupling> result = {
+                {"speed", "speed10x", 10, 0},
+                {"actual_power", "actual_power10x", 10, 0},
+                {"allowed_power", "allowed_power10x", 10, 0},
+                {"remain_mileage_e", "vcu_remainingMileageReal", 1, 0},
+                {"remain_mileage_e", "vcu_remainingMileageCLTCWLTC", 1, 0},
+                {"remain_mileage_f", "remain_mileage_f_nedc", 1, 0},
+                {"remain_mileage_f", "remain_mileage_f_wltc", 1, 0}};
+
+        // A tyre reading makes the measurement of its corner valid.
+        for (const std::string corner : {"LF", "RF", "LR", "RR"}) {
+            for (const std::string reading : {"Pressure", "Temp"}) {
+                result.push_back(
+                        {"bcm_tyre" + corner + reading, "bcm_tpms" + corner + "Sts", 0, 1});
+                result.push_back({"bcm_tyre" + corner + reading,
+                                  "can_v1_5_bcm_tpms" + corner + "Sts", 0, 1});
+            }
+        }
+
+        return result;
+    }();
+
+    return couplings;
+}
+} // namespace
+
 Json apply_patch(const Json &original, const Json &values) {
     validate_state(original);
 
@@ -828,8 +865,12 @@ Json apply_patch(const Json &original, const Json &values) {
         raw[name] = value;
     }
 
-    if (values.contains("speed") && !values.contains("speed10x")) {
-        raw["speed10x"] = raw["speed"].get<std::uint64_t>() * 10;
+    for (const auto &coupling : field_couplings()) {
+        if (values.contains(coupling.source) && !values.contains(coupling.target)) {
+            raw[coupling.target] = coupling.scale ? raw[coupling.source].get<std::uint64_t>() *
+                                                            coupling.scale
+                                                  : coupling.value;
+        }
     }
 
     if (values.contains("speed10x") && !values.contains("speed")) {
