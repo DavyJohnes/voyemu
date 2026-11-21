@@ -1,73 +1,27 @@
 #include "interguest_network.hpp"
 #include "error.hpp"
-#include "os/net.hpp"
+#include "os/child_watch.hpp"
+#include "os/platform.hpp"
 #include "os/process.hpp"
+#include "os/socket.hpp"
 #include <algorithm>
 #include <array>
 #include <chrono>
+#include <optional>
 #include <stdexcept>
-#ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#include <iphlpapi.h>
-#include <tlhelp32.h>
-#else
-#include <cerrno>
-#include <fcntl.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <unistd.h>
 #include <vector>
-#endif
+
 namespace voyemu {
 namespace {
-#ifdef _WIN32
-using Socket = SOCKET;
-constexpr Socket invalid = INVALID_SOCKET;
+using Socket = os::SocketHandle;
+constexpr Socket invalid = os::no_socket;
+using os::close_socket;
 
-void close_socket(Socket s) {
-    if (s != invalid) {
-        ::closesocket(s);
-    }
-}
-
-bool interrupted() {
-    return WSAGetLastError() == WSAEINTR;
-}
-
-bool again() {
-    return WSAGetLastError() == WSAEWOULDBLOCK;
-}
-
+// Whether a non-blocking connect is still in progress.
 bool connecting() {
-    const auto error = WSAGetLastError();
-
-    return error == WSAEWOULDBLOCK || error == WSAEINPROGRESS || error == WSAEALREADY;
-}
-#else
-using Socket = int;
-constexpr Socket invalid = -1;
-
-void close_socket(Socket s) {
-    if (s != invalid) {
-        ::close(s);
-    }
+    return os::socket_connecting() || os::socket_would_block();
 }
 
-bool interrupted() {
-    return errno == EINTR;
-}
-
-bool again() {
-    return errno == EAGAIN || errno == EWOULDBLOCK;
-}
-
-bool connecting() {
-    return errno == EINPROGRESS || errno == EALREADY || errno == EWOULDBLOCK;
-}
-#endif
 using Clock = std::chrono::steady_clock;
 
 Clock::time_point deadline(int ms) {
@@ -79,61 +33,63 @@ Clock::time_point deadline(int ms) {
 }
 
 void nonblocking(Socket s) {
-#ifdef _WIN32
-    u_long one = 1;
-
-    if (ioctlsocket(s, FIONBIO, &one)) {
-        throw VoyemuError("INTERGUEST_SOCKET", "nonblocking failed");
-    }
-#else
-    if (s >= FD_SETSIZE) {
-        throw VoyemuError("INTERGUEST_SOCKET", "descriptor outside select bound");
-    }
-
-    const int flags = fcntl(s, F_GETFL, 0);
-
-    if (flags < 0 || fcntl(s, F_SETFL, flags | O_NONBLOCK) < 0 ||
-        fcntl(s, F_SETFD, FD_CLOEXEC) < 0) {
+    if (!os::set_nonblocking_socket(s)) {
         throw VoyemuError("INTERGUEST_SOCKET", "nonblocking failed");
     }
 
-    if (!os::suppress_sigpipe(s)) {
+    if (!os::suppress_socket_signal(s)) {
         throw VoyemuError("INTERGUEST_SOCKET", "signal policy failed");
     }
-#endif
 }
 
-bool ready(Socket s, bool write, Clock::time_point end, bool connect_error = false) {
+// Whether s became readable, or writable when write is set, before end; an error reported by the
+// socket counts as ready, so the next call reads it.
+bool ready(Socket s, bool write, Clock::time_point end) {
     for (;;) {
         const auto us = std::max<std::int64_t>(
                 0,
                 std::chrono::duration_cast<std::chrono::microseconds>(end - Clock::now()).count());
-        fd_set selected, errors;
-        FD_ZERO(&selected);
-        FD_SET(s, &selected);
-        FD_ZERO(&errors);
+        const int result = os::wait_socket(s, write, us);
 
-        if (connect_error) {
-            FD_SET(s, &errors);
-        }
-
-        timeval budget{};
-        budget.tv_sec = static_cast<decltype(budget.tv_sec)>(us / 1000000);
-        budget.tv_usec = static_cast<decltype(budget.tv_usec)>(us % 1000000);
-        int result = ::select(static_cast<int>(s) + 1, write ? nullptr : &selected,
-                              write ? &selected : nullptr, connect_error ? &errors : nullptr,
-                              &budget);
-
-        if (result < 0 && interrupted()) {
+        if (result == -1 && os::socket_interrupted()) {
             continue;
         }
 
-        if (result < 0) {
+        if (result == -1) {
             throw VoyemuError("INTERGUEST_SOCKET", "select failed");
         }
 
-        return result > 0;
+        return result != 0;
     }
+}
+
+// The loopback port of a socket address.
+unsigned port_of(const sockaddr_in &address) {
+    return ntohs(address.sin_port);
+}
+
+// Whether a holder owns its row, throwing what for a foreign holder and the table failures.
+bool owned(os::LoopbackHolder holder, const char *what) {
+    using Holder = os::LoopbackHolder;
+
+    switch (holder) {
+    case Holder::owner:
+        return true;
+    case Holder::absent:
+        return false;
+    case Holder::foreign:
+        throw VoyemuError("INTERGUEST_OWNER", what);
+    case Holder::table_unavailable:
+        throw VoyemuError("INTERGUEST_OWNER", "TCP ownership table unavailable");
+    case Holder::table_read_failed:
+        throw VoyemuError("INTERGUEST_OWNER", "TCP ownership read failed");
+    case Holder::table_extent_invalid:
+        throw VoyemuError("INTERGUEST_OWNER", "TCP ownership extent invalid");
+    case Holder::table_count_invalid:
+        break;
+    }
+
+    throw VoyemuError("INTERGUEST_OWNER", "TCP ownership count invalid");
 }
 } // namespace
 struct InterguestNetwork::Impl {
@@ -143,253 +99,71 @@ struct InterguestNetwork::Impl {
     std::array<std::uint8_t, 4> header{};
     std::size_t header_used = 0, body_used = 0;
     std::vector<std::uint8_t> body;
-#ifdef _WIN32
-    bool winsock = false;
-    HANDLE process = nullptr;
-    DWORD process_pid = 0;
+    std::optional<os::SocketLibrary> library;
+    std::unique_ptr<os::ChildWatch> process;
 
-    static bool tcp_table(TCP_TABLE_CLASS kind, std::vector<unsigned char> &data) {
-        for (unsigned attempt = 0; attempt < 4; ++attempt) {
-            ULONG bytes = 0;
-            const auto first = GetExtendedTcpTable(nullptr, &bytes, FALSE, AF_INET, kind, 0);
-
-            if (first == ERROR_NO_DATA) {
-                return false;
-            }
-
-            if ((first != ERROR_INSUFFICIENT_BUFFER && first != NO_ERROR) ||
-                bytes < sizeof(DWORD) || bytes > 1024 * 1024) {
-                throw VoyemuError("INTERGUEST_OWNER", "TCP ownership table unavailable");
-            }
-
-            data.resize(bytes);
-            const auto result = GetExtendedTcpTable(data.data(), &bytes, FALSE, AF_INET, kind, 0);
-
-            if (result == ERROR_INSUFFICIENT_BUFFER) {
-                continue;
-            }
-
-            if (result == ERROR_NO_DATA) {
-                return false;
-            }
-
-            if (result != NO_ERROR) {
-                throw VoyemuError("INTERGUEST_OWNER", "TCP ownership read failed");
-            }
-
-            if (bytes > data.size() || bytes < sizeof(DWORD)) {
-                throw VoyemuError("INTERGUEST_OWNER", "TCP ownership extent invalid");
-            }
-
-            const auto *table = reinterpret_cast<const MIB_TCPTABLE_OWNER_PID *>(data.data());
-
-            if (table->dwNumEntries > (bytes - sizeof(DWORD)) / sizeof(MIB_TCPROW_OWNER_PID)) {
-                throw VoyemuError("INTERGUEST_OWNER", "TCP ownership count invalid");
-            }
-
-            return true;
-        }
-
-        return false;
+    bool process_alive() const {
+        return process && process->alive();
     }
 
     bool connection_owned(Socket socket) {
-        if (!process || WaitForSingleObject(process, 0) != WAIT_TIMEOUT) {
+        if (!process_alive()) {
             return false;
         }
 
         sockaddr_in local{}, remote{};
-        int size = sizeof local;
+        os::SocketLength size = sizeof local;
 
-        if (getsockname(socket, reinterpret_cast<sockaddr *>(&local), &size) ||
-            getpeername(socket, reinterpret_cast<sockaddr *>(&remote), &size)) {
+        if (!os::socket_name(socket, reinterpret_cast<sockaddr *>(&local), &size) ||
+            !os::peer_name(socket, reinterpret_cast<sockaddr *>(&remote), &size)) {
             return false;
         }
 
         if (local.sin_addr.s_addr != htonl(INADDR_LOOPBACK) ||
-            remote.sin_addr.s_addr != htonl(INADDR_LOOPBACK) ||
-            ntohs(remote.sin_port) != state.port) {
+            remote.sin_addr.s_addr != htonl(INADDR_LOOPBACK) || port_of(remote) != state.port) {
             throw VoyemuError("INTERGUEST_OWNER", "connected endpoint differs");
         }
 
-        std::vector<unsigned char> data;
-
-        if (!tcp_table(TCP_TABLE_OWNER_PID_CONNECTIONS, data)) {
-            return false;
-        }
-
-        const auto *table = reinterpret_cast<const MIB_TCPTABLE_OWNER_PID *>(data.data());
-        bool outgoing = false;
-
-        for (DWORD i = 0; i < table->dwNumEntries; ++i) {
-            const auto &row = table->table[i];
-
-            if (row.dwLocalAddr != htonl(INADDR_LOOPBACK) ||
-                row.dwRemoteAddr != htonl(INADDR_LOOPBACK) || row.dwState != MIB_TCP_STATE_ESTAB) {
-                continue;
-            }
-
-            const auto source = ntohs(static_cast<u_short>(row.dwLocalPort)),
-                       target = ntohs(static_cast<u_short>(row.dwRemotePort));
-
-            if (source == ntohs(local.sin_port) && target == state.port &&
-                row.dwOwningPid == GetCurrentProcessId()) {
-                outgoing = true;
-            }
-
-            if (source != state.port || target != ntohs(local.sin_port)) {
-                continue;
-            }
-
-            if (!row.dwOwningPid) {
-                continue;
-            }
-
-            if (row.dwOwningPid != process_pid) {
-                throw VoyemuError("INTERGUEST_OWNER", "connected peer belongs to foreign process");
-            }
-
-            return true;
-        }
-
-        // Before accept(), Windows may expose only our client row. The same live owned listener
-        // must still exist.
-        return outgoing && listener_owned();
-    }
-
-    bool listener_owned() {
-        if (!process || WaitForSingleObject(process, 0) != WAIT_TIMEOUT) {
-            return false;
-        }
-
-        std::vector<unsigned char> data;
-
-        if (!tcp_table(TCP_TABLE_OWNER_PID_LISTENER, data)) {
-            return false;
-        }
-
-        const auto *table = reinterpret_cast<const MIB_TCPTABLE_OWNER_PID *>(data.data());
-        bool found = false;
-
-        for (DWORD i = 0; i < table->dwNumEntries; ++i) {
-            const auto &row = table->table[i];
-
-            if (ntohs(static_cast<u_short>(row.dwLocalPort)) != state.port) {
-                continue;
-            }
-
-            if (row.dwOwningPid != process_pid || row.dwLocalAddr != htonl(INADDR_LOOPBACK)) {
-                throw VoyemuError("INTERGUEST_OWNER", "foreign listener at selected endpoint");
-            }
-
-            found = true;
-        }
-
-        return found;
-    }
-#else
-    std::uint64_t process_pid = 0;
-
-    static bool alive(std::uint64_t pid) {
-        return os::process_exists(static_cast<std::int64_t>(pid));
-    }
-
-    static bool listen_port(std::uint64_t pid, std::uint16_t port) {
-        for (const auto &socket : os::process_tcp_sockets(static_cast<std::int64_t>(pid))) {
-            if (socket.state != os::TcpSocket::State::listen || !socket.local.ipv4) {
-                continue;
-            }
-
-            if (socket.local.port == port && socket.local.address4 == htonl(INADDR_LOOPBACK)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    static bool established(std::uint64_t pid, std::uint16_t local_port,
-                            std::uint16_t remote_port) {
-        for (const auto &socket : os::process_tcp_sockets(static_cast<std::int64_t>(pid))) {
-            if (socket.state != os::TcpSocket::State::established || !socket.local.ipv4) {
-                continue;
-            }
-
-            if (socket.local.address4 != htonl(INADDR_LOOPBACK) ||
-                socket.remote.address4 != htonl(INADDR_LOOPBACK)) {
-                continue;
-            }
-
-            if (socket.local.port == local_port && socket.remote.port == remote_port) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    bool connection_owned(Socket socket) {
-        if (!process_pid || !alive(process_pid)) {
-            return false;
-        }
-
-        sockaddr_in local{}, remote{};
-        socklen_t size = sizeof local;
-
-        if (getsockname(socket, reinterpret_cast<sockaddr *>(&local), &size) ||
-            getpeername(socket, reinterpret_cast<sockaddr *>(&remote), &size)) {
-            return false;
-        }
-
-        if (local.sin_addr.s_addr != htonl(INADDR_LOOPBACK) ||
-            remote.sin_addr.s_addr != htonl(INADDR_LOOPBACK) ||
-            ntohs(remote.sin_port) != state.port) {
-            throw VoyemuError("INTERGUEST_OWNER", "connected endpoint differs");
-        }
-
-        if (established(process_pid, static_cast<std::uint16_t>(state.port),
-                        ntohs(local.sin_port))) {
+        if (owned(os::loopback_connection_holder(process->pid(), state.port, port_of(local)),
+                  "connected peer belongs to foreign process")) {
             return true;
         }
 
         // Before accept(), our own client row may be the only visible row. The same live owned
         // listener must still exist.
-        return established(static_cast<std::uint64_t>(::getpid()), ntohs(local.sin_port),
-                           static_cast<std::uint16_t>(state.port)) &&
+        return os::loopback_connection_holder(static_cast<std::uint64_t>(os::current_process()),
+                                              port_of(local),
+                                              state.port) == os::LoopbackHolder::owner &&
                listener_owned();
     }
 
     bool listener_owned() {
-        if (!process_pid || !alive(process_pid)) {
-            return false;
-        }
-
-        return listen_port(process_pid, static_cast<std::uint16_t>(state.port));
+        return process_alive() && owned(os::loopback_listener_holder(process->pid(), state.port),
+                                        "foreign listener at selected endpoint");
     }
 
     bool accepted_owned(Socket socket) {
-        if (!process_pid || !alive(process_pid)) {
+        if (!process_alive()) {
             return false;
         }
 
         sockaddr_in local{}, remote{};
-        socklen_t size = sizeof local;
+        os::SocketLength size = sizeof local;
 
-        if (getsockname(socket, reinterpret_cast<sockaddr *>(&local), &size) ||
-            getpeername(socket, reinterpret_cast<sockaddr *>(&remote), &size)) {
+        if (!os::socket_name(socket, reinterpret_cast<sockaddr *>(&local), &size) ||
+            !os::peer_name(socket, reinterpret_cast<sockaddr *>(&remote), &size)) {
             return false;
         }
 
         if (local.sin_addr.s_addr != htonl(INADDR_LOOPBACK) ||
-            remote.sin_addr.s_addr != htonl(INADDR_LOOPBACK) ||
-            ntohs(local.sin_port) != state.port) {
+            remote.sin_addr.s_addr != htonl(INADDR_LOOPBACK) || port_of(local) != state.port) {
             return false;
         }
 
         // The accepted peer must hold the ESTABLISHED row for the dialed endpoint.
-        return established(process_pid, ntohs(remote.sin_port), ntohs(local.sin_port));
+        return os::loopback_connection_holder(process->pid(), port_of(remote), port_of(local)) ==
+               os::LoopbackHolder::owner;
     }
-#endif
 
     void drop() noexcept {
         close_socket(peer);
@@ -412,16 +186,15 @@ unsigned InterguestNetwork::start() {
         throw VoyemuError("INTERGUEST_STATE", "transport already started");
     }
 
-#ifdef _WIN32
-    WSADATA w{};
+    impl_->library.emplace();
 
-    if (WSAStartup(MAKEWORD(2, 2), &w)) {
+    if (impl_->library->error()) {
+        impl_->library.reset();
         throw VoyemuError("INTERGUEST_SOCKET", "Winsock startup failed");
     }
-    impl_->winsock = true;
-#endif
+
     try {
-        impl_->listener = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+        impl_->listener = os::open_stream_socket(AF_INET);
 
         if (impl_->listener == invalid) {
             throw VoyemuError("INTERGUEST_SOCKET", "creation failed");
@@ -433,18 +206,15 @@ unsigned InterguestNetwork::start() {
         address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
         address.sin_port = 0;
 
-        if (::bind(impl_->listener, reinterpret_cast<sockaddr *>(&address), sizeof address) ||
-            ::listen(impl_->listener, 1)) {
+        if (!os::bind_socket(impl_->listener, reinterpret_cast<sockaddr *>(&address),
+                             sizeof address) ||
+            !os::listen_socket(impl_->listener, 1)) {
             throw VoyemuError("INTERGUEST_SOCKET", "loopback bind failed");
         }
 
-#ifdef _WIN32
-        int size = sizeof address;
-#else
-        socklen_t size = sizeof address;
-#endif
+        os::SocketLength size = sizeof address;
 
-        if (::getsockname(impl_->listener, reinterpret_cast<sockaddr *>(&address), &size)) {
+        if (!os::socket_name(impl_->listener, reinterpret_cast<sockaddr *>(&address), &size)) {
             throw VoyemuError("INTERGUEST_SOCKET", "endpoint unavailable");
         }
 
@@ -473,21 +243,8 @@ void InterguestNetwork::stop() noexcept {
     impl_->listener = invalid;
     impl_->state.port = 0;
     impl_->client = false;
-#ifdef _WIN32
-    if (impl_->process) {
-        CloseHandle(impl_->process);
-    }
-
-    impl_->process = nullptr;
-    impl_->process_pid = 0;
-
-    if (impl_->winsock) {
-        WSACleanup();
-        impl_->winsock = false;
-    }
-#else
-    impl_->process_pid = 0;
-#endif
+    impl_->process.reset();
+    impl_->library.reset();
 }
 
 bool InterguestNetwork::accept(int ms) {
@@ -498,10 +255,10 @@ bool InterguestNetwork::accept(int ms) {
     }
 
     while (ready(impl_->listener, false, end)) {
-        const Socket peer = ::accept(impl_->listener, nullptr, nullptr);
+        const Socket peer = os::accept_socket(impl_->listener);
 
         if (peer == invalid) {
-            if (again() || interrupted()) {
+            if (os::socket_would_block() || os::socket_interrupted()) {
                 continue;
             }
 
@@ -515,12 +272,12 @@ bool InterguestNetwork::accept(int ms) {
             throw;
         }
 
-#ifndef _WIN32
-        if (!impl_->accepted_owned(peer)) {
+        // Windows binds no peer process to a listener: only its client direction verifies the peer.
+        if (!os::host_windows && !impl_->accepted_owned(peer)) {
             close_socket(peer);
             continue;
         }
-#endif
+
         impl_->peer = peer;
         impl_->state.connected = true;
 
@@ -531,79 +288,27 @@ bool InterguestNetwork::accept(int ms) {
 }
 
 void InterguestNetwork::bind_peer(std::uint64_t pid) {
-#ifdef _WIN32
-    if (!impl_->client || pid == 0 || pid > MAXDWORD) {
+    // POSIX accepts an owned peer in both directions: the client verifies its peer, the server
+    // verifies its dialer. Windows binds a peer only to a client.
+    if (os::host_windows && !impl_->client) {
         throw VoyemuError("INTERGUEST_OWNER", "client process required");
     }
 
-    HANDLE process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION | SYNCHRONIZE, FALSE,
-                                 static_cast<DWORD>(pid));
+    auto process = std::make_unique<os::ChildWatch>();
 
-    if (!process || WaitForSingleObject(process, 0) != WAIT_TIMEOUT) {
-        if (process) {
-            CloseHandle(process);
-        }
-
+    switch (process->open(pid)) {
+    case os::ChildWatch::Opening::opened:
+        break;
+    case os::ChildWatch::Opening::invalid:
+        throw VoyemuError("INTERGUEST_OWNER", "client process required");
+    case os::ChildWatch::Opening::unavailable:
         throw VoyemuError("INTERGUEST_OWNER", "process unavailable");
-    }
-
-    bool child = pid == GetCurrentProcessId();
-    HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-
-    if (snapshot != INVALID_HANDLE_VALUE) {
-        PROCESSENTRY32 row{};
-        row.dwSize = sizeof row;
-
-        if (Process32First(snapshot, &row)) {
-            do {
-                if (row.th32ProcessID == pid && row.th32ParentProcessID == GetCurrentProcessId()) {
-                    child = true;
-                }
-            } while (Process32Next(snapshot, &row));
-        }
-
-        CloseHandle(snapshot);
-    }
-
-    if (!child) {
-        CloseHandle(process);
+    case os::ChildWatch::Opening::foreign:
         throw VoyemuError("INTERGUEST_OWNER", "process is not owned child");
     }
 
     impl_->drop();
-
-    if (impl_->process) {
-        CloseHandle(impl_->process);
-    }
-
-    impl_->process = process;
-    impl_->process_pid = static_cast<DWORD>(pid);
-#else
-    // Both directions accept an owned peer: the client verifies its peer, the server verifies its
-    // dialer.
-    if (pid == 0 || pid > 0x7fffffffULL) {
-        throw VoyemuError("INTERGUEST_OWNER", "client process required");
-    }
-
-    if (!Impl::alive(pid)) {
-        throw VoyemuError("INTERGUEST_OWNER", "process unavailable");
-    }
-
-    bool child = pid == static_cast<std::uint64_t>(::getpid());
-
-    if (!child) {
-        if (os::parent_process(static_cast<std::int64_t>(pid)) == ::getpid()) {
-            child = true;
-        }
-    }
-
-    if (!child) {
-        throw VoyemuError("INTERGUEST_OWNER", "process is not owned child");
-    }
-
-    impl_->drop();
-    impl_->process_pid = pid;
-#endif
+    impl_->process = std::move(process);
 }
 
 bool InterguestNetwork::connect(int ms) {
@@ -618,7 +323,7 @@ bool InterguestNetwork::connect(int ms) {
     }
 
     if (impl_->pending == invalid) {
-        const Socket peer = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+        const Socket peer = os::open_stream_socket(AF_INET);
 
         if (peer == invalid) {
             throw VoyemuError("INTERGUEST_SOCKET", "client creation failed");
@@ -636,7 +341,7 @@ bool InterguestNetwork::connect(int ms) {
         address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
         address.sin_port = htons(static_cast<unsigned short>(impl_->state.port));
 
-        if (::connect(peer, reinterpret_cast<sockaddr *>(&address), sizeof address) != 0 &&
+        if (!os::connect_socket(peer, reinterpret_cast<sockaddr *>(&address), sizeof address) &&
             !connecting()) {
             close_socket(peer);
 
@@ -646,19 +351,11 @@ bool InterguestNetwork::connect(int ms) {
         impl_->pending = peer;
     }
 
-    if (!ready(impl_->pending, true, end, true)) {
+    if (!ready(impl_->pending, true, end)) {
         return false;
     }
 
-    int error = 0;
-#ifdef _WIN32
-    int size = sizeof error;
-#else
-    socklen_t size = sizeof error;
-#endif
-
-    if (getsockopt(impl_->pending, SOL_SOCKET, SO_ERROR, reinterpret_cast<char *>(&error), &size) ||
-        error) {
+    if (os::pending_socket_error(impl_->pending) != 0) {
         close_socket(impl_->pending);
         impl_->pending = invalid;
 
@@ -715,10 +412,9 @@ bool InterguestNetwork::receive(std::vector<std::uint8_t> &frame, int ms) {
                                   : impl_->body.data() + impl_->body_used;
             const auto left = header ? 4 - impl_->header_used
                                      : impl_->body.size() - impl_->body_used;
-            const int n = ::recv(impl_->peer, reinterpret_cast<char *>(target),
-                                 static_cast<int>(left), 0);
+            const auto n = os::receive_socket(impl_->peer, reinterpret_cast<char *>(target), left);
 
-            if (n < 0 && (again() || interrupted())) {
+            if (n < 0 && (os::socket_would_block() || os::socket_interrupted())) {
                 continue;
             }
 
@@ -764,11 +460,11 @@ void InterguestNetwork::send(std::span<const std::uint8_t> frame, int ms) {
                 throw VoyemuError("INTERGUEST_TIMEOUT", "send deadline elapsed");
             }
 
-            const int count = ::send(impl_->peer,
-                                     reinterpret_cast<const char *>(wire.data() + used),
-                                     static_cast<int>(wire.size() - used), 0);
+            const auto count = os::send_socket(impl_->peer,
+                                               reinterpret_cast<const char *>(wire.data() + used),
+                                               wire.size() - used);
 
-            if (count < 0 && (again() || interrupted())) {
+            if (count < 0 && (os::socket_would_block() || os::socket_interrupted())) {
                 continue;
             }
 

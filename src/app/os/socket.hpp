@@ -84,6 +84,12 @@ struct SocketCloser {
 bool bind_socket(SocketHandle socket, const sockaddr *address, SocketLength size);
 bool connect_socket(SocketHandle socket, const sockaddr *address, SocketLength size);
 bool socket_name(SocketHandle socket, sockaddr *address, SocketLength *size);
+bool peer_name(SocketHandle socket, sockaddr *address, SocketLength *size);
+// Makes socket non-blocking; POSIX also closes it on exec.
+bool set_nonblocking_socket(SocketHandle socket);
+// Keeps writes to socket whose peer closed from raising a signal: SIGPIPE on POSIX, nothing to do
+// on Windows.
+bool suppress_socket_signal(SocketHandle socket);
 // The pending error of a socket after a non-blocking connect, -1 when it cannot be read.
 int pending_socket_error(SocketHandle socket);
 // One send or receive of at most size bytes without a broken-pipe signal: the byte count, 0 at the
@@ -112,4 +118,23 @@ struct SocketRefusal {
 std::optional<SocketRefusal> loopback_listener(int family, const sockaddr *address,
                                                SocketLength size, unsigned port,
                                                TcpPortProbe *diagnostic);
+
+// Who holds a loopback TCP row: owner when process pid holds it, foreign when another process holds
+// it, absent when no process does. Windows reads the TCP table of the system, which can also fail
+// in the four table_* ways; POSIX reads only the sockets of pid and so never reports foreign.
+enum class LoopbackHolder {
+    owner,
+    foreign,
+    absent,
+    table_unavailable,
+    table_read_failed,
+    table_extent_invalid,
+    table_count_invalid
+};
+// The holder of the IPv4 listener at port; Windows reports foreign also for an own listener on a
+// non-loopback address.
+LoopbackHolder loopback_listener_holder(std::uint64_t pid, unsigned port);
+// The holder of the ESTABLISHED IPv4 loopback connection from local_port to remote_port.
+LoopbackHolder loopback_connection_holder(std::uint64_t pid, unsigned local_port,
+                                          unsigned remote_port);
 } // namespace voyemu::os

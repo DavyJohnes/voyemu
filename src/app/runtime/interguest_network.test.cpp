@@ -1,64 +1,90 @@
 #include "interguest_network.hpp"
+#include "os/platform.hpp"
+#include "os/process.hpp"
+#include "os/socket.hpp"
+#include "process.hpp"
 #ifdef NDEBUG
 #undef NDEBUG
 #endif
 #include <array>
 #include <cassert>
 #include <chrono>
+#include <filesystem>
 #include <initializer_list>
 #include <iostream>
 #include <stdexcept>
 #include <string>
 #include <thread>
 #include <vector>
-#ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#include <winsock2.h>
-#include <ws2tcpip.h>
-using Socket = SOCKET;
-
-void close_peer(Socket s) {
-    closesocket(s);
-}
-#else
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <unistd.h>
-#ifdef __APPLE__
-#include <csignal>
-#include <iostream>
-#include <mach-o/dyld.h>
-#include <spawn.h>
-#include <sys/wait.h>
-extern char **environ;
-#endif
-using Socket = int;
-
-void close_peer(Socket s) {
-    close(s);
-}
-#endif
+using Socket = voyemu::os::SocketHandle;
 using voyemu::InterguestNetwork;
+using voyemu::os::close_socket;
+using voyemu::os::no_socket;
+
+sockaddr_in loopback(unsigned port) {
+    sockaddr_in address{};
+
+    address.sin_family = AF_INET;
+    address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    address.sin_port = htons(static_cast<unsigned short>(port));
+
+    return address;
+}
 
 Socket connect_peer(unsigned port) {
-    Socket s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    sockaddr_in a{};
+    const Socket s = voyemu::os::open_stream_socket(AF_INET);
+    const auto address = loopback(port);
 
-    a.sin_family = AF_INET;
-    a.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-    a.sin_port = htons(static_cast<unsigned short>(port));
-    assert(connect(s, reinterpret_cast<sockaddr *>(&a), sizeof a) == 0);
+    assert(s != no_socket);
+    assert(voyemu::os::connect_socket(s, reinterpret_cast<const sockaddr *>(&address),
+                                      sizeof address));
 
     return s;
 }
 
+// A listener that no child of this test inherits; it and its peers do not block.
+Socket listen_peer(unsigned port) {
+    const Socket listener = voyemu::os::open_private_tcp_socket();
+    const auto address = loopback(port);
+
+    assert(listener != no_socket);
+    assert(voyemu::os::bind_socket(listener, reinterpret_cast<const sockaddr *>(&address),
+                                   sizeof address) &&
+           voyemu::os::listen_socket(listener, 1));
+
+    return listener;
+}
+
+// Waits up to 2 s until s can be read, or written when writing is set.
+void await(Socket s, bool writing) {
+    assert(voyemu::os::wait_socket(s, writing, 2000000) == 1);
+}
+
+Socket accept_peer(Socket listener) {
+    await(listener, false);
+    const Socket peer = voyemu::os::accept_socket(listener);
+    assert(peer != no_socket);
+
+    return peer;
+}
+
 void put(Socket s, std::span<const std::uint8_t> data) {
     while (!data.empty()) {
-        const int n = ::send(s, reinterpret_cast<const char *>(data.data()),
-                             static_cast<int>(data.size()), 0);
+        await(s, true);
+        const auto n = voyemu::os::send_socket(s, reinterpret_cast<const char *>(data.data()),
+                                               data.size());
         assert(n > 0);
-        data = data.subspan(n);
+        data = data.subspan(static_cast<std::size_t>(n));
+    }
+}
+
+void take(Socket s, std::span<std::uint8_t> data) {
+    while (!data.empty()) {
+        await(s, false);
+        const auto n = voyemu::os::receive_socket(s, reinterpret_cast<char *>(data.data()),
+                                                  data.size());
+        assert(n > 0);
+        data = data.subspan(static_cast<std::size_t>(n));
     }
 }
 
@@ -71,130 +97,67 @@ template <class F> void fails(F f, const std::string &code) {
     }
 }
 
-#ifdef __APPLE__
-pid_t spawn_owned(std::initializer_list<std::string> arguments) {
-    char path[4096];
-    uint32_t size = sizeof path;
+std::vector<std::filesystem::path> child_logs;
 
-    assert(_NSGetExecutablePath(path, &size) == 0);
-    std::vector<char *> argv;
+// A child of this test running one of the modes below; its output goes to a log in child_logs.
+voyemu::ChildProcess spawn_owned(std::initializer_list<std::string> arguments) {
+    voyemu::ProcessSpec spec;
 
-    for (const auto &value : arguments) {
-        argv.push_back(const_cast<char *>(value.c_str()));
+    spec.executable = voyemu::os::executable_path();
+    spec.arguments = arguments;
+    spec.output = std::filesystem::temp_directory_path() /
+                  ("voyemu-interguest-network-" + std::to_string(voyemu::os::current_process()) +
+                   "-" + std::to_string(child_logs.size()) + ".log");
+    child_logs.push_back(spec.output);
+
+    return voyemu::ChildProcess::launch(spec);
+}
+
+// Waits up to 3 s for child to exit and returns its exit code.
+int finish_owned(voyemu::ChildProcess &child) {
+    const auto end = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+
+    while (child.alive()) {
+        assert(std::chrono::steady_clock::now() < end);
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 
-    argv.push_back(nullptr);
-    posix_spawnattr_t attributes;
-    assert(posix_spawnattr_init(&attributes) == 0);
-    assert(posix_spawnattr_setflags(&attributes, POSIX_SPAWN_CLOEXEC_DEFAULT) == 0);
-    pid_t pid = 0;
-    const int result = posix_spawn(&pid, path, nullptr, &attributes, argv.data(), environ);
-    posix_spawnattr_destroy(&attributes);
-    assert(result == 0 && pid > 0);
-
-    return pid;
+    return child.exit_code();
 }
-
-void terminate_owned(pid_t pid) {
-    assert(kill(pid, SIGTERM) == 0);
-    int status = 0;
-    assert(waitpid(pid, &status, 0) == pid);
-}
-#endif
 
 int main(int argc, char **argv) try {
-#ifdef _WIN32
+    const voyemu::os::SocketLibrary library;
+
+    assert(!library.error());
+
     if (argc == 2 && std::string(argv[1]) == "--owned-wait") {
-        Sleep(15000);
+        std::this_thread::sleep_for(std::chrono::seconds(15));
 
         return 0;
-    }
-
-    if (argc == 3 && std::string(argv[1]) == "--owned-server") {
-        WSADATA startup{};
-        assert(WSAStartup(MAKEWORD(2, 2), &startup) == 0);
-        Sleep(500);
-        Socket listener = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-        assert(listener != INVALID_SOCKET);
-        sockaddr_in address{};
-        address.sin_family = AF_INET;
-        address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-        address.sin_port = htons(static_cast<unsigned short>(std::stoul(argv[2])));
-        assert(bind(listener, reinterpret_cast<sockaddr *>(&address), sizeof address) == 0 &&
-               listen(listener, 1) == 0);
-        Socket peer = accept(listener, nullptr, nullptr);
-        assert(peer != INVALID_SOCKET);
-        close_peer(listener);
-        listener = INVALID_SOCKET;
-        const std::array<std::uint8_t, 18> frame{0, 0, 0, 14};
-        put(peer, frame);
-        std::array<char, 18> ack{};
-        std::size_t used = 0;
-
-        while (used < ack.size()) {
-            const auto count = recv(peer, ack.data() + used, static_cast<int>(ack.size() - used),
-                                    0);
-            assert(count > 0);
-            used += count;
-        }
-
-        close_peer(peer);
-        close_peer(listener);
-        WSACleanup();
-
-        return 0;
-    }
-#else
-    if (argc == 2 && std::string(argv[1]) == "--owned-wait") {
-        for (;;) {
-            std::this_thread::sleep_for(std::chrono::seconds(1));
-        }
     }
 
     if (argc == 3 && std::string(argv[1]) == "--connect") {
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
-        Socket dialed = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-        assert(dialed != Socket(-1));
-        sockaddr_in target{};
-        target.sin_family = AF_INET;
-        target.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-        target.sin_port = htons(static_cast<unsigned short>(std::stoul(argv[2])));
-        assert(connect(dialed, reinterpret_cast<sockaddr *>(&target), sizeof target) == 0);
-
-        for (;;) {
-            std::this_thread::sleep_for(std::chrono::seconds(1));
-        }
-    }
-
-    if (argc == 3 && std::string(argv[1]) == "--owned-server") {
-        Socket listener = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-        assert(listener != Socket(-1));
-        sockaddr_in address{};
-        address.sin_family = AF_INET;
-        address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-        address.sin_port = htons(static_cast<unsigned short>(std::stoul(argv[2])));
-        assert(bind(listener, reinterpret_cast<sockaddr *>(&address), sizeof address) == 0 &&
-               listen(listener, 1) == 0);
-        Socket peer = accept(listener, nullptr, nullptr);
-        assert(peer != Socket(-1));
-        close_peer(listener);
-        const std::array<std::uint8_t, 18> frame{0, 0, 0, 14};
-        put(peer, frame);
-        std::array<char, 18> ack{};
-        std::size_t used = 0;
-
-        while (used < ack.size()) {
-            const auto count = recv(peer, ack.data() + used, static_cast<int>(ack.size() - used),
-                                    0);
-            assert(count > 0);
-            used += count;
-        }
-
-        close_peer(peer);
+        (void)connect_peer(static_cast<unsigned>(std::stoul(argv[2])));
+        std::this_thread::sleep_for(std::chrono::seconds(15));
 
         return 0;
     }
-#endif
+
+    if (argc == 3 && std::string(argv[1]) == "--owned-server") {
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        const Socket listener = listen_peer(static_cast<unsigned>(std::stoul(argv[2])));
+        const Socket peer = accept_peer(listener);
+        close_socket(listener);
+        const std::array<std::uint8_t, 18> frame{0, 0, 0, 14};
+        put(peer, frame);
+        std::array<std::uint8_t, 18> ack{};
+        take(peer, ack);
+        close_socket(peer);
+
+        return 0;
+    }
+
     InterguestNetwork net;
     const unsigned port = net.start();
     assert(port > 0);
@@ -205,17 +168,16 @@ int main(int argc, char **argv) try {
                 net.start();
             },
             "INTERGUEST_STATE");
-#ifndef _WIN32
-    net.bind_peer(::getpid());
-#endif
+
+    // Windows binds a peer process only to a client.
+    if (!voyemu::os::host_windows) {
+        net.bind_peer(static_cast<std::uint64_t>(voyemu::os::current_process()));
+    }
+
     Socket peer = connect_peer(port);
     sockaddr_in endpoint{};
-#ifdef _WIN32
-    int endpoint_size = sizeof endpoint;
-#else
-    socklen_t endpoint_size = sizeof endpoint;
-#endif
-    assert(getpeername(peer, reinterpret_cast<sockaddr *>(&endpoint), &endpoint_size) == 0);
+    voyemu::os::SocketLength endpoint_size = sizeof endpoint;
+    assert(voyemu::os::peer_name(peer, reinterpret_cast<sockaddr *>(&endpoint), &endpoint_size));
     assert(endpoint.sin_addr.s_addr == htonl(INADDR_LOOPBACK));
     assert(net.accept(100));
     assert(net.status().connected);
@@ -250,14 +212,7 @@ int main(int argc, char **argv) try {
     assert(net.status().received == 3);
     net.send(frame, 100);
     std::vector<std::uint8_t> returned(wire.size());
-    std::size_t used = 0;
-
-    while (used < returned.size()) {
-        const int n = recv(peer, reinterpret_cast<char *>(returned.data() + used),
-                           static_cast<int>(returned.size() - used), 0);
-        assert(n > 0);
-        used += n;
-    }
+    take(peer, returned);
 
     assert(returned == wire);
     assert(net.status().sent == 1);
@@ -275,7 +230,7 @@ int main(int argc, char **argv) try {
             },
             "INTERGUEST_FRAME");
     assert(!net.status().connected);
-    close_peer(peer);
+    close_socket(peer);
     peer = connect_peer(port);
     assert(net.accept(100));
     const std::array<std::uint8_t, 4> runt{0, 0, 0, 0};
@@ -285,11 +240,11 @@ int main(int argc, char **argv) try {
                 net.receive(received, 100);
             },
             "INTERGUEST_FRAME");
-    close_peer(peer);
+    close_socket(peer);
     peer = connect_peer(port);
     assert(net.accept(100));
     put(peer, std::array<std::uint8_t, 2>{0, 0});
-    close_peer(peer);
+    close_socket(peer);
     fails(
             [&] {
                 net.receive(received, 100);
@@ -328,51 +283,17 @@ int main(int argc, char **argv) try {
                 net.accept(0);
             },
             "INTERGUEST_STATE");
-#ifdef _WIN32
-    net.bind_peer(GetCurrentProcessId());
-#else
-    net.bind_peer(::getpid());
-#endif
+    net.bind_peer(static_cast<std::uint64_t>(voyemu::os::current_process()));
     // Refused/pending connects must remain bounded and recover when QEMU starts listening.
     assert(!net.connect(1));
-    Socket listener = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    assert(listener != Socket(-1));
-    sockaddr_in listen_address{};
-    listen_address.sin_family = AF_INET;
-    listen_address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-    listen_address.sin_port = htons(static_cast<unsigned short>(client_port));
-    assert(bind(listener, reinterpret_cast<sockaddr *>(&listen_address), sizeof listen_address) ==
-           0);
-    assert(listen(listener, 1) == 0);
-#ifdef _WIN32
-    // A live owned child is still not authority for a different process listener.
-    wchar_t executable[32768]{};
-    assert(GetModuleFileNameW(nullptr, executable, 32768));
-    std::wstring command = L"\"" + std::wstring(executable) + L"\" --owned-wait";
-    STARTUPINFOW startup{};
-    startup.cb = sizeof startup;
-    PROCESS_INFORMATION child{};
-    assert(CreateProcessW(executable, command.data(), nullptr, nullptr, FALSE, CREATE_NO_WINDOW,
-                          nullptr, nullptr, &startup, &child));
-    net.bind_peer(child.dwProcessId);
-    fails(
-            [&] {
-                net.connect(1);
-            },
-            "INTERGUEST_OWNER");
-    assert(!net.status().connected);
-    net.bind_peer(GetCurrentProcessId());
-    assert(TerminateProcess(child.hProcess, 0));
-    assert(WaitForSingleObject(child.hProcess, 2000) == WAIT_OBJECT_0);
-    CloseHandle(child.hThread);
-    CloseHandle(child.hProcess);
-#else
-    // A live owned child is still not authority for a different process listener.
-    const pid_t owned_wait = spawn_owned({argv[0], "--owned-wait"});
-    net.bind_peer(static_cast<std::uint64_t>(owned_wait));
+    const Socket listener = listen_peer(client_port);
+    // A live owned child is still not authority for a different process listener: Windows sees
+    // the foreign listener in the system table, POSIX finds no row of the child.
+    auto owned_wait = spawn_owned({"--owned-wait"});
+    net.bind_peer(static_cast<std::uint64_t>(owned_wait.pid()));
     bool rejected = false;
     try {
-        rejected = !net.connect(1);
+        rejected = !net.connect(1) && !voyemu::os::host_windows;
     } catch (const std::runtime_error &e) {
         rejected = std::string(e.what()).starts_with("INTERGUEST_OWNER");
     }
@@ -383,9 +304,8 @@ int main(int argc, char **argv) try {
                 net.bind_peer(1);
             },
             "INTERGUEST_OWNER");
-    net.bind_peer(static_cast<std::uint64_t>(::getpid()));
-    terminate_owned(owned_wait);
-#endif
+    net.bind_peer(static_cast<std::uint64_t>(voyemu::os::current_process()));
+    owned_wait.terminate(0);
     auto connect_client = [&] {
         const auto end = std::chrono::steady_clock::now() + std::chrono::seconds(2);
 
@@ -395,8 +315,7 @@ int main(int argc, char **argv) try {
         }
     };
     connect_client();
-    peer = accept(listener, nullptr, nullptr);
-    assert(peer != Socket(-1));
+    peer = accept_peer(listener);
     assert(net.status().connected);
     fails(
             [&] {
@@ -410,17 +329,10 @@ int main(int argc, char **argv) try {
     assert(received == frame);
     net.send(frame, 100);
     returned.assign(wire.size(), 0);
-    used = 0;
-
-    while (used < returned.size()) {
-        const int n = recv(peer, reinterpret_cast<char *>(returned.data() + used),
-                           static_cast<int>(returned.size() - used), 0);
-        assert(n > 0);
-        used += n;
-    }
+    take(peer, returned);
 
     assert(returned == wire);
-    close_peer(peer);
+    close_socket(peer);
     fails(
             [&] {
                 net.receive(received, 100);
@@ -428,73 +340,58 @@ int main(int argc, char **argv) try {
             "INTERGUEST_SOCKET");
     assert(!net.status().connected);
     connect_client();
-    peer = accept(listener, nullptr, nullptr);
-    assert(peer != Socket(-1));
+    peer = accept_peer(listener);
     put(peer, wire);
     assert(net.receive(received, 100) && received == frame);
     net.stop();
-    close_peer(peer);
-    close_peer(listener);
+    close_socket(peer);
+    close_socket(listener);
     assert(net.status().port == 0);
     fails(
             [&] {
                 net.connect(0);
             },
             "INTERGUEST_STATE");
-#ifdef _WIN32
     const auto child_port = net.start_client();
-    command = L"\"" + std::wstring(executable) + L"\" --owned-server " +
-              std::to_wstring(child_port);
-    child = {};
-    assert(CreateProcessW(executable, command.data(), nullptr, nullptr, FALSE, CREATE_NO_WINDOW,
-                          nullptr, nullptr, &startup, &child));
-    net.bind_peer(child.dwProcessId);
+    auto owned_server = spawn_owned({"--owned-server", std::to_string(child_port)});
+    net.bind_peer(static_cast<std::uint64_t>(owned_server.pid()));
     connect_client();
     assert(net.receive(received, 2000) && received.size() == 14);
     net.send(received, 2000);
-    assert(WaitForSingleObject(child.hProcess, 3000) == WAIT_OBJECT_0);
-    DWORD code = 1;
-    assert(GetExitCodeProcess(child.hProcess, &code) && code == 0);
-    CloseHandle(child.hThread);
-    CloseHandle(child.hProcess);
+    assert(finish_owned(owned_server) == 0);
     net.stop();
-#else
-    const auto child_port = net.start_client();
-    const pid_t owned_server = spawn_owned({argv[0], "--owned-server", std::to_string(child_port)});
-    net.bind_peer(static_cast<std::uint64_t>(owned_server));
-    connect_client();
-    assert(net.receive(received, 2000) && received.size() == 14);
-    net.send(received, 2000);
-    int status = 0;
-    assert(waitpid(owned_server, &status, 0) == owned_server && WIFEXITED(status) &&
-           WEXITSTATUS(status) == 0);
-    net.stop();
-#endif
-#ifdef __APPLE__
+
     // Server-side ownership: the accepted peer must be the owned child, not an arbitrary dialer.
-    {
-        InterguestNetwork server;
-        const unsigned owned_port = server.start();
-        assert(owned_port > 0);
-        const pid_t dialer = spawn_owned({argv[0], "--connect", std::to_string(owned_port)});
-        server.bind_peer(static_cast<std::uint64_t>(dialer));
-        assert(server.accept(2000) && server.status().connected);
-        server.stop();
-        terminate_owned(dialer);
+    // Windows binds no peer process to a listener.
+    if (!voyemu::os::host_windows) {
+        {
+            InterguestNetwork server;
+            const unsigned owned_port = server.start();
+            assert(owned_port > 0);
+            auto dialer = spawn_owned({"--connect", std::to_string(owned_port)});
+            server.bind_peer(static_cast<std::uint64_t>(dialer.pid()));
+            assert(server.accept(2000) && server.status().connected);
+            server.stop();
+            dialer.terminate(0);
+        }
+        {
+            InterguestNetwork guarded;
+            const unsigned guarded_port = guarded.start();
+            assert(guarded_port > 0);
+            auto idler = spawn_owned({"--owned-wait"});
+            guarded.bind_peer(static_cast<std::uint64_t>(idler.pid()));
+            Socket foreign = connect_peer(guarded_port);
+            assert(!guarded.accept(200) && !guarded.status().connected);
+            close_socket(foreign);
+            guarded.stop();
+            idler.terminate(0);
+        }
     }
-    {
-        InterguestNetwork guarded;
-        const unsigned guarded_port = guarded.start();
-        assert(guarded_port > 0);
-        const pid_t idler = spawn_owned({argv[0], "--owned-wait"});
-        guarded.bind_peer(static_cast<std::uint64_t>(idler));
-        Socket foreign = connect_peer(guarded_port);
-        assert(!guarded.accept(200) && !guarded.status().connected);
-        close_peer(foreign);
-        guarded.stop();
-        terminate_owned(idler);
+
+    for (const auto &log : child_logs) {
+        std::error_code ignored;
+        std::filesystem::remove(log, ignored);
     }
-#endif
 } catch (const std::exception &error) {
     std::cerr << error.what() << '\n';
 

@@ -1,4 +1,5 @@
 #include "os/net.hpp"
+#include "os/process.hpp"
 #include "os/socket.hpp"
 #include <cerrno>
 #include <fcntl.h>
@@ -83,6 +84,23 @@ bool connect_socket(SocketHandle socket, const sockaddr *address, SocketLength s
 
 bool socket_name(SocketHandle socket, sockaddr *address, SocketLength *size) {
     return ::getsockname(static_cast<int>(socket), address, size) == 0;
+}
+
+bool peer_name(SocketHandle socket, sockaddr *address, SocketLength *size) {
+    return ::getpeername(static_cast<int>(socket), address, size) == 0;
+}
+
+bool set_nonblocking_socket(SocketHandle socket) {
+    const int fd = static_cast<int>(socket);
+
+    const int flags = ::fcntl(fd, F_GETFL, 0);
+
+    return flags >= 0 && ::fcntl(fd, F_SETFL, flags | O_NONBLOCK) == 0 &&
+           ::fcntl(fd, F_SETFD, FD_CLOEXEC) == 0;
+}
+
+bool suppress_socket_signal(SocketHandle socket) {
+    return suppress_sigpipe(static_cast<int>(socket));
 }
 
 int pending_socket_error(SocketHandle socket) {
@@ -171,5 +189,30 @@ std::optional<SocketRefusal> loopback_listener(int family, const sockaddr *addre
     }
 
     return std::nullopt;
+}
+
+LoopbackHolder loopback_listener_holder(std::uint64_t pid, unsigned port) {
+    for (const auto &socket : process_tcp_sockets(static_cast<std::int64_t>(pid))) {
+        if (socket.state == TcpSocket::State::listen && socket.local.ipv4 &&
+            socket.local.port == port && socket.local.address4 == htonl(INADDR_LOOPBACK)) {
+            return LoopbackHolder::owner;
+        }
+    }
+
+    return LoopbackHolder::absent;
+}
+
+LoopbackHolder loopback_connection_holder(std::uint64_t pid, unsigned local_port,
+                                          unsigned remote_port) {
+    for (const auto &socket : process_tcp_sockets(static_cast<std::int64_t>(pid))) {
+        if (socket.state == TcpSocket::State::established && socket.local.ipv4 &&
+            socket.local.address4 == htonl(INADDR_LOOPBACK) &&
+            socket.remote.address4 == htonl(INADDR_LOOPBACK) && socket.local.port == local_port &&
+            socket.remote.port == remote_port) {
+            return LoopbackHolder::owner;
+        }
+    }
+
+    return LoopbackHolder::absent;
 }
 } // namespace voyemu::os

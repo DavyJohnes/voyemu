@@ -77,8 +77,6 @@ src/app/runtime/android_port_lease.test.cpp group 10 runtime: interguest link, m
 src/app/runtime/cli_flow.test.cpp group 10 runtime: interguest link, media, providers and sessions
 src/app/runtime/field_delivery.test.cpp group 10 runtime: interguest link, media, providers and sessions
 src/app/runtime/interguest_link_owner.test.cpp group 10 runtime: interguest link, media, providers and sessions
-src/app/runtime/interguest_network.cpp group 10 runtime: interguest link, media, providers and sessions
-src/app/runtime/interguest_network.test.cpp group 10 runtime: interguest link, media, providers and sessions
 src/app/runtime/media_discovery.hpp group 10 runtime: the Wine path translation of the Windows build
 src/app/runtime/media_discovery.test.cpp group 10 runtime: interguest link, media, providers and sessions
 src/app/runtime/media_rpc.test.cpp group 10 runtime: interguest link, media, providers and sessions
