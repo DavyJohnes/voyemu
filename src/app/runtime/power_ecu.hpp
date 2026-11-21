@@ -63,6 +63,7 @@ public:
         const auto &raw = state.at("raw_oem");
         const auto previous = state_;
         Outcome result;
+
         result.receipt = {{"consumer", "voyemu.power-ecu"},
                           {"policy_id", "voyemu-own-power-v1"},
                           {"requested", name(target)},
