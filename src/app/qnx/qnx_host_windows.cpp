@@ -218,9 +218,9 @@ Json install_qnx_host_windows_source(const std::filesystem::path &root, bool off
     }
 
     const auto &recipe = qnx_host_catalog().at("windows_file_backend");
-    const auto pin = sha256_bytes(recipe.dump());
+    const auto pin = sha256_bytes(recipe.dump()), version = recipe.at("version").get<std::string>();
     const auto parent = root / ".local/toolchains",
-               target = parent / ("qnx-host-windows-source-11.1.2-" + pin.substr(0, 12));
+               target = parent / ("qnx-host-windows-source-" + version + "-" + pin.substr(0, 12));
     auto result = [&](bool cached) {
         const auto exe = target / "qemu-system-aarch64.exe";
         require(std::filesystem::is_regular_file(std::filesystem::symlink_status(exe)) &&
@@ -230,12 +230,12 @@ Json install_qnx_host_windows_source(const std::filesystem::path &root, bool off
         return Json{{"schema", 1},
                     {"ready", true},
                     {"cached", cached},
-                    {"version", "11.1.2"},
+                    {"version", version},
                     {"directory", target.string()},
                     {"executable", exe.string()},
                     {"guest_verified", false},
                     {"qnx_file_backend",
-                     {{"schema", 1}, {"version", "11.1.2"}, {"engine_sha256", sha256_file(exe)}}}};
+                     {{"schema", 1}, {"version", version}, {"engine_sha256", sha256_file(exe)}}}};
     };
 
     if (std::filesystem::exists(target)) {
@@ -503,9 +503,9 @@ Json install_qnx_host_windows_source(const std::filesystem::path &root, bool off
 
     if (!std::filesystem::exists(sources)) {
         const auto extract = stage / "sources";
-        const auto omitted = unpack_recorded(source, extract, "qemu-11.1.2", true);
+        const auto omitted = unpack_recorded(source, extract, "qemu-" + version, true);
         std::filesystem::remove(omitted);
-        const auto tree = extract / "qemu-11.1.2";
+        const auto tree = extract / ("qemu-" + version);
 
         for (const auto &[file, sha] : recipe.at("patched_sources").items()) {
             require(sha256_file(tree / file) == sha.at("before").get<std::string>(),
@@ -693,7 +693,7 @@ Json install_qnx_host_windows_source(const std::filesystem::path &root, bool off
             {"bytes", std::filesystem::file_size(payload / exe.filename())},
             {"sha256", sha256_file(payload / exe.filename())}};
     require(run(payload / exe.filename(), {"--version"}, payload)
-                            .find("QEMU emulator version 11.1.2") != std::string::npos,
+                            .find("QEMU emulator version " + version) != std::string::npos,
             "source engine version probe failed");
     require(run(payload / exe.filename(), {"-object", "help"}, payload)
                             .find("memory-backend-file") != std::string::npos,
@@ -747,10 +747,12 @@ std::string qnx_host_unavailable(const std::filesystem::path &root) {
     // An engine of the source recipe that a developer or CI run left in the cache stays usable;
     // deps never runs that recipe on Windows.
     const auto &file_backend = qnx_host_catalog().at("windows_file_backend");
-    const auto cache = root / ".local/toolchains/downloads/qnx-host/windows-file-backend-11.1.2";
-    const auto installed_engine =
-            root / ".local/toolchains" /
-            ("qnx-host-windows-11.1.2-" + qnx_host_cache_key(sha256_bytes(file_backend.dump())));
+    const auto version = file_backend.at("version").get<std::string>();
+    const auto cache = root / ".local/toolchains/downloads/qnx-host" /
+                       ("windows-file-backend-" + version);
+    const auto installed_engine = root / ".local/toolchains" /
+                                  ("qnx-host-windows-" + version + "-" +
+                                   qnx_host_cache_key(sha256_bytes(file_backend.dump())));
 
     return qnx_host_asset_missing(qnx_host_prebuilt_pin(qnx_host_catalog(), "windows_file_backend"),
                                   std::filesystem::exists(cache) ||

@@ -33,7 +33,8 @@ struct QnxHostSourceEngine {
                         const std::string &platform)
         : component(recipe), root(root_directory), pin(sha256_bytes(recipe.dump())),
           parent(root / ".local/toolchains"),
-          target(parent / ("qnx-host-" + platform + "-11.1.2-" + pin.substr(0, 12))),
+          target(parent / ("qnx-host-" + platform + "-" + recipe.at("version").get<std::string>() +
+                           "-" + pin.substr(0, 12))),
           binary(target / "qemu-system-aarch64") {}
 
     Json result(bool cached) const {

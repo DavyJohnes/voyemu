@@ -127,7 +127,8 @@ inline Json install_prebuilt_qnx_host(const std::filesystem::path &root, const J
     const auto archive = prebuilt.at("sha256").get<std::string>();
     const auto parent = root / ".local/toolchains";
     const auto target = parent /
-                        ("qnx-host-" + host + "-11.1.2-" + qnx_host_cache_key(pin, archive));
+                        ("qnx-host-" + host + "-" + component.at("version").get<std::string>() +
+                         "-" + qnx_host_cache_key(pin, archive));
     const auto verify = [&](const std::filesystem::path &directory, bool installed) {
         auto ancestor = root;
 

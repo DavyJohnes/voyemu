@@ -41,6 +41,7 @@ Json install_qnx_host_engine(const std::filesystem::path &root, bool offline, st
     }
 
     const QnxHostSourceEngine host(root, component, "linux");
+    const auto qemu_version = component.at("version").get<std::string>();
 
     if (host.installed()) {
         return host.result(true);
@@ -145,7 +146,7 @@ Json install_qnx_host_engine(const std::filesystem::path &root, bool offline, st
     }
 
     run("/usr/bin/tar", {"-xf", source.string(), "-C", stage.string()}, stage);
-    const auto sources = stage / "qemu-11.1.2", build = stage / "build";
+    const auto sources = stage / ("qemu-" + qemu_version), build = stage / "build";
     // GLib builds with the Meson that QEMU bundles.
     run(python,
         {"-m", "zipfile", "-e", (sources / "python/wheels/meson-1.11.1-py3-none-any.whl").string(),
@@ -274,7 +275,7 @@ Json install_qnx_host_engine(const std::filesystem::path &root, bool offline, st
         require(allowed.contains(name), "non-system runtime dependency rejected: " + name);
     }
 
-    require(run(engine, {"--version"}, stage).find("QEMU emulator version 11.1.2") !=
+    require(run(engine, {"--version"}, stage).find("QEMU emulator version " + qemu_version) !=
                     std::string::npos,
             "engine version differs");
     require(run(engine, {"-object", "help"}, stage).find("memory-backend-file") !=

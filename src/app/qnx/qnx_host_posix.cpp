@@ -22,8 +22,7 @@ constexpr Check need{"QNX_HOST"};
 constexpr bool macos = os::platform_name == "macOS";
 constexpr std::string_view factory_kind = macos ? "voyemu-macos-qnx-host" : "voyemu-linux-qnx-host",
                            factory_recipe = macos ? "macos_arm64" : "linux_x64",
-                           factory_engine = macos ? "qnx-host-macos-11.1.2-"
-                                                  : "qnx-host-linux-11.1.2-",
+                           factory_engine = macos ? "qnx-host-macos-" : "qnx-host-linux-",
                            angle_suffix = os::shared_library_suffix;
 
 class FactoryBindingLock {
@@ -136,6 +135,11 @@ bool managed_macos_bindings(const std::filesystem::path &root, const Json &value
                                      {"engine_receipt_sha256", sha256_file(receipt_file)}} &&
                  qemu.parent_path().filename() ==
                          std::string(factory_engine) +
+                                 qnx_host_catalog()
+                                         .at(std::string(factory_recipe))
+                                         .at("version")
+                                         .get<std::string>() +
+                                 "-" +
                                  qnx_host_cache_key(component,
                                                     receipt.value("archive_sha256", std::string{})),
          "factory marker differs");

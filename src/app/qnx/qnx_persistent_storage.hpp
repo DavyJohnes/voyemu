@@ -3,6 +3,7 @@
 #include "error.hpp"
 #include "model.hpp"
 #include "process.hpp"
+#include "qnx_host.hpp"
 #include "qnx_process_ram.hpp"
 #include <array>
 #include <filesystem>
@@ -25,8 +26,10 @@ inline bool qnx_file_backend_supported(const Json &capability, std::string_view 
     return capability.is_object() && capability.size() == 3 && capability.contains("schema") &&
            capability.at("schema").is_number_integer() && capability.at("schema") == 1 &&
            capability.contains("version") && capability.at("version").is_string() &&
-           capability.at("version") == "11.1.2" && engine_sha.size() == 64 &&
-           capability.contains("engine_sha256") && capability.at("engine_sha256").is_string() &&
+           capability.at("version") ==
+                   qnx_host_catalog().at("windows_file_backend").at("version") &&
+           engine_sha.size() == 64 && capability.contains("engine_sha256") &&
+           capability.at("engine_sha256").is_string() &&
            capability.at("engine_sha256") == engine_sha;
 }
 

@@ -19,17 +19,17 @@ inline Json install_cached_windows_qnx_host(const std::filesystem::path &root,
             "canonical Windows engine project root required");
     const auto &runtime = component.at("verified_runtime");
     const auto &files = runtime.at("files");
-    const auto pin = sha256_bytes(component.dump());
+    const auto pin = sha256_bytes(component.dump()),
+               version = component.at("version").get<std::string>();
     const auto archive = prebuilt.is_null() ? std::string{}
                                             : prebuilt.at("sha256").get<std::string>();
     const auto parent = root / ".local/toolchains",
-               target = parent / ("qnx-host-windows-11.1.2-" + qnx_host_cache_key(pin, archive));
+               target = parent /
+                        ("qnx-host-windows-" + version + "-" + qnx_host_cache_key(pin, archive));
     const auto capability = runtime.at("qnx_file_backend");
-    require(component.at("version") == "11.1.2" &&
-                    capability == Json{{"schema", 1},
-                                       {"version", "11.1.2"},
-                                       {"engine_sha256",
-                                        files.at("qemu-system-aarch64.exe").at("sha256")}},
+    require(capability == Json{{"schema", 1},
+                               {"version", version},
+                               {"engine_sha256", files.at("qemu-system-aarch64.exe").at("sha256")}},
             "Windows file backend recipe differs");
     const auto verify = [&](const std::filesystem::path &directory) {
         const auto relative_root = directory.lexically_relative(root);
@@ -90,7 +90,7 @@ inline Json install_cached_windows_qnx_host(const std::filesystem::path &root,
                     {"cached", cached},
                     {"directory", target.string()},
                     {"executable", (target / "qemu-system-aarch64.exe").string()},
-                    {"version", "11.1.2"},
+                    {"version", version},
                     {"qnx_file_backend", capability},
                     {"guest_verified", false}};
     };
@@ -106,7 +106,8 @@ inline Json install_cached_windows_qnx_host(const std::filesystem::path &root,
         return result(true);
     }
 
-    const auto cache = root / ".local/toolchains/downloads/qnx-host/windows-file-backend-11.1.2";
+    const auto cache = root / ".local/toolchains/downloads/qnx-host" /
+                       ("windows-file-backend-" + version);
 
     if (prebuilt.is_null()) {
         verify(cache);

@@ -505,6 +505,21 @@ int main(int argc, char **argv) {
         }
 
         check(failed, "capability cannot name a different engine");
+        // The engine version is recipe data: another version selects its own cache and directory.
+        auto upgraded = fixture;
+        upgraded["version"] = "11.2.0";
+        upgraded["verified_runtime"]["qnx_file_backend"]["version"] = "11.2.0";
+        const auto upgraded_cache = cache.parent_path() / "windows-file-backend-11.2.0";
+        std::filesystem::copy(cache, upgraded_cache);
+        const auto installed_upgrade = install_cached_windows_qnx_host(root, upgraded, 0);
+        check(installed_upgrade.at("version") == "11.2.0" &&
+                      std::filesystem::path(installed_upgrade.at("directory").get<std::string>())
+                              .filename()
+                              .string()
+                              .starts_with("qnx-host-windows-11.2.0-"),
+              "Windows engine version comes from its recipe");
+        std::filesystem::remove_all(installed_upgrade.at("directory").get<std::string>());
+        std::filesystem::remove_all(upgraded_cache);
         std::filesystem::rename(cache / "zlib1.dll", root / "external.dll");
         std::filesystem::create_symlink(root / "external.dll", cache / "zlib1.dll");
         failed = false;

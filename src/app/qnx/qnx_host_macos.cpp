@@ -24,6 +24,7 @@ Json install_qnx_host_engine(const std::filesystem::path &root, bool offline, st
     }
 
     const QnxHostSourceEngine host(root, component, "macos");
+    const auto qemu_version = component.at("version").get<std::string>();
 
     if (host.installed()) {
         return host.result(true);
@@ -126,7 +127,7 @@ Json install_qnx_host_engine(const std::filesystem::path &root, bool offline, st
         {"-xf", source.string(), "--exclude=roms/edk2/EmulatorPkg/Unix/Host/X11IncludeHack", "-C",
          stage.string()},
         stage);
-    const auto sources = stage / "qemu-11.1.2", build = stage / "build";
+    const auto sources = stage / ("qemu-" + qemu_version), build = stage / "build";
     ensure_private_directory(build);
     run("/usr/bin/patch", {"--batch", "-p1", "-i", patch.string()}, sources);
 
@@ -165,7 +166,7 @@ Json install_qnx_host_engine(const std::filesystem::path &root, bool offline, st
                 "non-system runtime dependency rejected");
     }
 
-    require(run(executable, {"--version"}, stage).find("QEMU emulator version 11.1.2") !=
+    require(run(executable, {"--version"}, stage).find("QEMU emulator version " + qemu_version) !=
                     std::string::npos,
             "engine version differs");
     const auto payload = stage / "payload";
