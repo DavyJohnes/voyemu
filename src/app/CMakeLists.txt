@@ -1144,6 +1144,9 @@ if(VOYEMU_BUILD_CLUSTER)
     set_source_files_properties(${voyemu_sdl_frame_sources} TARGET_DIRECTORY SDL3-static PROPERTIES COMPILE_OPTIONS -O2 SKIP_PRECOMPILE_HEADERS ON)
     add_library(voyemu_imgui STATIC "${IMGUI}/imgui.cpp" "${IMGUI}/imgui_draw.cpp" "${IMGUI}/imgui_tables.cpp" "${IMGUI}/imgui_widgets.cpp")
     target_include_directories(voyemu_imgui PUBLIC "${IMGUI}" "${IMGUI}/backends")
+    # The window opens no Dear ImGui metrics, debug log or ID stack tool; every user of imgui.h shares
+    # the definition, which changes the layout of ImGuiContext.
+    target_compile_definitions(voyemu_imgui PUBLIC IMGUI_DISABLE_DEBUG_TOOLS)
     include("${CMAKE_CURRENT_SOURCE_DIR}/ui_resources.cmake")
     add_library(voyemu_cluster_ui STATIC ui/licenses.cpp ui/cluster_ui.cpp ui/cluster_ui_controls.cpp ui/cluster_font.cpp ui/ui_resources.cpp ui/vector_artwork.cpp)
     target_include_directories(voyemu_cluster_ui PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
