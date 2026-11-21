@@ -57,6 +57,16 @@ function(voyemu_window_dependencies)
     foreach(subsystem AUDIO GPU CAMERA JOYSTICK HAPTIC HIDAPI POWER SENSOR DIALOG TRAY VULKAN RENDER_VULKAN RENDER_GPU)
         voyemu_window_option(SDL_${subsystem} OFF)
     endforeach()
+    # Renderers: Direct3D 11 on Windows and Metal on macOS, OpenGL after them and the software renderer
+    # last. The Direct3D 9 and 12 drivers come only after a failed Direct3D 11, and OpenGL ES needs an
+    # EGL library that neither host ships; Linux keeps OpenGL ES, whose EGL the Wayland driver uses.
+    if(WIN32)
+        voyemu_window_option(SDL_RENDER_D3D OFF)
+        voyemu_window_option(SDL_RENDER_D3D12 OFF)
+    endif()
+    if(WIN32 OR APPLE)
+        voyemu_window_option(SDL_OPENGLES OFF)
+    endif()
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         # X11 and Wayland from the pinned headers of window_linux.cmake; SDL loads the system
         # libraries by their sonames when the window opens.
