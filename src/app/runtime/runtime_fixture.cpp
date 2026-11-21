@@ -1605,12 +1605,9 @@ int fixture_main(int argc, char **argv) {
             // race.
             std::this_thread::sleep_for(std::chrono::milliseconds(300));
         }
-        console.close();
-        adb_listener.close();
-#ifdef _WIN32
-        sdk_media.reset();
-        WSACleanup();
-#endif
+        // The session terminates the SDK process once its listeners close, so the exit receipts
+        // are published while they are still bound; a termination during a later publication
+        // would leave a pending state file that refuses the next fixture.
         voyemu::write_private_json(
                 root / "identity.json",
                 {{"avd", avd}, {"token", token}, {"pid", pid}, {"port", port}, {"alive", false}});
@@ -1618,6 +1615,12 @@ int fixture_main(int argc, char **argv) {
                                    {{"token", token},
                                     {"pid", pid},
                                     {"cause", stopped ? "owned-stop" : "fixture-window-exit"}});
+        console.close();
+        adb_listener.close();
+#ifdef _WIN32
+        sdk_media.reset();
+        WSACleanup();
+#endif
 
         return 0;
     } catch (const std::exception &error) {
