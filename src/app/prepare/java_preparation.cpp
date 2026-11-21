@@ -10,6 +10,7 @@
 #include "passion_generated_helper.hpp"
 #include "process.hpp"
 #include "profile_build.hpp"
+#include "profile_catalog.hpp"
 #include "profile_file_nodes.hpp"
 #include "profile_identity.hpp"
 #include "project_files.hpp"
@@ -311,8 +312,7 @@ Json java_preparation_native_files(const std::filesystem::path &root,
     const bool codec = guest_api == 28 && profile.at("patches").contains("ccodec-allocation-a9");
 
     if (codec) {
-        need(runtime_profile_reference(profile, request.profile) ==
-                             "free-09-chinese-20260106-6.0.3" &&
+        need(record_declares(profile, ProfilePlatform::qinggan09, ProfileBoard::sa8155) &&
                      !b.native_files_receipt.empty() &&
                      inside(b.native_files_receipt, root / ".local"),
              "exact API28 codec handoff required");
@@ -345,7 +345,7 @@ Json java_preparation_native_files(const std::filesystem::path &root,
                   {"receipt_sha256", b.native_files_receipt_sha256}};
     }
 
-    const bool passion = request.profile == "passion-11-russian-20260403-2.1.4.80";
+    const bool passion = record_declares(profile, ProfilePlatform::passion, ProfileBoard::sa8155);
     const auto recipes = api30_file_recipes_for(profile.value("platform", std::string{}),
                                                 original_navi_requested(profile));
     std::size_t native_nodes = 0;
@@ -358,9 +358,7 @@ Json java_preparation_native_files(const std::filesystem::path &root,
         }
     }
 
-    need(((request.profile == "free-11-chinese-20260731-7.3.1" ||
-           request.profile == "free-11-chinese-20250710-6.11.1" ||
-           request.profile == "free-11-russian-20260318-rc1")
+    need((record_declares(profile, ProfilePlatform::qinggan11, ProfileBoard::sa8155)
                   ? native_nodes == recipes.size()
                   : (native_nodes == 0 || (!passion && native_nodes == 1) ||
                      native_nodes == recipes.size())) &&

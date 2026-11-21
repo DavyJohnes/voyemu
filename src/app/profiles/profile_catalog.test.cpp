@@ -897,7 +897,7 @@ int main(int argc, char **argv) {
             auto bad = passion;
 
             if (mode == 0) {
-                bad["id"] = "free-11-chinese-20260731-7.3.1";
+                bad["platform"] = "qinggan11";
             }
 
             if (mode == 1) {
@@ -1304,7 +1304,7 @@ int main(int argc, char **argv) {
                 auto bad = a11;
 
                 if (mode == 0) {
-                    bad["id"] = "passion-11-russian-20260403-2.1.4.80";
+                    bad["platform"] = "passion";
                 }
 
                 if (mode == 1) {
@@ -1959,7 +1959,7 @@ int main(int argc, char **argv) {
             auto bad = a11;
 
             if (mode == 0) {
-                bad["id"] = "passion-11-russian-20260403-2.1.4.80";
+                bad["platform"] = "passion";
             }
 
             if (mode == 1) {

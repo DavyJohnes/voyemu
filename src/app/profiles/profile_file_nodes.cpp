@@ -9,6 +9,7 @@
 #include "original_navi_candidate.hpp"
 #include "os/fs.hpp"
 #include "process.hpp"
+#include "profile_catalog.hpp"
 #include "profile_identity.hpp"
 #include "profile_originals.hpp"
 #include "quickboot.hpp"
@@ -191,9 +192,10 @@ ProfileFileNodes plan_profile_file_nodes(const std::filesystem::path &root,
     const auto definition = Json::parse(profile_bytes);
 
     if (native_base_api(definition.at("android")) == 30) {
-        const auto platform = profile_platform(definition);
-        const bool passion = platform == ProfilePlatform::passion,
-                   qinggan11 = platform == ProfilePlatform::qinggan11;
+        const bool passion = record_declares(definition, ProfilePlatform::passion,
+                                             ProfileBoard::sa8155),
+                   qinggan11 = record_declares(definition, ProfilePlatform::qinggan11,
+                                               ProfileBoard::sa8155);
         const auto recipes = api30_file_recipes_for(definition.value("platform", std::string{}),
                                                     original_navi_requested(definition));
         std::size_t policy_index = passion ? 0U : 1U;

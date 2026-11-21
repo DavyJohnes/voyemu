@@ -7,6 +7,7 @@
 #include "ordinary_path.hpp"
 #include "os/fs.hpp"
 #include "process.hpp"
+#include "profile_catalog.hpp"
 #include "profile_file_nodes.hpp"
 #include "profile_identity.hpp"
 #include "quickboot.hpp"
@@ -188,6 +189,9 @@ Json plan_profile_patch_graph(const std::filesystem::path &root, std::string_vie
         visit(it.key());
     }
 
+    // The A9 CAN file recipes belong to qinggan09 on the 8155 board.
+    const bool qinggan09 = record_declares(definition, ProfilePlatform::qinggan09,
+                                           ProfileBoard::sa8155);
     Json nodes = Json::array(), missing_nodes = Json::array(), missing_steps = Json::array();
     std::map<std::string, bool> ready;
     std::size_t implemented_count = 0;
@@ -242,27 +246,18 @@ Json plan_profile_patch_graph(const std::filesystem::path &root, std::string_vie
 
                 const bool base = definition.at("android").at("package") ==
                                   "system-images;android-28;default;arm64-v8a";
-                const bool family = name == "can-early-policy-a9"
-                                            ? (runtime_profile_reference(definition, profile) ==
-                                                       "free-09-chinese-20260106-6.0.3" &&
-                                               !patches.contains("selinux-canbus-a9") &&
-                                               !patches.contains("can-simulator-policy-a9"))
-                                    : name == "can-early-file-contexts-a9"
-                                            ? (runtime_profile_reference(definition, profile) ==
-                                                       "free-09-chinese-20260106-6.0.3" &&
-                                               !patches.contains("can-simulator-contexts-a9"))
-                                    : name == "can-early-property-contexts-a9"
-                                            ? (runtime_profile_reference(definition, profile) ==
-                                                       "free-09-chinese-20260106-6.0.3" &&
-                                               !patches.contains("selinux-property-contexts-a9"))
-                                    : name == "can-simulator-contexts-a9"
-                                            ? runtime_profile_reference(definition, profile) ==
-                                                      "free-09-chinese-20260106-6.0.3"
-                                    : name == "can-simulator-policy-a9"
-                                            ? (runtime_profile_reference(definition, profile) ==
-                                                       "free-09-chinese-20260106-6.0.3" &&
-                                               !patches.contains("selinux-canbus-a9"))
-                                            : true;
+                const bool family =
+                        name == "can-early-policy-a9"
+                                ? (qinggan09 && !patches.contains("selinux-canbus-a9") &&
+                                   !patches.contains("can-simulator-policy-a9"))
+                        : name == "can-early-file-contexts-a9"
+                                ? (qinggan09 && !patches.contains("can-simulator-contexts-a9"))
+                        : name == "can-early-property-contexts-a9"
+                                ? (qinggan09 && !patches.contains("selinux-property-contexts-a9"))
+                        : name == "can-simulator-contexts-a9" ? qinggan09
+                        : name == "can-simulator-policy-a9"
+                                ? (qinggan09 && !patches.contains("selinux-canbus-a9"))
+                                : true;
                 const bool bound = base && family && node_input != file_node_inputs().end() &&
                                    file_steps().contains(step) && !native_steps.empty() &&
                                    declaration == expected;

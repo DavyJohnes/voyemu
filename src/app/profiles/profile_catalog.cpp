@@ -114,11 +114,12 @@ Json declared_patch_plan(const Json &definition) {
         state[id] = 1;
         const auto &patch = patches.at(id);
         const auto type = patch.at("type").get<std::string>();
-        const auto profile_id = definition.value("id", std::string{});
-        const bool secondary_binding = (profile_id == "free-11-chinese-20260731-7.3.1" &&
-                                        id == "api30-secondary-navigation") ||
-                                       (profile_id == "passion-11-russian-20260403-2.1.4.80" &&
-                                        id == "passion-api30-secondary-navigation");
+        const bool qinggan11 = record_declares(definition, ProfilePlatform::qinggan11,
+                                               ProfileBoard::sa8155),
+                   passion = record_declares(definition, ProfilePlatform::passion,
+                                             ProfileBoard::sa8155);
+        const bool secondary_binding = (qinggan11 && id == "api30-secondary-navigation") ||
+                                       (passion && id == "passion-api30-secondary-navigation");
         const bool secondary_jar =
                 secondary_binding &&
                 android.value("package", std::string{}) ==
@@ -126,19 +127,19 @@ Json declared_patch_plan(const Json &definition) {
                 (patch == Json{{"type", "jar"},
                                {"input", "android:/system/framework/services.jar"},
                                {"steps", Json::array({id + ".json"})}} ||
-                 (profile_id == "passion-11-russian-20260403-2.1.4.80" &&
+                 (passion &&
                   patch == Json{{"type", "jar"},
                                 {"input", "android:/system/framework/services.jar"},
                                 {"steps", Json::array({"passion-api30-secondary-navigation.json",
                                                        "passion-api30-display-power.json"})}}) ||
-                 (profile_id == "passion-11-russian-20260403-2.1.4.80" &&
+                 (passion &&
                   patch == Json{{"type", "jar"},
                                 {"input", "android:/system/framework/services.jar"},
                                 {"steps", Json::array({"passion-api30-secondary-navigation.json",
                                                        "passion-api30-display-power.json",
                                                        "passion-api30-startup-volume.json"})}}));
         const bool audio_consumer_jar =
-                profile_id == "free-11-chinese-20260731-7.3.1" && id == "QGAPI" &&
+                qinggan11 && id == "QGAPI" &&
                 android.value("package", std::string{}) ==
                         "system-images;android-30;default;arm64-v8a" &&
                 qinggan11_pinned_original(definition.value("original", Json::object())
