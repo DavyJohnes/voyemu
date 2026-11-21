@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Run from the project root with an independently prepared A9 test machine.
+# Run from the project root with an independently prepared qinggan09 test machine.
 set -euo pipefail
 
 if [[ $# != 2 || ( $2 != home && $2 != setting ) ]]; then
-    echo "Usage: bash src/dev/checks/a9-left-shade.sh TEST_MACHINE_PATH home|setting" >&2
+    echo "Usage: bash src/dev/checks/qinggan09-left-shade.sh TEST_MACHINE_PATH home|setting" >&2
     exit 2
 fi
 
@@ -13,13 +13,13 @@ setting=com.qinggan.app.setting
 machine=$(cd -- "$1" && pwd -P)
 context=$2
 case "${machine##*/}" in
-    "$profile"|"$profile"-voboost*) echo "Supply a dedicated A9 test machine" >&2; exit 2 ;;
+    "$profile"|"$profile"-voboost*) echo "Supply a dedicated qinggan09 test machine" >&2; exit 2 ;;
 esac
 
 voyemu=${VOYEMU:-./voyemu}
 umask 077
 mkdir -p .local/build/tmp
-artifacts=$(mktemp -d "$(pwd -P)/.local/build/tmp/a9-left-shade-$context.XXXXXXXX")
+artifacts=$(mktemp -d "$(pwd -P)/.local/build/tmp/qinggan09-left-shade-$context.XXXXXXXX")
 echo "Evidence: $artifacts"
 session=null
 request_number=0
@@ -117,7 +117,7 @@ fi
 
 select_ui() {
     jq -ce --arg stage "$1" --arg owner "$launcher" --arg foreground "$foreground" \
-        -f src/dev/checks/a9-left-shade.jq "$2"
+        -f src/dev/checks/qinggan09-left-shade.jq "$2"
 }
 
 wait_for_ui() {
