@@ -630,27 +630,25 @@ struct SessionPersistenceFixture {
                     argv.push_back(arg);
                 }
 
-                if (argv !=
-                    std::vector<std::string>({"--ram",
-                                              ram.string(),
-                                              "--ram-bytes",
-                                              std::to_string(passion ? 11713ULL << 20 : 8ULL << 30),
-                                              "--address",
-                                              std::to_string(page),
-                                              "--session",
-                                              root.string(),
-                                              "--angle",
-                                              "unused",
-                                              "--session-id",
-                                              session.session_id_,
-                                              "--generation",
-                                              "1",
-                                              "--worker-nonce",
-                                              std::to_string(session.graphics_owners_.at(0).nonce),
-                                              "--guest-pid",
-                                              "0",
-                                              "--producer-incarnation",
-                                              "0"})) {
+                std::vector<std::string> expected{
+                        "--ram",       ram.string(),
+                        "--ram-bytes", std::to_string(passion ? 11713ULL << 20 : 8ULL << 30),
+                        "--address",   std::to_string(page),
+                        "--session",   root.string(),
+                        "--angle",     "unused"};
+
+                // A qinggan11 worker names the adapter of the MCU layout it serves.
+                if (!passion) {
+                    expected.insert(expected.end(), {"--mcu-adapter", "sa8155-qinggan11-731"});
+                }
+
+                expected.insert(expected.end(),
+                                {"--session-id", session.session_id_, "--generation", "1",
+                                 "--worker-nonce",
+                                 std::to_string(session.graphics_owners_.at(0).nonce),
+                                 "--guest-pid", "0", "--producer-incarnation", "0"});
+
+                if (argv != expected) {
                     throw std::runtime_error("Session graphics argv RAM extent mismatch");
                 }
 
