@@ -29,11 +29,11 @@ const std::string &art_diagnostic_script() {
     return script;
 }
 
-bool passion_profile(const Json &profile) {
+bool passion_platform(const Json &profile) {
     return record_declares(profile, ProfilePlatform::passion, ProfileBoard::sa8155);
 }
 
-bool qinggan11_profile(const Json &profile) {
+bool qinggan11_platform(const Json &profile) {
     return record_declares(profile, ProfilePlatform::qinggan11, ProfileBoard::sa8155);
 }
 
@@ -259,7 +259,7 @@ android_candidate_sdk_environment(const std::filesystem::path &sdk, bool windows
 }
 
 std::vector<std::string> android_candidate_art_verify_packages(const Json &profile) {
-    if (!passion_profile(profile) || !profile.contains("android") ||
+    if (!passion_platform(profile) || !profile.contains("android") ||
         profile.at("android").value("package", std::string{}) !=
                 "system-images;android-30;default;arm64-v8a" ||
         !profile.contains("original") || !profile.at("original").contains("LY_Car")) {
@@ -437,7 +437,7 @@ Json android_candidate_vehicle_observer_policy(const Json &profile) {
                 {"reason", "NXP profile has no source-backed vehicle observer"}};
     }
 
-    if (!passion_profile(profile)) {
+    if (!passion_platform(profile)) {
         return {{"supported", true}};
     }
 
@@ -459,7 +459,7 @@ void validate_android_candidate_checks(const Json &profile, const Json &checks) 
         fail("bounded nonempty cold check array required");
     }
 
-    const bool passion = passion_profile(profile);
+    const bool passion = passion_platform(profile);
     const auto unsupported = passion ? android_candidate_vehicle_observer_policy(profile) : Json();
     unsigned declarations = 0;
 
@@ -508,9 +508,9 @@ void validate_android_candidate_checks(const Json &profile, const Json &checks) 
 
 std::optional<unsigned> android_candidate_secondary_provider(const Json &profile,
                                                              const std::string &displays) {
-    const bool passion = passion_profile(profile);
+    const bool passion = passion_platform(profile);
 
-    need(passion || qinggan11_profile(profile),
+    need(passion || qinggan11_platform(profile),
          "API30 source-owned secondary provider scope required");
     need(android_candidate_api(profile) == 30,
          "API30 display readiness requires a supported source profile");
@@ -565,9 +565,9 @@ std::optional<unsigned> android_candidate_secondary_provider(const Json &profile
 std::optional<unsigned> android_candidate_secondary_display_ready(const Json &profile,
                                                                   const std::string &displays,
                                                                   const std::string &windows) {
-    const bool passion = passion_profile(profile);
+    const bool passion = passion_platform(profile);
 
-    if (!passion && !qinggan11_profile(profile)) {
+    if (!passion && !qinggan11_platform(profile)) {
         return secondary_display_ready(displays, windows);
     }
 
@@ -595,8 +595,8 @@ std::vector<std::string> android_candidate_capture_arguments(const Json &profile
 
     const bool nxp = record_declares(profile, ProfilePlatform::qinggan09, ProfileBoard::nxp) &&
                      android_candidate_api(profile) == 28,
-               qinggan11 = qinggan11_profile(profile);
-    need(nxp || ((passion_profile(profile) || qinggan11) && android_candidate_api(profile) == 30),
+               qinggan11 = qinggan11_platform(profile);
+    need(nxp || ((passion_platform(profile) || qinggan11) && android_candidate_api(profile) == 30),
          "frame capture requires an exact supported source profile");
 
     if (qinggan11 && profile.at("original").contains("Launcher")) {
@@ -673,7 +673,7 @@ void android_candidate_promote_labelled_system(const std::filesystem::path &mach
 }
 
 bool android_candidate_api30_root_layout(const Json &profile) {
-    if (!qinggan11_profile(profile)) {
+    if (!qinggan11_platform(profile)) {
         return false;
     }
 
@@ -695,7 +695,7 @@ std::uint64_t android_candidate_overlay_scratch_bytes(const Json &profile, std::
         original_navi_preflight(profile, android_candidate_api(profile));
     }
 
-    const bool qinggan11 = qinggan11_profile(profile);
+    const bool qinggan11 = qinggan11_platform(profile);
 
     if (qinggan11) {
         need(android_candidate_api30_root_layout(profile),
@@ -703,7 +703,7 @@ std::uint64_t android_candidate_overlay_scratch_bytes(const Json &profile, std::
     }
 
     if (!original_navi && !qinggan11) {
-        if (!passion_profile(profile)) {
+        if (!passion_platform(profile)) {
             return 0;
         }
 
@@ -1216,7 +1216,7 @@ void android_candidate_offline_policy_pin(const std::string &artifact, const std
         need(expected == "8bd8062c3b8108bdc34573f78d403691e747298a986a3464ace94721b02ad1d7",
              "offline contexts output pin differs");
     } else if (artifact == "patched:can-early-policy-api30") {
-        const bool qinggan11 = qinggan11_profile(profile),
+        const bool qinggan11 = qinggan11_platform(profile),
                    original_navi = qinggan11 && original_navi_requested(profile),
                    shared = qinggan11 && !original_navi;
         need((original_navi &&

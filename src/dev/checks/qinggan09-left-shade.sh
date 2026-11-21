@@ -7,11 +7,16 @@ if [[ $# != 2 || ( $2 != home && $2 != setting ) ]]; then
     exit 2
 fi
 
-profile=free-09-chinese-20260106-6.0.3
 launcher=com.qinggan.app.launcher
 setting=com.qinggan.app.setting
 machine=$(cd -- "$1" && pwd -P)
 context=$2
+# The machine names its profile; the embedded profile.json declares qinggan09 on the 8155 board.
+profile=$(jq -r .profile "$machine/runtime.json")
+if ! jq -e '.platform == "qinggan09" and .board == "8155"' "$machine/profile.json" >/dev/null; then
+    echo "Supply a qinggan09 test machine on the 8155 board" >&2
+    exit 2
+fi
 case "${machine##*/}" in
     "$profile"|"$profile"-voboost*) echo "Supply a dedicated qinggan09 test machine" >&2; exit 2 ;;
 esac

@@ -1441,7 +1441,7 @@ final class PatchTarget implements Recipes.Target {
                             java.nio.file.Files.readAllBytes(dex.resolve("classes.dex"))));
         } else {
             InterguestStartupGuard.validate(
-                    profile.referenceProfile(), api, input, source, entries.get("classes.dex"));
+                    profile.platform(), api, input, source, entries.get("classes.dex"));
         }
     }
 

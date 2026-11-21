@@ -48,10 +48,10 @@ final class InterguestStartupGuard {
                 3);
     }
 
-    static void validate(String profile, int api, Path input, Path source, byte[] primary)
+    static void validate(String platform, int api, Path input, Path source, byte[] primary)
             throws Exception {
         require(
-                Api30NativeFiles.QINGGAN11_731.equals(profile)
+                "qinggan11".equals(platform)
                         && api == 30
                         && FilesSupport.hash(input).equals(HiboardTopGestureGuard.PIN));
         require(

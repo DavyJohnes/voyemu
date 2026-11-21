@@ -96,8 +96,6 @@ final class Api30NativeFiles {
                             })
                     .toList();
 
-    static final String QINGGAN11_731 = "free-11-chinese-20260731-7.3.1";
-
     static final List<Spec> PASSION_SPECS =
             List.of(
                     new Spec(
