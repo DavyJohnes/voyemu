@@ -1,12 +1,42 @@
 #include "model.hpp"
 #include "process.hpp"
+#include <chrono>
 #include <iostream>
+#include <thread>
 using namespace voyemu;
 
 static void check(bool value, const char *message) {
     if (!value) {
         throw std::runtime_error(message);
     }
+}
+
+// Removes the test root without throwing. A file another process still holds, such as a scanner on
+// a fresh executable, can refuse deletion briefly; what stays after the retries is named.
+static std::string remove_root(const std::filesystem::path &root) {
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    std::error_code error;
+
+    std::filesystem::remove_all(root, error);
+
+    while (error && std::chrono::steady_clock::now() < deadline) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        std::filesystem::remove_all(root, error);
+    }
+
+    if (!error) {
+        return {};
+    }
+
+    std::string remaining;
+    std::error_code walk;
+
+    for (std::filesystem::recursive_directory_iterator entry(root, walk), end;
+         !walk && entry != end; entry.increment(walk)) {
+        remaining += " " + entry->path().string();
+    }
+
+    return error.message() + ";" + remaining;
 }
 
 int main(int argc, char **argv) {
@@ -32,7 +62,9 @@ int main(int argc, char **argv) {
             std::filesystem::path path;
 
             ~Cleanup() {
-                std::filesystem::remove_all(path);
+                if (!path.empty()) {
+                    (void)remove_root(path);
+                }
             }
         } cleanup{root};
         auto inspect = [&](const std::filesystem::path &binary) {
@@ -69,6 +101,9 @@ int main(int argc, char **argv) {
         check(!std::filesystem::exists(runtime / ".local/machines/sessions") &&
                       !std::filesystem::exists(root / "unrelated/.local/machines/sessions"),
               "root inspection never creates sessions");
+        cleanup.path.clear();
+        const auto left = remove_root(root);
+        check(left.empty(), ("test root stays: " + left).c_str());
         std::cout << "project-root CLI and standalone runtime root detection passed\n";
 
         return 0;
