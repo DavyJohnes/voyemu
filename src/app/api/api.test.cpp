@@ -3472,9 +3472,15 @@ int main(int argc, char **argv) try {
         auto start = request("session.start");
         start.erase("session");
 
-        for (const auto &path : std::vector<std::string>{
-                     external.string(),
-                     external.lexically_relative(std::filesystem::current_path()).string()}) {
+        std::vector<std::string> paths{external.string()};
+        const auto relative = external.lexically_relative(std::filesystem::current_path());
+
+        // A Windows scratch root on another drive than the working directory has no relative form.
+        if (!relative.empty()) {
+            paths.push_back(relative.string());
+        }
+
+        for (const auto &path : paths) {
             start["request_id"] = random_token();
             start["machine_path"] = path;
             const auto result = owner_api.call(start);
