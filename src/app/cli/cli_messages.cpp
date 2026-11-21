@@ -1,35 +1,26 @@
 #include "cli_messages.hpp"
+#include "embedded_data.hpp"
 #include "model.hpp"
-#include <iterator>
 namespace voyemu::cli {
 namespace {
 #include "cli_messages.inc"
 
 const Json &catalog(Language language) {
-    static const std::array<Json, 3> catalogs{
-            Json::parse(std::begin(embedded_cli_messages_en), std::end(embedded_cli_messages_en)),
-            Json::parse(std::begin(embedded_cli_messages_ru), std::end(embedded_cli_messages_ru)),
-            Json::parse(std::begin(embedded_cli_messages_zh), std::end(embedded_cli_messages_zh))};
+    static const std::array<Json, 3> catalogs{Json::parse(message_catalog(Language::english)),
+                                              Json::parse(message_catalog(Language::russian)),
+                                              Json::parse(message_catalog(Language::chinese))};
 
     return catalogs.at(static_cast<std::size_t>(language));
 }
 } // namespace
 
 std::string_view message_catalog(Language language) {
-    const auto bytes = [](const auto &array) {
-        return std::string_view(reinterpret_cast<const char *>(array), sizeof(array));
-    };
+    static const std::array<std::string, 3> catalogs{
+            inflate_embedded(embedded_cli_messages_en, embedded_cli_messages_en_size),
+            inflate_embedded(embedded_cli_messages_ru, embedded_cli_messages_ru_size),
+            inflate_embedded(embedded_cli_messages_zh, embedded_cli_messages_zh_size)};
 
-    switch (language) {
-    case Language::russian:
-        return bytes(embedded_cli_messages_ru);
-    case Language::chinese:
-        return bytes(embedded_cli_messages_zh);
-    case Language::english:
-        break;
-    }
-
-    return bytes(embedded_cli_messages_en);
+    return catalogs.at(static_cast<std::size_t>(language));
 }
 
 std::string message(Language language, std::string_view key, const MessageArguments &arguments) {

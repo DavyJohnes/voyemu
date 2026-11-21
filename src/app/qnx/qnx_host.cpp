@@ -1,5 +1,6 @@
 #include "qnx_host.hpp"
 #include "check.hpp"
+#include "embedded_data.hpp"
 #include "error.hpp"
 #include "little_endian.hpp"
 #include "process.hpp"
@@ -17,7 +18,7 @@ constexpr Check need{"QNX_HOST"};
 } // namespace
 
 const Json &qnx_host_catalog() {
-    static const Json value = Json::parse(std::begin(qnx_host_json), std::end(qnx_host_json));
+    static const Json value = Json::parse(inflate_embedded(qnx_host_json, qnx_host_json_size));
 
     return value;
 }

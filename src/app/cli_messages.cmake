@@ -1,3 +1,4 @@
+include("${CMAKE_CURRENT_LIST_DIR}/embedded_deflate.cmake")
 # Embed the CLI message catalogs; English is the source of keys and cli_messages tests the others.
 set(voyemu_cli_messages "")
 foreach(language IN ITEMS en ru zh)
@@ -8,9 +9,7 @@ foreach(language IN ITEMS en ru zh)
     if(invalid OR NOT type STREQUAL "OBJECT")
         message(FATAL_ERROR "Invalid CLI message catalog: ${source}")
     endif()
-    # Byte initializers avoid compiler string-literal limits and preserve UTF-8 verbatim.
-    string(HEX "${catalog}" catalog_hex)
-    string(REGEX REPLACE "(..)" "0x\\1," catalog_bytes "${catalog_hex}")
-    string(APPEND voyemu_cli_messages "static constexpr unsigned char embedded_cli_messages_${language}[]={${catalog_bytes}};\n")
+    voyemu_deflate_initializer("${source}" "${CMAKE_CURRENT_BINARY_DIR}/cli_messages.gz" catalog_bytes catalog_size)
+    string(APPEND voyemu_cli_messages "static constexpr unsigned char embedded_cli_messages_${language}[]={${catalog_bytes}};\nstatic constexpr std::size_t embedded_cli_messages_${language}_size=${catalog_size};\n")
 endforeach()
 file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/cli_messages.inc" "${voyemu_cli_messages}")
