@@ -1406,13 +1406,14 @@ void Session::advance_windows_android_transaction() {
                             "--extra",  "button:s:" + submitted.id,
                             "--extra",  "owner:s:" + submitted.owner,
                             "--extra",  "phase:s:" + submitted.phase};
-                    const auto command =
-                            paired && !transaction.wheel_pair_cleanup
-                                    ? android_short_wheel_pair_command(
-                                              session_id_, guest_auth_token_, transaction.boot,
-                                              event, release, transaction.wheel_pair_hold_ms,
-                                              AndroidShortWheelContract::a9, transaction.nonce)
-                                    : startup_shell(values);
+                    const auto command = paired && !transaction.wheel_pair_cleanup
+                                                 ? android_short_wheel_pair_command(
+                                                           session_id_, guest_auth_token_,
+                                                           transaction.boot, event, release,
+                                                           transaction.wheel_pair_hold_ms,
+                                                           AndroidShortWheelContract::qinggan09,
+                                                           transaction.nonce)
+                                                 : startup_shell(values);
 
                     if (event.phase == "down") {
                         android_possible_pressed_[event.id] = event.owner;

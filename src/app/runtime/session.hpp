@@ -180,13 +180,13 @@ bool android_vehicle_receipt_matches(const Json &receipt, const Json &state);
 bool android_vehicle_receipt_pending(const Json &receipt, const Json &state);
 bool android_wheel_release_reuses_identity(const WheelEvent &down, const WheelEvent &release);
 enum class AndroidShortWheelContract {
-    qinggan11_731,
-    a9
+    qinggan11,
+    qinggan09
 };
 std::string android_short_wheel_pair_command(
         const std::string &session, const std::string &token, const std::string &boot,
         const WheelEvent &down, const WheelEvent &up, int hold_ms,
-        AndroidShortWheelContract contract = AndroidShortWheelContract::qinggan11_731,
+        AndroidShortWheelContract contract = AndroidShortWheelContract::qinggan11,
         std::string_view nonce = {});
 std::optional<Json> android_wheel_delivery_receipt(const Json &receipt,
                                                    const std::string &session_id,

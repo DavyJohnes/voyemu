@@ -331,7 +331,7 @@ std::string android_short_wheel_pair_command(const std::string &session, const s
         return result;
     };
 
-    if (contract == AndroidShortWheelContract::a9) {
+    if (contract == AndroidShortWheelContract::qinggan09) {
         if (!android_boot_id_valid(boot) || !windows_startup_token(nonce)) {
             throw VoyemuError("WHEEL_PAIR", "fixed A9 boot and nonce required");
         }
@@ -352,7 +352,7 @@ std::string android_short_wheel_pair_command(const std::string &session, const s
                "[ \"$down_status\" = 0 ] && [ \"$hold_status\" = 0 ] && [ \"$up_status\" = 0 ]";
     }
 
-    if (contract != AndroidShortWheelContract::qinggan11_731) {
+    if (contract != AndroidShortWheelContract::qinggan11) {
         throw VoyemuError("WHEEL_PAIR", "known receipt contract required");
     }
 

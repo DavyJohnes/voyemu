@@ -502,9 +502,9 @@ int main() {
         {
             const WheelEvent down{1, "volume_down", "down", "own", 0, 0},
                     up{2, "volume_down", "up", "own", 0, 0};
-            auto command = android_short_wheel_pair_command(nonce, std::string(32, 'a'), boot, down,
-                                                            up, 150, AndroidShortWheelContract::a9,
-                                                            nonce);
+            auto command = android_short_wheel_pair_command(
+                    nonce, std::string(32, 'a'), boot, down, up, 150,
+                    AndroidShortWheelContract::qinggan09, nonce);
             need(command.find_first_of("\r\n") == std::string::npos);
             (void)windows_startup_command({command}, frame, nonce, boot, true, {}, true);
 
@@ -581,7 +581,7 @@ int main() {
             }
             rejects([&] {
                 android_short_wheel_pair_command(nonce, std::string(32, 'a'), "invalid", down, up,
-                                                 150, AndroidShortWheelContract::a9, nonce);
+                                                 150, AndroidShortWheelContract::qinggan09, nonce);
             });
         }
         // Android R56 has no printf builtin. Count actual external utility calls;
