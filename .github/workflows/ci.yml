@@ -214,6 +214,8 @@ jobs:
                   path: |
                       ${{ env.VOYEMU_NATIVE_FIXTURE_BASE }}
                       !${{ env.VOYEMU_NATIVE_FIXTURE_BASE }}/**/*.exe
+                  # Supervisor logs and session state live under each fixture's .local directory.
+                  include-hidden-files: true
                   if-no-files-found: ignore
             - name: Diagnose Windows admission storage
               if: failure() && steps.host-tests.outcome == 'failure'
