@@ -1,10 +1,10 @@
 #include "profile_apk_nodes.hpp"
 #include "check.hpp"
 #include "error.hpp"
-#include "ordinary_path.hpp"
 #include "os/fs.hpp"
 #include "process.hpp"
 #include "profile_originals.hpp"
+#include "profile_step_inputs.hpp"
 #include "quickboot.hpp"
 #include <algorithm>
 #include <fstream>
@@ -12,50 +12,7 @@
 namespace voyemu {
 namespace {
 constexpr Check require{"PROFILE_APK"};
-
-void ordinary(const std::filesystem::path &p) {
-    ordinary_path(p, require, PathForm::Canonical, "canonical path required",
-                  "linked ancestor rejected");
-}
-
-void file(const std::filesystem::path &p, std::uint64_t bound) {
-    ordinary(p);
-    require(std::filesystem::is_regular_file(p) && std::filesystem::hard_link_count(p) == 1 &&
-                    std::filesystem::file_size(p) <= bound,
-            "ordinary bounded file required");
-}
-
-Json inventory(const std::filesystem::path &source) {
-    ordinary(source);
-    Json out = Json::array();
-    std::uint64_t total = 0;
-
-    for (const auto &entry : std::filesystem::recursive_directory_iterator(source)) {
-        require(!entry.is_symlink() && (entry.is_regular_file() || entry.is_directory()),
-                "ordinary source tree required");
-
-        if (entry.is_directory()) {
-            continue;
-        }
-
-        file(entry.path(), 32ULL << 20);
-        const auto size = entry.file_size();
-        require(out.size() < 4096 && size <= (32ULL << 20) - total, "source inventory bounds");
-        total += size;
-        const auto epoch = cache_file_identity(entry.path());
-        const auto hash = sha256_file(entry.path());
-        require(cache_file_identity(entry.path()) == epoch, "source changed during hashing");
-        out.push_back({{"path", entry.path().lexically_relative(source).generic_string()},
-                       {"sha256", hash},
-                       {"bytes", size}});
-    }
-
-    std::sort(out.begin(), out.end(), [](const Json &a, const Json &b) {
-        return a.at("path").get<std::string>() < b.at("path").get<std::string>();
-    });
-
-    return out;
-}
+constexpr ProfileStepInputs inputs{require};
 } // namespace
 
 ProfileBinaryApkNode plan_profile_binary_apk_node(const std::filesystem::path &root,
@@ -63,17 +20,17 @@ ProfileBinaryApkNode plan_profile_binary_apk_node(const std::filesystem::path &r
                                                   const std::filesystem::path &build,
                                                   const std::filesystem::path &compiler,
                                                   const std::string &compiler_sha256) {
-    ordinary(root);
+    inputs.ordinary(root);
     require(valid_profile_name(profile), "safe profile name required");
     require(name == "VehicleSetting" || name == "VehicleAir", "unsupported binary profile node");
-    ordinary(build);
+    inputs.ordinary(build);
     const auto profile_dir = root / "profiles" / std::string(profile),
                profile_file = profile_dir / "profile.json",
                patch_file = profile_dir / "patches/add-qg-runtime.json",
                receipt_file = build / "receipt.json";
-    file(profile_file, 512 * 1024);
-    file(patch_file, 128 * 1024);
-    file(receipt_file, 128 * 1024);
+    inputs.file(profile_file, 512 * 1024);
+    inputs.file(patch_file, 128 * 1024);
+    inputs.file(receipt_file, 128 * 1024);
     std::map<std::filesystem::path, std::pair<Json, std::string>> tracked;
     auto track = [&](const std::filesystem::path &p) {
         const auto epoch = cache_file_identity(p);
@@ -83,7 +40,7 @@ ProfileBinaryApkNode plan_profile_binary_apk_node(const std::filesystem::path &r
 
         return hash;
     };
-    file(compiler, 512ULL << 20);
+    inputs.file(compiler, 512ULL << 20);
     require(sha256_text(compiler_sha256) && track(compiler) == compiler_sha256,
             "native compiler pin mismatch");
     track(profile_file);
@@ -118,10 +75,10 @@ ProfileBinaryApkNode plan_profile_binary_apk_node(const std::filesystem::path &r
     require(original_name == std::string(name) + ".apk" && sha256_text(original_pin),
             "original APK declaration");
     const auto source = profile_originals_directory(root, profile) / original_name;
-    file(source, 1ULL << 30);
+    inputs.file(source, 1ULL << 30);
     require(track(source) == original_pin, "original APK differs from profile pin");
     const auto component = profile_dir / "components/qg-runtime";
-    const auto local = inventory(component);
+    const auto local = inputs.inventory(component);
     auto recipe = read_private_json(component / "component.json");
     const auto shared = recipe.value("sourceFiles", Json::object());
     recipe.erase("sourceFiles");
@@ -138,7 +95,7 @@ ProfileBinaryApkNode plan_profile_binary_apk_node(const std::filesystem::path &r
                 "common component source mapping required");
         const auto common = root /
                             it.value().get<std::string>().substr(std::string("voyemu/").size());
-        file(common, 32ULL << 20);
+        inputs.file(common, 32ULL << 20);
         track(common);
     }
 
@@ -155,7 +112,7 @@ ProfileBinaryApkNode plan_profile_binary_apk_node(const std::filesystem::path &r
                     receipt.at("materialized_source").empty(),
             "producer tool or dependency mismatch");
     const auto library = build / "libqg_runtime.so";
-    file(library, 32ULL << 20);
+    inputs.file(library, 32ULL << 20);
     const auto library_pin = track(library);
     require(receipt.at("sha256") == library_pin &&
                     receipt.at("bytes") == std::filesystem::file_size(library),
@@ -187,7 +144,7 @@ ProfileBinaryApkNode plan_profile_binary_apk_node(const std::filesystem::path &r
                     "bound input changed before publication");
         }
 
-        require(inventory(component) == local,
+        require(inputs.inventory(component) == local,
                 "profile component source changed before publication");
     };
     node.request.prepublication_guard();

@@ -1,67 +1,24 @@
 #include "profile_binary_patches.hpp"
 #include "check.hpp"
 #include "error.hpp"
-#include "ordinary_path.hpp"
 #include "os/fs.hpp"
 #include "process.hpp"
 #include "profile_originals.hpp"
+#include "profile_step_inputs.hpp"
 #include "quickboot.hpp"
 #include <algorithm>
 #include <fstream>
 namespace voyemu {
 namespace {
 constexpr Check require{"BINARY_PATCH"};
-
-void ordinary(const std::filesystem::path &p) {
-    ordinary_path(p, require, PathForm::Canonical, "canonical path required",
-                  "linked ancestor rejected");
-}
-
-void file(const std::filesystem::path &p, std::uint64_t bound) {
-    ordinary(p);
-    require(std::filesystem::is_regular_file(p) && std::filesystem::hard_link_count(p) == 1 &&
-                    std::filesystem::file_size(p) <= bound,
-            "ordinary bounded file required");
-}
-
-Json inventory(const std::filesystem::path &source) {
-    ordinary(source);
-    Json out = Json::array();
-    std::uint64_t total = 0;
-
-    for (const auto &entry : std::filesystem::recursive_directory_iterator(source)) {
-        require(!entry.is_symlink() && (entry.is_regular_file() || entry.is_directory()),
-                "ordinary source tree required");
-
-        if (entry.is_directory()) {
-            continue;
-        }
-
-        file(entry.path(), 32ULL << 20);
-        const auto size = entry.file_size();
-        require(out.size() < 4096 && size <= (32ULL << 20) - total, "source inventory bounds");
-        total += size;
-        const auto epoch = cache_file_identity(entry.path());
-        const auto hash = sha256_file(entry.path());
-        require(cache_file_identity(entry.path()) == epoch, "source changed during hashing");
-        out.push_back({{"path", entry.path().lexically_relative(source).generic_string()},
-                       {"sha256", hash},
-                       {"bytes", size}});
-    }
-
-    std::sort(out.begin(), out.end(), [](const Json &a, const Json &b) {
-        return a.at("path").get<std::string>() < b.at("path").get<std::string>();
-    });
-
-    return out;
-}
+constexpr ProfileStepInputs inputs{require};
 } // namespace
 
 ProfileBinaryPatch plan_profile_binary_patch(
         const std::filesystem::path &root, std::string_view profile, std::string_view name,
         const std::map<std::string, std::filesystem::path> &builds,
         const std::filesystem::path &compiler, const std::string &compiler_sha256) {
-    ordinary(root);
+    inputs.ordinary(root);
     require(valid_profile_name(profile), "safe profile name required");
     const bool music = name == "MusicConcate";
     require(music || name == "QGIME" || name == "QGIMESecond", "unsupported binary step");
@@ -75,7 +32,7 @@ ProfileBinaryPatch plan_profile_binary_patch(
     std::map<std::filesystem::path, std::pair<Json, std::string>> tracked;
     std::map<std::filesystem::path, Json> source_trees;
     auto track = [&](const std::filesystem::path &path, std::uint64_t maximum) {
-        file(path, maximum);
+        inputs.file(path, maximum);
         const auto epoch = cache_file_identity(path);
         const auto hash = sha256_file(path);
         require(cache_file_identity(path) == epoch, "input changed during hash");
@@ -146,11 +103,11 @@ ProfileBinaryPatch plan_profile_binary_patch(
                 "native compiler pin mismatch");
 
         for (const auto &[component, build] : builds) {
-            ordinary(build);
+            inputs.ordinary(build);
             require(definition.at("components").at(component) == "components/" + component,
                     "component source mapping");
             const auto source = directory / "components" / component;
-            const auto files = inventory(source);
+            const auto files = inputs.inventory(source);
             source_trees[source] = files;
             const auto output = component == "qgime-handwrite" ? "libjni_qgHandWrite.so"
                                                                : "libjni_qgime.so";
@@ -218,7 +175,7 @@ ProfileBinaryPatch plan_profile_binary_patch(
         }
 
         for (const auto &[source, files] : source_trees) {
-            require(inventory(source) == files, "component source changed");
+            require(inputs.inventory(source) == files, "component source changed");
         }
     };
     result.revalidate();
