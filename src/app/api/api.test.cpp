@@ -21,6 +21,7 @@
 #include <mutex>
 #include <regex>
 #include <set>
+#include <system_error>
 #include <thread>
 #include <tuple>
 #include <vector>
@@ -4059,19 +4060,41 @@ int main(int argc, char **argv) try {
         assert(large_api.call(large_patch) == large_response && calls == large_calls);
     }
     {
-        // A malformed supervisor response is a protocol failure, not a client argument.
-        api::Transports failing = transport;
-        failing.control = [&](const auto &endpoint, const Json &op, int timeout) -> Json {
-            if (op.at("op") != "status") {
-                return transport.control(endpoint, op, timeout);
+        // A failure without its own CODE after the action was dispatched has an unknown outcome,
+        // and a malformed supervisor response is a protocol failure, not a client argument.
+        for (const std::string failure : {"filesystem", "malformed", "malformed-read"}) {
+            api::Transports failing = transport;
+            failing.control = [&](const auto &endpoint, const Json &op, int timeout) -> Json {
+                if (op.at("op") != (failure == "malformed-read" ? "status" : "patch")) {
+                    return transport.control(endpoint, op, timeout);
+                }
+
+                if (failure == "filesystem") {
+                    throw std::filesystem::filesystem_error(
+                            "resize_file", std::filesystem::path("vehicle-state.json"),
+                            std::make_error_code(std::errc::no_space_on_device));
+                }
+
+                return Json{{"ok", true}, {"session_id", 7}};
+            };
+            api::Api failing_api(root, "unused-cli", failing);
+            auto failing_request = request(failure == "malformed-read" ? "vehicle.get"
+                                                                       : "vehicle.set");
+
+            if (failure != "malformed-read") {
+                failing_request["expected_revision"] =
+                        session.handle({{"op", "status"}}).at("revision");
+                failing_request["values"] = {{"speed", 87}};
             }
 
-            return Json{{"ok", true}, {"session_id", 7}};
-        };
-        api::Api failing_api(root, "unused-cli", failing);
-        const auto failed = failing_api.call(request("vehicle.get")).at("error");
-        assert(failed.at("code") == "IPC_PROTOCOL" && failed.at("outcome") == "not_started" &&
-               failed.at("retryable") == false);
+            const auto failed = failing_api.call(failing_request).at("error");
+            const auto expected = failure == "filesystem"  ? "FILESYSTEM_UNKNOWN"
+                                  : failure == "malformed" ? "IPC_PROTOCOL_UNKNOWN"
+                                                           : "IPC_PROTOCOL";
+            assert(failed.at("code") == expected && failed.at("retryable") == false &&
+                   failed.at("outcome") ==
+                           (failure == "malformed-read" ? "not_started" : "unknown"));
+        }
     }
     run["request_id"] = random_token();
     run["artifact_dir"] = (root / ".local/build/tmp/pass-run").string();

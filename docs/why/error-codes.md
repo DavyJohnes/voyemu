@@ -2,7 +2,7 @@
 
 ## Decision
 
-Host code reports a failure as `VoyemuError("CODE", "message")`, whose text is `CODE: message`. The API turns the uppercase `CODE` into `error.code`, and the CLI maps the response to its exit code. A code ends with `_UNKNOWN` only when the effect of the failed operation is unknown, and exactly those failures carry `outcome: unknown`; every other failure carries `outcome: not_started`. An exception without a code gets `FILESYSTEM` or `SYSTEM` by its kind, on the command line also `JSON`, and any other one `INTERNAL_ERROR` with its text; code must not hide a known failure behind it. The API gives a JSON exception `TEST_ARGUMENT` before the first supervisor exchange and `IPC_PROTOCOL` after it.
+Host code reports a failure as `VoyemuError("CODE", "message")`, whose text is `CODE: message`. The API turns the uppercase `CODE` into `error.code`, and the CLI maps the response to its exit code. A code ends with `_UNKNOWN` only when the effect of the failed operation is unknown, and exactly those failures carry `outcome: unknown`; every other failure carries `outcome: not_started`. An exception without a code gets `FILESYSTEM` or `SYSTEM` by its kind, on the command line also `JSON`, and any other one `INTERNAL_ERROR` with its text; code must not hide a known failure behind it. The API gives a JSON exception `TEST_ARGUMENT` before the first supervisor exchange and `IPC_PROTOCOL` after it, and appends `_UNKNOWN` to the code of such an exception once the operation has sent its action.
 
 ## Context
 

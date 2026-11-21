@@ -79,7 +79,7 @@ bool boolean(const Json &object, const char *key, bool fallback);
 std::string profile(const Json &request);
 void validate_sources(const Json &request);
 std::string terminal_outcome(const Json &response);
-Json error(const std::exception &exception, bool contacted = false);
+Json error(const std::exception &exception, bool contacted = false, bool dispatched = false);
 std::string admission_scope(const Json &request);
 #ifndef _WIN32
 bool owned_wheel_lease_held(const std::filesystem::path &path);

@@ -148,17 +148,25 @@ std::string terminal_outcome(const Json &response) {
     return "unknown";
 }
 
-Json error(const std::exception &exception, bool contacted) {
+Json error(const std::exception &exception, bool contacted, bool dispatched) {
     std::string message = exception.what(), code(failure_code(exception));
 
-    // Before any supervisor exchange a JSON exception reads the request shape, which the client
+    // An exception without its own CODE is classified by the progress of the operation. Before
+    // any supervisor exchange a JSON exception reads the request shape, which the client
     // corrects; afterwards it reads a response. The other kinds keep their code and cause, as on
-    // the console.
-    if (code == "JSON") {
-        code = contacted ? "IPC_PROTOCOL" : "TEST_ARGUMENT";
-        message = contacted ? "Invalid JSON response shape" : "Invalid JSON request shape";
-    } else if (code.empty()) {
-        code = "INTERNAL_ERROR";
+    // the console. After an action was dispatched its effect is unknown.
+    if (message_code(message).empty()) {
+        if (code == "JSON") {
+            code = contacted || dispatched ? "IPC_PROTOCOL" : "TEST_ARGUMENT";
+            message = contacted || dispatched ? "Invalid JSON response shape"
+                                              : "Invalid JSON request shape";
+        } else if (code.empty()) {
+            code = "INTERNAL_ERROR";
+        }
+
+        if (dispatched) {
+            code += "_UNKNOWN";
+        }
     }
 
     if (message.size() > 1024) {
@@ -1301,6 +1309,11 @@ Json Api::control(const Json &request, const Json &operation, bool mutation, int
     const auto endpoint = record.at("endpoint").get<std::string>();
     try {
         contacted_ = true;
+
+        if (mutation) {
+            dispatched_ = true;
+        }
+
         auto response = transports_.control(endpoint, op, timeout_ms);
 
         if (response.value("session_id", std::string{}) !=
@@ -1369,6 +1382,7 @@ Json Api::call(const Json &supplied) {
     std::string scope, request_id;
     bool admitted = false, public_ui = false;
     contacted_ = false;
+    dispatched_ = false;
     try {
         if (!supplied.is_object() || !supplied.contains("schema") ||
             !supplied.at("schema").is_number_integer() || supplied.at("schema") != 1) {
@@ -1571,7 +1585,7 @@ Json Api::call(const Json &supplied) {
 }
 
 Json Api::operation_error(const std::exception &exception) const {
-    return error(exception, contacted_);
+    return error(exception, contacted_, dispatched_);
 }
 
 Json Api::dispatch(const Json &request, Clock::time_point deadline) {

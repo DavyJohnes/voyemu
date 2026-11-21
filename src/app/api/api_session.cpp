@@ -158,6 +158,7 @@ Json Api::dispatch_session(const std::string &op, const Json &request, Clock::ti
         }
 
         contacted_ = true;
+        dispatched_ = true;
         const auto result = transports_.create(created);
 
         if (machine.selected &&
@@ -765,6 +766,7 @@ Json Api::run(const Json &request) {
 
             try {
                 contacted_ = false;
+                dispatched_ = false;
                 auto result = dispatch(step);
                 const bool timeout = result.is_object() && (result.value("timed_out", false) ||
                                                             !result.value("accepted", true));
@@ -863,6 +865,7 @@ Json Api::run(const Json &request) {
             auto stop = context;
             stop["op"] = "session.stop";
             contacted_ = false;
+            dispatched_ = false;
             auto stopped = dispatch(stop);
             const bool clean = stopped.value("accepted", true);
             report["cleanup"] = {{"status", clean ? "passed" : "failed"}, {"result", stopped}};

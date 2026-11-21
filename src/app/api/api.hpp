@@ -58,9 +58,9 @@ private:
     Json operation_error(const std::exception &exception) const;
     std::filesystem::path root_, executable_;
     Transports transports_;
-    // Whether the current operation exchanged a message with its supervisor; parallel
-    // observations exchange concurrently.
-    std::atomic<bool> contacted_{false};
+    // Whether the current operation exchanged a message with its supervisor and whether it
+    // dispatched an action that can change a guest; parallel observations read concurrently.
+    std::atomic<bool> contacted_{false}, dispatched_{false};
 };
 int result_exit_code(const Json &response);
 } // namespace voyemu::api

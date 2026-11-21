@@ -49,6 +49,8 @@ A code that ends with `_UNKNOWN` means the effect of the operation is unknown: t
 | `INTERNAL_ERROR` | An unexpected failure without a code; the message keeps its text |
 | `IPC_PROTOCOL` | A supervisor response is malformed JSON or has the wrong shape |
 
+A failure without its own code that happens after the operation sent its action to the supervisor gets the `_UNKNOWN` form of its code: `FILESYSTEM_UNKNOWN`, `SYSTEM_UNKNOWN`, `INTERNAL_ERROR_UNKNOWN` or `IPC_PROTOCOL_UNKNOWN`.
+
 Host code never hides a known failure behind `INTERNAL_ERROR`. Malformed JSON that host code reads for itself gives `JSON` on the command line. Codes of other areas, such as `FETCH_MISSING` for missing OEM inputs or `CLI_COMMAND` for an unknown command, follow the same format.
 
 ## Command line
