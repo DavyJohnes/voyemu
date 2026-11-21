@@ -125,7 +125,8 @@ int main() try {
                                {{"gear", 3}, {"gear_valid", 1}, {"speed", 80}});
         std::uint32_t step = 0;
         auto press = [&](std::string id, std::chrono::milliseconds duration = 100ms) {
-            assert(platform.input(q11, ++step, id, "down", "ui-q", now).handled);
+            const bool pressed = platform.input(q11, ++step, id, "down", "ui-q", now).handled;
+            assert(pressed);
             auto up = platform.input(q11, ++step, id, "up", "ui-q", now + duration);
             now += duration + 10ms;
 
