@@ -306,11 +306,7 @@ Json materialize_qnx_originals(const std::filesystem::path &root, std::string_vi
     const auto archive_pin = sha256_file(archive);
     const auto tools = ensure_java_preparation_tools(root, jdk, offline);
     const auto cp = java_preparation_classpath(root, tools.runtime);
-#ifdef _WIN32
-    const std::string suffix = ".exe";
-#else
-    const std::string suffix;
-#endif
+    const std::string suffix(os::executable_suffix);
     const auto java = tools.runtime.jdk / "bin" / ("java" + suffix),
                stage = root / ".local/build/tmp" / ("qnx-originals-transport-" + random_token());
     ensure_private_directory(stage);
@@ -391,11 +387,7 @@ Json capture_vehicle_inputs(const std::filesystem::path &root, std::string_view 
     install_native_dependencies(root, offline);
     const auto tools = ensure_java_preparation_tools(root, jdk, offline);
     const auto classpath = java_preparation_classpath(root, tools.runtime);
-#ifdef _WIN32
-    const std::string suffix = ".exe";
-#else
-    const std::string suffix;
-#endif
+    const std::string suffix(os::executable_suffix);
     const auto adb = tools.sdk / "platform-tools" / ("adb" + suffix),
                java = tools.runtime.jdk / "bin" / ("java" + suffix),
                stage = root / ".local/build/tmp" / ("vehicle-capture-transport-" + random_token());

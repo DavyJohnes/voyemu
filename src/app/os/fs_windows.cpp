@@ -1,5 +1,6 @@
 #include "cli_messages.hpp"
 #include "fs.hpp"
+#include <cstdlib>
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
@@ -100,6 +101,12 @@ std::optional<FileObject> owned_file_object(const std::filesystem::path &path, b
 
     return FileObject{info.dwVolumeSerialNumber,
                       (std::uint64_t(info.nFileIndexHigh) << 32) | info.nFileIndexLow};
+}
+
+std::filesystem::path home_directory() {
+    const auto *home = _wgetenv(L"USERPROFILE");
+
+    return home ? std::filesystem::path(home) : std::filesystem::path();
 }
 
 bool create_junction(const std::filesystem::path &target, const std::filesystem::path &link) {

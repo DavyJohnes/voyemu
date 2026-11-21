@@ -121,6 +121,8 @@ bool reparse_point(const std::filesystem::path &path);
 // Whether path belongs to another user than the effective one; false on Windows, whose callers
 // check the owner on an open handle.
 bool foreign_owner(const std::filesystem::path &path);
+// The home directory of the user: USERPROFILE on Windows, HOME elsewhere; empty when unset.
+std::filesystem::path home_directory();
 // Whether the standard error stream of this process is an interactive terminal.
 bool error_terminal();
 

@@ -2,6 +2,7 @@
 #include "fs.hpp"
 #include <cerrno>
 #include <condition_variable>
+#include <cstdlib>
 #include <deque>
 #include <fcntl.h>
 #include <map>
@@ -58,6 +59,12 @@ std::optional<FileObject> owned_file_object(const std::filesystem::path &path, b
     }
 
     return FileObject{std::uint64_t(info.st_dev), std::uint64_t(info.st_ino)};
+}
+
+std::filesystem::path home_directory() {
+    const auto *home = std::getenv("HOME");
+
+    return home ? std::filesystem::path(home) : std::filesystem::path();
 }
 
 bool create_junction(const std::filesystem::path &, const std::filesystem::path &) {

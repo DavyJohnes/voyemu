@@ -15,18 +15,14 @@ src/app/android/windows_startup.test.cpp group 5 android: console, audio and eng
 src/app/api/api.test.cpp group 4 adb and api: sockets, files and admission
 src/app/api/cluster_tree.test.cpp group 4 adb and api: sockets, files and admission
 src/app/cli/build_cli.test.cpp group 6 cli: console, arguments and session hosting
-src/app/cli/cli_arguments.hpp group 6 cli: console, arguments and session hosting
 src/app/cli/cli_arguments.test.cpp group 6 cli: console, arguments and session hosting
-src/app/cli/cli_commands.hpp group 6 cli: console, arguments and session hosting
-src/app/cli/cli_session.cpp group 6 cli: console, arguments and session hosting
-src/app/cli/deps.cpp group 6 cli: console, arguments and session hosting
+src/app/cli/cli_commands.hpp group 6 cli: session hosting moves with the session primitives of group 10
+src/app/cli/cli_session.cpp group 6 cli: session hosting moves with the session primitives of group 10
 src/app/cli/deps.test.cpp group 6 cli: console, arguments and session hosting
 src/app/cli/fetch.cpp later: data-out and profile-sweep branches pending
 src/app/cli/fetch_segmented.cpp later: data-out and profile-sweep branches pending
 src/app/cli/fetch_segmented.test.cpp later: data-out and profile-sweep branches pending
 src/app/cli/fetch.test.cpp later: data-out and profile-sweep branches pending
-src/app/cli/main.cpp group 6 cli: console, arguments and session hosting
-src/app/cli/vehicle_capture.cpp group 6 cli: console, arguments and session hosting
 src/app/core/model.cpp later: CAN branch pending
 src/app/core/model.test.cpp later: CAN branch pending
 src/app/core/private_json_reader.hpp later: moves into os/ with its includes in the pending-branch files

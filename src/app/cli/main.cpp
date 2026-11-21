@@ -1,5 +1,6 @@
 #include "cli_commands.hpp"
 #include "interruption.hpp"
+#include "main_host.hpp"
 #include "version.hpp"
 
 namespace {
@@ -19,11 +20,10 @@ std::atomic<bool> voyemu::cli::interrupted = false;
 
 // NOLINTNEXTLINE(bugprone-exception-escape): only unreachable nlohmann::json invariants escape.
 int main(int argc, char **argv) {
-#ifdef _WIN32
-    if (argc > 1 && std::string_view(argv[1]) == "_wine-native") {
-        return voyemu::wine_native_proxy_main(argc - 1, argv + 1);
+    if (const auto result = voyemu::cli::host_command(argc, argv)) {
+        return *result;
     }
-#endif
+
 #ifdef VOYEMU_HAS_GRAPHICS
     if (argc > 1 && std::string_view(argv[1]) == "_graphics") {
         return voyemu::graphics_main(argc - 1, argv + 1);
@@ -36,10 +36,7 @@ int main(int argc, char **argv) {
 #endif
     std::signal(SIGINT, interrupt);
     std::signal(SIGTERM, interrupt);
-#ifndef _WIN32
-    // A broken local channel is an I/O error; it must not orphan the owned VMs.
-    std::signal(SIGPIPE, SIG_IGN);
-#endif
+    voyemu::cli::ignore_broken_pipe();
     const auto language = voyemu::cli::select_language(
             argc, argv,
             [](const char *name) {

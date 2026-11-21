@@ -3,6 +3,8 @@
 #include "cli_messages.hpp"
 #include "error.hpp"
 #include "machine_path.hpp"
+#include "os/fs.hpp"
+#include "os/platform.hpp"
 #include "profile_catalog.hpp"
 #include "profile_runtime.hpp"
 #include "progress.hpp"
@@ -38,13 +40,9 @@ inline std::filesystem::path user_path(const std::string &value) {
     std::filesystem::path path = value;
 
     if (value.starts_with("~/")) {
-#ifdef _WIN32
-        const auto *home = _wgetenv(L"USERPROFILE");
-#else
-        const auto *home = std::getenv("HOME");
-#endif
+        const auto home = os::home_directory();
 
-        if (!home || !*home || !std::filesystem::path(home).is_absolute()) {
+        if (home.empty() || !home.is_absolute()) {
             throw LocalizedError("USER_HOME", "error.user_home");
         }
 
@@ -465,9 +463,8 @@ inline Arguments parse(int argc, char **argv, const std::filesystem::path &execu
 
     if (!result.root.empty()) {
         result.root = std::filesystem::canonical(result.root);
-    }
-#ifdef __APPLE__
-    else if (const auto *home = std::getenv("HOME"); home && *home) {
+    } else if (const auto *home = std::getenv("HOME");
+               os::platform_name == "macOS" && home && *home) {
         const std::filesystem::path directory(home);
 
         if (!directory.is_absolute()) {
@@ -476,7 +473,6 @@ inline Arguments parse(int argc, char **argv, const std::filesystem::path &execu
 
         result.root = (directory / "Library/Application Support/Voyemu").lexically_normal();
     }
-#endif
 
     if (!result.build_destination.empty()) {
         const auto supplied = result.build_destination;
