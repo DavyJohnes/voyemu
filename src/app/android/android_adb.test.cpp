@@ -1,24 +1,17 @@
 #include "android_adb.hpp"
 #include "android_adb_route.hpp"
+#include "android_adb_test_host.hpp"
 #include "android_adb_trace.hpp"
 #include "android_identity_probe.hpp"
 #include "model.hpp"
+#include "os/fs.hpp"
+#include "os/platform.hpp"
+#include "os/socket.hpp"
 #include "windows_startup.hpp"
-#include <fstream>
-#include <thread>
-#ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#include "os/private_json_reader.hpp"
-#include <fcntl.h>
-#include <io.h>
-#endif
 #include <algorithm>
+#include <fstream>
 #include <iostream>
-#ifndef _WIN32
-#include <arpa/inet.h>
-#include <sys/socket.h>
-#include <unistd.h>
-#endif
+#include <thread>
 using namespace voyemu;
 namespace {
 void need(bool value) {
@@ -137,18 +130,7 @@ static void identity_probe_tests(const std::filesystem::path &self) {
         return spec;
     };
     auto read = [](const std::filesystem::path &path) {
-#ifdef _WIN32
-        detail::PrivateJsonReader file(path, 4096);
-
-        return file.text();
-#else
-        std::ifstream file(path, std::ios::binary);
-
-        if (!file) {
-            throw std::runtime_error("missing probe output");
-        }
-        return std::string(std::istreambuf_iterator<char>(file), {});
-#endif
+        return read_probe_output(path);
     };
     AndroidIdentityProbe probe;
     auto start = AndroidIdentityProbe::Clock::now();
@@ -402,15 +384,7 @@ static void identity_probe_tests(const std::filesystem::path &self) {
     {
         AndroidIdentityProbe replaced;
         need(replaced.launch(owner, process("replaced")));
-#ifdef _WIN32
-        // The inherited output handle prevents renaming the probe slot until the child exits.
-        const HANDLE child_handle = OpenProcess(SYNCHRONIZE, FALSE,
-                                                static_cast<DWORD>(replaced.pid()));
-        need(child_handle != nullptr);
-        const auto terminal = WaitForSingleObject(child_handle, 5000);
-        CloseHandle(child_handle);
-        need(terminal == WAIT_OBJECT_0);
-#endif
+        need(await_probe_child(replaced.pid()));
         const auto slot = replaced.output().parent_path();
         const auto old = root / "retained-original-slot";
         std::filesystem::rename(slot, old);
@@ -446,24 +420,24 @@ static void identity_probe_tests(const std::filesystem::path &self) {
     std::filesystem::remove_all(root);
 }
 
-#ifndef _WIN32
 static int listener_child(const char *path, unsigned port, bool pair) {
-    std::vector<int> sockets;
+    const os::SocketLibrary library;
+    std::vector<os::SocketHandle> sockets;
 
     for (unsigned i = 0; i < (pair ? 2u : 1u); ++i) {
-        const int fd = ::socket(AF_INET, SOCK_STREAM, 0);
+        const auto fd = os::open_stream_socket(AF_INET);
 
-        if (fd < 0) {
+        if (fd == os::no_socket) {
             return 2;
         }
 
         sockaddr_in address{};
         address.sin_family = AF_INET;
         address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-        address.sin_port = htons(port + i);
+        address.sin_port = htons(static_cast<std::uint16_t>(port + i));
 
-        if (::bind(fd, reinterpret_cast<sockaddr *>(&address), sizeof(address)) ||
-            ::listen(fd, 2)) {
+        if (!os::bind_socket(fd, reinterpret_cast<sockaddr *>(&address), sizeof(address)) ||
+            !os::listen_socket(fd, 2)) {
             return 3;
         }
 
@@ -560,7 +534,6 @@ static void retained_owner_tests(const std::filesystem::path &self) {
     need(!sdk.alive() && !server.alive());
     std::filesystem::remove_all(root);
 }
-#endif
 
 static void console_auth_environment_tests(const std::filesystem::path &self) {
     const auto root = std::filesystem::canonical(std::filesystem::temp_directory_path()) /
@@ -604,36 +577,28 @@ static void console_auth_environment_tests(const std::filesystem::path &self) {
 int main(int argc, char **argv) {
     try {
         if (argc == 4 && std::string(argv[1]) == "--console-auth-child") {
-#ifdef _WIN32
-            const auto home = std::getenv("USERPROFILE");
-#else
-            const auto home = std::getenv("HOME");
-#endif
+            const auto home = os::home_directory();
 
-            if (!home) {
+            if (home.empty()) {
                 return 1;
             }
 
-            std::ifstream input(std::filesystem::path(home) / ".emulator_console_auth_token");
+            std::ifstream input(home / ".emulator_console_auth_token");
             const std::string token((std::istreambuf_iterator<char>(input)),
                                     std::istreambuf_iterator<char>());
 
             if (!token.empty() && sha256_bytes(token) == argv[2]) {
-#ifdef _WIN32
                 // The modeled console prints LF; Windows text mode would add CR.
-                _setmode(_fileno(stdout), _O_BINARY);
-#endif
+                binary_standard_output();
                 std::cout << argv[3] << '\n';
             }
 
             return 0;
         }
 
-#ifndef _WIN32
         if (argc == 5 && std::string(argv[1]) == "--listener-child") {
             return listener_child(argv[2], std::stoul(argv[3]), std::string(argv[4]) == "pair");
         }
-#endif
 
         if ((argc == 4 || argc == 5) && std::string(argv[1]) == "--identity-child") {
             const auto delay = std::stoi(argv[2]);
@@ -648,9 +613,11 @@ int main(int argc, char **argv) {
             return 0;
         }
 
-#ifndef _WIN32
-        retained_owner_tests(std::filesystem::absolute(argv[0]));
-#endif
+        // The retained ADB owner fence reads the TCP listeners of the POSIX processes.
+        if (!os::host_windows) {
+            retained_owner_tests(std::filesystem::absolute(argv[0]));
+        }
+
         passive_trace_tests();
         console_auth_environment_tests(std::filesystem::absolute(argv[0]));
         identity_probe_tests(std::filesystem::absolute(argv[0]));

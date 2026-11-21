@@ -3,7 +3,6 @@
 # moves its platform code to an os/ backend; each reason names the group of its area.
 src/app/adb/adb_host.test.cpp group 4 adb and api: sockets, files and admission
 src/app/adb/adb_loopback.test.cpp group 4 adb and api: sockets, files and admission
-src/app/android/android_adb.test.cpp group 5 android: console, audio and engine launch
 src/app/android/android_audio.test.cpp group 5 android: console, audio and engine launch
 src/app/android/android_console.test.cpp group 5 android: console, audio and engine launch
 src/app/android/android_engine.test.cpp group 5 android: console, audio and engine launch

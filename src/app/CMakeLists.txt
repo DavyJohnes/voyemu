@@ -393,6 +393,7 @@ if(BUILD_TESTING)
         target_link_libraries(${name}_test PRIVATE voyemu_core)
         voyemu_add_test(${name} LABELS host TIMEOUT 180 COMMAND ${name}_test)
     endforeach()
+    target_sources(android_adb_test PRIVATE android/android_adb_${voyemu_host_backend}.test.cpp)
     # Adapts the shipped qnx-runtime.sh for both A11 profiles: utility counts and the ssplash slot.
     voyemu_add_test(qnx_qinggan11_runtime LABELS host TIMEOUT 60 COMMAND qnx_qinggan11_test --runtime "${voyemu_project_root}")
     # Without arguments the Passion platform test runs its synthetic part; the OEM part reads the
