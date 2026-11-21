@@ -1,5 +1,6 @@
 #include "graphics.hpp"
 #include "model.hpp"
+#include "os/fs.hpp"
 #include "process.hpp"
 #include "program_modes.hpp"
 #include <algorithm>
@@ -9,12 +10,6 @@
 #include <fstream>
 #include <iostream>
 #include <thread>
-#ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#include <windows.h>
-#include <winioctl.h>
-#endif
 using namespace voyemu;
 using namespace voyemu::graphics;
 namespace {
@@ -186,17 +181,8 @@ int main(int argc, char **argv) {
             std::ofstream f(ram, std::ios::binary);
             need(bool(f), "RAM fixture create failed");
         }
-#ifdef _WIN32
-        HANDLE file = CreateFileW(ram.c_str(), GENERIC_WRITE, 0, nullptr, OPEN_EXISTING,
-                                  FILE_ATTRIBUTE_NORMAL, nullptr);
-        need(file != INVALID_HANDLE_VALUE, "RAM fixture open failed");
-        DWORD returned = 0;
-        const bool sparse = DeviceIoControl(file, FSCTL_SET_SPARSE, nullptr, 0, nullptr, 0,
-                                            &returned, nullptr) != 0;
-        CloseHandle(file);
-        need(sparse, "sparse RAM fixture required");
-#endif
-        std::filesystem::resize_file(ram, ram_bytes);
+        // Grows sparse on Windows too.
+        voyemu::os::resize_file(ram, ram_bytes);
         Worker source(executable, angle, root, ram, "record", journals);
         const auto display = source.call(1).result;
         need(source.call(2, {display}).result, "EGL initialize failed");

@@ -1,5 +1,6 @@
 #include "qnx_prepare.hpp"
 #include "error.hpp"
+#include "os/platform.hpp"
 #include "process.hpp"
 #include "qnx_guest_build.hpp"
 #include "qnx_guest_shell.hpp"
@@ -194,11 +195,13 @@ int main(int argc, char **argv) {
             throw std::runtime_error("Free A9 OEM entropy must be ready before qconn");
         }
 
-#ifndef _WIN32
-        const auto entropy_script = actual.substr(
-                entropy_begin,
-                entropy_end + std::string("echo 'QNET entropy-ready=1'\n").size() - entropy_begin);
-        const std::string entropy_mock = R"SH(qm_test_steps=0
+        // The guest shell fragments run under the bash of a POSIX host.
+        if (!voyemu::os::host_windows) {
+            const auto entropy_script = actual.substr(
+                    entropy_begin, entropy_end +
+                                           std::string("echo 'QNET entropy-ready=1'\n").size() -
+                                           entropy_begin);
+            const std::string entropy_mock = R"SH(qm_test_steps=0
 qm_bounded() { case $1 in random-ready) return $RAND_RC;; *) return 125;; esac; }
 function /usr/sbin/random { return 0; }
 function kill { builtin [ "$START_RC" -eq 0 ]; }
@@ -206,23 +209,24 @@ function [ { if builtin [ "$#" -eq 4 ] && builtin [ "$1" = ! ] && builtin [ "$2"
 function /bin/sleep { qm_test_steps=$((qm_test_steps+1)); }
 )SH";
 
-        for (const auto &values : std::vector<std::vector<int>>{
-                     {0, 2, 0, 0}, {9, 2, 0, 1}, {0, 999, 0, 1}, {0, 0, 8, 1}}) {
-            ProcessSpec command;
-            command.executable = "/bin/bash";
-            command.arguments = {"-c", "START_RC=" + std::to_string(values[0]) +
-                                               "\nREADY_AT=" + std::to_string(values[1]) +
-                                               "\nRAND_RC=" + std::to_string(values[2]) + "\n" +
-                                               entropy_mock + entropy_script +
-                                               "echo ENTROPY_ADMITTED\n"};
-            const auto result = execute(command, 5000, 4096);
+            for (const auto &values : std::vector<std::vector<int>>{
+                         {0, 2, 0, 0}, {9, 2, 0, 1}, {0, 999, 0, 1}, {0, 0, 8, 1}}) {
+                ProcessSpec command;
+                command.executable = "/bin/bash";
+                command.arguments = {"-c", "START_RC=" + std::to_string(values[0]) +
+                                                   "\nREADY_AT=" + std::to_string(values[1]) +
+                                                   "\nRAND_RC=" + std::to_string(values[2]) + "\n" +
+                                                   entropy_mock + entropy_script +
+                                                   "echo ENTROPY_ADMITTED\n"};
+                const auto result = execute(command, 5000, 4096);
 
-            if (result.timed_out || result.exit_code != values[3] ||
-                (result.output.find("ENTROPY_ADMITTED") != std::string::npos) != (values[3] == 0)) {
-                throw std::runtime_error("Free A9 entropy daemon/device/RAND readiness gate");
+                if (result.timed_out || result.exit_code != values[3] ||
+                    (result.output.find("ENTROPY_ADMITTED") != std::string::npos) !=
+                            (values[3] == 0)) {
+                    throw std::runtime_error("Free A9 entropy daemon/device/RAND readiness gate");
+                }
             }
         }
-#endif
 
         if (actual.find("QGFX_NATIVE_MCU=1 QGFX_NATIVE_MCU_ASYNC=1 LD_PRELOAD=") == actual.npos ||
             actual.find(monitor) == actual.npos ||
@@ -365,89 +369,92 @@ function /bin/sleep { qm_test_steps=$((qm_test_steps+1)); }
                     "infrastructure preload changed or observer reads ambient preload");
         }
 
-#ifndef _WIN32
-        const auto source_root = std::filesystem::path(__FILE__)
-                                         .parent_path()
-                                         .parent_path()
-                                         .parent_path()
-                                         .parent_path();
-        ProcessSpec preload_test;
-        preload_test.executable = "/bin/bash";
-        preload_test.arguments = {
-                (source_root / "src/guest/qnx/persistent-runtime.test.sh").string()};
-        const auto preload_result = execute(preload_test, 5000, 8192);
+        // The guest shell regression runs under the bash of a POSIX host.
+        if (!voyemu::os::host_windows) {
+            const auto source_root = std::filesystem::path(__FILE__)
+                                             .parent_path()
+                                             .parent_path()
+                                             .parent_path()
+                                             .parent_path();
+            ProcessSpec preload_test;
+            preload_test.executable = "/bin/bash";
+            preload_test.arguments = {
+                    (source_root / "src/guest/qnx/persistent-runtime.test.sh").string()};
+            const auto preload_result = execute(preload_test, 5000, 8192);
 
-        if (preload_result.timed_out || preload_result.exit_code != 0) {
-            throw std::runtime_error("persistent preload shell regression: " +
-                                     preload_result.output);
-        }
-
-        auto source_text = [](const std::filesystem::path &file) {
-            std::ifstream stream(file);
-
-            if (!stream) {
-                throw std::runtime_error("runtime source unavailable");
+            if (preload_result.timed_out || preload_result.exit_code != 0) {
+                throw std::runtime_error("persistent preload shell regression: " +
+                                         preload_result.output);
             }
 
-            return std::string(std::istreambuf_iterator<char>(stream), {});
-        };
-        const auto owner_stage = source_text(source_root / "src/guest/qnx/persistent-runtime.sh");
-        const auto assembled = qnx_qinggan09_runtime(
-                source_text(source_root / "src/guest/qnx/qnx-runtime.sh"), owner_stage);
+            auto source_text = [](const std::filesystem::path &file) {
+                std::ifstream stream(file);
 
-        if (assembled.find("qm_sc ensure\n") > assembled.find("/usr/bin/sysmgr &")) {
-            throw std::runtime_error("A9 supervised owner config order");
-        }
+                if (!stream) {
+                    throw std::runtime_error("runtime source unavailable");
+                }
 
-        const auto observed = qnx_qinggan09_runtime(
-                source_text(source_root / "src/guest/qnx/qnx-runtime.sh"), owner_stage, true);
+                return std::string(std::istreambuf_iterator<char>(stream), {});
+            };
+            const auto owner_stage =
+                    source_text(source_root / "src/guest/qnx/persistent-runtime.sh");
+            const auto assembled = qnx_qinggan09_runtime(
+                    source_text(source_root / "src/guest/qnx/qnx-runtime.sh"), owner_stage);
 
-        if (observed.find("if(o==\"gauge\")f=\"CLUSTER_UI=1 ") == observed.npos ||
-            assembled.find("CLUSTER_UI=1") != assembled.npos) {
-            throw std::runtime_error("A9 Kanzi observer must be scoped to Gauge");
-        }
-
-        // Every fetched original of a qinggan09 adapter profile has the ssplash slack.
-        for (const auto &entry : std::filesystem::directory_iterator(source_root / "profiles")) {
-            const auto definition = entry.path() / "profile-qnx.json";
-            const auto original_ifs = source_root / ".local/profiles" / entry.path().filename() /
-                                      "qnx/ifs2_la.img";
-
-            if (!std::filesystem::is_regular_file(definition) ||
-                read_private_json(definition, 128 * 1024).value("hardware_adapter", "") !=
-                        "sa8155-qinggan09" ||
-                !std::filesystem::is_regular_file(original_ifs)) {
-                continue;
+            if (assembled.find("qm_sc ensure\n") > assembled.find("/usr/bin/sysmgr &")) {
+                throw std::runtime_error("A9 supervised owner config order");
             }
 
-            const auto display = read_qnx_imagefs_file(source_text(original_ifs),
-                                                       "ifs_display.img");
-            const auto before = read_qnx_imagefs_file(display, "bin/ssplash");
-            (void)replace_qnx_imagefs_file_in_zero_padding(display, "bin/ssplash",
-                                                           sha256_bytes(before),
-                                                           prepare_qnx_guest_shell(observed), 4096);
+            const auto observed = qnx_qinggan09_runtime(
+                    source_text(source_root / "src/guest/qnx/qnx-runtime.sh"), owner_stage, true);
+
+            if (observed.find("if(o==\"gauge\")f=\"CLUSTER_UI=1 ") == observed.npos ||
+                assembled.find("CLUSTER_UI=1") != assembled.npos) {
+                throw std::runtime_error("A9 Kanzi observer must be scoped to Gauge");
+            }
+
+            // Every fetched original of a qinggan09 adapter profile has the ssplash slack.
+            for (const auto &entry :
+                 std::filesystem::directory_iterator(source_root / "profiles")) {
+                const auto definition = entry.path() / "profile-qnx.json";
+                const auto original_ifs = source_root / ".local/profiles" /
+                                          entry.path().filename() / "qnx/ifs2_la.img";
+
+                if (!std::filesystem::is_regular_file(definition) ||
+                    read_private_json(definition, 128 * 1024).value("hardware_adapter", "") !=
+                            "sa8155-qinggan09" ||
+                    !std::filesystem::is_regular_file(original_ifs)) {
+                    continue;
+                }
+
+                const auto display = read_qnx_imagefs_file(source_text(original_ifs),
+                                                           "ifs_display.img");
+                const auto before = read_qnx_imagefs_file(display, "bin/ssplash");
+                (void)replace_qnx_imagefs_file_in_zero_padding(
+                        display, "bin/ssplash", sha256_bytes(before),
+                        prepare_qnx_guest_shell(observed), 4096);
+            }
+
+            preload_test.arguments = {
+                    (source_root / "src/guest/qnx/persistent-supervisor.test.sh").string()};
+            const auto supervisor_result = execute(preload_test, 5000, 8192);
+
+            if (supervisor_result.timed_out || supervisor_result.exit_code != 0) {
+                throw std::runtime_error("persistent supervisor lifecycle regression: " +
+                                         supervisor_result.output);
+            }
+
+            std::cout << "A9 persistent=" << owner_stage.size() << " assembled=" << assembled.size()
+                      << " bytes\n";
+            preload_test.arguments = {
+                    (source_root / "src/guest/qnx/persistent-owner-restart.test.sh").string()};
+            const auto owner_result = execute(preload_test, 5000, 8192);
+
+            if (owner_result.timed_out || owner_result.exit_code != 0) {
+                throw std::runtime_error("persistent supervised owner regression: " +
+                                         owner_result.output);
+            }
         }
-
-        preload_test.arguments = {
-                (source_root / "src/guest/qnx/persistent-supervisor.test.sh").string()};
-        const auto supervisor_result = execute(preload_test, 5000, 8192);
-
-        if (supervisor_result.timed_out || supervisor_result.exit_code != 0) {
-            throw std::runtime_error("persistent supervisor lifecycle regression: " +
-                                     supervisor_result.output);
-        }
-
-        std::cout << "A9 persistent=" << owner_stage.size() << " assembled=" << assembled.size()
-                  << " bytes\n";
-        preload_test.arguments = {
-                (source_root / "src/guest/qnx/persistent-owner-restart.test.sh").string()};
-        const auto owner_result = execute(preload_test, 5000, 8192);
-
-        if (owner_result.timed_out || owner_result.exit_code != 0) {
-            throw std::runtime_error("persistent supervised owner regression: " +
-                                     owner_result.output);
-        }
-#endif
 
         for (const auto &invalid :
              {fixture, persistent_fixture + "automount=hd0:/:qnx6:ro,after &\n"}) {

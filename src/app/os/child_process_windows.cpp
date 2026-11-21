@@ -21,6 +21,9 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <windows.h>
+#include <cstdio>
+#include <fcntl.h>
+#include <io.h>
 #include <iphlpapi.h>
 namespace voyemu {
 struct ChildProcess::Impl {
@@ -577,8 +580,12 @@ long long write_capture(FileHandle file, const char *data, std::size_t size) {
     return count;
 }
 
-void set_environment_variable(const std::string &name, const std::string &value) {
-    _putenv_s(name.c_str(), value.c_str());
+bool set_environment_variable(const std::string &name, const std::string &value) {
+    return _putenv_s(name.c_str(), value.c_str()) == 0;
+}
+
+void binary_standard_output() {
+    _setmode(_fileno(stdout), _O_BINARY);
 }
 } // namespace os
 } // namespace voyemu

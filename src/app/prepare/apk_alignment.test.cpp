@@ -1,18 +1,12 @@
 #include "apk_alignment.hpp"
 #include "model.hpp"
+#include "os/process.hpp"
 #include "process.hpp"
 #include "zip_archive.hpp"
+#include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <limits>
-#ifdef _WIN32
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <windows.h>
-#else
-#include <cstdlib>
-#endif
 using namespace voyemu;
 
 static void check(bool value) {
@@ -146,11 +140,7 @@ int main(int argc, char **argv) {
 
         if (argc == 1) {
             // A loader override inherited by the staged tool must abort alignment on every host.
-#ifdef _WIN32
-            SetEnvironmentVariableW(L"LD_LIBRARY_PATH", L"voyemu-loader-override");
-#else
-            setenv("LD_LIBRARY_PATH", "voyemu-loader-override", 1);
-#endif
+            voyemu::os::set_environment_variable("LD_LIBRARY_PATH", "voyemu-loader-override");
             const auto env_destination = dir / "env-aligned.apk";
             bool rejected_env = false;
             try {

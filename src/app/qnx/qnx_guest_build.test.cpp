@@ -1,6 +1,7 @@
 #include "qnx_guest_build.hpp"
 #include "error.hpp"
 #include "os/https.hpp"
+#include "os/platform.hpp"
 #include "process.hpp"
 #include "qnx_imagefs.hpp"
 #include "qnx_link_interface.hpp"
@@ -61,13 +62,8 @@ std::uint32_t word(std::string_view bytes, std::size_t at) {
 }
 
 std::filesystem::path pinned_zig(const std::filesystem::path &root) {
-#ifdef _WIN32
-    const auto host = "windowsBuild", binary = "zig.exe";
-#elif defined(__APPLE__)
-    const auto host = "macosBuild", binary = "zig";
-#else
-    const auto host = "linuxBuild", binary = "zig";
-#endif
+    const std::string host(voyemu::os::build_tools_host),
+            binary = "zig" + std::string(voyemu::os::executable_suffix);
 
     return root /
            embedded_toolchain_manifest()

@@ -1,4 +1,5 @@
 #include "qnx_guest_shell.hpp"
+#include "os/platform.hpp"
 #include "process.hpp"
 #include "qnx_imagefs.hpp"
 #include "qnx_passion_platform.hpp"
@@ -46,7 +47,6 @@ void minifies(std::string_view script, std::string_view expected) {
     need(prepare_qnx_guest_shell(actual) == actual, "not idempotent\n" + actual);
 }
 
-#ifndef _WIN32
 std::vector<std::filesystem::path> host_shells() {
     std::vector<std::filesystem::path> shells{"/bin/sh"};
 
@@ -66,14 +66,17 @@ ProcessResult shell(const std::filesystem::path &executable, std::vector<std::st
 
     return execute(spec, 10000, 64 * 1024);
 }
-#endif
 
 // bash 5.2 and newer print the script they parsed, with a blank line where the source had blank or
 // comment lines between commands: apart from those, minification must leave it unchanged. Other
 // hosts skip this comparison.
 void same_parse(const std::string &original, const std::string &installed,
                 const std::string &label) {
-#ifndef _WIN32
+    // The host shells are POSIX ones.
+    if (voyemu::os::host_windows) {
+        return;
+    }
+
     if (!std::filesystem::exists("/bin/bash")) {
         return;
     }
@@ -119,11 +122,6 @@ void same_parse(const std::string &original, const std::string &installed,
     need(before.exit_code == 0 && after.exit_code == 0 && !before.output.empty() &&
                  after.output == before.output,
          label + " parses differently after minification");
-#else
-    (void)original;
-    (void)installed;
-    (void)label;
-#endif
 }
 
 // The largest ssplash the writer accepts: in place for A11, into zero padding for A9 and Passion.
@@ -177,9 +175,11 @@ int main() try {
     refuses("echo \\\n", "QNX_GUEST_SHELL_UNTERMINATED");
     refuses("echo a", "QNX_GUEST_SHELL_SOURCE");
     refuses(std::string("echo \0\n", 7), "QNX_GUEST_SHELL_SOURCE");
-#ifndef _WIN32
-    // The minified script prints exactly what the original prints.
-    const std::string semantics = R"SH(#!/bin/sh
+
+    // The host shells are POSIX ones.
+    if (!voyemu::os::host_windows) {
+        // The minified script prints exactly what the original prints.
+        const std::string semantics = R"SH(#!/bin/sh
 # leading comment
 set -- one 'two # words' three   # trailing comment
 echo "count $# ${#1}" a#b # comment
@@ -217,20 +217,22 @@ echo comment after \
 # a joined comment
 echo end
 )SH";
-    const auto compact = prepare_qnx_guest_shell(semantics);
-    need(compact.size() < semantics.size() && compact.find("# leading") == std::string::npos,
-         "semantic fixture did not shrink");
-    same_parse(semantics, compact, "semantic fixture");
+        const auto compact = prepare_qnx_guest_shell(semantics);
+        need(compact.size() < semantics.size() && compact.find("# leading") == std::string::npos,
+             "semantic fixture did not shrink");
+        same_parse(semantics, compact, "semantic fixture");
 
-    for (const auto &executable : host_shells()) {
-        const auto before = shell(executable, {"-c", semantics}),
-                   after = shell(executable, {"-c", compact});
-        need(before.exit_code == 0 && !before.timed_out && after.exit_code == before.exit_code &&
-                     after.output == before.output &&
-                     before.output.find("end") != std::string::npos,
-             executable.string() + " output changed:\n" + before.output + "---\n" + after.output);
+        for (const auto &executable : host_shells()) {
+            const auto before = shell(executable, {"-c", semantics}),
+                       after = shell(executable, {"-c", compact});
+            need(before.exit_code == 0 && !before.timed_out &&
+                         after.exit_code == before.exit_code && after.output == before.output &&
+                         before.output.find("end") != std::string::npos,
+                 executable.string() + " output changed:\n" + before.output + "---\n" +
+                         after.output);
+        }
     }
-#endif
+
     const auto root =
             std::filesystem::path(__FILE__).parent_path().parent_path().parent_path().parent_path();
     const auto guest = root / "src/guest/qnx";
@@ -247,13 +249,16 @@ echo end
         const auto source = read(item.path()), installed = prepare_qnx_guest_shell(source);
         need(prepare_qnx_guest_shell(installed) == installed && installed.size() <= source.size(),
              name + " minification");
-#ifndef _WIN32
-        for (const auto &executable : host_shells()) {
-            const auto result = shell(executable, {"-n", "-c", installed});
-            need(result.exit_code == 0, name + " fails " + executable.string() +
-                                                " -n after minification: " + result.output);
+
+        // The host shells are POSIX ones.
+        if (!voyemu::os::host_windows) {
+            for (const auto &executable : host_shells()) {
+                const auto result = shell(executable, {"-n", "-c", installed});
+                need(result.exit_code == 0, name + " fails " + executable.string() +
+                                                    " -n after minification: " + result.output);
+            }
         }
-#endif
+
         same_parse(source, installed, name);
         std::cout << name << ": " << source.size() << " -> " << installed.size() << " bytes\n";
         ++scripts;

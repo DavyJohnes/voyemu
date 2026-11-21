@@ -1,5 +1,6 @@
 #include "media_discovery.hpp"
 #include "model.hpp"
+#include "os/platform.hpp"
 #include "process.hpp"
 #include <cassert>
 #include <exception>
@@ -71,16 +72,23 @@ static void warm_sdk_descriptor_binding() {
     std::filesystem::create_hard_link(source, root / "alias");
     rejected(987, 5566, 45992);
     std::filesystem::remove(root / "alias");
-#ifndef _WIN32
-    std::filesystem::rename(source, root / "original");
-    std::filesystem::create_symlink(root / "original", source);
-    assert(!cache.resolve(log, root, saved, 987, 5566, 45992, true));
-    std::filesystem::remove(source);
-    std::filesystem::rename(root / "original", source);
-    ::chmod(target.c_str(), 0644);
-    rejected(987, 5566, 45992);
-    ::chmod(target.c_str(), 0600);
-#endif
+
+    // Windows guards the descriptor with ACLs, and links need a privilege there.
+    if (!voyemu::os::host_windows) {
+        std::filesystem::rename(source, root / "original");
+        std::filesystem::create_symlink(root / "original", source);
+        assert(!cache.resolve(log, root, saved, 987, 5566, 45992, true));
+        std::filesystem::remove(source);
+        std::filesystem::rename(root / "original", source);
+        std::filesystem::permissions(target, std::filesystem::perms::owner_read |
+                                                     std::filesystem::perms::owner_write |
+                                                     std::filesystem::perms::group_read |
+                                                     std::filesystem::perms::others_read);
+        rejected(987, 5566, 45992);
+        std::filesystem::permissions(target, std::filesystem::perms::owner_read |
+                                                     std::filesystem::perms::owner_write);
+    }
+
     std::filesystem::create_hard_link(target, saved / "alias");
     rejected(987, 5566, 45992);
     std::filesystem::remove(saved / "alias");
@@ -100,14 +108,11 @@ int main() try {
     warm_sdk_descriptor_binding();
     const auto os_root = std::filesystem::absolute("sdk-user"),
                home = std::filesystem::absolute("project/emulator-home");
-#ifdef __APPLE__
     assert(sdk_registration_directory(os_root, home) ==
-           os_root / "Library/Caches/TemporaryItems/avd/running");
-#elif defined(_WIN32)
-    assert(sdk_registration_directory(os_root, home) == os_root / "Temp/avd/running");
-#else
-    assert(sdk_registration_directory(os_root, home) == os_root / "avd/running");
-#endif
+           os_root / (voyemu::os::platform_name == "macOS"
+                              ? "Library/Caches/TemporaryItems/avd/running"
+                      : voyemu::os::host_windows ? "Temp/avd/running"
+                                                 : "avd/running"));
     assert(sdk_registration_directory({}, home) == home / "avd/running");
     bool relative_rejected = false;
     try {
@@ -152,11 +157,14 @@ int main() try {
     std::filesystem::create_hard_link(descriptor, root / "alias");
     assert(!sdk_discovery(log, root, 123));
     std::filesystem::remove(root / "alias");
-#ifndef _WIN32
-    std::filesystem::remove(descriptor);
-    std::filesystem::create_symlink(other / "pid_123.ini", descriptor);
-    assert(!sdk_discovery(log, root, 123));
-#endif
+
+    // Creating a symbolic link needs a privilege on Windows.
+    if (!voyemu::os::host_windows) {
+        std::filesystem::remove(descriptor);
+        std::filesystem::create_symlink(other / "pid_123.ini", descriptor);
+        assert(!sdk_discovery(log, root, 123));
+    }
+
     auto source = root / "pid_987.ini", target = other / "pid_987.ini";
     {
         std::ofstream(source)
@@ -182,18 +190,25 @@ int main() try {
         std::ofstream(source)
                 << "grpc.port=45992\nport.serial=5566\ngrpc.token=private-fixture-token\n";
     }
-#ifndef _WIN32
-    ::chmod(target.c_str(), 0644);
-    blocked = false;
-    try {
-        import_sdk_descriptor(source, target, 987, 5566, 45992);
-    } catch (const std::exception &) {
-        blocked = true;
+
+    // Windows guards the descriptor with ACLs, not mode bits.
+    if (!voyemu::os::host_windows) {
+        std::filesystem::permissions(target, std::filesystem::perms::owner_read |
+                                                     std::filesystem::perms::owner_write |
+                                                     std::filesystem::perms::group_read |
+                                                     std::filesystem::perms::others_read);
+        blocked = false;
+        try {
+            import_sdk_descriptor(source, target, 987, 5566, 45992);
+        } catch (const std::exception &) {
+            blocked = true;
+        }
+
+        assert(blocked);
+        std::filesystem::permissions(target, std::filesystem::perms::owner_read |
+                                                     std::filesystem::perms::owner_write);
     }
 
-    assert(blocked);
-    ::chmod(target.c_str(), 0600);
-#endif
     std::filesystem::create_hard_link(target, other / "descriptor-alias");
     blocked = false;
     try {
@@ -215,15 +230,19 @@ int main() try {
     assert(blocked && !std::filesystem::exists(target));
     { std::ofstream(source) << "grpc.port=45992\nport.serial=5566\n"; }
     assert(!import_sdk_descriptor(source, target, 987, 5566, 45992));
-#ifndef _WIN32
-    {
-        std::ofstream(source)
-                << "grpc.port=45992\nport.serial=5566\ngrpc.token=private-fixture-token\n";
+
+    // Windows guards the descriptor with ACLs, not mode bits.
+    if (!voyemu::os::host_windows) {
+        {
+            std::ofstream(source)
+                    << "grpc.port=45992\nport.serial=5566\ngrpc.token=private-fixture-token\n";
+        }
+        assert(import_sdk_descriptor(source, target, 987, 5566, 45992));
+        assert((std::filesystem::status(target).permissions() &
+                (std::filesystem::perms::group_all | std::filesystem::perms::others_all)) ==
+               std::filesystem::perms::none);
     }
-    assert(import_sdk_descriptor(source, target, 987, 5566, 45992));
-    struct stat permissions{};
-    assert(::stat(target.c_str(), &permissions) == 0 && (permissions.st_mode & 0077) == 0);
-#endif
+
     std::filesystem::remove_all(root);
     std::cout
             << "SDK discovery retained PID/project boundary/tail extent/alias/ambiguity guards passed\n";

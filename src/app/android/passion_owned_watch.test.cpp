@@ -1,21 +1,16 @@
 #include "passion_owned_watch.hpp"
+#include "os/process.hpp"
 #include <cassert>
+#include <exception>
 #include <iostream>
 #include <thread>
-#ifdef _WIN32
-#include <exception>
-#include <fcntl.h>
-#include <io.h>
-#endif
 using namespace voyemu;
 using namespace voyemu::media;
 
 int main(int argc, char **argv) try {
     if (argc == 3 && std::string(argv[1]) == "--emit") {
-#ifdef _WIN32
         // The guest log bytes pass through unchanged; Windows text mode would add CR.
-        _setmode(_fileno(stdout), _O_BINARY);
-#endif
+        voyemu::os::binary_standard_output();
         std::ifstream in(argv[2], std::ios::binary);
 
         if (!in || std::filesystem::file_size(argv[2]) > 100000) {

@@ -1,4 +1,5 @@
 #include "qnx_checkpoint.hpp"
+#include "os/platform.hpp"
 #include "process.hpp"
 #include "qnx_interguest_contract.hpp"
 #include "quickboot.hpp"
@@ -10,7 +11,6 @@
 #include <iostream>
 using namespace voyemu;
 
-#ifdef __APPLE__
 static void shared_ram_contract() {
     auto root = std::filesystem::canonical(std::filesystem::temp_directory_path()) /
                 ("voyemu-shared-qnx-" + random_token());
@@ -222,12 +222,13 @@ static void shared_ram_contract() {
     assert(!std::filesystem::exists(target));
     assert(!inspect_qnx_checkpoint(cold, "car-a", true).resume);
 }
-#endif
 
 int main() try {
-#ifdef __APPLE__
-    shared_ram_contract();
-#endif
+    // The shared RAM contract of the macOS engine.
+    if (voyemu::os::platform_name == "macOS") {
+        shared_ram_contract();
+    }
+
     const auto root = std::filesystem::canonical(std::filesystem::temp_directory_path()) /
                       ("voyemu-qnx-cache-" + random_token());
     ensure_private_directory(root);
@@ -414,22 +415,24 @@ int main() try {
            inspect_qnx_checkpoint(cold, "car-a", true).verification == "cached_identity");
     ready = inspect_qnx_checkpoint(cold, "car-a");
     assert(remember_qnx_checkpoint_verification(ready));
-#ifndef _WIN32
-    std::filesystem::rename(root / "verified-files.json", root / "receipt.saved");
-    std::filesystem::create_symlink("receipt.saved", root / "verified-files.json");
-    assert(inspect_qnx_checkpoint(cold, "car-a", true).resume &&
-           inspect_qnx_checkpoint(cold, "car-a", true).verification == "full_sha256");
-    bool linked_rejected = false;
-    try {
-        remember_qnx_checkpoint_verification(inspect_qnx_checkpoint(cold, "car-a"));
-    } catch (...) {
-        linked_rejected = true;
-    }
 
-    assert(linked_rejected);
-    std::filesystem::remove(root / "verified-files.json");
-    std::filesystem::rename(root / "receipt.saved", root / "verified-files.json");
-#endif
+    // Creating a symbolic link needs a privilege on Windows.
+    if (!voyemu::os::host_windows) {
+        std::filesystem::rename(root / "verified-files.json", root / "receipt.saved");
+        std::filesystem::create_symlink("receipt.saved", root / "verified-files.json");
+        assert(inspect_qnx_checkpoint(cold, "car-a", true).resume &&
+               inspect_qnx_checkpoint(cold, "car-a", true).verification == "full_sha256");
+        bool linked_rejected = false;
+        try {
+            remember_qnx_checkpoint_verification(inspect_qnx_checkpoint(cold, "car-a"));
+        } catch (...) {
+            linked_rejected = true;
+        }
+
+        assert(linked_rejected);
+        std::filesystem::remove(root / "verified-files.json");
+        std::filesystem::rename(root / "receipt.saved", root / "verified-files.json");
+    }
 
     for (const auto &patch :
          {Json{{"state_sequence", 0xfffffffeULL}}, Json{{"held_keys", 1}},
@@ -460,11 +463,14 @@ int main() try {
     manifest["theme_sequence"] = 3;
     save(manifest);
     assert(inspect_qnx_checkpoint(cold, "car-a").resume);
-#ifndef _WIN32
-    std::filesystem::rename(root / "gpu/40001000.gpu", root / "gpu/original.gpu");
-    std::filesystem::create_symlink("original.gpu", root / "gpu/40001000.gpu");
-    assert(!inspect_qnx_checkpoint(cold, "car-a").resume);
-#endif
+
+    // Creating a symbolic link needs a privilege on Windows.
+    if (!voyemu::os::host_windows) {
+        std::filesystem::rename(root / "gpu/40001000.gpu", root / "gpu/original.gpu");
+        std::filesystem::create_symlink("original.gpu", root / "gpu/40001000.gpu");
+        assert(!inspect_qnx_checkpoint(cold, "car-a").resume);
+    }
+
     assert(!qnx_checkpoint_migration_ready({{"status", "active"}},
                                            {{"status", "paused"}, {"running", false}}));
     assert(qnx_checkpoint_migration_ready({{"status", "completed"}},

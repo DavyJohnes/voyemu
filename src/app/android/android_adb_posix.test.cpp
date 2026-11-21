@@ -16,5 +16,3 @@ std::string read_probe_output(const std::filesystem::path &path) {
 bool await_probe_child(std::int64_t) {
     return true;
 }
-
-void binary_standard_output() {}

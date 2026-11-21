@@ -1,19 +1,18 @@
 #include "interguest_link.hpp"
 #include "interguest_network.hpp"
+#include "os/platform.hpp"
 #ifdef NDEBUG
 #undef NDEBUG
 #endif
+#include "os/held_file.hpp"
+#include "qnx_process_ram.hpp"
+#include <array>
 #include <atomic>
 #include <cassert>
 #include <chrono>
 #include <cstring>
+#include <fstream>
 #include <functional>
-#ifndef _WIN32
-#include <array>
-#include <fcntl.h>
-#include <sys/mman.h>
-#include <unistd.h>
-#endif
 #include <iostream>
 #include <stdexcept>
 #include <thread>
@@ -141,83 +140,92 @@ int main(int argc, char **argv) try {
         link.stop();
     }
 
-#ifndef _WIN32
-    // Hold the real mailbox worker inside its network poll, then invalidate RAM
-    // before it samples counters. This deterministically reproduces a guest reset.
-    const auto ram = dir / "qnx-ram.bin";
-    const int fd = open(ram.c_str(), O_CREAT | O_EXCL | O_RDWR, 0600);
-    assert(fd >= 0 && ftruncate(fd, 0x200000000ULL) == 0);
-    auto *mapping = static_cast<unsigned char *>(
-            mmap(nullptr, 16384, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0));
-    assert(mapping != MAP_FAILED);
-    auto *words = reinterpret_cast<std::uint32_t *>(mapping + 4096);
-    std::array<std::uint32_t, 8> ring{};
-    ring[0] = 0xbeefeeee;
-    ring[1] = 16352;
-    const std::string marker = "QNET READY pid=42 paddr=0x40001000 length=4096 version=1\r\n";
-    ring[2] = marker.size();
-    assert(pwrite(fd, ring.data(), 32, 0x10010000) == 32 &&
-           pwrite(fd, marker.data(), marker.size(), 0x10010020) ==
-                   static_cast<ssize_t>(marker.size()));
-    connected_mode = true;
+    // The POSIX engine serves the mailbox that the hooks hold; Windows connects as a client.
+    if (!voyemu::os::host_windows) {
+        // Hold the real mailbox worker inside its network poll, then invalidate RAM
+        // before it samples counters. This deterministically reproduces a guest reset.
+        const auto ram = dir / "qnx-ram.bin";
+        voyemu::create_qnx_ram(ram, 0x200000000ULL);
+        voyemu::os::HeldFile backing;
+        assert(backing.open(ram, true) == voyemu::os::HeldFile::Opening::opened &&
+               backing.map(0, 16384) == voyemu::os::HeldFile::Mapping::mapped);
+        auto *mapping = static_cast<unsigned char *>(backing.view());
+        auto *words = reinterpret_cast<std::uint32_t *>(mapping + 4096);
+        std::array<std::uint32_t, 8> ring{};
+        ring[0] = 0xbeefeeee;
+        ring[1] = 16352;
+        const std::string marker = "QNET READY pid=42 paddr=0x40001000 length=4096 version=1\r\n";
+        ring[2] = marker.size();
+        {
+            std::fstream file(ram, std::ios::in | std::ios::out | std::ios::binary);
+            file.seekp(0x10010000);
+            file.write(reinterpret_cast<const char *>(ring.data()), 32);
+            file.seekp(0x10010020);
+            file.write(marker.data(), static_cast<std::streamsize>(marker.size()));
+            assert(file.good());
+        }
+        connected_mode = true;
 
-    for (unsigned invalid : {0U, 1U, 6U, 7U}) {
-        std::memset(words, 0, 4096);
-        words[0] = 0x54454e51;
-        words[1] = 1;
-        std::atomic<bool> entered = false, released = false, poll_returned = false,
-                          restored = false;
-        receive_hook = [&] {
-            entered = true;
+        for (unsigned invalid : {0U, 1U, 6U, 7U}) {
+            std::memset(words, 0, 4096);
+            words[0] = 0x54454e51;
+            words[1] = 1;
+            std::atomic<bool> entered = false, released = false, poll_returned = false,
+                              restored = false;
+            receive_hook = [&] {
+                entered = true;
 
-            for (unsigned i = 0; !released && i < 2000; ++i) {
+                for (unsigned i = 0; !released && i < 2000; ++i) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                }
+
+                assert(released);
+                poll_returned = true;
+            };
+            // Restore the header at the first transport observation after publication.
+            // A missing post-poll validation would then expose poisoned counters without
+            // a later fault to clear them; checking only the final cache is insufficient.
+            status_hook = [&] {
+                if (!poll_returned.exchange(false)) {
+                    return;
+                }
+
+                std::atomic_ref<std::uint32_t>(words[invalid])
+                        .store(invalid == 0   ? 0x54454e51U
+                               : invalid == 1 ? 1U
+                                              : 0U,
+                               std::memory_order_release);
+                restored = true;
+            };
+            voyemu::InterguestLink link;
+            const auto port = link.start(dir, token);
+            link.bind_ram(ram);
+
+            for (unsigned i = 0; !entered && i < 2000; ++i) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(1));
             }
 
-            assert(released);
-            poll_returned = true;
-        };
-        // Restore the header at the first transport observation after publication.
-        // A missing post-poll validation would then expose poisoned counters without
-        // a later fault to clear them; checking only the final cache is insufficient.
-        status_hook = [&] {
-            if (!poll_returned.exchange(false)) {
-                return;
-            }
-
+            assert(entered);
+            std::atomic_ref<std::uint32_t>(words[8]).store(2630172672U, std::memory_order_release);
+            std::atomic_ref<std::uint32_t>(words[9]).store(1784781U, std::memory_order_release);
             std::atomic_ref<std::uint32_t>(words[invalid])
-                    .store(invalid == 0   ? 0x54454e51U
-                           : invalid == 1 ? 1U
-                                          : 0U,
-                           std::memory_order_release);
-            restored = true;
-        };
-        voyemu::InterguestLink link;
-        const auto port = link.start(dir, token);
-        link.bind_ram(ram);
-
-        for (unsigned i = 0; !entered && i < 2000; ++i) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                    .store(invalid == 0 ? 0U : 2U, std::memory_order_release);
+            released = true;
+            wait_fault(link);
+            assert(link.status().fault == "INTERGUEST_PAGE: relay stopped or invalid" &&
+                   !link.status().ready && link.status().port == port &&
+                   link.status().generation == 1);
+            assert(!restored && link.guest_counters().sent == 0 &&
+                   link.guest_counters().received == 0);
+            link.stop();
+            status_hook = {};
         }
 
-        assert(entered);
-        std::atomic_ref<std::uint32_t>(words[8]).store(2630172672U, std::memory_order_release);
-        std::atomic_ref<std::uint32_t>(words[9]).store(1784781U, std::memory_order_release);
-        std::atomic_ref<std::uint32_t>(words[invalid])
-                .store(invalid == 0 ? 0U : 2U, std::memory_order_release);
-        released = true;
-        wait_fault(link);
-        assert(link.status().fault == "INTERGUEST_PAGE: relay stopped or invalid" &&
-               !link.status().ready && link.status().port == port && link.status().generation == 1);
-        assert(!restored && link.guest_counters().sent == 0 && link.guest_counters().received == 0);
-        link.stop();
-        status_hook = {};
+        connected_mode = false;
+        receive_hook = {};
+        backing.close();
     }
 
-    connected_mode = false;
-    receive_hook = {};
-    assert(munmap(mapping, 16384) == 0 && close(fd) == 0);
-#endif
     std::filesystem::remove_all(root);
 } catch (const std::exception &error) {
     std::cerr << error.what() << '\n';

@@ -1,6 +1,7 @@
 #include "e2fs_helper.hpp"
 #include "deps.hpp"
 #include "os/https.hpp"
+#include "os/platform.hpp"
 #include <fstream>
 #include <functional>
 #include <iostream>
@@ -104,20 +105,20 @@ int main(int argc, char **argv) {
         const auto cache = scratch / ".local/toolchains/downloads/e2fsprogs";
         ensure_private_directory(cache);
         write(cache / (sha + ".blob"), bytes);
-#ifdef _WIN32
-        const std::string installed = "a9-offline-labels.exe";
-#else
-        const std::string installed = "a9-offline-labels";
-#endif
+        const std::string installed = "a9-offline-labels" +
+                                      std::string(voyemu::os::executable_suffix);
         const auto helper = install_e2fs_helper(scratch, fixture, "a9-offline-labels", true, 0);
         check(helper == scratch / ".local/toolchains/e2fs-helpers" / sha / installed &&
                       text(helper) == bytes,
               "helper installed from the verified download");
-#ifndef _WIN32
-        check((std::filesystem::status(helper).permissions() &
-               std::filesystem::perms::owner_exec) == std::filesystem::perms::owner_exec,
-              "installed helper is executable");
-#endif
+
+        // Windows has no executable permission bit.
+        if (!voyemu::os::host_windows) {
+            check((std::filesystem::status(helper).permissions() &
+                   std::filesystem::perms::owner_exec) == std::filesystem::perms::owner_exec,
+                  "installed helper is executable");
+        }
+
         check(install_e2fs_helper(scratch, fixture, "a9-offline-labels", true, 0) == helper,
               "installed helper reused");
         write(helper, bytes + "changed");

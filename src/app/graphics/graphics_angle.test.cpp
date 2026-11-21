@@ -1,11 +1,15 @@
 #include "graphics.hpp"
+#include "graphics_main.cpp"
 #include "model.hpp"
+#include "os/platform.hpp"
+#include "os/process.hpp"
 #include "process.hpp"
 #include "qnx_adapter.hpp"
 #include <algorithm>
 #include <cassert>
 #include <chrono>
 #include <cstring>
+#include <exception>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -14,14 +18,6 @@
 #include <string>
 #include <thread>
 #include <vector>
-#ifdef _WIN32
-#define NOMINMAX
-#include <windows.h>
-#else
-#include <unistd.h>
-#endif
-#include "graphics_main.cpp"
-#include <exception>
 using namespace voyemu::graphics;
 using namespace voyemu;
 
@@ -241,11 +237,7 @@ static void owner_liveness_protocol(const std::filesystem::path &parent,
         file.write(reinterpret_cast<const char *>(bmp.data()), bmp.size());
         assert(file);
     }
-#ifdef _WIN32
-    const std::uint64_t worker_pid = GetCurrentProcessId();
-#else
-    const std::uint64_t worker_pid = getpid();
-#endif
+    const auto worker_pid = static_cast<std::uint64_t>(voyemu::os::current_process());
 
     for (bool legacy : {false, true}) {
         const auto directory = parent / (legacy ? "owner-liveness-legacy" : "owner-liveness");
@@ -903,24 +895,26 @@ int main(int argc, char **argv) try {
         file.put(0);
     }
     try {
-#ifdef _WIN32
-        const auto invalid_angle = directory / "invalid-angle";
-        ensure_private_directory(invalid_angle);
+        // The ANGLE pin of the Windows engine.
+        if (voyemu::os::host_windows) {
+            const auto invalid_angle = directory / "invalid-angle";
+            ensure_private_directory(invalid_angle);
 
-        for (const char *name : {"libEGL.dll", "libGLESv2.dll"}) {
-            std::ofstream(invalid_angle / name, std::ios::binary).put(0);
+            for (const char *name : {"libEGL.dll", "libGLESv2.dll"}) {
+                std::ofstream(invalid_angle / name, std::ios::binary).put(0);
+            }
+
+            bool wrong_angle_rejected = false;
+            try {
+                Backend invalid({ram, directory, invalid_angle, {}, ram_base + 4096, false, true});
+            } catch (const std::runtime_error &error) {
+                wrong_angle_rejected = std::string(error.what()) ==
+                                       "GRAPHICS: ANGLE Windows pin mismatch";
+            }
+
+            assert(wrong_angle_rejected);
         }
 
-        bool wrong_angle_rejected = false;
-        try {
-            Backend invalid({ram, directory, invalid_angle, {}, ram_base + 4096, false, true});
-        } catch (const std::runtime_error &error) {
-            wrong_angle_rejected = std::string(error.what()) ==
-                                   "GRAPHICS: ANGLE Windows pin mismatch";
-        }
-
-        assert(wrong_angle_rejected);
-#endif
         worker_terminal_reasons(directory, argv[1]);
         owner_liveness_protocol(directory, argv[1], ram);
         configured_ram_geometry(directory, argv[1]);
@@ -1605,11 +1599,79 @@ int main(int argc, char **argv) try {
         fail_header({rpc_magic, rpc_version + 1, 1, 123, 78, 0, 0, 0});
         publish(0);
         assert(!backend.service());
-#ifdef _WIN32
-        // The mapped handle denies delete sharing, so the backing file cannot be replaced in place.
-        // A same-size replacement reached through a path the OS still permits must be caught by the
-        // re-opened identity guard rather than the mapped handle alone.
-        auto backing_rejected = [&]() {
+
+        // Windows denies delete sharing on the mapped file; POSIX checks the inode per request.
+        if (voyemu::os::host_windows) {
+            // The mapped handle denies delete sharing, so the backing file cannot be replaced in
+            // place. A same-size replacement reached through a path the OS still permits must be
+            // caught by the re-opened identity guard rather than the mapped handle alone.
+            auto backing_rejected = [&]() {
+                bool rejected = false;
+                try {
+                    backend.service();
+                } catch (const std::runtime_error &e) {
+                    rejected = std::string(e.what()) == "GRAPHICS: RAM backing changed";
+                }
+
+                return rejected;
+            };
+            {
+                std::uint32_t pending = 1;
+                std::fstream file(ram, std::ios::binary | std::ios::in | std::ios::out);
+                file.seekp(4096 + 8);
+                file.write(reinterpret_cast<const char *>(&pending), sizeof(pending));
+                file.flush();
+                assert(file);
+            }
+            std::error_code replacement_error;
+            std::filesystem::rename(ram, directory / "original-ram.bin", replacement_error);
+
+            if (!replacement_error) {
+                {
+                    std::ofstream replacement(ram, std::ios::binary);
+                    replacement.seekp(ram_bytes - 1);
+                    replacement.put(0);
+                }
+                assert(backing_rejected());
+                std::filesystem::remove(ram);
+                std::filesystem::rename(directory / "original-ram.bin", ram);
+            } else {
+                // Re-pointing the containing directory still bypasses the file's delete-sharing
+                // denial.
+                const auto parked = std::filesystem::path(directory.string() + ".parked");
+                std::error_code directory_error;
+                std::filesystem::rename(directory, parked, directory_error);
+
+                if (directory_error) {
+                    assert(directory_error);
+                } else {
+                    std::filesystem::create_directory(directory);
+                    {
+                        std::ofstream replacement(ram, std::ios::binary);
+                        replacement.seekp(ram_bytes - 1);
+                        replacement.put(0);
+                    }
+                    assert(backing_rejected());
+                    std::filesystem::remove_all(directory);
+                    std::filesystem::rename(parked, directory);
+                }
+            }
+        } else {
+            // Replacing the pathname cannot bypass the per-request inode guard.
+            std::filesystem::rename(ram, directory / "original-ram.bin");
+            {
+                std::ofstream replacement(ram, std::ios::binary);
+                replacement.seekp(ram_bytes - 1);
+                replacement.put(0);
+            }
+            auto original = directory / "original-ram.bin";
+            {
+                std::uint32_t pending = 1;
+                std::fstream file(original, std::ios::binary | std::ios::in | std::ios::out);
+                file.seekp(4096 + 8);
+                file.write(reinterpret_cast<const char *>(&pending), sizeof(pending));
+                file.flush();
+            }
             bool rejected = false;
             try {
                 backend.service();
@@ -1617,93 +1679,29 @@ int main(int argc, char **argv) try {
                 rejected = std::string(e.what()) == "GRAPHICS: RAM backing changed";
             }
 
-            return rejected;
-        };
-        {
-            std::uint32_t pending = 1;
-            std::fstream file(ram, std::ios::binary | std::ios::in | std::ios::out);
-            file.seekp(4096 + 8);
-            file.write(reinterpret_cast<const char *>(&pending), sizeof(pending));
-            file.flush();
-            assert(file);
-        }
-        std::error_code replacement_error;
-        std::filesystem::rename(ram, directory / "original-ram.bin", replacement_error);
-
-        if (!replacement_error) {
+            assert(rejected);
+            std::filesystem::remove(ram);
+            std::filesystem::rename(original, ram);
+            publish(0);
+            assert(!backend.service());
+            // Idle identity changes are also detected within the periodic check bound.
+            std::filesystem::rename(ram, original);
             {
                 std::ofstream replacement(ram, std::ios::binary);
                 replacement.seekp(ram_bytes - 1);
                 replacement.put(0);
             }
-            assert(backing_rejected());
-            std::filesystem::remove(ram);
-            std::filesystem::rename(directory / "original-ram.bin", ram);
-        } else {
-            // Re-pointing the containing directory still bypasses the file's delete-sharing denial.
-            const auto parked = std::filesystem::path(directory.string() + ".parked");
-            std::error_code directory_error;
-            std::filesystem::rename(directory, parked, directory_error);
-
-            if (directory_error) {
-                assert(directory_error);
-            } else {
-                std::filesystem::create_directory(directory);
-                {
-                    std::ofstream replacement(ram, std::ios::binary);
-                    replacement.seekp(ram_bytes - 1);
-                    replacement.put(0);
-                }
-                assert(backing_rejected());
-                std::filesystem::remove_all(directory);
-                std::filesystem::rename(parked, directory);
+            std::this_thread::sleep_for(std::chrono::milliseconds(110));
+            rejected = false;
+            try {
+                backend.service();
+            } catch (const std::runtime_error &e) {
+                rejected = std::string(e.what()) == "GRAPHICS: RAM backing changed";
             }
-        }
-#else
-        // Replacing the pathname cannot bypass the per-request inode guard.
-        std::filesystem::rename(ram, directory / "original-ram.bin");
-        {
-            std::ofstream replacement(ram, std::ios::binary);
-            replacement.seekp(ram_bytes - 1);
-            replacement.put(0);
-        }
-        auto original = directory / "original-ram.bin";
-        {
-            std::uint32_t pending = 1;
-            std::fstream file(original, std::ios::binary | std::ios::in | std::ios::out);
-            file.seekp(4096 + 8);
-            file.write(reinterpret_cast<const char *>(&pending), sizeof(pending));
-            file.flush();
-        }
-        bool rejected = false;
-        try {
-            backend.service();
-        } catch (const std::runtime_error &e) {
-            rejected = std::string(e.what()) == "GRAPHICS: RAM backing changed";
+
+            assert(rejected);
         }
 
-        assert(rejected);
-        std::filesystem::remove(ram);
-        std::filesystem::rename(original, ram);
-        publish(0);
-        assert(!backend.service());
-        // Idle identity changes are also detected within the periodic check bound.
-        std::filesystem::rename(ram, original);
-        {
-            std::ofstream replacement(ram, std::ios::binary);
-            replacement.seekp(ram_bytes - 1);
-            replacement.put(0);
-        }
-        std::this_thread::sleep_for(std::chrono::milliseconds(110));
-        rejected = false;
-        try {
-            backend.service();
-        } catch (const std::runtime_error &e) {
-            rejected = std::string(e.what()) == "GRAPHICS: RAM backing changed";
-        }
-
-        assert(rejected);
-#endif
         std::cout
                 << "native real ANGLE readback and mapped polling guards passed; no OEM frame claimed\n";
 

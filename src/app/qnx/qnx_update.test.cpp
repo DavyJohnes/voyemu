@@ -1,14 +1,11 @@
 #include "qnx_update.hpp"
 #include "model.hpp"
+#include "os/library.hpp"
 #include "process.hpp"
 #include <fstream>
 #include <iostream>
+#include <memory>
 #include <stdexcept>
-#ifdef _WIN32
-#include <windows.h>
-#else
-#include <dlfcn.h>
-#endif
 using namespace voyemu;
 namespace {
 void check(bool value, const char *reason) {
@@ -86,21 +83,11 @@ int main(int argc, char **argv) {
         check(sha256_file(library) == library_pin, "fixture codec pin");
         check(!std::filesystem::exists(directory), "fresh fixture directory required");
         std::filesystem::create_directory(directory);
-#ifdef _WIN32
-        const auto handle =
-                LoadLibraryExW(library.c_str(), nullptr,
-                               LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
-        check(handle != nullptr, "fixture codec load");
+        auto handle = std::make_unique<voyemu::os::Library>(std::filesystem::path(library));
+        check(handle->loaded(), "fixture codec load");
         auto symbol = [&](const char *name) {
-            return reinterpret_cast<void *>(GetProcAddress(handle, name));
+            return handle->symbol(name);
         };
-#else
-        const auto handle = dlopen(library.c_str(), RTLD_NOW | RTLD_LOCAL);
-        check(handle != nullptr, "fixture codec load");
-        auto symbol = [&](const char *name) {
-            return dlsym(handle, name);
-        };
-#endif
         const auto compress = reinterpret_cast<std::size_t (*)(
                 void *, std::size_t, const void *, std::size_t, int)>(symbol("ZSTD_compress"));
         const auto error = reinterpret_cast<unsigned (*)(std::size_t)>(symbol("ZSTD_isError"));
@@ -237,11 +224,7 @@ int main(int argc, char **argv) {
                                         sha256_bytes(foreign_source), library, library_pin, output);
         });
         check(!std::filesystem::exists(output), "nonzero-base patch retained");
-#ifdef _WIN32
-        FreeLibrary(handle);
-#else
-        dlclose(handle);
-#endif
+        handle.reset();
         std::filesystem::remove(patch);
         std::filesystem::remove(directory);
         std::cout

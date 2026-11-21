@@ -1,13 +1,12 @@
+#include "build_cli_test_host.hpp"
 #include "model.hpp"
+#include "os/platform.hpp"
 #include "process.hpp"
 #include <chrono>
 #include <fstream>
 #include <iostream>
 #include <regex>
 #include <thread>
-#ifndef _WIN32
-#include <csignal>
-#endif
 using namespace voyemu;
 
 static void require(bool value, const std::string &message) {
@@ -50,11 +49,7 @@ int main(int argc, char **argv) {
                 std::filesystem::remove_all(root);
             }
         } cleanup{root};
-#ifdef _WIN32
-        const auto installed = root / "voyemu.exe";
-#else
-        const auto installed = root / "voyemu";
-#endif
+        const auto installed = root / ("voyemu" + std::string(voyemu::os::executable_suffix));
         std::filesystem::copy_file(std::filesystem::canonical(argv[1]), installed);
         // A failed command names its log file in the installation, which keeps the English text
         // of the error as JSON Lines.
@@ -93,65 +88,66 @@ int main(int argc, char **argv) {
                     std::string(command) + " accepted an unknown profile: " + unknown.output);
         }
 
-#ifndef _WIN32
-        // Ctrl+C stops fetch while it hashes the update archive and ends it with code 130.
-        {
-            // A synthetic profile whose owner archive the import hashes for seconds.
-            const std::string synthetic = "sigint-fixture";
-            const auto archive = root / "update.zip";
-            const std::string pin(64, '0');
-            write_private_json(root / "profiles" / synthetic / "profile.json",
-                               {{"schema", 1},
-                                {"acquisition",
-                                 {{"format", "pinned-zip-tgz-raw-scatter"},
-                                  {"diff", false},
-                                  {"qnxOriginals", Json::array({"role.img"})}}},
-                                {"ownerUpdate",
-                                 {{"file", "update.zip"},
-                                  {"bytes", 4ULL << 30},
-                                  {"sha256", pin},
-                                  {"inner", {{"file", "inner.tgz"}, {"sha256", pin}}}}}});
-            write_private_json(
-                    root / "profiles" / synthetic / "profile-qnx.json",
-                    {{"schema", 1},
-                     {"originals", {{"role.img", {{"file", "role.img"}, {"sha256", pin}}}}},
-                     {"update",
-                      {{"container", "zip-stored-tgz"},
-                       {"sha256", pin},
-                       {"nested_member", "inner.tgz"},
-                       {"nested_sha256", pin}}}});
-            std::ofstream(archive).close();
-            std::filesystem::resize_file(archive, 4ULL << 30);
-            ProcessSpec spec;
-            spec.executable = installed;
-            spec.arguments = {"fetch", synthetic, "--source=" + archive.string(), "--lang=en"};
-            spec.directory = root;
-            spec.output = root / "fetch-interrupted.log";
-            auto fetch = ChildProcess::launch(spec);
-            std::this_thread::sleep_for(std::chrono::milliseconds(500));
-            const auto signalled = std::chrono::steady_clock::now();
-            require(::kill(static_cast<pid_t>(fetch.pid()), SIGINT) == 0, "SIGINT not sent");
+        // Ctrl+C reaches the child as SIGINT on POSIX hosts.
+        if (!voyemu::os::host_windows) {
+            // Ctrl+C stops fetch while it hashes the update archive and ends it with code 130.
+            {
+                // A synthetic profile whose owner archive the import hashes for seconds.
+                const std::string synthetic = "sigint-fixture";
+                const auto archive = root / "update.zip";
+                const std::string pin(64, '0');
+                write_private_json(root / "profiles" / synthetic / "profile.json",
+                                   {{"schema", 1},
+                                    {"acquisition",
+                                     {{"format", "pinned-zip-tgz-raw-scatter"},
+                                      {"diff", false},
+                                      {"qnxOriginals", Json::array({"role.img"})}}},
+                                    {"ownerUpdate",
+                                     {{"file", "update.zip"},
+                                      {"bytes", 4ULL << 30},
+                                      {"sha256", pin},
+                                      {"inner", {{"file", "inner.tgz"}, {"sha256", pin}}}}}});
+                write_private_json(
+                        root / "profiles" / synthetic / "profile-qnx.json",
+                        {{"schema", 1},
+                         {"originals", {{"role.img", {{"file", "role.img"}, {"sha256", pin}}}}},
+                         {"update",
+                          {{"container", "zip-stored-tgz"},
+                           {"sha256", pin},
+                           {"nested_member", "inner.tgz"},
+                           {"nested_sha256", pin}}}});
+                std::ofstream(archive).close();
+                std::filesystem::resize_file(archive, 4ULL << 30);
+                ProcessSpec spec;
+                spec.executable = installed;
+                spec.arguments = {"fetch", synthetic, "--source=" + archive.string(), "--lang=en"};
+                spec.directory = root;
+                spec.output = root / "fetch-interrupted.log";
+                auto fetch = ChildProcess::launch(spec);
+                std::this_thread::sleep_for(std::chrono::milliseconds(500));
+                const auto signalled = std::chrono::steady_clock::now();
+                require(interrupt_child(fetch.pid()), "SIGINT not sent");
 
-            while (fetch.alive() &&
-                   std::chrono::steady_clock::now() - signalled < std::chrono::seconds(30)) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(20));
+                while (fetch.alive() &&
+                       std::chrono::steady_clock::now() - signalled < std::chrono::seconds(30)) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+                }
+
+                const auto stopped = std::chrono::steady_clock::now() - signalled;
+                std::ifstream log(spec.output);
+                const std::string output(std::istreambuf_iterator<char>(log), {});
+                require(!fetch.alive() && fetch.exit_code() == 130 &&
+                                stopped < std::chrono::seconds(3) &&
+                                output.find(
+                                        "Voyemu: INTERRUPTED: the command was interrupted.\nLog: ") !=
+                                        std::string::npos,
+                        "Ctrl+C did not stop fetch promptly with code 130: " +
+                                std::to_string(fetch.exit_code()) + " " + output);
+                require(named_log(output).find("\"command.started\"") != std::string::npos,
+                        "interrupted fetch log lacks its start record");
+                std::filesystem::remove(archive);
             }
-
-            const auto stopped = std::chrono::steady_clock::now() - signalled;
-            std::ifstream log(spec.output);
-            const std::string output(std::istreambuf_iterator<char>(log), {});
-            require(!fetch.alive() && fetch.exit_code() == 130 &&
-                            stopped < std::chrono::seconds(3) &&
-                            output.find(
-                                    "Voyemu: INTERRUPTED: the command was interrupted.\nLog: ") !=
-                                    std::string::npos,
-                    "Ctrl+C did not stop fetch promptly with code 130: " +
-                            std::to_string(fetch.exit_code()) + " " + output);
-            require(named_log(output).find("\"command.started\"") != std::string::npos,
-                    "interrupted fetch log lacks its start record");
-            std::filesystem::remove(archive);
         }
-#endif
 
         for (const auto *profile :
              {"free-11-chinese-20260731-7.3.1", "passion-11-russian-20260403-2.1.4.80"}) {
@@ -304,11 +300,13 @@ int main(int argc, char **argv) {
             require(std::filesystem::is_directory(directory) &&
                             !std::filesystem::is_symlink(directory),
                     std::string("preparation did not recreate .local/") + name);
-#ifndef _WIN32
-            require(std::filesystem::status(directory).permissions() ==
-                            std::filesystem::perms::owner_all,
-                    std::string(".local/") + name + " is not private");
-#endif
+
+            // Windows guards the directories with ACLs, not mode bits.
+            if (!voyemu::os::host_windows) {
+                require(std::filesystem::status(directory).permissions() ==
+                                std::filesystem::perms::owner_all,
+                        std::string(".local/") + name + " is not private");
+            }
         }
 
         std::cout

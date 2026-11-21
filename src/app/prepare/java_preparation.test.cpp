@@ -3,6 +3,7 @@
 #include "ext4_image.hpp"
 #include "file_patch.hpp"
 #include "original_navi_candidate.hpp"
+#include "os/platform.hpp"
 #include "process.hpp"
 #include "profile_build.hpp"
 #include "profile_catalog.hpp"
@@ -220,11 +221,7 @@ int main(int argc, char **argv) {
                                             {"patches", Json::object()}});
             auto mutation_runtime = second;
             mutation_runtime.jdk = root / ".local/toolchains/test-jdk";
-#ifdef _WIN32
-            const std::string java_name = "java.exe";
-#else
-            const std::string java_name = "java";
-#endif
+            const std::string java_name = "java" + std::string(voyemu::os::executable_suffix);
             const auto java = mutation_runtime.jdk / "bin" / java_name;
             ensure_private_directory(java.parent_path());
             std::filesystem::copy_file(std::filesystem::canonical(argv[0]), java);
@@ -829,11 +826,7 @@ int main(int argc, char **argv) {
         b.tool_manifest_sha256 = sha256_file(root / "src/app/toolchain.json");
         const auto specs = read_private_json(root / "src/app/toolchain.json", 1 << 20);
         const auto tools = specs.at("sdk").at("buildTools").get<std::string>();
-#ifdef _WIN32
-        const std::string exe = ".exe";
-#else
-        const std::string exe;
-#endif
+        const std::string exe(voyemu::os::executable_suffix);
 
         for (const auto &name : {"build-tools/" + tools + "/aapt2" + exe,
                                  "build-tools/" + tools + "/zipalign" + exe}) {

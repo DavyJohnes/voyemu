@@ -1,25 +1,22 @@
 #include "qnx_host.hpp"
+#include "host_refresh.hpp"
 #include "os/fs.hpp"
+#include "os/platform.hpp"
 #include "process.hpp"
+#include "qnx_host_build_diagnostics.hpp"
 #include "qnx_host_prebuilt.hpp"
 #include "qnx_host_windows.hpp"
 #include "qnx_host_windows_cache.hpp"
 #include "qnx_process_ram.hpp"
 #include "quickboot.hpp"
 #include "session.hpp"
-#ifdef __APPLE__
-#include "host_refresh.hpp"
-#include "qnx_host_build_diagnostics.hpp"
-#include <fcntl.h>
-#include <sys/file.h>
-#include <unistd.h>
-#endif
 #include <algorithm>
 #include <array>
 #include <fstream>
 #include <functional>
 #include <iostream>
 #include <map>
+#include <memory>
 using namespace voyemu;
 
 static void check(bool ok, const char *message) {
@@ -560,608 +557,620 @@ int main(int argc, char **argv) {
         check(binding.filename() == "installed.json" &&
                       binding == root / ".local/toolchains/installed.json",
               "single shared host binding file");
-#ifdef _WIN32
-        const auto windows_section = windows_binding(root / "windows-toolchains");
-        const Json flat{{"schema", 1},
-                        {"qnx_qemu", "macos-engine"},
-                        {"graphics", "macos-self"},
-                        {"angle", "macos-angle"},
-                        {"pins", Json::array()},
-                        {"factory",
-                         {{"kind", "voyemu-macos-qnx-host"},
-                          {"component_sha256", std::string(64, '0')},
-                          {"engine_receipt_sha256", std::string(64, '0')}}}};
-        write_private_json(binding, flat);
-        bool refused = false;
-        try {
-            ensure_qnx_host_bindings(root, true);
-        } catch (...) {
-            refused = true;
-        }
 
-        check(refused && read_private_json(binding) == flat,
-              "flat shared binding without a Windows section is refused");
-        {
-            const auto section = windows_binding(root / "windows-toolchains");
-            write_private_json(binding, {{"schema", 1}, {"windows", section}});
-            check(ensure_qnx_host_bindings(root, true) == section,
-                  "Windows host binding section is read from the shared file");
-        }
-        {
-            const Json plain{{"schema", 1},
-                             {"qnx_qemu", "macos-engine"},
-                             {"graphics", "macos-self"},
-                             {"angle", "macos-angle"},
-                             {"pins", Json::array()}};
-            check(qnx_host_binding_view(root, Json{{"schema", 1}, {"windows", windows_section}}) ==
-                          windows_section,
-                  "Windows binding view returns the shared windows section");
-            check(qnx_host_binding_view(root, plain) == plain,
-                  "Windows binding view falls back to the flat document");
-        }
-#else
         const Json explicit_binding{{"schema", 1}, {"qnx_qemu", "explicit-user-engine"}};
-        write_private_json(binding, explicit_binding);
-        check(ensure_qnx_host_bindings(root, true) == explicit_binding &&
-                      read_private_json(binding) == explicit_binding,
-              "explicit host bindings preserved without installation");
-        {
-            const Json shared_with_windows{{"schema", 1}, {"windows", {{"schema", 1}}}};
-            check(qnx_host_binding_view(root, shared_with_windows) == shared_with_windows,
-                  "non-Windows binding view stays the flat document");
-        }
-#endif
-#ifdef _WIN32
-        if (argc == 3 && std::string(argv[1]) == "--extract") {
-            extract_qnx_unpacker(std::filesystem::canonical(argv[2]), root / "unpacker");
-            check(std::filesystem::file_size(root / "unpacker/7z.exe") == 575488 &&
-                          std::filesystem::file_size(root / "unpacker/7z.dll") == 1906176,
-                  "exact ready extractor payload");
-            ProcessSpec spec;
-            spec.executable = root / "unpacker/7z.exe";
-            spec.arguments = {"i"};
-            spec.directory = root;
-            spec.output = root / "probe.log";
-            const auto result = execute(spec, 15000);
-            check(result.exit_code == 0 && result.output.find("Nsis") != std::string::npos,
-                  "ready extractor supports QEMU archive");
-            bool duplicate = false;
-            try {
-                extract_qnx_unpacker(std::filesystem::canonical(argv[2]), root / "unpacker");
-            } catch (...) {
-                duplicate = true;
-            }
 
-            check(duplicate, "cannot overwrite extractor output");
-        }
-
-        if (argc == 3 && std::string(argv[1]) == "--install") {
-            const auto actual = std::filesystem::canonical(argv[2]);
-            const auto installed = install_qnx_host(actual, true, 0);
-            check(installed.at("ready") == true, "offline retained package install");
-            check(install_qnx_host(actual, true, 0).at("cached") == true,
-                  "installed tree reverified");
-            std::cout << installed.dump() << '\n';
-        }
-#elif defined(__APPLE__)
-        const auto diagnostics_stage = root / "diagnostic-source",
-                   diagnostics_logs = root / "diagnostic-logs";
-        ensure_private_directory(diagnostics_stage / "build/meson-logs");
-        write_private_json(diagnostics_stage / "17.log", Json{{"phase", "configure"}});
-        write_private_json(diagnostics_stage / "build/config.log",
-                           Json{{"failure", "offline pip configure failure"}});
-        write_private_json(diagnostics_stage / "build/meson-logs/meson-log.txt",
-                           Json{{"phase", "meson"}});
-        bool original_preserved = false;
-        try {
-            QnxHostBuildStage stage(diagnostics_stage, diagnostics_logs);
-            throw std::runtime_error("original configure failure");
-        } catch (const std::exception &error) {
-            original_preserved = std::string(error.what()) == "original configure failure";
-        }
-
-        check(original_preserved && !std::filesystem::exists(diagnostics_stage) &&
-                      read_private_json(diagnostics_logs / "configure.log").at("failure") ==
-                              "offline pip configure failure" &&
-                      read_private_json(diagnostics_logs / "17.log").at("phase") == "configure" &&
-                      read_private_json(diagnostics_logs / "meson-log.txt").at("phase") == "meson",
-              "nested diagnostics survive failure without masking original or leaking stage");
-        const auto rejected_logs = root / "diagnostic-logs-file",
-                   failed_stage = root / "diagnostic-cleanup-source";
-        write_private_json(rejected_logs, Json{{"ordinary", true}});
-        ensure_private_directory(failed_stage);
-        original_preserved = false;
-        try {
-            QnxHostBuildStage stage(failed_stage, rejected_logs);
-            throw std::runtime_error("original configure failure");
-        } catch (const std::exception &error) {
-            original_preserved = std::string(error.what()) == "original configure failure";
-        }
-
-        check(original_preserved && !std::filesystem::exists(failed_stage) &&
-                      read_private_json(rejected_logs).at("ordinary") == true,
-              "diagnostic destination failure cannot mask original or prevent source cleanup");
-        const auto bounded_stage = root / "diagnostic-bounded-source",
-                   bounded_logs = root / "diagnostic-bounded-logs";
-        ensure_private_directory(bounded_stage / "build");
-        {
-            std::ofstream large(bounded_stage / "build/config.log", std::ios::binary);
-            large.seekp(5ULL << 20);
-            large.put('Z');
-        }
-        { QnxHostBuildStage stage(bounded_stage, bounded_logs); }
-        check(!std::filesystem::exists(bounded_stage) &&
-                      std::filesystem::file_size(bounded_logs / "configure.log") <= (4ULL << 20),
-              "retained nested log has finite per-file bound");
-        const auto linked_stage = root / "diagnostic-linked-source",
-                   linked_logs = root / "diagnostic-linked-logs",
-                   external = root / "diagnostic-external";
-        ensure_private_directory(linked_stage / "build");
-        write_private_json(external, Json{{"private", true}});
-        std::filesystem::create_symlink(external, linked_stage / "build/config.log");
-        { QnxHostBuildStage stage(linked_stage, linked_logs); }
-        check(!std::filesystem::exists(linked_stage) &&
-                      !std::filesystem::exists(linked_logs / "configure.log") &&
-                      read_private_json(external).at("private") == true,
-              "nested symlink cannot copy or remove external diagnostic");
-        const auto component_pin = sha256_bytes(mac.dump());
-        const auto legacy = root / ".local/toolchains/qnx-host-macos-11.1.2",
-                   current = root / ".local/toolchains" /
-                             ("qnx-host-macos-11.1.2-" +
-                              qnx_host_cache_key(component_pin,
-                                                 qnx_host_prebuilt_pin(c, "macos_arm64")
-                                                         .at("sha256")
-                                                         .get<std::string>()));
-        ensure_private_directory(legacy);
-        const Json old_receipt{{"component_sha256", "old-recipe"},
-                               {"executable_sha256", "old-binary"}};
-        write_private_json(legacy / "qnx-host.json", old_receipt);
-        write_private_json(legacy / "qemu-system-aarch64", Json{{"legacy", true}});
-        const auto old_binary_pin = sha256_file(legacy / "qemu-system-aarch64");
-        failed = false;
-        try {
-            install_qnx_host(root, true, 0);
-        } catch (const std::exception &) {
-            failed = true;
-        }
-
-        check(failed && !std::filesystem::exists(current) &&
-                      read_private_json(legacy / "qnx-host.json") == old_receipt &&
-                      sha256_file(legacy / "qemu-system-aarch64") == old_binary_pin,
-              "new recipe cannot overwrite legacy installation");
-        ensure_private_directory(current);
-        write_private_json(current / "qemu-system-aarch64", Json{{"fixture", true}});
-        const auto binary_pin = sha256_file(current / "qemu-system-aarch64");
-        auto colliding_pin = component_pin;
-        colliding_pin.back() = colliding_pin.back() == '0' ? '1' : '0';
-        write_private_json(current / "qnx-host.json", Json{{"component_sha256", colliding_pin},
-                                                           {"executable_sha256", binary_pin}});
-        failed = false;
-        try {
-            install_qnx_host(root, true, 0);
-        } catch (const std::exception &) {
-            failed = true;
-        }
-
-        check(failed, "matching path prefix cannot bypass full recipe SHA");
-        write_private_json(
-                current / "qnx-host.json",
-                Json{{"component_sha256", component_pin},
-                     {"executable_sha256", binary_pin},
-                     {"recipe", mac},
-                     {"archive_sha256", qnx_host_prebuilt_pin(c, "macos_arm64").at("sha256")}});
-        const auto installed_fixture = install_qnx_host(root, true, 0);
-        check(installed_fixture.at("cached") == true &&
-                      installed_fixture.at("directory") == current.string() && current != legacy,
-              "new recipe uses distinct validated cache path");
-        check(read_private_json(legacy / "qnx-host.json") == old_receipt &&
-                      sha256_file(legacy / "qemu-system-aarch64") == old_binary_pin,
-              "new recipe cache preserves old receipt and executable");
-
-        // A factory binding names the current engine and self; explicit user bindings remain
-        // untouched.
-        const auto program = root / "voyemu",
-                   angle = root / ".local/toolchains/native-sdk/emulator/lib64/gles_angle";
-        ensure_private_directory(angle);
-        write_private_json(program, Json{{"current-self", true}});
-        write_private_json(angle / "libEGL.dylib", Json{{"EGL", true}});
-        write_private_json(angle / "libGLESv2.dylib", Json{{"GLES", true}});
-        std::filesystem::remove(binding);
-        const auto created = ensure_qnx_host_bindings(root, true);
-        check(created.at("qnx_qemu") == (current / "qemu-system-aarch64").string() &&
-                      created.contains("factory") &&
-                      created.at("pins").at(1).at("sha256") == sha256_file(program),
-              "managed factory did not name engine/current self");
-        const auto created_identity = cache_file_identity(binding);
-        check(ensure_qnx_host_bindings(root, true) == created &&
-                      cache_file_identity(binding) == created_identity,
-              "current managed factory unexpectedly rewritten");
-        const auto binding_pin = sha256_file(binding);
-        write_private_json(program, Json{{"new-current-self", true}});
-        const auto self_refreshed = ensure_qnx_host_bindings(root, true);
-        check(self_refreshed.at("qnx_qemu") == created.at("qnx_qemu") &&
-                      self_refreshed.at("pins").at(1).at("sha256") == sha256_file(program) &&
-                      self_refreshed.at("pins").at(0) == created.at("pins").at(0),
-              "managed self refresh changed engine");
-        check(sha256_file(binding.parent_path() /
-                          ("portable-host-" + binding_pin + ".previous.json")) == binding_pin,
-              "managed self refresh snapshot failed");
-        auto rejects_managed = [&](Json value) {
-            write_private_json(binding, value);
-            const auto before = sha256_file(binding);
-            bool rejected = false;
+        // Windows reads its section of the shared binding file.
+        if (voyemu::os::host_windows) {
+            const auto windows_section = windows_binding(root / "windows-toolchains");
+            const Json flat{{"schema", 1},
+                            {"qnx_qemu", "macos-engine"},
+                            {"graphics", "macos-self"},
+                            {"angle", "macos-angle"},
+                            {"pins", Json::array()},
+                            {"factory",
+                             {{"kind", "voyemu-macos-qnx-host"},
+                              {"component_sha256", std::string(64, '0')},
+                              {"engine_receipt_sha256", std::string(64, '0')}}}};
+            write_private_json(binding, flat);
+            bool refused = false;
             try {
                 ensure_qnx_host_bindings(root, true);
             } catch (...) {
-                rejected = true;
+                refused = true;
             }
 
-            check(rejected && sha256_file(binding) == before,
-                  "invalid managed binding was installed");
-        };
-        auto malformed = self_refreshed;
-        malformed["factory"]["component_sha256"] = std::string(64, '0');
-        rejects_managed(malformed);
-        malformed = self_refreshed;
-        malformed["pins"][0]["sha256"] = std::string(64, '0');
-        rejects_managed(malformed);
-        malformed = self_refreshed;
-        malformed["pins"][3] = malformed["pins"][2];
-        rejects_managed(malformed);
-        const auto lockfile = binding.string() + ".factory.lock";
-        const int held = ::open(lockfile.c_str(), O_CREAT | O_RDWR | O_CLOEXEC | O_NOFOLLOW, 0600);
-        check(held >= 0 && ::flock(held, LOCK_EX | LOCK_NB) == 0, "fixture factory lock");
-        bool locked = false;
-        try {
-            ensure_qnx_host_bindings(root, true);
-        } catch (const std::exception &error) {
-            locked = std::string(error.what()).find("already in preparation") != std::string::npos;
-        }
-
-        ::close(held);
-        check(locked, "concurrent factory publication was not rejected");
-        std::string mutable_record = "old", foreign_record = "foreign";
-        unsigned writes = 0;
-        bool foreign_rejected = false;
-        try {
-            publish_host_refresh(
-                    std::array<HostRefreshRecord, 3>{{{binding, "old", "ours"}, {}, {}}},
-                    [&](const auto &) {
-                        return mutable_record;
-                    },
-                    [&](const auto &, const auto &bytes) {
-                        ++writes;
-                        mutable_record = bytes;
-                    },
-                    [&] {
-                        mutable_record = foreign_record;
-                    });
-        } catch (...) {
-            foreign_rejected = true;
-        }
-
-        check(foreign_rejected && mutable_record == foreign_record && writes == 0,
-              "foreign binding replaced during recognition/publication was overwritten");
-
-        // One shared file carries the macOS factory keys and the Windows binding section; a macOS
-        // refresh keeps the section.
-        const auto windows_section = windows_binding(root / "windows-toolchains");
-        auto unified = self_refreshed;
-        unified["windows"] = windows_section;
-        write_private_json(binding, unified);
-        const auto unified_bytes = read_private_json(binding);
-        check(ensure_qnx_host_bindings(root, true) == unified &&
-                      read_private_json(binding) == unified_bytes,
-              "macOS refresh changed the shared Windows section");
-        // A Windows section is read on macOS too; its path spelling is not a native POSIX path.
-        const auto foreign_windows = Json{
-                {"schema", 1},
-                {"qnx_qemu", R"(Z:\Users\owner\voyemu\qemu-system-aarch64.exe)"},
-                {"graphics", R"(Z:\Users\owner\voyemu\voyemu.exe)"},
-                {"angle", R"(Z:\Users\owner\voyemu\gles_angle)"},
-                {"pins",
-                 Json::array({{{"path", R"(Z:\Users\owner\voyemu\qemu-system-aarch64.exe)"},
-                               {"sha256", std::string(64, '7')}},
-                              {{"path", R"(Z:\Users\owner\voyemu\voyemu.exe)"},
-                               {"sha256", std::string(64, '8')}},
-                              {{"path", R"(Z:\Users\owner\voyemu\gles_angle\libEGL.dll)"},
-                               {"sha256", std::string(64, '9')}},
-                              {{"path", R"(Z:\Users\owner\voyemu\gles_angle\libGLESv2.dll)"},
-                               {"sha256", std::string(64, 'a')}}})},
-                {"qnx_file_backend",
-                 {{"schema", 1}, {"version", "11.1.2"}, {"engine_sha256", std::string(64, '7')}}}};
-
-        for (unsigned mode = 0; mode < 2; ++mode) {
-            auto section = foreign_windows;
-
-            if (mode == 1) {
-                section["qnx_qemu"] = "Z:/Users/owner/voyemu/qemu-system-aarch64.exe";
-                section["pins"][0]["path"] = section.at("qnx_qemu");
-            }
-
-            auto shared = self_refreshed;
-            shared["windows"] = section;
-            write_private_json(binding, shared);
-            const auto joined = ensure_qnx_host_bindings(root, true);
-            check(joined.at("windows") == section,
-                  "foreign Windows paths lost their exact spelling");
-            const auto joined_identity = cache_file_identity(binding);
-            check(ensure_qnx_host_bindings(root, true) == joined &&
-                          cache_file_identity(binding) == joined_identity,
-                  "foreign Windows section refresh is not idempotent");
-        }
-
-        auto rejects_windows = [&](Json value) {
-            auto shared = self_refreshed;
-            shared["windows"] = value;
-            write_private_json(binding, shared);
-            const auto before = sha256_file(binding);
-            bool rejected = false;
-            try {
-                ensure_qnx_host_bindings(root, true);
-            } catch (...) {
-                rejected = true;
-            }
-
-            check(rejected && sha256_file(binding) == before,
-                  "invalid Windows binding section was installed");
-        };
-        {
-            auto value = foreign_windows;
-            value["qnx_qemu"] = R"(Z:\Users\owner\voyemu\qemu-system-aarch64.exe.bak)";
-            value["pins"][0]["path"] = value.at("qnx_qemu");
-            rejects_windows(value);
-        }
-        {
-            auto value = foreign_windows;
-            value["pins"][2]["path"] = R"(Z:\Users\owner\voyemu\foreign\libEGL.dll)";
-            rejects_windows(value);
-        }
-        {
-            auto value = foreign_windows;
-            value["pins"][3] = value["pins"][2];
-            rejects_windows(value);
-        }
-        {
-            auto value = foreign_windows;
-            value["pins"][3] = value["pins"][2];
-            value["pins"][3]["path"] = "Z:/Users/owner/voyemu/gles_angle/libEGL.dll";
-            rejects_windows(value);
-        }
-        {
-            auto value = foreign_windows;
-            value["qnx_file_backend"]["engine_sha256"] = std::string(64, '0');
-            rejects_windows(value);
-        }
-        {
-            auto value = windows_section;
-            value["schema"] = 2;
-            rejects_windows(value);
-        }
-        {
-            auto value = windows_section;
-            value["angle"] = program.string();
-            rejects_windows(value);
-        }
-        {
-            auto value = windows_section;
-            value["qnx_file_backend"]["engine_sha256"] = std::string(64, '0');
-            rejects_windows(value);
-        }
-
-        write_private_json(binding, explicit_binding);
-        const auto custom_identity = cache_file_identity(binding);
-        check(ensure_qnx_host_bindings(root, true) == explicit_binding &&
-                      cache_file_identity(binding) == custom_identity,
-              "explicit custom binding was refreshed");
-
-        if (argc == 3 && std::string(argv[1]) == "--install") {
-            const auto actual = std::filesystem::canonical(argv[2]);
-            const auto installed = install_qnx_host(actual, false);
-            check(installed.at("ready") == true, "Mac pinned source install");
-            check(install_qnx_host(actual, true).at("cached") == true,
-                  "Mac receipt reverified offline");
-            std::cout << installed.dump() << '\n';
-        }
-
-        // The qnx-host workflow builds the engine from the recipe even when a prebuilt pin exists
-        // and packs the installed directory with its receipt into the release asset.
-        if ((argc == 3 || argc == 4) && std::string(argv[1]) == "--source-root") {
-            const auto actual = std::filesystem::canonical(argv[2]);
-            const auto installed = install_qnx_host_engine(actual, false, 0, true);
-            check(installed.at("ready") == true && installed.at("cached") == false,
-                  "Mac recipe source install");
-
-            if (argc == 4) {
-                write_qnx_host_asset(installed.at("directory").get<std::string>(), argv[3], true,
-                                     "macos-arm64");
-            }
-
-            std::cout << installed.dump() << '\n';
-        }
-#elif defined(__linux__) && defined(__x86_64__)
-        const auto &linux_recipe = c.at("linux_x64");
-        check(linux_recipe.at("version") == "11.1.2" &&
-                      linux_recipe.at("source") == mac.at("source") &&
-                      linux_recipe.at("dependencies").size() == 5 &&
-                      linux_recipe.at("python_wheels") == mac.at("python_wheels") &&
-                      linux_recipe.at("compiler").at("target") == "x86_64-linux-gnu.2.34",
-              "complete pinned Linux build graph");
-        // The engine links only the system C library of the glibc baseline.
-        const auto needed = qnx_host_elf_needed(std::filesystem::canonical("/proc/self/exe"));
-        check(std::find(needed.begin(), needed.end(), "libc.so.6") != needed.end(),
-              "ELF dependencies of a dynamic executable");
-        const auto linux_pin = sha256_bytes(linux_recipe.dump());
-        const auto engine_directory =
-                root / ".local/toolchains" /
-                ("qnx-host-linux-11.1.2-" +
-                 qnx_host_cache_key(
-                         linux_pin,
-                         qnx_host_prebuilt_pin(c, "linux_x64").at("sha256").get<std::string>()));
-        ensure_private_directory(engine_directory);
-        write_private_json(engine_directory / "qemu-system-aarch64", Json{{"engine", true}});
-        const auto engine_pin = sha256_file(engine_directory / "qemu-system-aarch64");
-        write_private_json(engine_directory / "qnx-host.json",
-                           Json{{"component_sha256", std::string(64, '0')},
-                                {"executable_sha256", engine_pin}});
-        bool linux_failed = false;
-        try {
-            install_qnx_host(root, true, 0);
-        } catch (const std::exception &) {
-            linux_failed = true;
-        }
-
-        check(linux_failed, "installed Linux engine of another recipe accepted");
-        write_private_json(
-                engine_directory / "qnx-host.json",
-                Json{{"component_sha256", linux_pin},
-                     {"executable_sha256", engine_pin},
-                     {"recipe", linux_recipe},
-                     {"archive_sha256", qnx_host_prebuilt_pin(c, "linux_x64").at("sha256")}});
-        const auto linux_installed = install_qnx_host(root, true, 0);
-        check(linux_installed.at("cached") == true &&
-                      linux_installed.at("executable") ==
-                              (engine_directory / "qemu-system-aarch64").string(),
-              "installed Linux engine reverified offline");
-        // A fresh shared binding file gets the factory binding of the Linux engine and ANGLE.
-        const auto program = root / "voyemu",
-                   angle = root / ".local/toolchains/native-sdk/emulator/lib64/gles_angle";
-        ensure_private_directory(angle);
-        write_private_json(program, Json{{"self", true}});
-        write_private_json(angle / "libEGL.so", Json{{"EGL", true}});
-        write_private_json(angle / "libGLESv2.so", Json{{"GLES", true}});
-        std::filesystem::remove(binding);
-        const auto factory = ensure_qnx_host_bindings(root, true);
-        check(factory.at("qnx_qemu") == (engine_directory / "qemu-system-aarch64").string() &&
-                      factory.at("angle") == angle.string() &&
-                      factory.at("factory").at("kind") == "voyemu-linux-qnx-host" &&
-                      factory.at("pins").size() == 4 &&
-                      factory.at("pins").at(2).at("path") == (angle / "libEGL.so").string() &&
-                      read_private_json(binding) == factory,
-              "Linux factory binding");
-        const auto factory_identity = cache_file_identity(binding);
-        check(ensure_qnx_host_bindings(root, true) == factory &&
-                      cache_file_identity(binding) == factory_identity,
-              "current Linux factory binding rewritten");
-        write_private_json(program, Json{{"new-self", true}});
-        const auto refreshed = ensure_qnx_host_bindings(root, true);
-        check(refreshed.at("pins").at(1).at("sha256") == sha256_file(program) &&
-                      refreshed.at("pins").at(0) == factory.at("pins").at(0),
-              "Linux factory self refresh");
-        auto tampered = refreshed;
-        tampered["pins"][2]["sha256"] = std::string(64, '0');
-        write_private_json(binding, tampered);
-        linux_failed = false;
-        try {
-            ensure_qnx_host_bindings(root, true);
-        } catch (const std::exception &) {
-            linux_failed = true;
-        }
-
-        check(linux_failed && read_private_json(binding) == tampered,
-              "changed Linux ANGLE pin accepted");
-
-        // The qnx-host workflow builds the engine from the recipe and packs the installed
-        // directory with its receipt into the release asset.
-        if ((argc == 3 || argc == 4) && std::string(argv[1]) == "--source-root") {
-            const auto actual = std::filesystem::canonical(argv[2]);
-            const auto installed = install_qnx_host_engine(actual, false, 0, true);
-            check(installed.at("ready") == true && installed.at("cached") == false,
-                  "Linux recipe source install");
-
-            if (argc == 4) {
-                write_qnx_host_asset(installed.at("directory").get<std::string>(), argv[3], true,
-                                     "linux-x64");
-            }
-
-            std::cout << installed.dump() << '\n';
-        }
-
-        // The installed engine boots an AArch64 guest with the machine, translation, clock and
-        // shared RAM file of the QNX launch: the guest writes a line to the PL011 UART and powers
-        // off through PSCI.
-        if (argc == 3 && std::string(argv[1]) == "--boot") {
-            const auto actual = std::filesystem::canonical(argv[2]);
-            Json engine;
-            try {
-                engine = install_qnx_host(actual, true, 0);
-            } catch (const std::exception &error) {
-                std::cerr << "Installed QNX engine required: " << error.what() << '\n';
-
-                return 77;
-            }
-
-            // movz x1, #0x0900, lsl #16; adr x2, message; 1: ldrb w3, [x2], #1; cbz w3, 2f;
-            // strb w3, [x1]; b 1b; 2: movz x0, #8; movk x0, #0x8400, lsl #16; smc #0; hvc #0;
-            // 3: wfi; b 3b; message: "VOYEMU QNX ENGINE BOOT\n"
-            const std::array<std::uint32_t, 20> guest{
-                    0xd2a12001, 0x10000162, 0x38401443, 0x34000063, 0x39000023,
-                    0x17fffffd, 0xd2800100, 0xf2b08000, 0xd4000003, 0xd4000002,
-                    0xd503207f, 0x17ffffff, 0x45594f56, 0x5120554d, 0x4520584e,
-                    0x4e49474e, 0x4f422045, 0x000a544f, 0x00000000, 0x00000000};
-            const auto session = root / "boot";
-            ensure_private_directory(session);
+            check(refused && read_private_json(binding) == flat,
+                  "flat shared binding without a Windows section is refused");
             {
-                std::ofstream image(session / "guest.bin", std::ios::binary);
-                image.write(reinterpret_cast<const char *>(guest.data()),
-                            static_cast<std::streamsize>(guest.size() * sizeof(std::uint32_t)));
+                const auto section = windows_binding(root / "windows-toolchains");
+                write_private_json(binding, {{"schema", 1}, {"windows", section}});
+                check(ensure_qnx_host_bindings(root, true) == section,
+                      "Windows host binding section is read from the shared file");
             }
-            // The QMP socket lives in the runtime directory of a session launch, not under the
-            // project root, whose length is unbounded and exceeds sun_path in a deep checkout.
-            const auto qmp = native_socket_root() / (random_token() + "-qmp.sock");
-            const auto launch = qnx_ram_launch(host_qnx_engine);
-            ProcessSpec spec;
-            spec.executable = engine.at("executable").get<std::string>();
-            spec.arguments = {"-machine",
-                              launch.machine,
-                              "-accel",
-                              launch.accelerator,
-                              "-cpu",
-                              qnx_engine_cpu(host_qnx_engine),
-                              "-m",
-                              "8192",
-                              "-smp",
-                              "8",
-                              "-nodefaults",
-                              "-display",
-                              "none",
-                              "-qmp",
-                              "unix:" + qmp.string() + ",server=on,wait=off",
-                              "-nic",
-                              "none",
-                              "-no-reboot",
-                              "-kernel",
-                              (session / "guest.bin").string(),
-                              "-serial",
-                              "file:" + (session / "serial.log").string()};
+            {
+                const Json plain{{"schema", 1},
+                                 {"qnx_qemu", "macos-engine"},
+                                 {"graphics", "macos-self"},
+                                 {"angle", "macos-angle"},
+                                 {"pins", Json::array()}};
+                check(qnx_host_binding_view(root,
+                                            Json{{"schema", 1}, {"windows", windows_section}}) ==
+                              windows_section,
+                      "Windows binding view returns the shared windows section");
+                check(qnx_host_binding_view(root, plain) == plain,
+                      "Windows binding view falls back to the flat document");
+            }
+        } else {
+            write_private_json(binding, explicit_binding);
+            check(ensure_qnx_host_bindings(root, true) == explicit_binding &&
+                          read_private_json(binding) == explicit_binding,
+                  "explicit host bindings preserved without installation");
+            {
+                const Json shared_with_windows{{"schema", 1}, {"windows", {{"schema", 1}}}};
+                check(qnx_host_binding_view(root, shared_with_windows) == shared_with_windows,
+                      "non-Windows binding view stays the flat document");
+            }
+        }
 
-            for (auto option : launch.options) {
-                const auto at = option.find("${SESSION}");
-
-                if (at != std::string::npos) {
-                    option.replace(at, 10, session.string());
+        // The engine of each host: the extracted Windows runtime, the macOS and the Linux build
+        // recipes.
+        if (os::host_windows) {
+            if (argc == 3 && std::string(argv[1]) == "--extract") {
+                extract_qnx_unpacker(std::filesystem::canonical(argv[2]), root / "unpacker");
+                check(std::filesystem::file_size(root / "unpacker/7z.exe") == 575488 &&
+                              std::filesystem::file_size(root / "unpacker/7z.dll") == 1906176,
+                      "exact ready extractor payload");
+                ProcessSpec spec;
+                spec.executable = root / "unpacker/7z.exe";
+                spec.arguments = {"i"};
+                spec.directory = root;
+                spec.output = root / "probe.log";
+                const auto result = execute(spec, 15000);
+                check(result.exit_code == 0 && result.output.find("Nsis") != std::string::npos,
+                      "ready extractor supports QEMU archive");
+                bool duplicate = false;
+                try {
+                    extract_qnx_unpacker(std::filesystem::canonical(argv[2]), root / "unpacker");
+                } catch (...) {
+                    duplicate = true;
                 }
 
-                spec.arguments.push_back(option);
+                check(duplicate, "cannot overwrite extractor output");
             }
 
-            spec.directory = session;
-            spec.output = session / "engine.log";
-            const auto result = execute(spec, 60000);
-            std::filesystem::remove(qmp);
-            std::ifstream serial(session / "serial.log");
-            const std::string line((std::istreambuf_iterator<char>(serial)),
-                                   std::istreambuf_iterator<char>());
-            check(!result.timed_out && result.exit_code == 0 &&
-                          line == "VOYEMU QNX ENGINE BOOT\n" &&
-                          std::filesystem::file_size(session / "qnx-ram.bin") == 8ULL << 30,
-                  "installed engine boots the guest with the QNX launch");
-            std::cout << "QNX engine booted the AArch64 guest: " << engine.at("executable") << '\n';
+            if (argc == 3 && std::string(argv[1]) == "--install") {
+                const auto actual = std::filesystem::canonical(argv[2]);
+                const auto installed = install_qnx_host(actual, true, 0);
+                check(installed.at("ready") == true, "offline retained package install");
+                check(install_qnx_host(actual, true, 0).at("cached") == true,
+                      "installed tree reverified");
+                std::cout << installed.dump() << '\n';
+            }
+        } else if (os::platform_name == "macOS") {
+            const auto diagnostics_stage = root / "diagnostic-source",
+                       diagnostics_logs = root / "diagnostic-logs";
+            ensure_private_directory(diagnostics_stage / "build/meson-logs");
+            write_private_json(diagnostics_stage / "17.log", Json{{"phase", "configure"}});
+            write_private_json(diagnostics_stage / "build/config.log",
+                               Json{{"failure", "offline pip configure failure"}});
+            write_private_json(diagnostics_stage / "build/meson-logs/meson-log.txt",
+                               Json{{"phase", "meson"}});
+            bool original_preserved = false;
+            try {
+                QnxHostBuildStage stage(diagnostics_stage, diagnostics_logs);
+                throw std::runtime_error("original configure failure");
+            } catch (const std::exception &error) {
+                original_preserved = std::string(error.what()) == "original configure failure";
+            }
+
+            check(original_preserved && !std::filesystem::exists(diagnostics_stage) &&
+                          read_private_json(diagnostics_logs / "configure.log").at("failure") ==
+                                  "offline pip configure failure" &&
+                          read_private_json(diagnostics_logs / "17.log").at("phase") ==
+                                  "configure" &&
+                          read_private_json(diagnostics_logs / "meson-log.txt").at("phase") ==
+                                  "meson",
+                  "nested diagnostics survive failure without masking original or leaking stage");
+            const auto rejected_logs = root / "diagnostic-logs-file",
+                       failed_stage = root / "diagnostic-cleanup-source";
+            write_private_json(rejected_logs, Json{{"ordinary", true}});
+            ensure_private_directory(failed_stage);
+            original_preserved = false;
+            try {
+                QnxHostBuildStage stage(failed_stage, rejected_logs);
+                throw std::runtime_error("original configure failure");
+            } catch (const std::exception &error) {
+                original_preserved = std::string(error.what()) == "original configure failure";
+            }
+
+            check(original_preserved && !std::filesystem::exists(failed_stage) &&
+                          read_private_json(rejected_logs).at("ordinary") == true,
+                  "diagnostic destination failure cannot mask original or prevent source cleanup");
+            const auto bounded_stage = root / "diagnostic-bounded-source",
+                       bounded_logs = root / "diagnostic-bounded-logs";
+            ensure_private_directory(bounded_stage / "build");
+            {
+                std::ofstream large(bounded_stage / "build/config.log", std::ios::binary);
+                large.seekp(5ULL << 20);
+                large.put('Z');
+            }
+            { QnxHostBuildStage stage(bounded_stage, bounded_logs); }
+            check(!std::filesystem::exists(bounded_stage) &&
+                          std::filesystem::file_size(bounded_logs / "configure.log") <=
+                                  (4ULL << 20),
+                  "retained nested log has finite per-file bound");
+            const auto linked_stage = root / "diagnostic-linked-source",
+                       linked_logs = root / "diagnostic-linked-logs",
+                       external = root / "diagnostic-external";
+            ensure_private_directory(linked_stage / "build");
+            write_private_json(external, Json{{"private", true}});
+            std::filesystem::create_symlink(external, linked_stage / "build/config.log");
+            { QnxHostBuildStage stage(linked_stage, linked_logs); }
+            check(!std::filesystem::exists(linked_stage) &&
+                          !std::filesystem::exists(linked_logs / "configure.log") &&
+                          read_private_json(external).at("private") == true,
+                  "nested symlink cannot copy or remove external diagnostic");
+            const auto component_pin = sha256_bytes(mac.dump());
+            const auto legacy = root / ".local/toolchains/qnx-host-macos-11.1.2",
+                       current = root / ".local/toolchains" /
+                                 ("qnx-host-macos-11.1.2-" +
+                                  qnx_host_cache_key(component_pin,
+                                                     qnx_host_prebuilt_pin(c, "macos_arm64")
+                                                             .at("sha256")
+                                                             .get<std::string>()));
+            ensure_private_directory(legacy);
+            const Json old_receipt{{"component_sha256", "old-recipe"},
+                                   {"executable_sha256", "old-binary"}};
+            write_private_json(legacy / "qnx-host.json", old_receipt);
+            write_private_json(legacy / "qemu-system-aarch64", Json{{"legacy", true}});
+            const auto old_binary_pin = sha256_file(legacy / "qemu-system-aarch64");
+            failed = false;
+            try {
+                install_qnx_host(root, true, 0);
+            } catch (const std::exception &) {
+                failed = true;
+            }
+
+            check(failed && !std::filesystem::exists(current) &&
+                          read_private_json(legacy / "qnx-host.json") == old_receipt &&
+                          sha256_file(legacy / "qemu-system-aarch64") == old_binary_pin,
+                  "new recipe cannot overwrite legacy installation");
+            ensure_private_directory(current);
+            write_private_json(current / "qemu-system-aarch64", Json{{"fixture", true}});
+            const auto binary_pin = sha256_file(current / "qemu-system-aarch64");
+            auto colliding_pin = component_pin;
+            colliding_pin.back() = colliding_pin.back() == '0' ? '1' : '0';
+            write_private_json(current / "qnx-host.json", Json{{"component_sha256", colliding_pin},
+                                                               {"executable_sha256", binary_pin}});
+            failed = false;
+            try {
+                install_qnx_host(root, true, 0);
+            } catch (const std::exception &) {
+                failed = true;
+            }
+
+            check(failed, "matching path prefix cannot bypass full recipe SHA");
+            write_private_json(
+                    current / "qnx-host.json",
+                    Json{{"component_sha256", component_pin},
+                         {"executable_sha256", binary_pin},
+                         {"recipe", mac},
+                         {"archive_sha256", qnx_host_prebuilt_pin(c, "macos_arm64").at("sha256")}});
+            const auto installed_fixture = install_qnx_host(root, true, 0);
+            check(installed_fixture.at("cached") == true &&
+                          installed_fixture.at("directory") == current.string() &&
+                          current != legacy,
+                  "new recipe uses distinct validated cache path");
+            check(read_private_json(legacy / "qnx-host.json") == old_receipt &&
+                          sha256_file(legacy / "qemu-system-aarch64") == old_binary_pin,
+                  "new recipe cache preserves old receipt and executable");
+
+            // A factory binding names the current engine and self; explicit user bindings remain
+            // untouched.
+            const auto program = root / "voyemu",
+                       angle = root / ".local/toolchains/native-sdk/emulator/lib64/gles_angle";
+            ensure_private_directory(angle);
+            write_private_json(program, Json{{"current-self", true}});
+            write_private_json(angle / "libEGL.dylib", Json{{"EGL", true}});
+            write_private_json(angle / "libGLESv2.dylib", Json{{"GLES", true}});
+            std::filesystem::remove(binding);
+            const auto created = ensure_qnx_host_bindings(root, true);
+            check(created.at("qnx_qemu") == (current / "qemu-system-aarch64").string() &&
+                          created.contains("factory") &&
+                          created.at("pins").at(1).at("sha256") == sha256_file(program),
+                  "managed factory did not name engine/current self");
+            const auto created_identity = cache_file_identity(binding);
+            check(ensure_qnx_host_bindings(root, true) == created &&
+                          cache_file_identity(binding) == created_identity,
+                  "current managed factory unexpectedly rewritten");
+            const auto binding_pin = sha256_file(binding);
+            write_private_json(program, Json{{"new-current-self", true}});
+            const auto self_refreshed = ensure_qnx_host_bindings(root, true);
+            check(self_refreshed.at("qnx_qemu") == created.at("qnx_qemu") &&
+                          self_refreshed.at("pins").at(1).at("sha256") == sha256_file(program) &&
+                          self_refreshed.at("pins").at(0) == created.at("pins").at(0),
+                  "managed self refresh changed engine");
+            check(sha256_file(binding.parent_path() /
+                              ("portable-host-" + binding_pin + ".previous.json")) == binding_pin,
+                  "managed self refresh snapshot failed");
+            auto rejects_managed = [&](Json value) {
+                write_private_json(binding, value);
+                const auto before = sha256_file(binding);
+                bool rejected = false;
+                try {
+                    ensure_qnx_host_bindings(root, true);
+                } catch (...) {
+                    rejected = true;
+                }
+
+                check(rejected && sha256_file(binding) == before,
+                      "invalid managed binding was installed");
+            };
+            auto malformed = self_refreshed;
+            malformed["factory"]["component_sha256"] = std::string(64, '0');
+            rejects_managed(malformed);
+            malformed = self_refreshed;
+            malformed["pins"][0]["sha256"] = std::string(64, '0');
+            rejects_managed(malformed);
+            malformed = self_refreshed;
+            malformed["pins"][3] = malformed["pins"][2];
+            rejects_managed(malformed);
+            const auto lockfile = binding.string() + ".factory.lock";
+            auto held = std::make_unique<os::FileLock>(lockfile, true);
+            check(held->held(), "fixture factory lock");
+            bool locked = false;
+            try {
+                ensure_qnx_host_bindings(root, true);
+            } catch (const std::exception &error) {
+                locked = std::string(error.what()).find("already in preparation") !=
+                         std::string::npos;
+            }
+
+            held.reset();
+            check(locked, "concurrent factory publication was not rejected");
+            std::string mutable_record = "old", foreign_record = "foreign";
+            unsigned writes = 0;
+            bool foreign_rejected = false;
+            try {
+                publish_host_refresh(
+                        std::array<HostRefreshRecord, 3>{{{binding, "old", "ours"}, {}, {}}},
+                        [&](const auto &) {
+                            return mutable_record;
+                        },
+                        [&](const auto &, const auto &bytes) {
+                            ++writes;
+                            mutable_record = bytes;
+                        },
+                        [&] {
+                            mutable_record = foreign_record;
+                        });
+            } catch (...) {
+                foreign_rejected = true;
+            }
+
+            check(foreign_rejected && mutable_record == foreign_record && writes == 0,
+                  "foreign binding replaced during recognition/publication was overwritten");
+
+            // One shared file carries the macOS factory keys and the Windows binding section; a
+            // macOS refresh keeps the section.
+            const auto windows_section = windows_binding(root / "windows-toolchains");
+            auto unified = self_refreshed;
+            unified["windows"] = windows_section;
+            write_private_json(binding, unified);
+            const auto unified_bytes = read_private_json(binding);
+            check(ensure_qnx_host_bindings(root, true) == unified &&
+                          read_private_json(binding) == unified_bytes,
+                  "macOS refresh changed the shared Windows section");
+            // A Windows section is read on macOS too; its path spelling is not a native POSIX path.
+            const auto foreign_windows = Json{
+                    {"schema", 1},
+                    {"qnx_qemu", R"(Z:\Users\owner\voyemu\qemu-system-aarch64.exe)"},
+                    {"graphics", R"(Z:\Users\owner\voyemu\voyemu.exe)"},
+                    {"angle", R"(Z:\Users\owner\voyemu\gles_angle)"},
+                    {"pins",
+                     Json::array({{{"path", R"(Z:\Users\owner\voyemu\qemu-system-aarch64.exe)"},
+                                   {"sha256", std::string(64, '7')}},
+                                  {{"path", R"(Z:\Users\owner\voyemu\voyemu.exe)"},
+                                   {"sha256", std::string(64, '8')}},
+                                  {{"path", R"(Z:\Users\owner\voyemu\gles_angle\libEGL.dll)"},
+                                   {"sha256", std::string(64, '9')}},
+                                  {{"path", R"(Z:\Users\owner\voyemu\gles_angle\libGLESv2.dll)"},
+                                   {"sha256", std::string(64, 'a')}}})},
+                    {"qnx_file_backend",
+                     {{"schema", 1},
+                      {"version", "11.1.2"},
+                      {"engine_sha256", std::string(64, '7')}}}};
+
+            for (unsigned mode = 0; mode < 2; ++mode) {
+                auto section = foreign_windows;
+
+                if (mode == 1) {
+                    section["qnx_qemu"] = "Z:/Users/owner/voyemu/qemu-system-aarch64.exe";
+                    section["pins"][0]["path"] = section.at("qnx_qemu");
+                }
+
+                auto shared = self_refreshed;
+                shared["windows"] = section;
+                write_private_json(binding, shared);
+                const auto joined = ensure_qnx_host_bindings(root, true);
+                check(joined.at("windows") == section,
+                      "foreign Windows paths lost their exact spelling");
+                const auto joined_identity = cache_file_identity(binding);
+                check(ensure_qnx_host_bindings(root, true) == joined &&
+                              cache_file_identity(binding) == joined_identity,
+                      "foreign Windows section refresh is not idempotent");
+            }
+
+            auto rejects_windows = [&](Json value) {
+                auto shared = self_refreshed;
+                shared["windows"] = value;
+                write_private_json(binding, shared);
+                const auto before = sha256_file(binding);
+                bool rejected = false;
+                try {
+                    ensure_qnx_host_bindings(root, true);
+                } catch (...) {
+                    rejected = true;
+                }
+
+                check(rejected && sha256_file(binding) == before,
+                      "invalid Windows binding section was installed");
+            };
+            {
+                auto value = foreign_windows;
+                value["qnx_qemu"] = R"(Z:\Users\owner\voyemu\qemu-system-aarch64.exe.bak)";
+                value["pins"][0]["path"] = value.at("qnx_qemu");
+                rejects_windows(value);
+            }
+            {
+                auto value = foreign_windows;
+                value["pins"][2]["path"] = R"(Z:\Users\owner\voyemu\foreign\libEGL.dll)";
+                rejects_windows(value);
+            }
+            {
+                auto value = foreign_windows;
+                value["pins"][3] = value["pins"][2];
+                rejects_windows(value);
+            }
+            {
+                auto value = foreign_windows;
+                value["pins"][3] = value["pins"][2];
+                value["pins"][3]["path"] = "Z:/Users/owner/voyemu/gles_angle/libEGL.dll";
+                rejects_windows(value);
+            }
+            {
+                auto value = foreign_windows;
+                value["qnx_file_backend"]["engine_sha256"] = std::string(64, '0');
+                rejects_windows(value);
+            }
+            {
+                auto value = windows_section;
+                value["schema"] = 2;
+                rejects_windows(value);
+            }
+            {
+                auto value = windows_section;
+                value["angle"] = program.string();
+                rejects_windows(value);
+            }
+            {
+                auto value = windows_section;
+                value["qnx_file_backend"]["engine_sha256"] = std::string(64, '0');
+                rejects_windows(value);
+            }
+
+            write_private_json(binding, explicit_binding);
+            const auto custom_identity = cache_file_identity(binding);
+            check(ensure_qnx_host_bindings(root, true) == explicit_binding &&
+                          cache_file_identity(binding) == custom_identity,
+                  "explicit custom binding was refreshed");
+
+            if (argc == 3 && std::string(argv[1]) == "--install") {
+                const auto actual = std::filesystem::canonical(argv[2]);
+                const auto installed = install_qnx_host(actual, false);
+                check(installed.at("ready") == true, "Mac pinned source install");
+                check(install_qnx_host(actual, true).at("cached") == true,
+                      "Mac receipt reverified offline");
+                std::cout << installed.dump() << '\n';
+            }
+
+            // The qnx-host workflow builds the engine from the recipe even when a prebuilt pin
+            // exists and packs the installed directory with its receipt into the release asset.
+            if ((argc == 3 || argc == 4) && std::string(argv[1]) == "--source-root") {
+                const auto actual = std::filesystem::canonical(argv[2]);
+                const auto installed = install_qnx_host_engine(actual, false, 0, true);
+                check(installed.at("ready") == true && installed.at("cached") == false,
+                      "Mac recipe source install");
+
+                if (argc == 4) {
+                    write_qnx_host_asset(installed.at("directory").get<std::string>(), argv[3],
+                                         true, "macos-arm64");
+                }
+
+                std::cout << installed.dump() << '\n';
+            }
+        } else {
+            const auto &linux_recipe = c.at("linux_x64");
+            check(linux_recipe.at("version") == "11.1.2" &&
+                          linux_recipe.at("source") == mac.at("source") &&
+                          linux_recipe.at("dependencies").size() == 5 &&
+                          linux_recipe.at("python_wheels") == mac.at("python_wheels") &&
+                          linux_recipe.at("compiler").at("target") == "x86_64-linux-gnu.2.34",
+                  "complete pinned Linux build graph");
+            // The engine links only the system C library of the glibc baseline.
+            const auto needed = qnx_host_elf_needed(std::filesystem::canonical("/proc/self/exe"));
+            check(std::find(needed.begin(), needed.end(), "libc.so.6") != needed.end(),
+                  "ELF dependencies of a dynamic executable");
+            const auto linux_pin = sha256_bytes(linux_recipe.dump());
+            const auto engine_directory =
+                    root / ".local/toolchains" /
+                    ("qnx-host-linux-11.1.2-" +
+                     qnx_host_cache_key(linux_pin, qnx_host_prebuilt_pin(c, "linux_x64")
+                                                           .at("sha256")
+                                                           .get<std::string>()));
+            ensure_private_directory(engine_directory);
+            write_private_json(engine_directory / "qemu-system-aarch64", Json{{"engine", true}});
+            const auto engine_pin = sha256_file(engine_directory / "qemu-system-aarch64");
+            write_private_json(engine_directory / "qnx-host.json",
+                               Json{{"component_sha256", std::string(64, '0')},
+                                    {"executable_sha256", engine_pin}});
+            bool linux_failed = false;
+            try {
+                install_qnx_host(root, true, 0);
+            } catch (const std::exception &) {
+                linux_failed = true;
+            }
+
+            check(linux_failed, "installed Linux engine of another recipe accepted");
+            write_private_json(
+                    engine_directory / "qnx-host.json",
+                    Json{{"component_sha256", linux_pin},
+                         {"executable_sha256", engine_pin},
+                         {"recipe", linux_recipe},
+                         {"archive_sha256", qnx_host_prebuilt_pin(c, "linux_x64").at("sha256")}});
+            const auto linux_installed = install_qnx_host(root, true, 0);
+            check(linux_installed.at("cached") == true &&
+                          linux_installed.at("executable") ==
+                                  (engine_directory / "qemu-system-aarch64").string(),
+                  "installed Linux engine reverified offline");
+            // A fresh shared binding file gets the factory binding of the Linux engine and ANGLE.
+            const auto program = root / "voyemu",
+                       angle = root / ".local/toolchains/native-sdk/emulator/lib64/gles_angle";
+            ensure_private_directory(angle);
+            write_private_json(program, Json{{"self", true}});
+            write_private_json(angle / "libEGL.so", Json{{"EGL", true}});
+            write_private_json(angle / "libGLESv2.so", Json{{"GLES", true}});
+            std::filesystem::remove(binding);
+            const auto factory = ensure_qnx_host_bindings(root, true);
+            check(factory.at("qnx_qemu") == (engine_directory / "qemu-system-aarch64").string() &&
+                          factory.at("angle") == angle.string() &&
+                          factory.at("factory").at("kind") == "voyemu-linux-qnx-host" &&
+                          factory.at("pins").size() == 4 &&
+                          factory.at("pins").at(2).at("path") == (angle / "libEGL.so").string() &&
+                          read_private_json(binding) == factory,
+                  "Linux factory binding");
+            const auto factory_identity = cache_file_identity(binding);
+            check(ensure_qnx_host_bindings(root, true) == factory &&
+                          cache_file_identity(binding) == factory_identity,
+                  "current Linux factory binding rewritten");
+            write_private_json(program, Json{{"new-self", true}});
+            const auto refreshed = ensure_qnx_host_bindings(root, true);
+            check(refreshed.at("pins").at(1).at("sha256") == sha256_file(program) &&
+                          refreshed.at("pins").at(0) == factory.at("pins").at(0),
+                  "Linux factory self refresh");
+            auto tampered = refreshed;
+            tampered["pins"][2]["sha256"] = std::string(64, '0');
+            write_private_json(binding, tampered);
+            linux_failed = false;
+            try {
+                ensure_qnx_host_bindings(root, true);
+            } catch (const std::exception &) {
+                linux_failed = true;
+            }
+
+            check(linux_failed && read_private_json(binding) == tampered,
+                  "changed Linux ANGLE pin accepted");
+
+            // The qnx-host workflow builds the engine from the recipe and packs the installed
+            // directory with its receipt into the release asset.
+            if ((argc == 3 || argc == 4) && std::string(argv[1]) == "--source-root") {
+                const auto actual = std::filesystem::canonical(argv[2]);
+                const auto installed = install_qnx_host_engine(actual, false, 0, true);
+                check(installed.at("ready") == true && installed.at("cached") == false,
+                      "Linux recipe source install");
+
+                if (argc == 4) {
+                    write_qnx_host_asset(installed.at("directory").get<std::string>(), argv[3],
+                                         true, "linux-x64");
+                }
+
+                std::cout << installed.dump() << '\n';
+            }
+
+            // The installed engine boots an AArch64 guest with the machine, translation, clock and
+            // shared RAM file of the QNX launch: the guest writes a line to the PL011 UART and
+            // powers off through PSCI.
+            if (argc == 3 && std::string(argv[1]) == "--boot") {
+                const auto actual = std::filesystem::canonical(argv[2]);
+                Json engine;
+                try {
+                    engine = install_qnx_host(actual, true, 0);
+                } catch (const std::exception &error) {
+                    std::cerr << "Installed QNX engine required: " << error.what() << '\n';
+
+                    return 77;
+                }
+
+                // movz x1, #0x0900, lsl #16; adr x2, message; 1: ldrb w3, [x2], #1; cbz w3, 2f;
+                // strb w3, [x1]; b 1b; 2: movz x0, #8; movk x0, #0x8400, lsl #16; smc #0; hvc #0;
+                // 3: wfi; b 3b; message: "VOYEMU QNX ENGINE BOOT\n"
+                const std::array<std::uint32_t, 20> guest{
+                        0xd2a12001, 0x10000162, 0x38401443, 0x34000063, 0x39000023,
+                        0x17fffffd, 0xd2800100, 0xf2b08000, 0xd4000003, 0xd4000002,
+                        0xd503207f, 0x17ffffff, 0x45594f56, 0x5120554d, 0x4520584e,
+                        0x4e49474e, 0x4f422045, 0x000a544f, 0x00000000, 0x00000000};
+                const auto session = root / "boot";
+                ensure_private_directory(session);
+                {
+                    std::ofstream image(session / "guest.bin", std::ios::binary);
+                    image.write(reinterpret_cast<const char *>(guest.data()),
+                                static_cast<std::streamsize>(guest.size() * sizeof(std::uint32_t)));
+                }
+                // The QMP socket lives in the runtime directory of a session launch, not under the
+                // project root, whose length is unbounded and exceeds sun_path in a deep checkout.
+                const auto qmp = native_socket_root() / (random_token() + "-qmp.sock");
+                const auto launch = qnx_ram_launch(host_qnx_engine);
+                ProcessSpec spec;
+                spec.executable = engine.at("executable").get<std::string>();
+                spec.arguments = {"-machine",
+                                  launch.machine,
+                                  "-accel",
+                                  launch.accelerator,
+                                  "-cpu",
+                                  qnx_engine_cpu(host_qnx_engine),
+                                  "-m",
+                                  "8192",
+                                  "-smp",
+                                  "8",
+                                  "-nodefaults",
+                                  "-display",
+                                  "none",
+                                  "-qmp",
+                                  "unix:" + qmp.string() + ",server=on,wait=off",
+                                  "-nic",
+                                  "none",
+                                  "-no-reboot",
+                                  "-kernel",
+                                  (session / "guest.bin").string(),
+                                  "-serial",
+                                  "file:" + (session / "serial.log").string()};
+
+                for (auto option : launch.options) {
+                    const auto at = option.find("${SESSION}");
+
+                    if (at != std::string::npos) {
+                        option.replace(at, 10, session.string());
+                    }
+
+                    spec.arguments.push_back(option);
+                }
+
+                spec.directory = session;
+                spec.output = session / "engine.log";
+                const auto result = execute(spec, 60000);
+                std::filesystem::remove(qmp);
+                std::ifstream serial(session / "serial.log");
+                const std::string line((std::istreambuf_iterator<char>(serial)),
+                                       std::istreambuf_iterator<char>());
+                check(!result.timed_out && result.exit_code == 0 &&
+                              line == "VOYEMU QNX ENGINE BOOT\n" &&
+                              std::filesystem::file_size(session / "qnx-ram.bin") == 8ULL << 30,
+                      "installed engine boots the guest with the QNX launch");
+                std::cout << "QNX engine booted the AArch64 guest: " << engine.at("executable")
+                          << '\n';
+            }
         }
-#else
-        (void)argc;
-        (void)argv;
-#endif
 
         if (argc == 3 && std::string(argv[1]) == "--install-windows-cached") {
             const auto actual = std::filesystem::canonical(argv[2]);

@@ -1,3 +1,4 @@
+#include "os/platform.hpp"
 #include "session.hpp"
 #include <array>
 #include <fstream>
@@ -215,11 +216,10 @@ int main(int argc, char **argv) try {
                     Json::array({"--qnx-checkpoint-fixture", "${SESSION}/qnx-ram.bin"});
             cached["graphics"] = {{"executable", fixture.string()}, {"angle", root.string()}};
             cached["quickboot"] = {{"directory", cache.string()}};
-#ifdef _WIN32
-            const std::array<const char *, 2> libraries{"libEGL.dll", "libGLESv2.dll"};
-#else
-            const std::array<const char *, 2> libraries{"libEGL.dylib", "libGLESv2.dylib"};
-#endif
+            const auto libraries =
+                    voyemu::os::host_windows
+                            ? std::array<const char *, 2>{"libEGL.dll", "libGLESv2.dll"}
+                            : std::array<const char *, 2>{"libEGL.dylib", "libGLESv2.dylib"};
 
             for (auto name : libraries) {
                 const auto path = root / name;
@@ -313,99 +313,102 @@ int main(int argc, char **argv) try {
                             sha256_file(cache / "gpu/40001000.gpu") == gpu_hash,
                     "manual cold boot rewrote the valid checkpoint");
         }
-#ifdef __APPLE__
-        {
-            const auto cache = root / "prelaunch-cache";
-            ensure_private_directory(cache);
-            ensure_private_directory(cache / "gpu");
-            const auto blocked = root / "non-executable-qemu";
-            std::filesystem::copy_file(fixture, blocked);
-            std::filesystem::permissions(blocked, std::filesystem::perms::owner_read |
-                                                          std::filesystem::perms::owner_write);
-            const auto ram = cache / "ram.bin";
-            { std::ofstream(ram) << "fixture-RAM"; }
-            std::filesystem::resize_file(ram, 8ULL * 1024 * 1024 * 1024);
+
+        // The prelaunch checks of the macOS engine.
+        if (voyemu::os::platform_name == "macOS") {
             {
-                std::ofstream f(cache / "vmstate.bin", std::ios::binary);
-                const char bytes[] = {0x51, 0x45, 0x56, 0x4d, 0, 0, 0, 3};
-                f.write(bytes, 8);
-            }
-            {
-                std::ofstream f(cache / "gpu/40001000.gpu", std::ios::binary);
-                const std::array<std::uint64_t, 3> words{0x3130305550475156ULL, 0x40001000ULL,
-                                                         8ULL * 1024 * 1024 * 1024};
-                f.write(reinterpret_cast<const char *>(words.data()), 24);
-            }
+                const auto cache = root / "prelaunch-cache";
+                ensure_private_directory(cache);
+                ensure_private_directory(cache / "gpu");
+                const auto blocked = root / "non-executable-qemu";
+                std::filesystem::copy_file(fixture, blocked);
+                std::filesystem::permissions(blocked, std::filesystem::perms::owner_read |
+                                                              std::filesystem::perms::owner_write);
+                const auto ram = cache / "ram.bin";
+                { std::ofstream(ram) << "fixture-RAM"; }
+                std::filesystem::resize_file(ram, 8ULL * 1024 * 1024 * 1024);
+                {
+                    std::ofstream f(cache / "vmstate.bin", std::ios::binary);
+                    const char bytes[] = {0x51, 0x45, 0x56, 0x4d, 0, 0, 0, 3};
+                    f.write(bytes, 8);
+                }
+                {
+                    std::ofstream f(cache / "gpu/40001000.gpu", std::ios::binary);
+                    const std::array<std::uint64_t, 3> words{0x3130305550475156ULL, 0x40001000ULL,
+                                                             8ULL * 1024 * 1024 * 1024};
+                    f.write(reinterpret_cast<const char *>(words.data()), 24);
+                }
 
-            for (const auto &path : {ram, cache / "vmstate.bin", cache / "gpu/40001000.gpu"}) {
-                std::filesystem::permissions(path, std::filesystem::perms::owner_read |
-                                                           std::filesystem::perms::owner_write);
-            }
+                for (const auto &path : {ram, cache / "vmstate.bin", cache / "gpu/40001000.gpu"}) {
+                    std::filesystem::permissions(path, std::filesystem::perms::owner_read |
+                                                               std::filesystem::perms::owner_write);
+                }
 
-            auto failed = spec;
-            failed["guest_arch"] = "aarch64";
-            failed["qemu"]["executable"] = blocked.string();
-            failed["pins"].push_back(
-                    {{"path", blocked.string()}, {"sha256", sha256_file(blocked)}});
-            failed["graphics"] = {{"executable", fixture.string()}, {"angle", root.string()}};
-            failed["quickboot"] = {{"directory", cache.string()}};
-
-            for (const auto *name : {"libEGL.dylib", "libGLESv2.dylib"}) {
+                auto failed = spec;
+                failed["guest_arch"] = "aarch64";
+                failed["qemu"]["executable"] = blocked.string();
                 failed["pins"].push_back(
-                        {{"path", (root / name).string()}, {"sha256", sha256_file(root / name)}});
-            }
+                        {{"path", blocked.string()}, {"sha256", sha256_file(blocked)}});
+                failed["graphics"] = {{"executable", fixture.string()}, {"angle", root.string()}};
+                failed["quickboot"] = {{"directory", cache.string()}};
 
-            failed["qemu"]["args"] = Json::array(
-                    {"-machine", "virt-11.0,memory-backend=qnxmem", "-m", "8192", "-object",
-                     "memory-backend-file,id=qnxmem,size=8192M,mem-path=${SESSION}/qnx-ram.bin,share=on",
-                     "-S"});
-            auto pin = [](const auto &path) {
-                return Json{{"bytes", std::filesystem::file_size(path)},
-                            {"sha256", sha256_file(path)}};
-            };
-            write_private_json(
-                    cache / "manifest.json",
-                    {{"schema", 1},
-                     {"state", "ready"},
-                     {"key", qnx_checkpoint_key(failed, "test-profile")},
-                     {"state_sequence", 1},
-                     {"theme_sequence", 0},
-                     {"wheel_sequence", 0},
-                     {"held_keys", 0},
-                     {"producers", Json::array({0x40001000ULL})},
-                     {"vm", pin(cache / "vmstate.bin")},
-                     {"gpu", {{"40001000.gpu", pin(cache / "gpu/40001000.gpu")}}},
-                     {"memory",
-                      {{"format", "shared-file-cpr-v1"},
-                       {"ram", pin(ram)},
-                       {"boot_roms", Json::array({{{"address", 0x40000000ULL}, {"bytes", 8}}})}}}});
-            auto saved = inspect_qnx_checkpoint(failed, "test-profile");
-            require(saved.resume && saved.external_ram &&
-                            remember_qnx_checkpoint_verification(saved),
-                    "prelaunch checkpoint fixture did not verify");
-            const auto id = random_token();
-            const auto directory = root / ".local/machines/test-profile/sessions" / id;
-            Session no_child(directory, id);
-            bool rejected = false;
-            try {
-                no_child.attach_cluster(failed, 1);
-            } catch (const std::exception &) {
-                rejected = true;
-            }
+                for (const auto *name : {"libEGL.dylib", "libGLESv2.dylib"}) {
+                    failed["pins"].push_back({{"path", (root / name).string()},
+                                              {"sha256", sha256_file(root / name)}});
+                }
 
-            require(rejected, "non-executable QEMU unexpectedly started");
-            const auto status = no_child.handle({{"op", "status"}});
-            require(status["qnx_pid"] == 0 &&
-                            status["deliveries"]["qnx"]["cleanup"]["ram_removed"] == true &&
-                            !std::filesystem::exists(directory / "qnx-ram.bin"),
-                    "failed process launch leaked its RAM clone");
-            const auto evidence = std::filesystem::path(
-                    status["deliveries"]["qnx"]["cleanup"]["handoff"].get<std::string>());
-            require(std::filesystem::is_regular_file(evidence) && std::filesystem::exists(ram),
-                    "failed launch deleted source or omitted durable handoff");
-            no_child.stop();
+                failed["qemu"]["args"] = Json::array(
+                        {"-machine", "virt-11.0,memory-backend=qnxmem", "-m", "8192", "-object",
+                         "memory-backend-file,id=qnxmem,size=8192M,mem-path=${SESSION}/qnx-ram.bin,share=on",
+                         "-S"});
+                auto pin = [](const auto &path) {
+                    return Json{{"bytes", std::filesystem::file_size(path)},
+                                {"sha256", sha256_file(path)}};
+                };
+                write_private_json(cache / "manifest.json",
+                                   {{"schema", 1},
+                                    {"state", "ready"},
+                                    {"key", qnx_checkpoint_key(failed, "test-profile")},
+                                    {"state_sequence", 1},
+                                    {"theme_sequence", 0},
+                                    {"wheel_sequence", 0},
+                                    {"held_keys", 0},
+                                    {"producers", Json::array({0x40001000ULL})},
+                                    {"vm", pin(cache / "vmstate.bin")},
+                                    {"gpu", {{"40001000.gpu", pin(cache / "gpu/40001000.gpu")}}},
+                                    {"memory",
+                                     {{"format", "shared-file-cpr-v1"},
+                                      {"ram", pin(ram)},
+                                      {"boot_roms", Json::array({{{"address", 0x40000000ULL},
+                                                                  {"bytes", 8}}})}}}});
+                auto saved = inspect_qnx_checkpoint(failed, "test-profile");
+                require(saved.resume && saved.external_ram &&
+                                remember_qnx_checkpoint_verification(saved),
+                        "prelaunch checkpoint fixture did not verify");
+                const auto id = random_token();
+                const auto directory = root / ".local/machines/test-profile/sessions" / id;
+                Session no_child(directory, id);
+                bool rejected = false;
+                try {
+                    no_child.attach_cluster(failed, 1);
+                } catch (const std::exception &) {
+                    rejected = true;
+                }
+
+                require(rejected, "non-executable QEMU unexpectedly started");
+                const auto status = no_child.handle({{"op", "status"}});
+                require(status["qnx_pid"] == 0 &&
+                                status["deliveries"]["qnx"]["cleanup"]["ram_removed"] == true &&
+                                !std::filesystem::exists(directory / "qnx-ram.bin"),
+                        "failed process launch leaked its RAM clone");
+                const auto evidence = std::filesystem::path(
+                        status["deliveries"]["qnx"]["cleanup"]["handoff"].get<std::string>());
+                require(std::filesystem::is_regular_file(evidence) && std::filesystem::exists(ram),
+                        "failed launch deleted source or omitted durable handoff");
+                no_child.stop();
+            }
         }
-#endif
+
         auto id = random_token();
         Session guarded(root / ".local/machines/test-profile/sessions" / id, id);
 

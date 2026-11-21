@@ -2,21 +2,19 @@
 #include <cerrno>
 #include <chrono>
 #include <cstring>
+#include <fcntl.h>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <signal.h>
 #include <sstream>
 #include <string>
-#include <thread>
-#include <vector>
-#ifndef _WIN32
-#include <fcntl.h>
-#include <signal.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <sys/wait.h>
+#include <thread>
 #include <unistd.h>
-#endif
+#include <vector>
 namespace fs = std::filesystem;
 
 static std::string read(const fs::path &p) {
@@ -32,7 +30,6 @@ static void write(const fs::path &p, const std::string &s) {
     assert(f.good());
 }
 
-#ifndef _WIN32
 struct Result {
     int code;
     std::string output;
@@ -350,10 +347,8 @@ echo RC=$qm_test_rc:$qm_test_bad
     std::cout
             << "driver native opt-in only/default parity/160 attempts/failure/strict transport PASS; guest unverified\n";
 }
-#endif
 
 int main(int argc, char **argv) try {
-#ifndef _WIN32
     if (argc >= 3 && std::string(argv[1]) == "--record") {
         std::ofstream f(argv[2]);
 
@@ -475,13 +470,6 @@ int main(int argc, char **argv) try {
     fs::remove_all(temp);
 
     return 0;
-#else
-    (void)argc;
-    (void)argv;
-    std::cout << "SKIP: actual shell fixture requires a POSIX /bin/bash; no Windows shell claim\n";
-
-    return 77;
-#endif
 } catch (const std::exception &error) {
     std::cerr << error.what() << '\n';
 

@@ -6,6 +6,7 @@
 #include "model.hpp"
 #include "os/fs.hpp"
 #include "os/platform.hpp"
+#include "os/process.hpp"
 #include "os/socket.hpp"
 #include "windows_startup.hpp"
 #include <algorithm>
@@ -589,7 +590,7 @@ int main(int argc, char **argv) {
 
             if (!token.empty() && sha256_bytes(token) == argv[2]) {
                 // The modeled console prints LF; Windows text mode would add CR.
-                binary_standard_output();
+                os::binary_standard_output();
                 std::cout << argv[3] << '\n';
             }
 

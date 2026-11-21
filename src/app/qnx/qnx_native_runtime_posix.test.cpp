@@ -1,16 +1,14 @@
 #include "model.hpp"
 #include "process.hpp"
+#include <cerrno>
+#include <csignal>
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
-#ifndef _WIN32
-#include <cerrno>
-#include <csignal>
 #include <unistd.h>
-#endif
 using namespace voyemu;
 namespace {
 void need(bool value, const char *message) {
@@ -27,7 +25,6 @@ std::string read(const std::filesystem::path &path) {
     return {(std::istreambuf_iterator<char>(file)), {}};
 }
 
-#ifndef _WIN32
 const char *environment(const char *key) {
     auto value = std::getenv(key);
 
@@ -80,19 +77,10 @@ int record() {
 
     return std::stoi(environment("QBW_TEST_STATUS"));
 }
-#endif
 } // namespace
 
 int main(int argc, char **argv) {
     try {
-#ifdef _WIN32
-        (void)argc;
-        (void)argv;
-        std::cout
-                << "Mac Bash route test unavailable on Windows; actual QNX ksh acceptance is separate\n";
-
-        return 77;
-#else
         if (argc == 2 && std::string_view(argv[1]) == "--record") {
             return record();
         }
@@ -291,7 +279,6 @@ int main(int argc, char **argv) {
                 << "Mac actual shell prefix: exec direct scoped carrier parent, literal argv/status/env guards, absent/default legacy routes passed; no QNX ksh execution\n";
 
         return 0;
-#endif
     } catch (const std::exception &error) {
         std::cerr << error.what() << '\n';
 

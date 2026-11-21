@@ -1,10 +1,9 @@
 #include "android_console.hpp"
+#include "android_console_test_host.hpp"
+#include "os/platform.hpp"
 #include <iostream>
 #include <stdexcept>
 #include <string>
-#ifndef _WIN32
-#include <sys/resource.h>
-#endif
 using namespace voyemu;
 
 static void require(bool value, const char *reason) {
@@ -28,37 +27,17 @@ int main() try {
 
             client.connect(sink.port(),
                            android_console_detail::Clock::now() + std::chrono::seconds(5));
-#ifdef __APPLE__
         } catch (const android_console_detail::Timeout &) {
-#else
+            // macOS lets the refused connect time out; the other hosts report the disconnect.
+            refused = voyemu::os::platform_name == "macOS";
         } catch (const android_console_detail::Disconnected &) {
-#endif
-            refused = true;
+            refused = voyemu::os::platform_name != "macOS";
         }
 
         require(refused, "SDK notification port accepted a connection");
     }
 
-#ifndef _WIN32
-    // Without a free descriptor the socket itself fails; the sink reports the owner error.
-    rlimit previous{};
-
-    require(getrlimit(RLIMIT_NOFILE, &previous) == 0, "getrlimit failed");
-    rlimit exhausted = previous;
-    exhausted.rlim_cur = 3;
-    require(setrlimit(RLIMIT_NOFILE, &exhausted) == 0, "setrlimit failed");
-    std::string message;
-
-    try {
-        AndroidSdkAdbSink sink;
-    } catch (const std::runtime_error &error) {
-        message = error.what();
-    }
-
-    require(setrlimit(RLIMIT_NOFILE, &previous) == 0, "setrlimit restore failed");
-    require(message == "ANDROID_ADB_OWNER: SDK notification port unavailable",
-            "socket failure did not map to ANDROID_ADB_OWNER");
-#endif
+    exhausted_descriptor_case();
     std::cout << "android console tests passed\n";
 
     return 0;

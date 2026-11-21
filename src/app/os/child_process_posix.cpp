@@ -446,12 +446,11 @@ long long write_capture(FileHandle file, const char *data, std::size_t size) {
     }
 }
 
-void set_environment_variable(const std::string &name, const std::string &value) {
-    if (value.empty()) {
-        ::unsetenv(name.c_str());
-    } else {
-        ::setenv(name.c_str(), value.c_str(), 1);
-    }
+bool set_environment_variable(const std::string &name, const std::string &value) {
+    return (value.empty() ? ::unsetenv(name.c_str()) : ::setenv(name.c_str(), value.c_str(), 1)) ==
+           0;
 }
+
+void binary_standard_output() {}
 } // namespace os
 } // namespace voyemu

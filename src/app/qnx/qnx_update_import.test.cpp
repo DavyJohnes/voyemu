@@ -1,16 +1,14 @@
 #include "qnx_update_import.hpp"
 #include "cli_messages.hpp"
+#include "os/library.hpp"
+#include "os/platform.hpp"
 #include "process.hpp"
 #include "qnx_qinggan11.hpp"
 #include <fstream>
 #include <iostream>
 #include <limits>
+#include <memory>
 #include <vector>
-#ifdef _WIN32
-#include <windows.h>
-#else
-#include <dlfcn.h>
-#endif
 using namespace voyemu;
 namespace {
 void check(bool value, const char *reason) {
@@ -112,13 +110,7 @@ int main(int argc, char **argv) {
                                                   128 * 1024);
             const auto tools = read_private_json(root / "src/app/toolchain.json", 256 * 1024)
                                        .at("qnxUpdateCodec")
-                                       .at(
-#ifdef _WIN32
-                                               "win32"
-#else
-                                               "darwin"
-#endif
-                                       );
+                                       .at(voyemu::os::host_windows ? "win32" : "darwin");
             std::cout << import_qnx_update(std::filesystem::canonical(argv[4]),
                                            config.at("update").at("sha256").get<std::string>(),
                                            config.at("originals"),
@@ -260,21 +252,11 @@ int main(int argc, char **argv) {
 
         check(short_space && !std::filesystem::exists(root / "space"),
               "a volume without the reserve names the disk space");
-#ifdef _WIN32
-        const auto handle =
-                LoadLibraryExW(library.c_str(), nullptr,
-                               LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
-        check(handle != nullptr, "codec load");
+        auto handle = std::make_unique<voyemu::os::Library>(std::filesystem::path(library));
+        check(handle->loaded(), "codec load");
         auto symbol = [&](const char *name) {
-            return reinterpret_cast<void *>(GetProcAddress(handle, name));
+            return handle->symbol(name);
         };
-#else
-        const auto handle = dlopen(library.c_str(), RTLD_NOW | RTLD_LOCAL);
-        check(handle != nullptr, "codec load");
-        auto symbol = [&](const char *name) {
-            return dlsym(handle, name);
-        };
-#endif
         const auto compress = reinterpret_cast<std::size_t (*)(
                 void *, std::size_t, const void *, std::size_t, int)>(symbol("ZSTD_compress"));
         const auto is_error = reinterpret_cast<unsigned (*)(std::size_t)>(symbol("ZSTD_isError"));
@@ -349,11 +331,7 @@ int main(int argc, char **argv) {
         });
         check(!std::filesystem::exists(root / "trailing-segment-frame"),
               "undeclared trailing frame not accepted as segment");
-#ifdef _WIN32
-        FreeLibrary(handle);
-#else
-        dlclose(handle);
-#endif
+        handle.reset();
         std::cout
                 << "Native owner update raw/ordered-zstd import, exact pins and transaction guards passed\n";
 

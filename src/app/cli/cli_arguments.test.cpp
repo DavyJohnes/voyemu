@@ -1,5 +1,7 @@
 #include "cli_arguments.hpp"
 #include "help.hpp"
+#include "os/platform.hpp"
+#include "os/process.hpp"
 #include <cassert>
 #include <cstdlib>
 #include <exception>
@@ -20,11 +22,7 @@ int main(int argc, char **argv) try {
     const auto variant = root / "machines/variant";
     ensure_private_directory(variant);
     write_private_json(variant / "runtime.json", read_private_json(machine / "runtime.json"));
-#ifdef _WIN32
-    const auto executable = root / "voyemu.exe";
-#else
-    const auto executable = root / "voyemu";
-#endif
+    const auto executable = root / ("voyemu" + std::string(voyemu::os::executable_suffix));
     auto parse = [&](std::vector<std::string> words) {
         words.insert(words.begin(), executable.string());
         std::vector<char *> pointers;
@@ -152,19 +150,11 @@ int main(int argc, char **argv) try {
                    root / "downloads/request.json" &&
            parse({"test", "--request", "-"}).request_file == "-");
     std::filesystem::current_path(saved_directory);
-#ifdef _WIN32
-    const char *home_variable = "USERPROFILE";
-#else
-    const char *home_variable = "HOME";
-#endif
+    const char *home_variable = voyemu::os::host_windows ? "USERPROFILE" : "HOME";
     const auto *saved_home = std::getenv(home_variable);
     const std::string previous_home = saved_home ? saved_home : "";
     const auto set_home = [&](const std::string &value) {
-#ifdef _WIN32
-        _putenv_s(home_variable, value.c_str());
-#else
-        setenv(home_variable, value.c_str(), 1);
-#endif
+        voyemu::os::set_environment_variable(home_variable, value);
     };
     set_home(root.string());
     assert(fetched("~/owner update.zip") == archive);
@@ -177,10 +167,12 @@ int main(int argc, char **argv) try {
     std::filesystem::create_directory_symlink(real, root / "linked");
     assert(fetched((root / "linked/owner.zip").string()) == real / "owner.zip");
     assert(fetched((root / "linked/absent.zip").string()) == real / "absent.zip");
-#ifndef _WIN32
-    std::filesystem::create_symlink(real / "owner.zip", root / "linked.zip");
-    assert(fetched((root / "linked.zip").string()) == real / "owner.zip");
-#endif
+
+    // Creating a file symbolic link needs a privilege on Windows.
+    if (!voyemu::os::host_windows) {
+        std::filesystem::create_symlink(real / "owner.zip", root / "linked.zip");
+        assert(fetched((root / "linked.zip").string()) == real / "owner.zip");
+    }
 
     for (const auto &options : std::vector<std::vector<std::string>>{
                  {"fetch", profile, "--source=adb"},

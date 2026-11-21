@@ -1,23 +1,12 @@
 #include "media_rpc.hpp"
+#include "media_rpc_test_host.hpp"
 #include "model.hpp"
+#include "os/platform.hpp"
 #include "process.hpp"
 #include <cassert>
+#include <exception>
 #include <fstream>
 #include <iostream>
-#ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#include "os/current_user_windows.hpp"
-#include "os/private_state_security.hpp"
-#include <windows.h>
-#include <aclapi.h>
-
-#include <vector>
-#else
-#include <exception>
-#include <sys/stat.h>
-#include <unistd.h>
-#endif
 using namespace voyemu;
 
 template <class Function> void rejects(Function f) {
@@ -77,14 +66,10 @@ int main(int argc, char **argv) try {
     ensure_private_directory(root);
     const auto descriptor = root / "pid_123.ini", record = root / "connection.json";
     auto ini = [&](const std::string &extra = "") {
-#ifdef _WIN32
         if (!std::filesystem::exists(descriptor)) {
-            voyemu::detail::PrivateStateSecurity security;
-            HANDLE owned = CreateFileW(descriptor.c_str(), GENERIC_WRITE, 0, &security.attributes,
-                                       CREATE_NEW, FILE_ATTRIBUTE_NORMAL, nullptr);
-            assert(owned != INVALID_HANDLE_VALUE && CloseHandle(owned));
+            create_private_descriptor(descriptor);
         }
-#endif
+
         std::ofstream file(descriptor);
         file << "port.serial=5566\ngrpc.port=45992\ngrpc.token=" << std::string(32, '1') << "\n"
              << extra;
@@ -141,43 +126,22 @@ int main(int argc, char **argv) try {
         std::filesystem::remove(root / "alias.ini");
     }
 
-#ifdef _WIN32
-    // Wine may report successful owner assignment without changing the owner SID.
-    HANDLE file = CreateFileW(descriptor.c_str(), WRITE_OWNER | READ_CONTROL,
-                              FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr,
-                              OPEN_EXISTING, FILE_FLAG_OPEN_REPARSE_POINT, nullptr);
-    bool foreign = false;
+    // The foreign owner case assigns Everyone as the owner of a Windows file.
+    if (voyemu::os::host_windows) {
+        const bool foreign = assign_world_owner(descriptor);
 
-    if (file != INVALID_HANDLE_VALUE) {
-        BYTE sid[SECURITY_MAX_SID_SIZE]{};
-        DWORD size = sizeof(sid);
-        assert(CreateWellKnownSid(WinWorldSid, nullptr, sid, &size));
-        const auto changed = SetSecurityInfo(file, SE_FILE_OBJECT, OWNER_SECURITY_INFORMATION, sid,
-                                             nullptr, nullptr, nullptr);
-        PSID owner = nullptr;
-        PSECURITY_DESCRIPTOR security = nullptr;
-        const auto observed = GetSecurityInfo(file, SE_FILE_OBJECT, OWNER_SECURITY_INFORMATION,
-                                              &owner, nullptr, nullptr, nullptr, &security);
-        foreign = changed == ERROR_SUCCESS && observed == ERROR_SUCCESS && owner &&
-                  EqualSid(owner, sid);
-
-        if (security) {
-            LocalFree(security);
+        if (foreign) {
+            rejects([&] {
+                media::read_connection(record, id);
+            });
+            std::filesystem::remove(descriptor);
+            ini();
+        } else {
+            std::cout
+                    << "SKIP descriptor foreign owner: assignment not confirmed by SID readback\n";
         }
-
-        CloseHandle(file);
     }
 
-    if (foreign) {
-        rejects([&] {
-            media::read_connection(record, id);
-        });
-        std::filesystem::remove(descriptor);
-        ini();
-    } else {
-        std::cout << "SKIP descriptor foreign owner: assignment not confirmed by SID readback\n";
-    }
-#endif
     rejects([&] {
         media::send_input(connection, "arbitrary-method", {});
     });
@@ -198,128 +162,116 @@ int main(int argc, char **argv) try {
     });
     assert(connection.frame_directory == root / "media-frames");
     assert(!std::filesystem::exists(connection.frame_directory));
-#ifdef _WIN32
-    const auto owned_by_current_user = [&](const std::filesystem::path &path) {
-        HANDLE file = CreateFileW(path.c_str(), READ_CONTROL,
-                                  FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr,
-                                  OPEN_EXISTING, FILE_FLAG_OPEN_REPARSE_POINT, nullptr);
 
-        if (file == INVALID_HANDLE_VALUE) {
-            return false;
-        }
-
-        const bool owned = voyemu::os::owned_by_current_user(file);
-        CloseHandle(file);
-
-        return owned;
-    };
-    std::filesystem::path frame_path;
-    {
-        media::MappedFrame frame(root / "buffers", pixel_bytes);
-        const auto handle = frame.handle();
-        assert(handle.starts_with("file:///"));
-        frame_path = handle.substr(std::string("file:///").size());
-        assert(std::filesystem::file_size(frame_path) == pixel_bytes &&
-               owned_by_current_user(frame_path));
+    // Windows pins the mapped frame file against deletion and truncation and may refuse links.
+    if (voyemu::os::host_windows) {
+        std::filesystem::path frame_path;
         {
-            std::fstream file(frame_path, std::ios::in | std::ios::out | std::ios::binary);
-            file.put(33);
+            media::MappedFrame frame(root / "buffers", pixel_bytes);
+            const auto handle = frame.handle();
+            assert(handle.starts_with("file:///"));
+            frame_path = handle.substr(std::string("file:///").size());
+            assert(private_frame_file(frame_path, pixel_bytes));
+            {
+                std::fstream file(frame_path, std::ios::in | std::ios::out | std::ios::binary);
+                file.put(33);
+            }
+            assert(frame.pixels().front() == 33);
         }
-        assert(frame.pixels().front() == 33);
-    }
-    assert(!std::filesystem::exists(frame_path));
-    rejects([&] {
-        media::MappedFrame frame("relative-directory", pixel_bytes);
-    });
-    std::error_code frame_symlink_error;
-    std::filesystem::create_symlink(root / "buffers", root / "linked-buffers", frame_symlink_error);
+        assert(!std::filesystem::exists(frame_path));
+        rejects([&] {
+            media::MappedFrame frame("relative-directory", pixel_bytes);
+        });
+        std::error_code frame_symlink_error;
+        std::filesystem::create_symlink(root / "buffers", root / "linked-buffers",
+                                        frame_symlink_error);
 
-    if (frame_symlink_error) {
-        std::cout << "SKIP frame reparse fixture: " << frame_symlink_error.message() << '\n';
+        if (frame_symlink_error) {
+            std::cout << "SKIP frame reparse fixture: " << frame_symlink_error.message() << '\n';
+        } else {
+            rejects([&] {
+                media::MappedFrame frame(root / "linked-buffers", pixel_bytes);
+            });
+            std::filesystem::remove(root / "linked-buffers");
+        }
+
+        // Windows pins a mapped file against deletion and truncation, so the hard link and the
+        // extent change are attempted while the region is live and cleaned up after release.
+        bool frame_alias = false;
+        {
+            media::MappedFrame frame(root / "buffers", pixel_bytes);
+            frame_path = frame.handle().substr(std::string("file:///").size());
+            std::error_code frame_hardlink_error;
+            std::filesystem::create_hard_link(frame_path, root / "frame-alias",
+                                              frame_hardlink_error);
+
+            if (frame_hardlink_error) {
+                std::cout << "SKIP frame hardlink fixture: " << frame_hardlink_error.message()
+                          << '\n';
+            } else {
+                frame_alias = true;
+                rejects([&] {
+                    frame.pixels();
+                });
+            }
+
+            std::error_code frame_resize_error;
+            std::filesystem::resize_file(frame_path, 8, frame_resize_error);
+
+            if (frame_resize_error) {
+                std::cout << "frame extent refused by pinned mapping: "
+                          << frame_resize_error.message() << '\n';
+            } else {
+                rejects([&] {
+                    frame.pixels();
+                });
+            }
+        }
+
+        if (frame_alias) {
+            assert(std::filesystem::exists(frame_path));
+            std::filesystem::remove(root / "frame-alias");
+            std::filesystem::remove(frame_path);
+        }
+
+        std::atomic<bool> stopped{true};
+        media::ScreenshotStream raw(connection, {0, 1920, 720}, true);
+        raw.run(stopped, [](media::Image) {
+            assert(false);
+        });
+        assert(!std::filesystem::exists(connection.frame_directory));
     } else {
+        std::filesystem::path frame_path;
+        {
+            media::MappedFrame frame(root / "buffers", pixel_bytes);
+            frame_path = frame.handle().substr(7);
+            assert(private_frame_file(frame_path, pixel_bytes));
+            {
+                std::fstream file(frame_path, std::ios::in | std::ios::out | std::ios::binary);
+                file.put(33);
+            }
+            assert(frame.pixels().front() == 33);
+            std::filesystem::create_hard_link(frame_path, root / "frame-alias");
+            rejects([&] {
+                frame.pixels();
+            });
+            std::filesystem::remove(root / "frame-alias");
+            std::filesystem::resize_file(frame_path, 8);
+            rejects([&] {
+                frame.pixels();
+            });
+            std::filesystem::resize_file(frame_path, pixel_bytes);
+        }
+        assert(!std::filesystem::exists(frame_path));
+        rejects([&] {
+            media::MappedFrame frame("relative-directory", pixel_bytes);
+        });
+        std::filesystem::create_symlink(root / "buffers", root / "linked-buffers");
         rejects([&] {
             media::MappedFrame frame(root / "linked-buffers", pixel_bytes);
         });
         std::filesystem::remove(root / "linked-buffers");
     }
-
-    // Windows pins a mapped file against deletion and truncation, so the hard link and the
-    // extent change are attempted while the region is live and cleaned up after release.
-    bool frame_alias = false;
-    {
-        media::MappedFrame frame(root / "buffers", pixel_bytes);
-        frame_path = frame.handle().substr(std::string("file:///").size());
-        std::error_code frame_hardlink_error;
-        std::filesystem::create_hard_link(frame_path, root / "frame-alias", frame_hardlink_error);
-
-        if (frame_hardlink_error) {
-            std::cout << "SKIP frame hardlink fixture: " << frame_hardlink_error.message() << '\n';
-        } else {
-            frame_alias = true;
-            rejects([&] {
-                frame.pixels();
-            });
-        }
-
-        std::error_code frame_resize_error;
-        std::filesystem::resize_file(frame_path, 8, frame_resize_error);
-
-        if (frame_resize_error) {
-            std::cout << "frame extent refused by pinned mapping: " << frame_resize_error.message()
-                      << '\n';
-        } else {
-            rejects([&] {
-                frame.pixels();
-            });
-        }
-    }
-
-    if (frame_alias) {
-        assert(std::filesystem::exists(frame_path));
-        std::filesystem::remove(root / "frame-alias");
-        std::filesystem::remove(frame_path);
-    }
-
-    std::atomic<bool> stopped{true};
-    media::ScreenshotStream raw(connection, {0, 1920, 720}, true);
-    raw.run(stopped, [](media::Image) {
-        assert(false);
-    });
-    assert(!std::filesystem::exists(connection.frame_directory));
-#else
-    std::filesystem::path frame_path;
-    {
-        media::MappedFrame frame(root / "buffers", pixel_bytes);
-        frame_path = frame.handle().substr(7);
-        struct stat st{};
-        assert(::stat(frame_path.c_str(), &st) == 0 &&
-               st.st_size == static_cast<off_t>(pixel_bytes) && (st.st_mode & 0077) == 0);
-        {
-            std::fstream file(frame_path, std::ios::in | std::ios::out | std::ios::binary);
-            file.put(33);
-        }
-        assert(frame.pixels().front() == 33);
-        std::filesystem::create_hard_link(frame_path, root / "frame-alias");
-        rejects([&] {
-            frame.pixels();
-        });
-        std::filesystem::remove(root / "frame-alias");
-        std::filesystem::resize_file(frame_path, 8);
-        rejects([&] {
-            frame.pixels();
-        });
-        std::filesystem::resize_file(frame_path, pixel_bytes);
-    }
-    assert(!std::filesystem::exists(frame_path));
-    rejects([&] {
-        media::MappedFrame frame("relative-directory", pixel_bytes);
-    });
-    std::filesystem::create_symlink(root / "buffers", root / "linked-buffers");
-    rejects([&] {
-        media::MappedFrame frame(root / "linked-buffers", pixel_bytes);
-    });
-    std::filesystem::remove(root / "linked-buffers");
-#endif
 
     std::filesystem::remove_all(root);
     std::cout << "owned SDK discovery, stale epoch and closed-method guards passed\n";

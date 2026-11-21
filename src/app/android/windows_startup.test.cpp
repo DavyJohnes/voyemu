@@ -1,4 +1,5 @@
 #include "windows_startup.hpp"
+#include "os/platform.hpp"
 #include "session.hpp"
 #include "windows_wheel_pair.hpp"
 #include <cstdlib>
@@ -24,7 +25,6 @@ template <class F> void rejects(F operation) {
     throw std::runtime_error("invalid startup frame accepted");
 }
 
-#ifndef _WIN32
 std::filesystem::path test_ksh(const char *configured) {
     if (!configured) {
         return "/bin/ksh";
@@ -38,7 +38,6 @@ std::filesystem::path test_ksh(const char *configured) {
 
     return path;
 }
-#endif
 } // namespace
 
 int main() {
@@ -395,352 +394,367 @@ int main() {
                     {0, captured_nested_exit, false}, "8c9e2d2055e89f1446ab1cd36b6ace5b",
                     "c3333aea6f8e77a28fe485072d0fe5d3", "9f2bba6e-e4fd-480f-9dcc-244d113a4f53");
         });
-#ifndef _WIN32
-        // The fences require KornShell; an explicitly configured missing shell is an error.
-        need(test_ksh(nullptr) == "/bin/ksh");
-        rejects([] {
-            test_ksh("");
-        });
-        rejects([] {
-            test_ksh("/voyemu-missing-test-ksh");
-        });
-        const auto ksh = test_ksh(std::getenv("VOYEMU_TEST_KSH"));
 
-        if (!std::filesystem::exists(ksh)) {
-            std::cout
-                    << "Windows startup portable guards passed; ksh fences skipped without /bin/ksh\n";
+        // The fences run under the KornShell of a POSIX host.
+        if (!voyemu::os::host_windows) {
+            // The fences require KornShell; an explicitly configured missing shell is an error.
+            need(test_ksh(nullptr) == "/bin/ksh");
+            rejects([] {
+                test_ksh("");
+            });
+            rejects([] {
+                test_ksh("/voyemu-missing-test-ksh");
+            });
+            const auto ksh = test_ksh(std::getenv("VOYEMU_TEST_KSH"));
 
-            return 77;
-        }
+            if (!std::filesystem::exists(ksh)) {
+                std::cout
+                        << "Windows startup portable guards passed; ksh fences skipped without /bin/ksh\n";
 
-        // Execute both fences with cat unavailable: neither boot read needs a guest utility.
-        const auto slot =
-                std::filesystem::temp_directory_path() /
-                ("voyemu-startup-read-" +
-                 std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
-        need(std::filesystem::create_directory(slot));
-        struct RemoveSlot {
-            std::filesystem::path path;
-
-            ~RemoveSlot() {
-                std::error_code error;
-                std::filesystem::remove_all(path, error);
-            }
-        } cleanup{slot};
-        const auto selected_ksh = slot / "selected-ksh";
-        std::filesystem::create_symlink(std::filesystem::absolute(ksh), selected_ksh);
-        need(test_ksh(selected_ksh.c_str()) == selected_ksh);
-        ProcessSpec selected_shell;
-        selected_shell.executable = test_ksh(selected_ksh.c_str());
-        selected_shell.arguments = {"-c", "print -r -- selected-ksh"};
-        const auto selected_result = execute(selected_shell, 2000);
-        need(selected_result.exit_code == 0 && !selected_result.timed_out &&
-             selected_result.output == "selected-ksh\n");
-        const auto boot_file = slot / "boot";
-        {
-            std::ofstream output(boot_file);
-            output << boot << '\n';
-        }
-        auto generated = windows_startup_command({"id", "-u"}, frame, nonce, boot, false);
-        const std::string original_path = "/proc/sys/kernel/random/boot_id";
-
-        for (std::size_t position = 0;
-             (position = generated.find(original_path, position)) != std::string::npos;
-             position += boot_file.string().size()) {
-            generated.replace(position, original_path.size(), boot_file.string());
-        }
-
-        auto run_fence = [&](std::string observed_nonce) {
-            ProcessSpec spec;
-            spec.executable = ksh;
-            spec.arguments = {
-                    "-c",
-                    "cat(){ return 97; }; getprop(){ printf '%s\\n' '" + observed_nonce +
-                            "'; }; id(){ printf '2000\\n'; }; EPOCHREALTIME=1700000000.123456; " +
-                            generated};
-
-            return execute(spec, 2000);
-        };
-        const auto executed = run_fence(nonce);
-        need(executed.exit_code == 0 && !executed.timed_out);
-        need(parse_windows_startup_frame(executed, frame, nonce, boot).result.output == "2000\n");
-        // Real A9 Windows startup nested an already-framed pm-path command. Its exit
-        // must terminate only the action, so both ownership fences still complete.
-        auto run_action = [&](const std::string &action) {
-            auto command = windows_startup_command({action}, frame, nonce, boot, false, {}, true);
-
-            for (std::size_t position = 0;
-                 (position = command.find(original_path, position)) != std::string::npos;
-                 position += boot_file.string().size()) {
-                command.replace(position, original_path.size(), boot_file.string());
+                return 77;
             }
 
-            ProcessSpec spec;
-            spec.executable = ksh;
-            spec.arguments = {"-c", "getprop(){ print -r -- " + android_shell_quote(nonce) +
-                                            "; }; EPOCHREALTIME=1700000000.123456; " + command};
+            // Execute both fences with cat unavailable: neither boot read needs a guest utility.
+            const auto slot =
+                    std::filesystem::temp_directory_path() /
+                    ("voyemu-startup-read-" +
+                     std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+            need(std::filesystem::create_directory(slot));
+            struct RemoveSlot {
+                std::filesystem::path path;
 
-            return execute(spec, 2000);
-        };
-
-        for (const auto status : {0, 23}) {
-            const auto captured =
-                    run_action("print -r -- action-output; exit " + std::to_string(status));
-            need(captured.exit_code == 0 && !captured.timed_out);
-            const auto parsed = parse_windows_startup_frame(captured, frame, nonce, boot);
-            need(parsed.result.exit_code == status && parsed.result.output == "action-output\n");
-        }
-
-        const auto inner_frame = std::string(32, 'd');
-        const auto inner = windows_startup_command({"print -r -- nested-output; exit 7"},
-                                                   inner_frame, nonce, boot, false, {}, true);
-        const auto nested = parse_windows_startup_frame(run_action(inner), frame, nonce, boot);
-        const auto inner_result = parse_windows_startup_frame(nested.result, inner_frame, nonce,
-                                                              boot);
-        need(nested.result.exit_code == 0 && inner_result.result.exit_code == 7 &&
-             inner_result.result.output == "nested-output\n");
-        {
-            const WheelEvent down{1, "volume_down", "down", "own", 0, 0},
-                    up{2, "volume_down", "up", "own", 0, 0};
-            auto command = android_short_wheel_pair_command(
-                    nonce, std::string(32, 'a'), boot, down, up, 150,
-                    AndroidShortWheelContract::qinggan09, nonce);
-            need(command.find_first_of("\r\n") == std::string::npos);
-            (void)windows_startup_command({command}, frame, nonce, boot, true, {}, true);
-
-            for (std::size_t position = 0;
-                 (position = command.find(original_path, position)) != std::string::npos;
-                 position += boot_file.string().size()) {
-                command.replace(position, original_path.size(), boot_file.string());
-            }
-
-            const auto released = slot / "pair-released", slept = slot / "pair-sleep",
-                       pressed = slot / "pair-pressed";
-            auto pair_run = [&](bool malformed, bool foreign_after_down, bool boot_changed = false,
-                                bool down_failure = false) {
-                std::filesystem::remove(released);
-                std::filesystem::remove(slept);
-                std::filesystem::remove(pressed);
-                {
-                    std::ofstream output(boot_file);
-                    output << boot << '\n';
+                ~RemoveSlot() {
+                    std::error_code error;
+                    std::filesystem::remove_all(path, error);
                 }
-                ProcessSpec spec;
-                spec.executable = ksh;
-                const auto response = malformed ? std::string("MALFORMED-DOWN")
-                                                : Json{{"schema", 1},     {"session_id", nonce},
-                                                       {"sequence", 1},   {"button", "volume_down"},
-                                                       {"phase", "down"}, {"status", "no-consumer"}}
-                                                          .dump();
-                spec.arguments = {
-                        "-c",
-                        "getprop(){ if " +
-                                std::string(
-                                        foreign_after_down
-                                                ? "[ -e " + android_shell_quote(pressed.string()) +
-                                                          " ]"
-                                                : "false") +
-                                "; then print -r -- foreign; else print -r -- " +
-                                android_shell_quote(nonce) +
-                                "; fi; }; sleep(){ print -r -- \"$1\" > " +
-                                android_shell_quote(slept.string()) +
-                                "; }; content(){ case \"$*\" in *phase:s:down*) : > " +
-                                android_shell_quote(pressed.string()) + "; print -r -- " +
-                                android_shell_quote(response) + "; " +
-                                (boot_changed
-                                         ? "print -r -- " + android_shell_quote(other) + " > " +
-                                                   android_shell_quote(boot_file.string()) + "; "
-                                         : "") +
-                                (down_failure ? "return 23; " : "") + ";; *phase:s:up*) : > " +
-                                android_shell_quote(released.string()) +
-                                "; print -r -- UP;; *) return 9;; esac; }; " + command};
-
-                return execute(spec, 2000);
-            };
-
-            for (bool malformed : {false, true}) {
-                const auto result = pair_run(malformed, false);
-                need(result.exit_code == 0 && !result.timed_out &&
-                     std::filesystem::exists(released));
-                std::ifstream input(slept);
-                std::string interval;
-                std::getline(input, interval);
-                need(interval == "0.150000");
-                need(result.output.find("VOYEMU_UP\nUP") != std::string::npos);
-            }
-
-            const auto foreign = pair_run(false, true);
-            need(foreign.exit_code == 79 && !std::filesystem::exists(released));
-            const auto changed_boot = pair_run(false, false, true);
-            need(changed_boot.exit_code == 79 && !std::filesystem::exists(released));
-            const auto failed_down = pair_run(false, false, false, true);
-            need(failed_down.exit_code != 0 && std::filesystem::exists(released));
+            } cleanup{slot};
+            const auto selected_ksh = slot / "selected-ksh";
+            std::filesystem::create_symlink(std::filesystem::absolute(ksh), selected_ksh);
+            need(test_ksh(selected_ksh.string().c_str()) == selected_ksh);
+            ProcessSpec selected_shell;
+            selected_shell.executable = test_ksh(selected_ksh.string().c_str());
+            selected_shell.arguments = {"-c", "print -r -- selected-ksh"};
+            const auto selected_result = execute(selected_shell, 2000);
+            need(selected_result.exit_code == 0 && !selected_result.timed_out &&
+                 selected_result.output == "selected-ksh\n");
+            const auto boot_file = slot / "boot";
             {
                 std::ofstream output(boot_file);
                 output << boot << '\n';
             }
+            auto generated = windows_startup_command({"id", "-u"}, frame, nonce, boot, false);
+            const std::string original_path = "/proc/sys/kernel/random/boot_id";
+
+            for (std::size_t position = 0;
+                 (position = generated.find(original_path, position)) != std::string::npos;
+                 position += boot_file.string().size()) {
+                generated.replace(position, original_path.size(), boot_file.string());
+            }
+
+            auto run_fence = [&](std::string observed_nonce) {
+                ProcessSpec spec;
+                spec.executable = ksh;
+                spec.arguments = {
+                        "-c",
+                        "cat(){ return 97; }; getprop(){ printf '%s\\n' '" + observed_nonce +
+                                "'; }; id(){ printf '2000\\n'; }; EPOCHREALTIME=1700000000.123456; " +
+                                generated};
+
+                return execute(spec, 2000);
+            };
+            const auto executed = run_fence(nonce);
+            need(executed.exit_code == 0 && !executed.timed_out);
+            need(parse_windows_startup_frame(executed, frame, nonce, boot).result.output ==
+                 "2000\n");
+            // Real A9 Windows startup nested an already-framed pm-path command. Its exit
+            // must terminate only the action, so both ownership fences still complete.
+            auto run_action = [&](const std::string &action) {
+                auto command = windows_startup_command({action}, frame, nonce, boot, false, {},
+                                                       true);
+
+                for (std::size_t position = 0;
+                     (position = command.find(original_path, position)) != std::string::npos;
+                     position += boot_file.string().size()) {
+                    command.replace(position, original_path.size(), boot_file.string());
+                }
+
+                ProcessSpec spec;
+                spec.executable = ksh;
+                spec.arguments = {"-c", "getprop(){ print -r -- " + android_shell_quote(nonce) +
+                                                "; }; EPOCHREALTIME=1700000000.123456; " + command};
+
+                return execute(spec, 2000);
+            };
+
+            for (const auto status : {0, 23}) {
+                const auto captured =
+                        run_action("print -r -- action-output; exit " + std::to_string(status));
+                need(captured.exit_code == 0 && !captured.timed_out);
+                const auto parsed = parse_windows_startup_frame(captured, frame, nonce, boot);
+                need(parsed.result.exit_code == status &&
+                     parsed.result.output == "action-output\n");
+            }
+
+            const auto inner_frame = std::string(32, 'd');
+            const auto inner = windows_startup_command({"print -r -- nested-output; exit 7"},
+                                                       inner_frame, nonce, boot, false, {}, true);
+            const auto nested = parse_windows_startup_frame(run_action(inner), frame, nonce, boot);
+            const auto inner_result = parse_windows_startup_frame(nested.result, inner_frame, nonce,
+                                                                  boot);
+            need(nested.result.exit_code == 0 && inner_result.result.exit_code == 7 &&
+                 inner_result.result.output == "nested-output\n");
+            {
+                const WheelEvent down{1, "volume_down", "down", "own", 0, 0},
+                        up{2, "volume_down", "up", "own", 0, 0};
+                auto command = android_short_wheel_pair_command(
+                        nonce, std::string(32, 'a'), boot, down, up, 150,
+                        AndroidShortWheelContract::qinggan09, nonce);
+                need(command.find_first_of("\r\n") == std::string::npos);
+                (void)windows_startup_command({command}, frame, nonce, boot, true, {}, true);
+
+                for (std::size_t position = 0;
+                     (position = command.find(original_path, position)) != std::string::npos;
+                     position += boot_file.string().size()) {
+                    command.replace(position, original_path.size(), boot_file.string());
+                }
+
+                const auto released = slot / "pair-released", slept = slot / "pair-sleep",
+                           pressed = slot / "pair-pressed";
+                auto pair_run = [&](bool malformed, bool foreign_after_down,
+                                    bool boot_changed = false, bool down_failure = false) {
+                    std::filesystem::remove(released);
+                    std::filesystem::remove(slept);
+                    std::filesystem::remove(pressed);
+                    {
+                        std::ofstream output(boot_file);
+                        output << boot << '\n';
+                    }
+                    ProcessSpec spec;
+                    spec.executable = ksh;
+                    const auto response =
+                            malformed ? std::string("MALFORMED-DOWN")
+                                      : Json{{"schema", 1},     {"session_id", nonce},
+                                             {"sequence", 1},   {"button", "volume_down"},
+                                             {"phase", "down"}, {"status", "no-consumer"}}
+                                                .dump();
+                    spec.arguments = {
+                            "-c",
+                            "getprop(){ if " +
+                                    std::string(foreign_after_down
+                                                        ? "[ -e " +
+                                                                  android_shell_quote(
+                                                                          pressed.string()) +
+                                                                  " ]"
+                                                        : "false") +
+                                    "; then print -r -- foreign; else print -r -- " +
+                                    android_shell_quote(nonce) +
+                                    "; fi; }; sleep(){ print -r -- \"$1\" > " +
+                                    android_shell_quote(slept.string()) +
+                                    "; }; content(){ case \"$*\" in *phase:s:down*) : > " +
+                                    android_shell_quote(pressed.string()) + "; print -r -- " +
+                                    android_shell_quote(response) + "; " +
+                                    (boot_changed
+                                             ? "print -r -- " + android_shell_quote(other) + " > " +
+                                                       android_shell_quote(boot_file.string()) +
+                                                       "; "
+                                             : "") +
+                                    (down_failure ? "return 23; " : "") + ";; *phase:s:up*) : > " +
+                                    android_shell_quote(released.string()) +
+                                    "; print -r -- UP;; *) return 9;; esac; }; " + command};
+
+                    return execute(spec, 2000);
+                };
+
+                for (bool malformed : {false, true}) {
+                    const auto result = pair_run(malformed, false);
+                    need(result.exit_code == 0 && !result.timed_out &&
+                         std::filesystem::exists(released));
+                    std::ifstream input(slept);
+                    std::string interval;
+                    std::getline(input, interval);
+                    need(interval == "0.150000");
+                    need(result.output.find("VOYEMU_UP\nUP") != std::string::npos);
+                }
+
+                const auto foreign = pair_run(false, true);
+                need(foreign.exit_code == 79 && !std::filesystem::exists(released));
+                const auto changed_boot = pair_run(false, false, true);
+                need(changed_boot.exit_code == 79 && !std::filesystem::exists(released));
+                const auto failed_down = pair_run(false, false, false, true);
+                need(failed_down.exit_code != 0 && std::filesystem::exists(released));
+                {
+                    std::ofstream output(boot_file);
+                    output << boot << '\n';
+                }
+                rejects([&] {
+                    android_short_wheel_pair_command(nonce, std::string(32, 'a'), "invalid", down,
+                                                     up, 150, AndroidShortWheelContract::qinggan09, nonce);
+                });
+            }
+            // Android R56 has no printf builtin. Count actual external utility calls;
+            // marker emission must use print's builtin rather than hide cost behind host printf.
+            const auto external_calls = slot / "external-printf";
+            ProcessSpec marker_contract;
+            marker_contract.executable = ksh;
+            marker_contract.arguments = {
+                    "-c",
+                    "printf(){ print -r -- call >> " +
+                            android_shell_quote(external_calls.string()) +
+                            "; /usr/bin/printf \"$@\"; }; getprop(){ print -r -- " +
+                            android_shell_quote(nonce) +
+                            "; }; id(){ print -r -- 2000; }; EPOCHREALTIME=1700000000.123456; " +
+                            generated};
+            const auto marker_result = execute(marker_contract, 2000);
+            need(marker_result.exit_code == 0 && !marker_result.timed_out &&
+                 marker_result.output == executed.output);
+
+            if (std::filesystem::exists(external_calls)) {
+                throw std::runtime_error(
+                        "startup frame invoked external printf for marker emission");
+            }
+
+            // Host KSH93 injects the Android R56 special variable; this is a byte contract,
+            // not execution of Android's gettimeofday-backed EPOCHREALTIME implementation.
+            const auto date_calls = slot / "external-date";
+            auto run_epoch = [&](const std::string &assignment) {
+                ProcessSpec spec;
+                spec.executable = ksh;
+                spec.arguments = {"-c", assignment + "; date(){ print -r -- call >> " +
+                                                android_shell_quote(date_calls.string()) +
+                                                "; return 97; }; getprop(){ print -r -- " +
+                                                android_shell_quote(nonce) +
+                                                "; }; id(){ print -r -- 2000; }; " + generated};
+
+                return execute(spec, 2000);
+            };
+            const auto builtin_epoch = run_epoch("EPOCHREALTIME=1700000000.123456");
+
+            if (builtin_epoch.exit_code || builtin_epoch.timed_out ||
+                std::filesystem::exists(date_calls)) {
+                throw std::runtime_error("startup UTC tail invoked external date");
+            }
+
+            need(builtin_epoch.output == executed.output &&
+                 parse_windows_startup_frame(builtin_epoch, frame, nonce, boot).utc_seconds ==
+                         1700000000);
+
+            for (const auto *assignment : {"unset EPOCHREALTIME", "EPOCHREALTIME=garbage.123456",
+                                           "EPOCHREALTIME=-1.123456"}) {
+                const auto rejected = run_epoch(assignment);
+                need(rejected.exit_code == 78 && !rejected.timed_out &&
+                     rejected.output.find(marker + ":utc:") == std::string::npos);
+                rejects([&] {
+                    parse_windows_startup_frame(rejected, frame, nonce, boot);
+                });
+                need(!std::filesystem::exists(date_calls));
+            }
+
+            // A blocked post-command nonce read must expose body completion without
+            // granting authority to its still-incomplete frame. Completed bytes stay exact.
+            const auto seen = slot / "getprop-seen", release = slot / "getprop-release";
+            ProcessSpec delayed;
+            delayed.executable = ksh;
+            delayed.output = slot / "delayed.log";
+            delayed.arguments = {
+                    "-c",
+                    "getprop(){ if [ -e " + android_shell_quote(seen.string()) +
+                            " ]; then i=0; while [ ! -e " + android_shell_quote(release.string()) +
+                            " ] && [ $i -lt 250 ]; do sleep .01; i=$((i+1)); done; fi; : > " +
+                            android_shell_quote(seen.string()) + "; printf '%s\n' '" + nonce +
+                            "'; }; id(){ printf '2000\n'; }; EPOCHREALTIME=1700000000.123456; " +
+                            generated};
+            auto child = ChildProcess::launch(delayed);
+            auto captured = [&] {
+                std::ifstream input(delayed.output);
+
+                return std::string{std::istreambuf_iterator<char>(input), {}};
+            };
+            std::string partial;
+            const auto hold_until = std::chrono::steady_clock::now() +
+                                    std::chrono::milliseconds(1600);
+
+            while (std::chrono::steady_clock::now() < hold_until) {
+                partial = captured();
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            }
+
+            const bool progress_visible = partial.find(marker + ":exit:0\n") != std::string::npos;
+            const bool before_tail = partial.find(marker + ":n2:") == std::string::npos;
+            { std::ofstream(release) << "release"; }
+            const auto finish = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+
+            while (child.alive() && std::chrono::steady_clock::now() < finish) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            }
+
+            need(!child.alive() && child.exit_code() == 0);
+            const auto completed = captured();
+            need(completed == executed.output);
             rejects([&] {
-                android_short_wheel_pair_command(nonce, std::string(32, 'a'), "invalid", down, up,
-                                                 150, AndroidShortWheelContract::qinggan09, nonce);
+                parse_windows_startup_frame({0, partial, false}, frame, nonce, boot);
             });
-        }
-        // Android R56 has no printf builtin. Count actual external utility calls;
-        // marker emission must use print's builtin rather than hide cost behind host printf.
-        const auto external_calls = slot / "external-printf";
-        ProcessSpec marker_contract;
-        marker_contract.executable = ksh;
-        marker_contract.arguments = {
-                "-c", "printf(){ print -r -- call >> " +
-                              android_shell_quote(external_calls.string()) +
-                              "; /usr/bin/printf \"$@\"; }; getprop(){ print -r -- " +
-                              android_shell_quote(nonce) +
-                              "; }; id(){ print -r -- 2000; }; EPOCHREALTIME=1700000000.123456; " +
-                              generated};
-        const auto marker_result = execute(marker_contract, 2000);
-        need(marker_result.exit_code == 0 && !marker_result.timed_out &&
-             marker_result.output == executed.output);
 
-        if (std::filesystem::exists(external_calls)) {
-            throw std::runtime_error("startup frame invoked external printf for marker emission");
-        }
+            if (!progress_visible || !before_tail) {
+                throw std::runtime_error(
+                        "post-command progress marker missing while second getprop is blocked");
+            }
 
-        // Host KSH93 injects the Android R56 special variable; this is a byte contract,
-        // not execution of Android's gettimeofday-backed EPOCHREALTIME implementation.
-        const auto date_calls = slot / "external-date";
-        auto run_epoch = [&](const std::string &assignment) {
-            ProcessSpec spec;
-            spec.executable = ksh;
-            spec.arguments = {"-c", assignment + "; date(){ print -r -- call >> " +
-                                            android_shell_quote(date_calls.string()) +
-                                            "; return 97; }; getprop(){ print -r -- " +
-                                            android_shell_quote(nonce) +
-                                            "; }; id(){ print -r -- 2000; }; " + generated};
+            const auto first_seen = slot / "first-seen", first_release = slot / "first-release";
+            ProcessSpec first;
+            first.executable = ksh;
+            first.output = slot / "first.log";
+            first.arguments = {
+                    "-c",
+                    "getprop(){ if [ ! -e " + android_shell_quote(first_seen.string()) +
+                            " ]; then i=0; while [ ! -e " +
+                            android_shell_quote(first_release.string()) +
+                            " ] && [ $i -lt 250 ]; do sleep .01; i=$((i+1)); done; fi; : > " +
+                            android_shell_quote(first_seen.string()) + "; printf '%s\n' '" + nonce +
+                            "'; }; id(){ printf '2000\n'; }; EPOCHREALTIME=1700000000.123456; " +
+                            generated};
+            auto first_child = ChildProcess::launch(first);
+            auto first_capture = [&] {
+                std::ifstream input(first.output);
 
-            return execute(spec, 2000);
-        };
-        const auto builtin_epoch = run_epoch("EPOCHREALTIME=1700000000.123456");
+                return std::string{std::istreambuf_iterator<char>(input), {}};
+            };
+            std::string first_partial;
+            const auto first_hold = std::chrono::steady_clock::now() +
+                                    std::chrono::milliseconds(1600);
 
-        if (builtin_epoch.exit_code || builtin_epoch.timed_out ||
-            std::filesystem::exists(date_calls)) {
-            throw std::runtime_error("startup UTC tail invoked external date");
-        }
+            while (std::chrono::steady_clock::now() < first_hold) {
+                first_partial = first_capture();
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            }
 
-        need(builtin_epoch.output == executed.output &&
-             parse_windows_startup_frame(builtin_epoch, frame, nonce, boot).utc_seconds ==
-                     1700000000);
+            const bool boot_progress = first_partial.find(marker + ":b1:" + boot + "\n") !=
+                                       std::string::npos;
+            const bool before_nonce = first_partial.find(marker + ":n1:") == std::string::npos;
+            { std::ofstream(first_release) << "release"; }
+            const auto first_end = std::chrono::steady_clock::now() + std::chrono::seconds(2);
 
-        for (const auto *assignment :
-             {"unset EPOCHREALTIME", "EPOCHREALTIME=garbage.123456", "EPOCHREALTIME=-1.123456"}) {
-            const auto rejected = run_epoch(assignment);
-            need(rejected.exit_code == 78 && !rejected.timed_out &&
-                 rejected.output.find(marker + ":utc:") == std::string::npos);
+            while (first_child.alive() && std::chrono::steady_clock::now() < first_end) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            }
+
+            need(!first_child.alive() && first_child.exit_code() == 0);
+            need(first_capture() == executed.output);
             rejects([&] {
-                parse_windows_startup_frame(rejected, frame, nonce, boot);
+                parse_windows_startup_frame({0, first_partial, false}, frame, nonce, boot);
             });
-            need(!std::filesystem::exists(date_calls));
+
+            if (!boot_progress || !before_nonce) {
+                throw std::runtime_error(
+                        "pre-fence boot progress missing while first getprop blocked");
+            }
+
+            const auto foreign = run_fence(std::string(32, 'c'));
+            need(foreign.exit_code == 79 &&
+                 foreign.output.find(marker + ":body") == std::string::npos);
+            std::filesystem::remove(boot_file);
+            need(run_fence(nonce).exit_code == 78);
         }
 
-        // A blocked post-command nonce read must expose body completion without
-        // granting authority to its still-incomplete frame. Completed bytes stay exact.
-        const auto seen = slot / "getprop-seen", release = slot / "getprop-release";
-        ProcessSpec delayed;
-        delayed.executable = ksh;
-        delayed.output = slot / "delayed.log";
-        delayed.arguments = {
-                "-c", "getprop(){ if [ -e " + android_shell_quote(seen.string()) +
-                              " ]; then i=0; while [ ! -e " +
-                              android_shell_quote(release.string()) +
-                              " ] && [ $i -lt 250 ]; do sleep .01; i=$((i+1)); done; fi; : > " +
-                              android_shell_quote(seen.string()) + "; printf '%s\n' '" + nonce +
-                              "'; }; id(){ printf '2000\n'; }; EPOCHREALTIME=1700000000.123456; " +
-                              generated};
-        auto child = ChildProcess::launch(delayed);
-        auto captured = [&] {
-            std::ifstream input(delayed.output);
-
-            return std::string{std::istreambuf_iterator<char>(input), {}};
-        };
-        std::string partial;
-        const auto hold_until = std::chrono::steady_clock::now() + std::chrono::milliseconds(1600);
-
-        while (std::chrono::steady_clock::now() < hold_until) {
-            partial = captured();
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
-        }
-
-        const bool progress_visible = partial.find(marker + ":exit:0\n") != std::string::npos;
-        const bool before_tail = partial.find(marker + ":n2:") == std::string::npos;
-        { std::ofstream(release) << "release"; }
-        const auto finish = std::chrono::steady_clock::now() + std::chrono::seconds(2);
-
-        while (child.alive() && std::chrono::steady_clock::now() < finish) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
-        }
-
-        need(!child.alive() && child.exit_code() == 0);
-        const auto completed = captured();
-        need(completed == executed.output);
-        rejects([&] {
-            parse_windows_startup_frame({0, partial, false}, frame, nonce, boot);
-        });
-
-        if (!progress_visible || !before_tail) {
-            throw std::runtime_error(
-                    "post-command progress marker missing while second getprop is blocked");
-        }
-
-        const auto first_seen = slot / "first-seen", first_release = slot / "first-release";
-        ProcessSpec first;
-        first.executable = ksh;
-        first.output = slot / "first.log";
-        first.arguments = {
-                "-c", "getprop(){ if [ ! -e " + android_shell_quote(first_seen.string()) +
-                              " ]; then i=0; while [ ! -e " +
-                              android_shell_quote(first_release.string()) +
-                              " ] && [ $i -lt 250 ]; do sleep .01; i=$((i+1)); done; fi; : > " +
-                              android_shell_quote(first_seen.string()) + "; printf '%s\n' '" +
-                              nonce +
-                              "'; }; id(){ printf '2000\n'; }; EPOCHREALTIME=1700000000.123456; " +
-                              generated};
-        auto first_child = ChildProcess::launch(first);
-        auto first_capture = [&] {
-            std::ifstream input(first.output);
-
-            return std::string{std::istreambuf_iterator<char>(input), {}};
-        };
-        std::string first_partial;
-        const auto first_hold = std::chrono::steady_clock::now() + std::chrono::milliseconds(1600);
-
-        while (std::chrono::steady_clock::now() < first_hold) {
-            first_partial = first_capture();
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
-        }
-
-        const bool boot_progress = first_partial.find(marker + ":b1:" + boot + "\n") !=
-                                   std::string::npos;
-        const bool before_nonce = first_partial.find(marker + ":n1:") == std::string::npos;
-        { std::ofstream(first_release) << "release"; }
-        const auto first_end = std::chrono::steady_clock::now() + std::chrono::seconds(2);
-
-        while (first_child.alive() && std::chrono::steady_clock::now() < first_end) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
-        }
-
-        need(!first_child.alive() && first_child.exit_code() == 0);
-        need(first_capture() == executed.output);
-        rejects([&] {
-            parse_windows_startup_frame({0, first_partial, false}, frame, nonce, boot);
-        });
-
-        if (!boot_progress || !before_nonce) {
-            throw std::runtime_error("pre-fence boot progress missing while first getprop blocked");
-        }
-
-        const auto foreign = run_fence(std::string(32, 'c'));
-        need(foreign.exit_code == 79 && foreign.output.find(marker + ":body") == std::string::npos);
-        std::filesystem::remove(boot_file);
-        need(run_fence(nonce).exit_code == 78);
-#endif
         const auto sections = windows_startup_sections("VOYEMU_SECTION_" + frame +
                                                                ":display\nfirst\nVOYEMU_SECTION_" +
                                                                frame + ":windows\nsecond\n",

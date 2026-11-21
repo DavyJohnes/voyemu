@@ -1,5 +1,6 @@
 #include "qnx_qinggan11.hpp"
 #include "error.hpp"
+#include "os/platform.hpp"
 #include "process.hpp"
 #include "qnx_guest_shell.hpp"
 #include "qnx_imagefs.hpp"
@@ -292,18 +293,21 @@ esac
                     prepare_qnx_qinggan11_runtime(runtime + "VOYEMU_QNET_RELAY=1\n", hash);
                 },
                 "QNX_QINGGAN11_RUNTIME_NETWORK");
-#ifndef _WIN32
-        {
-            ProcessSpec syntax;
-            syntax.executable = "/bin/sh";
-            syntax.directory = std::filesystem::current_path();
-            syntax.arguments = {"-n", "-c", selected};
 
-            if (execute(syntax, 5000, 4096).exit_code != 0) {
-                throw std::runtime_error("Free network shell syntax");
+        // The guest shell fragments run under the sh of a POSIX host.
+        if (!voyemu::os::host_windows) {
+            {
+                ProcessSpec syntax;
+                syntax.executable = "/bin/sh";
+                syntax.directory = std::filesystem::current_path();
+                syntax.arguments = {"-n", "-c", selected};
+
+                if (execute(syntax, 5000, 4096).exit_code != 0) {
+                    throw std::runtime_error("Free network shell syntax");
+                }
             }
         }
-#endif
+
         const std::string wait_trace =
                 "echo 'QMC WAIT initial_sleep before'\necho 'QMC WAIT initial_sleep after'\necho 'QMC WAIT ram_driver before'\necho 'QMC WAIT ram_driver after'\n";
 
@@ -398,75 +402,80 @@ esac
         rejects([&] {
             prepare_qnx_qinggan11_runtime(runtime + dlt_launch, hash);
         });
-#ifndef _WIN32
-        auto mocked_socket = socket_provider;
-        const auto replace_mock = [&](const std::string &old, const std::string &replacement) {
-            const auto at = mocked_socket.find(old);
 
-            if (at == std::string::npos || mocked_socket.find(old, at + 1) != std::string::npos) {
-                throw std::runtime_error("socket mock substitution");
+        // The guest shell fragments run under the sh of a POSIX host.
+        if (!voyemu::os::host_windows) {
+            auto mocked_socket = socket_provider;
+            const auto replace_mock = [&](const std::string &old, const std::string &replacement) {
+                const auto at = mocked_socket.find(old);
+
+                if (at == std::string::npos ||
+                    mocked_socket.find(old, at + 1) != std::string::npos) {
+                    throw std::runtime_error("socket mock substitution");
+                }
+
+                mocked_socket.replace(at, old.size(), replacement);
+            };
+            replace_mock("[ ! -e /dev/socket ]", "[ \"$node_present\" = 0 ]");
+            replace_mock("/proc/boot/bin/io-pkt-v6-hc -I -t2 > /log/io-pkt-local.log 2>&1 &",
+                         "qm_io_pkt -I -t2 &");
+
+            for (const auto present : {0, 1}) {
+                for (const auto code : {0, 7}) {
+                    ProcessSpec spec;
+                    spec.executable = "/bin/sh";
+                    spec.directory = std::filesystem::current_path();
+                    spec.arguments = {
+                            "-c",
+                            "node_present=" + std::to_string(present) +
+                                    "; qm_io_pkt(){ [ \"$#\" -eq 2 ] && [ \"$1\" = -I ] && [ \"$2\" = -t2 ] || exit 92; echo SOCKET_START; }; qm_bounded(){ if [ \"$1\" = socket-provider ]; then [ \"$#\" -eq 4 ] && [ \"$2\" = /proc/boot/bin/waitfor ] && [ \"$3\" = /dev/socket ] && [ \"$4\" = 5 ] || exit 93; echo SOCKET_WAIT; return " +
+                                    std::to_string(code) +
+                                    "; fi; [ \"$#\" -eq 5 ] && [ \"$1\" = socket-stderr ] && [ \"$2\" = /proc/boot/bin/dd ] && [ \"$3\" = if=/log/io-pkt-local.log ] && [ \"$4\" = bs=1024 ] && [ \"$5\" = count=8 ] || exit 94; echo SOCKET_REPORT; return 127; }; " +
+                                    mocked_socket +
+                                    "if [ \"$node_present\" = 0 ]; then wait \"$qm_socket_provider\" || exit 95; fi; echo DLT_FOLLOW"};
+                    const auto result = execute(spec, 5000, 4096);
+                    const auto failed = present == 0 && code != 0;
+                    auto occurrences = [&](const std::string &value) {
+                        unsigned count = 0;
+
+                        for (std::size_t p = 0;
+                             (p = result.output.find(value, p)) != std::string::npos;
+                             p += value.size()) {
+                            ++count;
+                        }
+
+                        return count;
+                    };
+
+                    if (result.timed_out || result.exit_code != (failed ? 1 : 0) ||
+                        occurrences("SOCKET_START") != (present ? 0 : 1) ||
+                        occurrences("SOCKET_WAIT") != (present ? 0 : 1) ||
+                        occurrences("SOCKET_REPORT") != (failed ? 1 : 0) ||
+                        occurrences("DLT_FOLLOW") != (failed ? 0 : 1)) {
+                        throw std::runtime_error(
+                                "genuine local socket prerequisite lifecycle/error route");
+                    }
+                }
             }
 
-            mocked_socket.replace(at, old.size(), replacement);
-        };
-        replace_mock("[ ! -e /dev/socket ]", "[ \"$node_present\" = 0 ]");
-        replace_mock("/proc/boot/bin/io-pkt-v6-hc -I -t2 > /log/io-pkt-local.log 2>&1 &",
-                     "qm_io_pkt -I -t2 &");
-
-        for (const auto present : {0, 1}) {
             for (const auto code : {0, 7}) {
                 ProcessSpec spec;
                 spec.executable = "/bin/sh";
                 spec.directory = std::filesystem::current_path();
                 spec.arguments = {
                         "-c",
-                        "node_present=" + std::to_string(present) +
-                                "; qm_io_pkt(){ [ \"$#\" -eq 2 ] && [ \"$1\" = -I ] && [ \"$2\" = -t2 ] || exit 92; echo SOCKET_START; }; qm_bounded(){ if [ \"$1\" = socket-provider ]; then [ \"$#\" -eq 4 ] && [ \"$2\" = /proc/boot/bin/waitfor ] && [ \"$3\" = /dev/socket ] && [ \"$4\" = 5 ] || exit 93; echo SOCKET_WAIT; return " +
+                        "qm_bounded(){ if [ \"$1\" = dlt-ready ]; then return " +
                                 std::to_string(code) +
-                                "; fi; [ \"$#\" -eq 5 ] && [ \"$1\" = socket-stderr ] && [ \"$2\" = /proc/boot/bin/dd ] && [ \"$3\" = if=/log/io-pkt-local.log ] && [ \"$4\" = bs=1024 ] && [ \"$5\" = count=8 ] || exit 94; echo SOCKET_REPORT; return 127; }; " +
-                                mocked_socket +
-                                "if [ \"$node_present\" = 0 ]; then wait \"$qm_socket_provider\" || exit 95; fi; echo DLT_FOLLOW"};
+                                "; fi; [ \"$#\" -eq 5 ] && [ \"$1\" = dlt-stderr ] && [ \"$2\" = /proc/boot/bin/dd ] && [ \"$3\" = if=/log/dlt-ascii.log ] && [ \"$4\" = bs=1024 ] && [ \"$5\" = count=8 ] || exit 93; echo DLT_REPORT; return 127; }; " +
+                                dlt_report};
                 const auto result = execute(spec, 5000, 4096);
-                const auto failed = present == 0 && code != 0;
-                auto occurrences = [&](const std::string &value) {
-                    unsigned count = 0;
 
-                    for (std::size_t p = 0; (p = result.output.find(value, p)) != std::string::npos;
-                         p += value.size()) {
-                        ++count;
-                    }
-
-                    return count;
-                };
-
-                if (result.timed_out || result.exit_code != (failed ? 1 : 0) ||
-                    occurrences("SOCKET_START") != (present ? 0 : 1) ||
-                    occurrences("SOCKET_WAIT") != (present ? 0 : 1) ||
-                    occurrences("SOCKET_REPORT") != (failed ? 1 : 0) ||
-                    occurrences("DLT_FOLLOW") != (failed ? 0 : 1)) {
-                    throw std::runtime_error(
-                            "genuine local socket prerequisite lifecycle/error route");
+                if (result.timed_out || result.exit_code != (code == 0 ? 0 : 1) ||
+                    (result.output.find("DLT_REPORT") != std::string::npos) != (code != 0)) {
+                    throw std::runtime_error("DLT genuine failure status/export route changed");
                 }
             }
         }
-
-        for (const auto code : {0, 7}) {
-            ProcessSpec spec;
-            spec.executable = "/bin/sh";
-            spec.directory = std::filesystem::current_path();
-            spec.arguments = {
-                    "-c",
-                    "qm_bounded(){ if [ \"$1\" = dlt-ready ]; then return " + std::to_string(code) +
-                            "; fi; [ \"$#\" -eq 5 ] && [ \"$1\" = dlt-stderr ] && [ \"$2\" = /proc/boot/bin/dd ] && [ \"$3\" = if=/log/dlt-ascii.log ] && [ \"$4\" = bs=1024 ] && [ \"$5\" = count=8 ] || exit 93; echo DLT_REPORT; return 127; }; " +
-                            dlt_report};
-            const auto result = execute(spec, 5000, 4096);
-
-            if (result.timed_out || result.exit_code != (code == 0 ? 0 : 1) ||
-                (result.output.find("DLT_REPORT") != std::string::npos) != (code != 0)) {
-                throw std::runtime_error("DLT genuine failure status/export route changed");
-            }
-        }
-#endif
 
         if (argc == 3 && std::string_view(argv[1]) == "--runtime") {
             const auto original = read(std::filesystem::path(argv[2]) /

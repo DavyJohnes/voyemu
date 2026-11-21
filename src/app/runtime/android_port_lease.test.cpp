@@ -1,16 +1,10 @@
 #include "android_port_lease.hpp"
 #include "machine_host_ports.hpp"
 #include "model.hpp"
+#include "os/platform.hpp"
+#include "os/process.hpp"
+#include "os/socket.hpp"
 #include "process.hpp"
-#ifdef _WIN32
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#else
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <unistd.h>
-#endif
 #include <chrono>
 #include <cstdlib>
 #include <iostream>
@@ -140,32 +134,24 @@ void finish(const std::filesystem::path &directory, std::vector<ChildProcess> &c
 class ForeignListener {
 public:
     explicit ForeignListener(unsigned port) {
-        socket_ = ::socket(AF_INET, SOCK_STREAM, 0);
+        socket_ = os::open_stream_socket(AF_INET);
         sockaddr_in address{};
         address.sin_family = AF_INET;
         address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
         address.sin_port = htons(static_cast<std::uint16_t>(port));
-        check(::bind(socket_, reinterpret_cast<sockaddr *>(&address), sizeof address) == 0 &&
-                      ::listen(socket_, 1) == 0,
+        check(os::bind_socket(socket_, reinterpret_cast<sockaddr *>(&address), sizeof address) &&
+                      os::listen_socket(socket_, 1),
               "foreign listener unavailable");
     }
 
     ~ForeignListener() {
-#ifdef _WIN32
-        ::closesocket(socket_);
-#else
-        ::close(socket_);
-#endif
+        os::close_socket(socket_);
     }
 
     ForeignListener(const ForeignListener &) = delete;
 
 private:
-#ifdef _WIN32
-    SOCKET socket_;
-#else
-    int socket_;
-#endif
+    os::SocketHandle socket_;
 };
 
 std::filesystem::path scenario(const std::filesystem::path &root, const char *name) {
@@ -183,22 +169,17 @@ int main(int argc, char **argv) try {
                      std::stoul(argv[5]));
     }
 
-#ifdef _WIN32
-    WSADATA data{};
-    check(WSAStartup(MAKEWORD(2, 2), &data) == 0, "Winsock unavailable");
-#endif
+    const os::SocketLibrary sockets;
+    check(!sockets.error(), "Winsock unavailable");
     const auto self = std::filesystem::canonical(argv[0]);
     const auto root = std::filesystem::canonical(std::filesystem::temp_directory_path()) /
                       ("android-port-lease-" + random_token());
     ensure_private_directory(root);
     // Claimants inherit a private lease directory, isolated from live sessions of this user.
-#ifdef _WIN32
-    check(_putenv_s("TMP", root.string().c_str()) == 0 &&
-                  _putenv_s("TEMP", root.string().c_str()) == 0,
+    check(os::host_windows ? os::set_environment_variable("TMP", root.string()) &&
+                                     os::set_environment_variable("TEMP", root.string())
+                           : os::set_environment_variable("TMPDIR", root.string()),
           "private lease directory unavailable");
-#else
-    check(::setenv("TMPDIR", root.c_str(), 1) == 0, "private lease directory unavailable");
-#endif
     const auto preferred = select_free(5554);
 
     {

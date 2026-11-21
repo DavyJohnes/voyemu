@@ -1,6 +1,7 @@
 #include "java_toolchain.hpp"
 #include "error.hpp"
 #include "os/https.hpp"
+#include "os/platform.hpp"
 #include "process.hpp"
 #include "project_files.hpp"
 #include "quickboot.hpp"
@@ -368,11 +369,7 @@ void selection_checks(const std::filesystem::path &scratch, const std::filesyste
         throw os::HttpsFailure(os::HttpsFailure::Kind::status, 404, "fixture");
     };
     const auto &runtime = embedded_toolchain_manifest().at("javaRuntime");
-#ifdef _WIN32
-    const auto java_name = "java.exe";
-#else
-    const auto java_name = "java";
-#endif
+    const auto java_name = "java" + std::string(voyemu::os::executable_suffix);
     // --jdk runs the helper on that JDK and installs no Java runtime.
     check(java_preparation_java(root, jdk, runtime, true, 0, missing) ==
                   std::filesystem::canonical(jdk) / "bin" / java_name &&
@@ -502,11 +499,14 @@ int main(int argc, char **argv) {
         std::filesystem::create_hard_link(input, link);
         check(java_toolchain_input_sha256(input) == input_pin &&
               java_toolchain_input_sha256(link) == input_pin);
-#ifndef _WIN32
-        // A system JDK is installed root-owned; its executables are immutable inputs too.
-        const std::filesystem::path system_tool = "/usr/bin/env";
-        check(java_toolchain_input_sha256(system_tool) == sha256_file(system_tool));
-#endif
+
+        // POSIX keeps a root-owned system tool at /usr/bin/env.
+        if (!voyemu::os::host_windows) {
+            // A system JDK is installed root-owned; its executables are immutable inputs too.
+            const std::filesystem::path system_tool = "/usr/bin/env";
+            check(java_toolchain_input_sha256(system_tool) == sha256_file(system_tool));
+        }
+
         bool cache_rejected = false;
         try {
             cache_file_identity(input);
@@ -527,11 +527,14 @@ int main(int argc, char **argv) {
             check(rejected);
         };
         rejects_input(input, 1);
-#ifndef _WIN32
-        const auto symlink = temporary / "linked.jar";
-        std::filesystem::create_symlink(input, symlink);
-        rejects_input(symlink, 1024);
-#endif
+
+        // Creating a symbolic link needs a privilege on Windows.
+        if (!voyemu::os::host_windows) {
+            const auto symlink = temporary / "linked.jar";
+            std::filesystem::create_symlink(input, symlink);
+            rejects_input(symlink, 1024);
+        }
+
         rejects_input(input, 1024, [&] {
             std::ofstream out(link);
             out << "changed pinned payload";

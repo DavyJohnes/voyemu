@@ -1,0 +1,277 @@
+#include "inactive_profile.hpp"
+#include "inactive_profile_test_host.hpp"
+#include <fstream>
+#include <iostream>
+#include <thread>
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#include <aclapi.h>
+
+#include "os/current_user_windows.hpp"
+
+#include <exception>
+#include <vector>
+using namespace voyemu;
+
+int inactive_profile_case(int argc, char **argv) {
+    if (argc == 2 && std::string(argv[1]) == "--exit") {
+        return 0;
+    }
+
+    if (argc == 4 && std::string(argv[1]) == "--hold-file") {
+        const HANDLE file = CreateFileW(std::filesystem::path(argv[2]).c_str(), GENERIC_READ,
+                                        FILE_SHARE_READ, nullptr, OPEN_EXISTING,
+                                        FILE_FLAG_OPEN_REPARSE_POINT, nullptr);
+
+        if (file == INVALID_HANDLE_VALUE) {
+            return 2;
+        }
+
+        {
+            std::ofstream ready(argv[3]);
+            ready << "ready";
+        }
+        std::this_thread::sleep_for(std::chrono::seconds(20));
+        CloseHandle(file);
+
+        return 0;
+    }
+
+    // A private descriptor mirrors the macOS 0600/0700 mode the lease demands; a world descriptor
+    // mirrors the 0660/0770 mode it must refuse. The descriptor must ride the creating call: Wine
+    // synthesises the DACL at creation and ignores later mutation.
+    struct Descriptor {
+        voyemu::os::CurrentUser user;
+        PACL acl = nullptr;
+        SECURITY_DESCRIPTOR descriptor{};
+        SECURITY_ATTRIBUTES attributes{sizeof(SECURITY_ATTRIBUTES), &descriptor, FALSE};
+
+        explicit Descriptor(bool foreign) {
+            using Reading = voyemu::os::CurrentUser::Reading;
+            const auto reading = user.read();
+            check(reading != Reading::token_unavailable, "fixture token failed");
+            check(reading != Reading::extent_differs, "fixture token size failed");
+            check(reading != Reading::identity_unavailable, "fixture token identity failed");
+            BYTE world[SECURITY_MAX_SID_SIZE]{};
+            DWORD size = sizeof world;
+            check(CreateWellKnownSid(WinWorldSid, nullptr, world, &size) != 0,
+                  "fixture world identity failed");
+            const auto owner = user.sid();
+            PSID sid = foreign ? static_cast<PSID>(world) : owner;
+            EXPLICIT_ACCESSW access{};
+            access.grfAccessPermissions = FILE_ALL_ACCESS;
+            access.grfAccessMode = SET_ACCESS;
+            access.grfInheritance = SUB_CONTAINERS_AND_OBJECTS_INHERIT;
+            access.Trustee.TrusteeForm = TRUSTEE_IS_SID;
+            access.Trustee.TrusteeType = foreign ? TRUSTEE_IS_WELL_KNOWN_GROUP : TRUSTEE_IS_USER;
+            access.Trustee.ptstrName = reinterpret_cast<LPWSTR>(sid);
+            check(SetEntriesInAclW(1, &access, nullptr, &acl) == ERROR_SUCCESS,
+                  "fixture ACL build failed");
+            check(InitializeSecurityDescriptor(&descriptor, SECURITY_DESCRIPTOR_REVISION) &&
+                          SetSecurityDescriptorOwner(&descriptor, owner, FALSE) &&
+                          SetSecurityDescriptorDacl(&descriptor, TRUE, acl, FALSE) &&
+                          SetSecurityDescriptorControl(&descriptor, SE_DACL_PROTECTED,
+                                                       SE_DACL_PROTECTED),
+                  "fixture descriptor failed");
+        }
+
+        ~Descriptor() {
+            if (acl) {
+                LocalFree(acl);
+            }
+        }
+    };
+    Descriptor privacy(false), exposed(true);
+    const auto make_directory = [&](const std::filesystem::path &path, const Descriptor &security) {
+        std::filesystem::create_directories(path.parent_path());
+        check(CreateDirectoryW(path.c_str(),
+                               const_cast<SECURITY_ATTRIBUTES *>(&security.attributes)) ||
+                      GetLastError() == ERROR_ALREADY_EXISTS,
+              "fixture directory creation failed");
+    };
+    const auto make_file = [&](const std::filesystem::path &path, const std::string &text,
+                               const Descriptor &security) {
+        const HANDLE file =
+                CreateFileW(path.c_str(), GENERIC_WRITE, 0,
+                            const_cast<SECURITY_ATTRIBUTES *>(&security.attributes), CREATE_ALWAYS,
+                            FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OPEN_REPARSE_POINT, nullptr);
+        check(file != INVALID_HANDLE_VALUE, "fixture file creation failed");
+        const DWORD extent = static_cast<DWORD>(text.size());
+        DWORD count = 0;
+        const bool wrote = WriteFile(file, text.data(), extent, &count, nullptr) && count == extent;
+        CloseHandle(file);
+        check(wrote, "fixture file write failed");
+    };
+    const auto root = std::filesystem::temp_directory_path() /
+                      ("inactive-profile-" + random_token().substr(0, 12));
+    ensure_private_directory(root);
+    const std::string profile = "test-profile", id = random_token();
+    const auto machine = machine_identity(profile, "");
+    const auto directory = native_session_directory(root, profile, machine, id),
+               active_dir = native_current_active_directory(root, profile, machine);
+    make_directory(active_dir, privacy);
+    make_directory(directory, privacy);
+    const std::string endpoint = "\\\\.\\pipe\\voyemu-" + id;
+    const auto lock_path = active_dir / (profile + ".supervisor.lock"),
+               owner_path = directory / "session-owner.json", ram = directory / "qnx-ram.bin",
+               system = root / "system", userdata = root / "userdata";
+    ProcessSpec ended;
+    ended.executable = std::filesystem::canonical(argv[0]);
+    ended.arguments = {"--exit"};
+    ended.output = root / "ended.log";
+    auto child = ChildProcess::launch(ended);
+
+    while (child.alive()) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+
+    const auto dead = child.pid();
+    Json active{{"schema", 1},
+                {"profile", profile},
+                {"session_id", id},
+                {"directory", directory.generic_string()},
+                {"endpoint", endpoint}},
+            runtime{{"schema", 1},      {"session_id", id}, {"endpoint", endpoint},
+                    {"stopped", false}, {"android_pid", 0}, {"qnx_pid", dead}},
+            owner{{"schema", 1},
+                  {"session_id", id},
+                  {"directory", directory.generic_string()},
+                  {"origin", "voyemu-native-supervisor"},
+                  {"creator_pid", dead},
+                  {"qnx_pid", dead}},
+            storage{{"schema", 1}, {"system", system.string()}, {"userdata", userdata.string()}};
+    const auto publish = [&] {
+        make_file(active_dir / (profile + ".json"), active.dump() + "\n", privacy);
+        make_file(directory / "runtime.json", runtime.dump() + "\n", privacy);
+        make_file(owner_path, owner.dump() + "\n", privacy);
+    };
+    publish();
+    make_file(lock_path, "retained", privacy);
+    make_file(ram, "retained", privacy);
+    make_file(system, "retained", privacy);
+    make_file(userdata, "retained", privacy);
+    const auto snapshot = read_private_json_bytes(directory / "runtime.json");
+    const auto rejected = [&] {
+        bool failed = false;
+        try {
+            InactiveProfileLease lease(root, profile, machine, active, runtime, storage);
+        } catch (...) {
+            failed = true;
+        }
+
+        check(failed, "unsafe stale epoch accepted");
+    };
+    const auto accepted = [&] {
+        check(!runtime.at("stopped").get<bool>(), "unblocking fixture must keep stopped:false");
+        InactiveProfileLease lease(root, profile, machine, active, runtime, storage);
+    };
+    owner["creator_pid"] = static_cast<std::int64_t>(GetCurrentProcessId());
+    publish();
+    rejected();
+    owner["creator_pid"] = dead;
+    publish();
+    std::filesystem::remove(lock_path);
+    make_file(lock_path, "retained", exposed);
+    rejected();
+    std::filesystem::remove(lock_path);
+    make_file(lock_path, "retained", privacy);
+    const HANDLE held = CreateFileW(lock_path.c_str(), GENERIC_READ,
+                                    FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING,
+                                    FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OPEN_REPARSE_POINT, nullptr);
+    check(held != INVALID_HANDLE_VALUE, "fixture lock failed");
+    rejected();
+    CloseHandle(held);
+    const HANDLE pipe = CreateNamedPipeW(std::filesystem::path(endpoint).c_str(),
+                                         PIPE_ACCESS_DUPLEX, PIPE_TYPE_BYTE | PIPE_WAIT, 1, 4096,
+                                         4096, 0, nullptr);
+    check(pipe != INVALID_HANDLE_VALUE, "fixture control channel failed");
+    rejected();
+    CloseHandle(pipe);
+
+    for (const auto &file : {ram, system, userdata}) {
+        const auto ready = root / (file.filename().string() + ".ready");
+        ProcessSpec worker;
+        worker.executable = std::filesystem::canonical(argv[0]);
+        worker.arguments = {"--hold-file", file.string(), ready.string()};
+        worker.output = root / (file.filename().string() + ".log");
+        auto live = ChildProcess::launch(worker);
+        const auto limit = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+
+        while (!std::filesystem::exists(ready) && std::chrono::steady_clock::now() < limit) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+
+        check(std::filesystem::exists(ready), "fixture file holder unavailable");
+        rejected();
+        live.terminate(1000);
+        check(!live.alive(), "owned holder not terminal");
+        std::filesystem::remove(ready);
+    }
+
+    auto wrong = active;
+    wrong["session_id"] = random_token();
+    bool bad = false;
+    try {
+        InactiveProfileLease lease(root, profile, machine, wrong, runtime, storage);
+    } catch (...) {
+        bad = true;
+    }
+
+    check(bad, "foreign active epoch accepted");
+    accepted();
+    {
+        InactiveProfileLease lease(root, profile, machine, active, runtime, storage);
+        const HANDLE contender = CreateFileW(
+                lock_path.c_str(), GENERIC_READ | GENERIC_WRITE, 0, nullptr, OPEN_EXISTING,
+                FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OPEN_REPARSE_POINT, nullptr);
+        check(contender == INVALID_HANDLE_VALUE, "inactive lease did not retain supervisor lock");
+
+        if (contender != INVALID_HANDLE_VALUE) {
+            CloseHandle(contender);
+        }
+
+        check(read_private_json_bytes(directory / "runtime.json") == snapshot &&
+                      !runtime.at("stopped").get<bool>() && std::filesystem::exists(ram),
+              "inactive lease altered retained metadata/RAM");
+    }
+    { InactiveProfileLease again(root, profile, machine, active, runtime, storage); }
+    {
+        BYTE world[SECURITY_MAX_SID_SIZE]{};
+        DWORD size = sizeof world;
+        check(CreateWellKnownSid(WinWorldSid, nullptr, world, &size) != 0,
+              "fixture world identity failed");
+        const auto changed = SetNamedSecurityInfoW(const_cast<LPWSTR>(ram.c_str()), SE_FILE_OBJECT,
+                                                   OWNER_SECURITY_INFORMATION, world, nullptr,
+                                                   nullptr, nullptr);
+        PSID observed = nullptr;
+        PSECURITY_DESCRIPTOR descriptor = nullptr;
+        const auto read = GetNamedSecurityInfoW(const_cast<LPWSTR>(ram.c_str()), SE_FILE_OBJECT,
+                                                OWNER_SECURITY_INFORMATION, &observed, nullptr,
+                                                nullptr, nullptr, &descriptor);
+        const bool stranger = changed == ERROR_SUCCESS && read == ERROR_SUCCESS && observed &&
+                              EqualSid(observed, world);
+
+        if (descriptor) {
+            LocalFree(descriptor);
+        }
+
+        if (stranger) {
+            rejected();
+        } else {
+            std::cout << "SKIP foreign owner rejection: assignment not confirmed by SID readback\n";
+        }
+    }
+    std::filesystem::remove_all(directory);
+    make_directory(directory, exposed);
+    rejected();
+    std::filesystem::remove_all(root);
+    std::cout
+            << "inactive profile: stopped:false dead epoch accepted under a free supervisor lock and absent control channel; live PID, held lock, control channel, RAM/disk holders, foreign epoch, non-private lock/directory DACL and foreign owner rejected; metadata retained\n";
+
+    return 0;
+}

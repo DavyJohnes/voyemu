@@ -2,9 +2,6 @@
 #include "os/private_json_reader.hpp"
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
-#include <cstdio>
-#include <fcntl.h>
-#include <io.h>
 
 std::string read_probe_output(const std::filesystem::path &path) {
     voyemu::detail::PrivateJsonReader file(path, 4096);
@@ -23,8 +20,4 @@ bool await_probe_child(std::int64_t pid) {
     CloseHandle(child);
 
     return terminal == WAIT_OBJECT_0;
-}
-
-void binary_standard_output() {
-    _setmode(_fileno(stdout), _O_BINARY);
 }

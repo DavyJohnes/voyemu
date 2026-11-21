@@ -24,12 +24,13 @@ inline Json passion_mcu_capability() {
             {"full_wire_verified", false}};
 }
 
-inline bool passion_mcu_available(const Json &android) {
+// windows selects the Windows host, which refuses the partial projection.
+inline bool passion_mcu_available(const Json &android, bool windows = os::host_windows) {
     if (!android.contains("mcu_property_adapter")) {
         return false;
     }
 
-    if (os::host_windows) {
+    if (windows) {
         throw VoyemuError("PASSION_MCU", "Windows partial projection is unsupported");
     }
 

@@ -1,4 +1,5 @@
 #include "passion_mcu_property.hpp"
+#include "os/platform.hpp"
 #include <cassert>
 #include <exception>
 #include <iostream>
@@ -251,14 +252,16 @@ int main() try {
            observed.at("guest_acknowledged") == false);
     assert(!passion_mcu_capability().contains("helper_dex_sha256"));
     Json android = {{"api", 30}, {"mcu_property_adapter", passion_mcu_capability()}};
-#ifdef _WIN32
+
     // Windows refuses the partial projection even for the exact prepared capability.
-    rejects([&] {
-        passion_mcu_available(android);
-    });
-#else
-    assert(passion_mcu_available(android));
-#endif
+    if (voyemu::os::host_windows) {
+        rejects([&] {
+            passion_mcu_available(android);
+        });
+    } else {
+        assert(passion_mcu_available(android));
+    }
+
     android["mcu_property_adapter"]["supported_fields"].push_back("target");
     rejects([&] {
         passion_mcu_available(android);

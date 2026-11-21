@@ -2,6 +2,7 @@
 #include "android_audio_startup.hpp"
 #include "android_engine.hpp"
 #include "android_system_binding.hpp"
+#include "os/platform.hpp"
 #include "passion_wheel.hpp"
 #include "process.hpp"
 #include "qinggan11_startup.hpp"
@@ -297,15 +298,18 @@ int main() try {
     assert(cache.snapshot_save_budget(4 * gib + reserve - 1).at("allowed") == false);
     assert(cache.snapshot_save_budget(std::nullopt).at("allowed") == false);
     const auto ram_size = std::filesystem::file_size(directory / "ram.bin");
-#ifndef _WIN32
-    std::filesystem::resize_file(directory / "ram.bin",
-                                 5 * gib); // Sparse length, not a multi-gigabyte allocation.
-    const auto previous_budget = cache.snapshot_save_budget(6 * gib);
-    assert(previous_budget.at("allowed") == true &&
-           previous_budget.at("required_bytes") == 5 * gib + 2 * ram_size + reserve);
-    assert(cache.snapshot_save_budget(5 * gib + reserve).at("allowed") == false);
-    std::filesystem::resize_file(directory / "ram.bin", ram_size);
-#endif
+
+    // The save budget of a sparse RAM file on the POSIX hosts.
+    if (!voyemu::os::host_windows) {
+        std::filesystem::resize_file(directory / "ram.bin",
+                                     5 * gib); // Sparse length, not a multi-gigabyte allocation.
+        const auto previous_budget = cache.snapshot_save_budget(6 * gib);
+        assert(previous_budget.at("allowed") == true &&
+               previous_budget.at("required_bytes") == 5 * gib + 2 * ram_size + reserve);
+        assert(cache.snapshot_save_budget(5 * gib + reserve).at("allowed") == false);
+        std::filesystem::resize_file(directory / "ram.bin", ram_size);
+    }
+
     const auto before_budget = sha256_file(directory / "ram.bin");
     { std::ofstream(config_template) << "hw.ramSize = 8192\n"; }
     auto larger_spec = spec;
@@ -396,66 +400,72 @@ int main() try {
            cache.runtime_checkpoint()
                    .resume); // Runtime avoids the snapshot walk; explicit inspect audits it.
     std::filesystem::rename(unavailable, directory);
-#ifdef _WIN32
-    {
-        assert(key.at("backend_arguments") == android_sdk_machine_arguments(true));
-        auto renderer_spec = spec;
-        renderer_spec["rendererPolicy"] = "windows-angle-36.3.10";
-        const auto renderer_key = android_quickboot_key(renderer_spec);
-        assert(renderer_key != key);
-        auto changed_renderer = renderer_spec;
-        changed_renderer["rendererPolicy"] = "tampered";
-        assert(android_quickboot_key(changed_renderer) != renderer_key);
-        changed_renderer.erase("rendererPolicy");
-        assert(android_quickboot_key(changed_renderer) != renderer_key);
-        auto legacy = read_private_json(machine / "voyemu-quickboot.json");
-        auto saved = legacy;
-        legacy["key"].erase("backend_arguments");
-        write_private_json(machine / "voyemu-quickboot.json", legacy);
-        assert(!cache.inspect().resume && cache.inspect().reason == "prepared_inputs_changed");
-        legacy = saved;
-        legacy["key"]["backend_arguments"] = Json::array({"-qemu", "-machine", "type=virt"});
-        write_private_json(machine / "voyemu-quickboot.json", legacy);
-        assert(!cache.inspect().resume && cache.inspect().reason == "prepared_inputs_changed");
-        legacy = saved;
-        legacy["key"]["backend_arguments"] =
-                Json::array({"-qemu", "-machine", "type=virt", "-accel", "tcg,thread=single"});
-        write_private_json(machine / "voyemu-quickboot.json", legacy);
-        assert(!cache.inspect().resume && cache.inspect().reason == "prepared_inputs_changed");
-        write_private_json(machine / "voyemu-quickboot.json", saved);
+
+    // Only the Windows engine keys its backend arguments and renderer.
+    if (voyemu::os::host_windows) {
+        {
+            assert(key.at("backend_arguments") == android_sdk_machine_arguments(true));
+            auto renderer_spec = spec;
+            renderer_spec["rendererPolicy"] = "windows-angle-36.3.10";
+            const auto renderer_key = android_quickboot_key(renderer_spec);
+            assert(renderer_key != key);
+            auto changed_renderer = renderer_spec;
+            changed_renderer["rendererPolicy"] = "tampered";
+            assert(android_quickboot_key(changed_renderer) != renderer_key);
+            changed_renderer.erase("rendererPolicy");
+            assert(android_quickboot_key(changed_renderer) != renderer_key);
+            auto legacy = read_private_json(machine / "voyemu-quickboot.json");
+            auto saved = legacy;
+            legacy["key"].erase("backend_arguments");
+            write_private_json(machine / "voyemu-quickboot.json", legacy);
+            assert(!cache.inspect().resume && cache.inspect().reason == "prepared_inputs_changed");
+            legacy = saved;
+            legacy["key"]["backend_arguments"] = Json::array({"-qemu", "-machine", "type=virt"});
+            write_private_json(machine / "voyemu-quickboot.json", legacy);
+            assert(!cache.inspect().resume && cache.inspect().reason == "prepared_inputs_changed");
+            legacy = saved;
+            legacy["key"]["backend_arguments"] =
+                    Json::array({"-qemu", "-machine", "type=virt", "-accel", "tcg,thread=single"});
+            write_private_json(machine / "voyemu-quickboot.json", legacy);
+            assert(!cache.inspect().resume && cache.inspect().reason == "prepared_inputs_changed");
+            write_private_json(machine / "voyemu-quickboot.json", saved);
+            assert(cache.inspect().resume);
+        }
+    } else {
+        assert(!key.contains("backend_arguments"));
+    }
+
+    // macOS identifies guest storage by its volume UUID.
+    if (voyemu::os::platform_name == "macOS") {
+        const auto identity = read_private_json(machine / "voyemu-quickboot.json");
+        const auto volume =
+                identity.at("disks").at("userdata-qemu.img").at("volume_uuid").get<std::string>();
+        assert(volume.size() == 32 &&
+               volume.find_first_not_of("0123456789abcdef") == std::string::npos &&
+               volume != std::string(32, '0'));
+
+        for (const auto &group : {"disks", "snapshot"}) {
+            for (const auto &item : identity.at(group).items()) {
+                assert(item.value().at("volume_uuid") == volume &&
+                       !item.value().contains("device"));
+            }
+        }
+
+        auto other_volume = identity;
+        other_volume["disks"]["userdata-qemu.img"]["volume_uuid"] = std::string(32, '0');
+        write_private_json(machine / "voyemu-quickboot.json", other_volume);
+        assert(cache.inspect().reason == "guest_storage_changed");
+        write_private_json(machine / "voyemu-quickboot.json", identity);
+        assert(cache.inspect().resume);
+        auto old_volume = identity;
+        old_volume["disks"]["userdata-qemu.img"].erase("volume_uuid");
+        old_volume["disks"]["userdata-qemu.img"]["device"] = 123;
+        write_private_json(machine / "voyemu-quickboot.json", old_volume);
+        assert(cache.inspect().reason == "storage_identity_format_changed");
+        write_private_json(machine / "voyemu-quickboot.json", identity);
         assert(cache.inspect().resume);
     }
-#else
-    assert(!key.contains("backend_arguments"));
-#endif
-#ifdef __APPLE__
-    const auto identity = read_private_json(machine / "voyemu-quickboot.json");
-    const auto volume =
-            identity.at("disks").at("userdata-qemu.img").at("volume_uuid").get<std::string>();
-    assert(volume.size() == 32 &&
-           volume.find_first_not_of("0123456789abcdef") == std::string::npos &&
-           volume != std::string(32, '0'));
 
-    for (const auto &group : {"disks", "snapshot"}) {
-        for (const auto &item : identity.at(group).items()) {
-            assert(item.value().at("volume_uuid") == volume && !item.value().contains("device"));
-        }
-    }
-
-    auto other_volume = identity;
-    other_volume["disks"]["userdata-qemu.img"]["volume_uuid"] = std::string(32, '0');
-    write_private_json(machine / "voyemu-quickboot.json", other_volume);
-    assert(cache.inspect().reason == "guest_storage_changed");
-    write_private_json(machine / "voyemu-quickboot.json", identity);
-    assert(cache.inspect().resume);
-    auto old_volume = identity;
-    old_volume["disks"]["userdata-qemu.img"].erase("volume_uuid");
-    old_volume["disks"]["userdata-qemu.img"]["device"] = 123;
-    write_private_json(machine / "voyemu-quickboot.json", old_volume);
-    assert(cache.inspect().reason == "storage_identity_format_changed");
-    write_private_json(machine / "voyemu-quickboot.json", identity);
-    assert(cache.inspect().resume);
-#endif
     auto legacy = read_private_json(machine / "voyemu-quickboot.json");
     legacy["key"]["prepared"]["frontend"] = {{"executable", "older-private-viewer"}};
     write_private_json(machine / "voyemu-quickboot.json", legacy);
@@ -543,20 +553,24 @@ int main() try {
     { std::ofstream(machine / "voyemu-quickboot.json.pending") << "interrupted metadata"; }
     cache.begin();
     assert(!std::filesystem::exists(machine / "voyemu-quickboot.json.pending"));
-#ifndef _WIN32
-    std::filesystem::remove(machine / "voyemu-quickboot.json");
-    std::filesystem::create_symlink(directory / "snapshot.pb", machine / "voyemu-quickboot.json");
-    assert(!cache.inspect().resume);
-    bool rejected = false;
-    try {
-        cache.begin();
-    } catch (...) {
-        rejected = true;
+
+    // Creating a symbolic link needs a privilege on Windows.
+    if (!voyemu::os::host_windows) {
+        std::filesystem::remove(machine / "voyemu-quickboot.json");
+        std::filesystem::create_symlink(directory / "snapshot.pb",
+                                        machine / "voyemu-quickboot.json");
+        assert(!cache.inspect().resume);
+        bool rejected = false;
+        try {
+            cache.begin();
+        } catch (...) {
+            rejected = true;
+        }
+
+        assert(rejected);
+        std::filesystem::remove(machine / "voyemu-quickboot.json");
     }
 
-    assert(rejected);
-    std::filesystem::remove(machine / "voyemu-quickboot.json");
-#endif
     const auto config = android_quickboot_config(
             "hw.cpu.ncore=2\nfastboot.forceColdBoot=yes\nfastboot.forceFastBoot=no\n");
     assert(config == "hw.cpu.ncore=2\nfastboot.forceColdBoot=no\nfastboot.forceFastBoot=yes\n");
@@ -720,53 +734,56 @@ int main() try {
                                         {"reason", "provider_not_installed"}};
     assert(!android_presave_required(passion_spec) &&
            !android_quickboot_key(passion_spec).contains("presave_protocol"));
-#ifdef _WIN32
-    {
-        const auto runtime = root / "avd";
-        AndroidQuickBoot linked(machine, key, runtime);
-        linked.begin();
 
-        for (const auto *name : {"cache.img", "cache.img.qcow2"}) {
-            std::ofstream(runtime / name) << "disposable cache";
-        }
-
-        for (const auto *name : {"snapshot.pb", "ram.bin", "hardware.ini"}) {
-            std::ofstream(runtime / "snapshots" / AndroidQuickBoot::snapshot_name / name)
-                    << "saved snapshot";
-        }
-
-        for (const auto *name : {"encryptionkey.img", "system.img.qcow2", "vendor.img.qcow2"}) {
-            std::filesystem::create_hard_link(machine / name, runtime / name);
-        }
-
-        for (const auto *name : {"system.img", "vendor.img"}) {
-            std::filesystem::create_hard_link(machine / "base" / name, runtime / name);
-        }
-
-        linked.commit(boot);
-        assert(linked.inspect().resume && linked.runtime_checkpoint().resume);
-        const auto reject_link = [&](const auto &disk) {
-            const auto foreign = root / "foreign-link.img";
-            std::filesystem::create_hard_link(disk, foreign);
-            assert(!linked.inspect().resume && !linked.runtime_checkpoint().resume);
+    // The linked SDK runtime of the Windows engine.
+    if (voyemu::os::host_windows) {
+        {
+            const auto runtime = root / "avd";
+            AndroidQuickBoot linked(machine, key, runtime);
             linked.begin();
-            bool rejected = false;
 
-            try {
-                linked.commit(boot);
-            } catch (const VoyemuError &error) {
-                rejected = std::string_view(error.what()).starts_with("QUICKBOOT_FILE:");
+            for (const auto *name : {"cache.img", "cache.img.qcow2"}) {
+                std::ofstream(runtime / name) << "disposable cache";
             }
 
-            assert(rejected);
-            std::filesystem::remove(foreign);
+            for (const auto *name : {"snapshot.pb", "ram.bin", "hardware.ini"}) {
+                std::ofstream(runtime / "snapshots" / AndroidQuickBoot::snapshot_name / name)
+                        << "saved snapshot";
+            }
+
+            for (const auto *name : {"encryptionkey.img", "system.img.qcow2", "vendor.img.qcow2"}) {
+                std::filesystem::create_hard_link(machine / name, runtime / name);
+            }
+
+            for (const auto *name : {"system.img", "vendor.img"}) {
+                std::filesystem::create_hard_link(machine / "base" / name, runtime / name);
+            }
+
             linked.commit(boot);
-            assert(linked.inspect().resume);
-        };
-        reject_link(machine / "base/system.img");
-        reject_link(machine / "userdata-qemu.img");
+            assert(linked.inspect().resume && linked.runtime_checkpoint().resume);
+            const auto reject_link = [&](const auto &disk) {
+                const auto foreign = root / "foreign-link.img";
+                std::filesystem::create_hard_link(disk, foreign);
+                assert(!linked.inspect().resume && !linked.runtime_checkpoint().resume);
+                linked.begin();
+                bool rejected = false;
+
+                try {
+                    linked.commit(boot);
+                } catch (const VoyemuError &error) {
+                    rejected = std::string_view(error.what()).starts_with("QUICKBOOT_FILE:");
+                }
+
+                assert(rejected);
+                std::filesystem::remove(foreign);
+                linked.commit(boot);
+                assert(linked.inspect().resume);
+            };
+            reject_link(machine / "base/system.img");
+            reject_link(machine / "userdata-qemu.img");
+        }
     }
-#endif
+
     std::filesystem::remove_all(root);
     std::cout << "checkpoint invalidation and unchanged guest storage passed\n";
 } catch (const std::exception &error) {

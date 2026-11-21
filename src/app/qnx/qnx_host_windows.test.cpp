@@ -1,4 +1,5 @@
 #include "qnx_host_windows.hpp"
+#include "os/platform.hpp"
 #include "qnx_host.hpp"
 #include "qnx_host_prebuilt.hpp"
 #include <fstream>
@@ -180,31 +181,37 @@ int main(int argc, char **argv) {
                 std::filesystem::remove_all(scratch_path, error);
             }
         } scratch_guard{scratch};
-#ifdef _WIN32
-        expect_throw(
-                [&] {
-                    install_qnx_host_windows_source(scratch / "..", false, 0);
-                },
-                "canonical project root",
-                "non-canonical root refused before any download or publication");
-        check(!std::filesystem::exists(scratch / ".local/toolchains"), "refusal published nothing");
 
-        // While the prebuilt pin is pending and no engine is cached, deps reports the engine
-        // unavailable instead of running the source recipe.
-        if (qnx_host_prebuilt_pin(qnx_host_catalog(), "windows_file_backend").is_null()) {
-            check(!qnx_host_unavailable(scratch).empty(), "pending Windows engine unavailable");
+        // Windows installs only a published or cached engine; macOS and Linux build a pending one.
+        if (voyemu::os::host_windows) {
             expect_throw(
                     [&] {
-                        install_qnx_host(scratch, false, 0);
+                        install_qnx_host_windows_source(scratch / "..", false, 0);
                     },
-                    "QNX_HOST_ASSET_MISSING", "deps without a published or cached Windows engine");
+                    "canonical project root",
+                    "non-canonical root refused before any download or publication");
             check(!std::filesystem::exists(scratch / ".local/toolchains"),
-                  "missing Windows engine started no recipe");
+                  "refusal published nothing");
+
+            // While the prebuilt pin is pending and no engine is cached, deps reports the engine
+            // unavailable instead of running the source recipe.
+            if (qnx_host_prebuilt_pin(qnx_host_catalog(), "windows_file_backend").is_null()) {
+                check(!qnx_host_unavailable(scratch).empty(), "pending Windows engine unavailable");
+                expect_throw(
+                        [&] {
+                            install_qnx_host(scratch, false, 0);
+                        },
+                        "QNX_HOST_ASSET_MISSING",
+                        "deps without a published or cached Windows engine");
+                check(!std::filesystem::exists(scratch / ".local/toolchains"),
+                      "missing Windows engine started no recipe");
+            }
+        } else {
+            // macOS and Linux build a pending engine from its recipe.
+            check(qnx_host_unavailable(scratch).empty(),
+                  "POSIX engine installable from its recipe");
         }
-#else
-        // macOS and Linux build a pending engine from its recipe.
-        check(qnx_host_unavailable(scratch).empty(), "POSIX engine installable from its recipe");
-#endif
+
         //----------- SLT listing -> record producer contract (native owner API) -----------
         const auto work = scratch / "slt";
         ensure_private_directory(work);
@@ -641,30 +648,31 @@ int main(int argc, char **argv) {
             }
         }
         std::cout << "QNX Windows source builder shared validations passed\n";
-#ifdef _WIN32
-        // The qnx-host workflow packs the runtime files of the installed engine, without its
-        // receipt, into the release asset that deps checks against verified_runtime.
-        if ((argc == 3 || argc == 4) && std::string(argv[1]) == "--source-root") {
-            const auto actual = std::filesystem::canonical(argv[2]);
-            const auto result = install_qnx_host_windows_source(actual, false, 0);
-            check(result.at("ready") == true && result.at("cached") == false,
-                  "actual online source install");
-            validate_installed_windows_source(
-                    std::filesystem::path(result.at("directory").get<std::string>()), actual,
-                    real_recipe);
-            check(install_qnx_host_windows_source(actual, true, 0).at("cached") == true,
-                  "actual source install offline reuse");
 
-            if (argc == 4) {
-                write_qnx_host_asset(result.at("directory").get<std::string>(), argv[3], false,
-                                     "windows-x64");
+        if (voyemu::os::host_windows) {
+            // The qnx-host workflow packs the runtime files of the installed engine, without its
+            // receipt, into the release asset that deps checks against verified_runtime.
+            if ((argc == 3 || argc == 4) && std::string(argv[1]) == "--source-root") {
+                const auto actual = std::filesystem::canonical(argv[2]);
+                const auto result = install_qnx_host_windows_source(actual, false, 0);
+                check(result.at("ready") == true && result.at("cached") == false,
+                      "actual online source install");
+                validate_installed_windows_source(
+                        std::filesystem::path(result.at("directory").get<std::string>()), actual,
+                        real_recipe);
+                check(install_qnx_host_windows_source(actual, true, 0).at("cached") == true,
+                      "actual source install offline reuse");
+
+                if (argc == 4) {
+                    write_qnx_host_asset(result.at("directory").get<std::string>(), argv[3], false,
+                                         "windows-x64");
+                }
+
+                std::cout << result.dump() << '\n';
+
+                return 0;
             }
-
-            std::cout << result.dump() << '\n';
-
-            return 0;
         }
-#endif
 
         if (argc == 3 && std::string(argv[1]) == "--integration") {
             // Explicitly selected acceptance against the real pinned runtime files already in the

@@ -1,4 +1,5 @@
 #include "android_engine.hpp"
+#include "os/platform.hpp"
 #include <algorithm>
 #include <iostream>
 #include <stdexcept>
@@ -140,15 +141,15 @@ int main() {
         }
 
         const auto native_net = android_interguest_arguments(23456, true);
-#ifdef _WIN32
-        if (native_net != windows_net) {
+
+        if (voyemu::os::host_windows && native_net != windows_net) {
             throw std::runtime_error("Windows default interguest direction differs");
         }
-#else
-        if (native_net != android_interguest_arguments(23456, true, false)) {
+
+        if (!voyemu::os::host_windows &&
+            native_net != android_interguest_arguments(23456, true, false)) {
             throw std::runtime_error("Mac default interguest direction changed");
         }
-#endif
 
         for (unsigned invalid : {0u, 1023u, 65536u}) {
             bool rejected = false;
@@ -188,25 +189,26 @@ int main() {
                     (sdk / "emulator").string() + ";original-path");
         }
 
-#ifdef _WIN32
-        const auto absolute = std::filesystem::path(LR"(C:\Voyemu SDK)");
+        // A drive-letter path is absolute only on Windows.
+        if (voyemu::os::host_windows) {
+            const auto absolute = std::filesystem::path(LR"(C:\Voyemu SDK)");
 
-        if (!absolute.is_absolute()) {
-            throw std::runtime_error("Windows SDK fixture must be absolute");
+            if (!absolute.is_absolute()) {
+                throw std::runtime_error("Windows SDK fixture must be absolute");
+            }
+
+            const auto absolute_env = android_sdk_environment(absolute, true, R"(C:\Windows)");
+
+            if (android_sdk_ext4_program(absolute, true).string().find('/') != std::string::npos ||
+                android_sdk_ext4_config(absolute, true).string().find('/') != std::string::npos) {
+                throw std::runtime_error("Windows formatter/config paths contain mixed separators");
+            }
+
+            if (absolute_env.at("PATH").find('/') != std::string::npos ||
+                android_sdk_program(absolute, true).string().find('/') != std::string::npos) {
+                throw std::runtime_error("Windows SDK paths contain mixed separators");
+            }
         }
-
-        const auto absolute_env = android_sdk_environment(absolute, true, R"(C:\Windows)");
-
-        if (android_sdk_ext4_program(absolute, true).string().find('/') != std::string::npos ||
-            android_sdk_ext4_config(absolute, true).string().find('/') != std::string::npos) {
-            throw std::runtime_error("Windows formatter/config paths contain mixed separators");
-        }
-
-        if (absolute_env.at("PATH").find('/') != std::string::npos ||
-            android_sdk_program(absolute, true).string().find('/') != std::string::npos) {
-            throw std::runtime_error("Windows SDK paths contain mixed separators");
-        }
-#endif
 
         if (!android_sdk_environment(sdk, false, "original-path").empty()) {
             throw std::runtime_error("Mac environment changed");
