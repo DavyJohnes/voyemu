@@ -1128,8 +1128,7 @@ Json passion_system_evidence(const std::filesystem::path &seed, const Json &mani
     need(candidate.at("schema") == 1 && candidate.at("kind") == "android-candidate" &&
                  candidate.at("profile") == manifest.at("profile") &&
                  definition.at("id") == manifest.at("profile") &&
-                 record_declares(definition, manifest.at("profile").get<std::string>(),
-                                 ProfilePlatform::passion, ProfileBoard::sa8155) &&
+                 record_declares(definition, ProfilePlatform::passion, ProfileBoard::sa8155) &&
                  candidate.at("profile_sha256") == lineage.at("source_profile").at("sha256") &&
                  candidate.at("stopped") == true && candidate.at("cold_boot_verified") == true &&
                  candidate.at("prepared_VM") == true &&
@@ -1237,8 +1236,7 @@ static std::pair<Json, std::string> passion_wheel_guest_source(const std::filesy
     }
 
     need(definition.at("id") == manifest.at("profile") &&
-                 record_declares(definition, manifest.at("profile").get<std::string>(),
-                                 ProfilePlatform::passion, ProfileBoard::sa8155) &&
+                 record_declares(definition, ProfilePlatform::passion, ProfileBoard::sa8155) &&
                  !manifest.at("android").contains("system_upgrade"),
          "wheel provenance requires base Passion generation");
     const auto &descriptor = manifest.at("resources").at("ui/cockpit-provenance.json");
@@ -1505,19 +1503,17 @@ Json portable_android_launch(const std::filesystem::path &root,
                      audio_diagnostic.value("profile", std::string{}) == diagnostic_profile,
              "audio diagnostic profile differs from selected definition");
         need(android.at("api") == 30 ||
-                     ((record_declares(definition, diagnostic_profile, ProfilePlatform::qinggan09,
-                                       ProfileBoard::nxp) ||
-                       record_declares(definition, diagnostic_profile, ProfilePlatform::qinggan09,
+                     ((record_declares(definition, ProfilePlatform::qinggan09, ProfileBoard::nxp) ||
+                       record_declares(definition, ProfilePlatform::qinggan09,
                                        ProfileBoard::sa8155)) &&
                       android.at("api") == 28),
              "audio diagnostic requires the selected pinned runtime");
         android["diagnostic_audio"] = "wav";
     }
 
-    const bool passion = record_declares(definition, reference, ProfilePlatform::passion,
+    const bool passion = record_declares(definition, ProfilePlatform::passion,
                                          ProfileBoard::sa8155);
-    const bool nxp = record_declares(definition, reference, ProfilePlatform::qinggan09,
-                                     ProfileBoard::nxp);
+    const bool nxp = record_declares(definition, ProfilePlatform::qinggan09, ProfileBoard::nxp);
 
     if (passion) {
 #ifdef _WIN32
@@ -1884,8 +1880,7 @@ static Json inspect_portable_runtime_impl(const std::filesystem::path &root,
     }
 
     if (manifest.at("android").contains("qinggan09_owned_packages")) {
-        need(record_declares(definition, family, ProfilePlatform::qinggan09,
-                             ProfileBoard::sa8155) &&
+        need(record_declares(definition, ProfilePlatform::qinggan09, ProfileBoard::sa8155) &&
                      api == 28,
              "A9 packages require exact API28 profile");
         const auto &packages = manifest.at("android").at("qinggan09_owned_packages");
@@ -1900,8 +1895,7 @@ static Json inspect_portable_runtime_impl(const std::filesystem::path &root,
     }
 
     if (manifest.at("android").contains("qinggan09_phone_package")) {
-        need(record_declares(definition, family, ProfilePlatform::qinggan09,
-                             ProfileBoard::sa8155) &&
+        need(record_declares(definition, ProfilePlatform::qinggan09, ProfileBoard::sa8155) &&
                      api == 28,
              "A9 Phone package requires exact API28 profile");
         const auto &descriptor = manifest.at("android").at("qinggan09_phone_package");

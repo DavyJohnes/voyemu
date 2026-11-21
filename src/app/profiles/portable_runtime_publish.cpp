@@ -447,7 +447,7 @@ Json publish_machine_android_system(const std::filesystem::path &root, std::stri
          "prepared API30 machine required");
     const auto definition = portable_profile_definition(root, profile, machine, seed);
     need(definition.at("id") == profile, "machine profile snapshot differs");
-    need(record_declares(definition, profile, ProfilePlatform::passion, ProfileBoard::sa8155) ==
+    need(record_declares(definition, ProfilePlatform::passion, ProfileBoard::sa8155) ==
                  !source_evidence.is_null(),
          "Passion system upgrade requires actual cold source evidence");
     Json generation = Json::object();

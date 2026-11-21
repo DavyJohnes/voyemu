@@ -14,14 +14,12 @@ inline constexpr const char *passion_profile_id = "passion-11-russian-20260403-2
 
 // Whether a machine launch record belongs to a profile of the Passion platform.
 inline bool passion_launch(const Json &android) {
-    return record_declares(android, android.value("reference_profile", std::string{}),
-                           ProfilePlatform::passion, ProfileBoard::sa8155);
+    return record_declares(android, ProfilePlatform::passion, ProfileBoard::sa8155);
 }
 
 inline void passion_camera_config(const Json &definition,
                                   std::map<std::string, std::string> &values) {
-    if (record_declares(definition, runtime_profile_reference(definition), ProfilePlatform::passion,
-                        ProfileBoard::sa8155)) {
+    if (record_declares(definition, ProfilePlatform::passion, ProfileBoard::sa8155)) {
         values["hw.camera.back"] = "emulated";
         values["hw.camera.front"] = "none";
     }
@@ -117,8 +115,7 @@ inline constexpr const char *passion_secondary =
 
 inline Json passion_startup_values(const Json &definition) {
     if (definition.value("schema", 0) != 1 ||
-        !record_declares(definition, runtime_profile_reference(definition),
-                         ProfilePlatform::passion, ProfileBoard::sa8155) ||
+        !record_declares(definition, ProfilePlatform::passion, ProfileBoard::sa8155) ||
         definition.value("status", std::string{}) != "incomplete" ||
         definition.value("android", Json::object()).value("package", std::string{}) !=
                 "system-images;android-30;default;arm64-v8a" ||

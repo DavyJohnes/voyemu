@@ -347,8 +347,7 @@ Json activate_portable_runtime(const std::filesystem::path &root, std::string_vi
     if (manifest.at("android").contains("qinggan09_owned_packages")) {
         auto packages = manifest.at("android").at("qinggan09_owned_packages");
         qinggan09_owned_packages_descriptor(packages, true);
-        need(record_declares(definition, family, ProfilePlatform::qinggan09,
-                             ProfileBoard::sa8155) &&
+        need(record_declares(definition, ProfilePlatform::qinggan09, ProfileBoard::sa8155) &&
                      api == 28,
              "exact A9 activation required");
 
@@ -373,8 +372,7 @@ Json activate_portable_runtime(const std::filesystem::path &root, std::string_vi
     if (manifest.at("android").contains("qinggan09_phone_package")) {
         auto descriptor = manifest.at("android").at("qinggan09_phone_package");
         qinggan09_phone_package_descriptor(descriptor, true);
-        need(record_declares(definition, family, ProfilePlatform::qinggan09,
-                             ProfileBoard::sa8155) &&
+        need(record_declares(definition, ProfilePlatform::qinggan09, ProfileBoard::sa8155) &&
                      api == 28,
              "exact A9 Phone activation required");
         auto &package = descriptor.at("package");

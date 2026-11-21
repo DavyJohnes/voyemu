@@ -66,10 +66,8 @@ Json Api::cluster_tree(const Json &request, Clock::time_point deadline) {
         const auto reference = runtime_profile_reference(definition, name);
 
         if (definition.value("id", std::string{}) != name ||
-            !(record_declares(definition, reference, ProfilePlatform::qinggan09,
-                              ProfileBoard::sa8155) ||
-              record_declares(definition, reference, ProfilePlatform::qinggan11,
-                              ProfileBoard::sa8155)) ||
+            !(record_declares(definition, ProfilePlatform::qinggan09, ProfileBoard::sa8155) ||
+              record_declares(definition, ProfilePlatform::qinggan11, ProfileBoard::sa8155)) ||
             !manifest.contains("qnx")) {
             throw VoyemuError("TEST_UNSUPPORTED",
                               "selected machine has no compatible Kanzi scene provider");

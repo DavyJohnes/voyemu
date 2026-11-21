@@ -279,7 +279,10 @@ void observer_configuration_checks(const std::filesystem::path &stage, bool a9 =
              "https://dl.google.com/android/repository/sys-img/android/arm64-v8a-30_r02.zip"},
             {"sha256", "cb50112cf2dd234a71e2a29b0241c23dbb37dd5fc3156c68cc9c49d0f58ad304"},
             {"clean_base", android_base(30).at("clean_base")}};
-    Json definition = {{"id", profile}, {"android", android30}};
+    Json definition = {{"id", profile},
+                       {"platform", a9 ? "qinggan09" : "passion"},
+                       {"board", "8155"},
+                       {"android", android30}};
 
     if (a9) {
         definition.erase("id");
@@ -493,7 +496,12 @@ void observer_build_snapshot_checks(const std::filesystem::path &stage) {
                      a9 ? "86844d2edf6ba7c7f11261f6be3fb37788c985cfcf3b8924cfe9f57a1ccbc0a9"
                         : "cb50112cf2dd234a71e2a29b0241c23dbb37dd5fc3156c68cc9c49d0f58ad304"},
                     {"clean_base", android_base(a9 ? 28 : 30).at("clean_base")}};
-            Json definition = {{"android", android}};
+            Json definition = {{"platform", a9 ? "qinggan09"
+                                            : std::string_view(profile).starts_with("passion")
+                                                    ? "passion"
+                                                    : "qinggan11"},
+                               {"board", "8155"},
+                               {"android", android}};
 
             if (!a9) {
                 definition["id"] = profile;
@@ -1247,6 +1255,8 @@ void passion_wheel_refresh_checks(const std::filesystem::path &stage) {
     const auto root = stage / "passion-wheel", seed = root / "machines" / profile;
     Json definition = {
             {"id", profile},
+            {"platform", "passion"},
+            {"board", "8155"},
             {"status", "incomplete"},
             {"android",
              {{"package", "system-images;android-30;default;arm64-v8a"},
@@ -1553,6 +1563,8 @@ void passion_system_upgrade_checks(const std::filesystem::path &stage,
                data = seed / "android", scoped = root / ".local/machines" / profile;
     Json definition = {
             {"id", profile},
+            {"platform", "passion"},
+            {"board", "8155"},
             {"status", "incomplete"},
             {"android",
              {{"package", "system-images;android-30;default;arm64-v8a"},
@@ -5177,6 +5189,8 @@ int main(int argc, char **argv) {
                   "API30 non-Free/Dreamer profile silently inherited Free/Dreamer adapters");
             auto nxp_definition = definition30;
             nxp_definition["id"] = nxp_profile_id;
+            nxp_definition["platform"] = "qinggan09";
+            nxp_definition["board"] = "nxp";
             nxp_definition["android"] = {
                     {"package", "system-images;android-28;default;arm64-v8a"},
                     {"revision", "1"},
@@ -5247,6 +5261,8 @@ int main(int argc, char **argv) {
             }
             auto passion_definition = definition30;
             passion_definition["id"] = passion_profile_id;
+            passion_definition["platform"] = "passion";
+            passion_definition["board"] = "8155";
             passion_definition["configure"] = {{"home", "com.voyah.os.carlauncher"},
                                                {"homeActivity", passion_home}};
             passion_definition["displays"] = Json::array(

@@ -12,9 +12,8 @@ std::vector<std::string> embedded_profile_names(ProfilePlatform platform, Profil
 // a local copy, declares none.
 bool embedded_profile_declares(std::string_view id, ProfilePlatform platform, ProfileBoard board);
 // Whether a profile definition or a machine launch record declares this platform and board; a
-// record written before profiles declared them is read through the bundled profile it refers to.
-bool record_declares(const Json &record, std::string_view reference, ProfilePlatform platform,
-                     ProfileBoard board);
+// record without a platform declares none.
+bool record_declares(const Json &record, ProfilePlatform platform, ProfileBoard board);
 // Declared patch dependencies only; component build recipes are a separate graph.
 Json declared_patch_plan(const Json &definition);
 } // namespace voyemu

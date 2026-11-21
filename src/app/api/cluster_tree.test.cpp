@@ -1257,6 +1257,8 @@ int main(int argc, char **argv) try {
     ensure_private_directory(clone_seed);
     ensure_private_directory(clone_session);
     const Json definition = {{"id", clone},
+                             {"platform", "qinggan09"},
+                             {"board", "8155"},
                              {"capture", {{"profile", clone}, {"referenceProfile", profile}}}};
     write_private_json(clone_seed / "profile.json", definition);
     Json images = Json::object();
@@ -1301,9 +1303,11 @@ int main(int argc, char **argv) try {
                 native_session_directory(root, copy, voyemu::machine_identity(copy, copy), id);
         ensure_private_directory(copy_seed);
         ensure_private_directory(copy_session);
-        write_private_json(
-                copy_seed / "profile.json",
-                {{"id", copy}, {"capture", {{"profile", copy}, {"referenceProfile", reference}}}});
+        write_private_json(copy_seed / "profile.json",
+                           {{"id", copy},
+                            {"platform", passion ? "passion" : "qinggan11"},
+                            {"board", "8155"},
+                            {"capture", {{"profile", copy}, {"referenceProfile", reference}}}});
         const auto layout = qnx_runtime_layout(passion ? "sa8155-passion-21480"
                                                        : "sa8155-qinggan11-731");
         Json copy_images = Json::object();

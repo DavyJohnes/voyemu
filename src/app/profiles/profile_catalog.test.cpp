@@ -544,19 +544,19 @@ int main(int argc, char **argv) {
                                                              ? ProfileBoard::sa8155
                                                              : ProfileBoard::nxp),
                   "catalog selects profiles by their declared platform and board");
-            check(record_declares(Json{{"schema", 1}}, id, platform, board) &&
-                          record_declares(Json::object(), id, platform, board),
-                  "a record without a platform is read through its bundled reference");
+            check(record_declares(definition, platform, board) &&
+                          !record_declares(Json{{"schema", 1}, {"id", id}}, platform, board),
+                  "a record without a platform declares none, whatever profile it names");
         }
 
         const Json declared = {{"platform", "passion"}, {"board", "8155"}};
-        check(record_declares(declared, "synthetic-local-copy", ProfilePlatform::passion,
-                              ProfileBoard::sa8155) &&
-                      !record_declares(declared, "synthetic-local-copy", ProfilePlatform::qinggan11,
+        check(record_declares(declared, ProfilePlatform::passion, ProfileBoard::sa8155) &&
+                      !record_declares(declared, ProfilePlatform::qinggan11,
                                        ProfileBoard::sa8155) &&
-                      !record_declares(Json::object(), "synthetic-local-copy",
-                                       ProfilePlatform::passion, ProfileBoard::sa8155),
-              "a declared platform decides regardless of the reference id");
+                      !record_declares(declared, ProfilePlatform::passion, ProfileBoard::nxp) &&
+                      !record_declares(Json::object(), ProfilePlatform::passion,
+                                       ProfileBoard::sa8155),
+              "the declared platform and board of a record decide");
 
         check(!embedded_profile_declares("synthetic-local-copy", ProfilePlatform::qinggan09,
                                          ProfileBoard::sa8155),
@@ -659,12 +659,14 @@ int main(int argc, char **argv) {
                           config.at("hw.camera.front") == "none",
                   "Passion must force virtual camera config");
             auto other = passion;
-            other["id"] = "foreign";
+            other["platform"] = "qinggan11";
             config["hw.camera.back"] = "webcam0";
             passion_camera_config(other, config);
             check(config.at("hw.camera.back") == "webcam0",
                   "other profiles must retain camera config");
             Json launch = {{"reference_profile", passion_profile_id},
+                           {"platform", "passion"},
+                           {"board", "8155"},
                            {"presentation_adapter", {{"family", passion_profile_id}}},
                            {"args", Json::array()}};
             const std::string good = "hw.camera.back=emulated\nhw.camera.front=none\n";

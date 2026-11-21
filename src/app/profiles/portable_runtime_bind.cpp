@@ -270,7 +270,7 @@ std::filesystem::path bind_machine_configuration(const std::filesystem::path &ro
     }
 
     if (manifest.at("android").contains("qinggan09_owned_packages")) {
-        need(record_declares(retained_definition, family, ProfilePlatform::qinggan09,
+        need(record_declares(retained_definition, ProfilePlatform::qinggan09,
                              ProfileBoard::sa8155) &&
                      manifest.at("android").at("api") == 28,
              "exact A9 package machine required");
@@ -294,7 +294,7 @@ std::filesystem::path bind_machine_configuration(const std::filesystem::path &ro
     Json desired_phone = Json::object();
 
     if (manifest.at("android").contains("qinggan09_phone_package")) {
-        need(record_declares(retained_definition, family, ProfilePlatform::qinggan09,
+        need(record_declares(retained_definition, ProfilePlatform::qinggan09,
                              ProfileBoard::sa8155) &&
                      manifest.at("android").at("api") == 28,
              "exact A9 Phone machine required");
@@ -407,8 +407,7 @@ std::filesystem::path bind_machine_configuration(const std::filesystem::path &ro
             return false;
         }
 
-        if (record_declares(retained_definition, family, ProfilePlatform::qinggan09,
-                            ProfileBoard::nxp) &&
+        if (record_declares(retained_definition, ProfilePlatform::qinggan09, ProfileBoard::nxp) &&
             !nxp_presentation(launch)) {
             return false;
         }
@@ -457,10 +456,8 @@ std::filesystem::path bind_machine_configuration(const std::filesystem::path &ro
         }
 
         if (!qinggan11_profile_id(family) &&
-            !record_declares(retained_definition, family, ProfilePlatform::passion,
-                             ProfileBoard::sa8155) &&
-            (!record_declares(retained_definition, family, ProfilePlatform::qinggan09,
-                              ProfileBoard::nxp) ||
+            !record_declares(retained_definition, ProfilePlatform::passion, ProfileBoard::sa8155) &&
+            (!record_declares(retained_definition, ProfilePlatform::qinggan09, ProfileBoard::nxp) ||
              retained_definition.value("components", Json::object()).contains("wheel"))) {
             Json routes = Json::object();
             const auto route_metadata =
@@ -590,7 +587,7 @@ std::filesystem::path bind_machine_configuration(const std::filesystem::path &ro
 
         const auto definition = portable_profile_definition(root, profile, machine, seed);
 
-        if (record_declares(definition, family, ProfilePlatform::passion, ProfileBoard::sa8155)) {
+        if (record_declares(definition, ProfilePlatform::passion, ProfileBoard::sa8155)) {
             const auto capability = passion_wheel_capability(definition);
 
             if (launch.value("wheel_capability", Json{}) != capability) {
@@ -1185,8 +1182,7 @@ std::filesystem::path bind_machine_configuration(const std::filesystem::path &ro
                          sha256_text(archive),
                  "API28/API30 arm64 configuration required");
 
-            if (record_declares(definition, family, ProfilePlatform::passion,
-                                ProfileBoard::sa8155)) {
+            if (record_declares(definition, ProfilePlatform::passion, ProfileBoard::sa8155)) {
                 host.android_port = 5590;
             } else if (!bindings.contains("android_port")) {
                 host.android_port =

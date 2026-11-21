@@ -60,7 +60,7 @@ inline bool nxp_presentation(const Json &android) {
     const auto reference = android.value("reference_profile", std::string{});
 
     if (!android.contains("presentation_adapter") ||
-        !record_declares(android, reference, ProfilePlatform::qinggan09, ProfileBoard::nxp)) {
+        !record_declares(android, ProfilePlatform::qinggan09, ProfileBoard::nxp)) {
         return false;
     }
 
