@@ -9,6 +9,7 @@ Static checks run before every commit and in [CI](ci.md). Each uses a pinned too
 | Error Prone | `cmake --build .local/build/native --target errorprone-check` | Error Prone 2.52.0 on the pinned JDK |
 | EditorConfig | `java src/dev/checks/EditorConfigCheck.java .` | Line endings, final newline, trailing whitespace and indentation by `config/config-editor` |
 | Documentation | `java src/dev/checks/CheckDocs.java .` | Page pairs, links, glossary terms and decision records |
+| Platform macros | `java src/dev/checks/CheckPlatformMacros.java .` | Host and architecture conditions outside `src/app/os/`, with the remaining files in `config/config-platform-macros.txt` |
 
 ## lint and lint-fix
 
@@ -59,6 +60,14 @@ java src/dev/checks/CheckDocs.java
 
 ```sh
 java src/dev/checks/CheckProfileIds.java
+```
+
+## Platform macro check
+
+`CheckPlatformMacros` keeps host code in the thin `os/` backends of the [single implementation](../why/single-implementation.md): no C, C++ or Objective-C++ source under `src/` outside `src/app/os/` may test a host or architecture macro such as `_WIN32`, `__APPLE__`, `__linux__` or `__aarch64__` in `#if`, `#ifdef`, `#ifndef` or `#elif`. Pinned third-party code and the formatter fixtures are excluded. `config/config-platform-macros.txt` lists the files that still do, one path and its reason per line; the check fails on a finding in any other file and on a listed file without findings, so the list only shrinks. It prints `file:line` for every finding and the totals. Its own test on synthetic trees runs in CTest.
+
+```sh
+java src/dev/checks/CheckPlatformMacros.java .
 ```
 
 Tool paths default to the pins in `src/app/toolchain.json`; `VOYEMU_CLANG_FORMAT`, `VOYEMU_GOOGLE_JAVA_FORMAT` and `VOYEMU_CLANG_TIDY` select other binaries of the same version.

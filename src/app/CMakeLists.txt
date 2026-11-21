@@ -583,6 +583,8 @@ if(BUILD_TESTING)
     voyemu_add_test(check_docs LABELS host TIMEOUT 120 COMMAND "${voyemu_jdk}/bin/java" "${voyemu_project_root}/src/dev/checks/test/CheckDocsTest.java" "${voyemu_project_root}/src/dev/checks/CheckDocs.java" "${voyemu_project_root}/.local/build/tmp/check-docs")
     # The profile id checker runs on synthetic trees; it joins lint once src/ names no profile.
     voyemu_add_test(check_profile_ids LABELS host TIMEOUT 120 COMMAND "${voyemu_jdk}/bin/java" "${voyemu_project_root}/src/dev/checks/test/CheckProfileIdsTest.java" "${voyemu_project_root}/src/dev/checks/CheckProfileIds.java" "${voyemu_project_root}/.local/build/tmp/check-profile-ids")
+    # The platform macro checker runs on synthetic trees; lint runs it on src/.
+    voyemu_add_test(check_platform_macros LABELS host TIMEOUT 120 COMMAND "${voyemu_jdk}/bin/java" "${voyemu_project_root}/src/dev/checks/test/CheckPlatformMacrosTest.java" "${voyemu_project_root}/src/dev/checks/CheckPlatformMacros.java" "${voyemu_project_root}/.local/build/tmp/check-platform-macros")
     foreach(GROUP qinggan09 qinggan11_611 qinggan11_731 passion)
         voyemu_add_test(prepare_java_oem_${GROUP} LABELS oem deps TIMEOUT 3600 COMMAND ${CMAKE_COMMAND} -DGROUP=${GROUP} "-DEXT4_IMAGE=$<TARGET_FILE:ext4_image_test>" -P "${CMAKE_CURRENT_SOURCE_DIR}/../prepare/test/java/oem/run.cmake")
     endforeach()
@@ -1251,6 +1253,7 @@ endif()
 add_custom_target(lint
     COMMAND "${voyemu_lint_java}" src/dev/checks/EditorConfigCheck.java .
     COMMAND "${voyemu_lint_java}" src/dev/checks/CheckDocs.java .
+    COMMAND "${voyemu_lint_java}" src/dev/checks/CheckPlatformMacros.java .
     WORKING_DIRECTORY "${voyemu_project_root}" USES_TERMINAL VERBATIM)
 add_dependencies(lint format-check errorprone-check tidy-check)
 add_custom_target(lint-fix

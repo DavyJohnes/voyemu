@@ -9,6 +9,7 @@
 | Error Prone | `cmake --build .local/build/native --target errorprone-check` | Error Prone 2.52.0 на закреплённом JDK |
 | EditorConfig | `java src/dev/checks/EditorConfigCheck.java .` | Окончания строк, финальный перевод строки, пробелы в конце строк и отступы по `config/config-editor` |
 | Документация | `java src/dev/checks/CheckDocs.java .` | Пары страниц, ссылки, термины глоссария и записи о решениях |
+| Платформенные макросы | `java src/dev/checks/CheckPlatformMacros.java .` | Условия по хосту и архитектуре вне `src/app/os/`, оставшиеся файлы перечислены в `config/config-platform-macros.txt` |
 
 ## lint и lint-fix
 
@@ -59,6 +60,14 @@ java src/dev/checks/CheckDocs.java
 
 ```sh
 java src/dev/checks/CheckProfileIds.java
+```
+
+## Проверка платформенных макросов
+
+`CheckPlatformMacros` держит код хоста в тонких бэкендах `os/` по правилу [одной реализации](../why/single-implementation.ru.md): ни один исходник на C, C++ или Objective-C++ в `src/` вне `src/app/os/` не проверяет макрос хоста или архитектуры, например `_WIN32`, `__APPLE__`, `__linux__` или `__aarch64__`, в `#if`, `#ifdef`, `#ifndef` или `#elif`. Закреплённый сторонний код и образцы форматирования исключены. `config/config-platform-macros.txt` перечисляет файлы, которые ещё это делают, по одному пути с причиной в строке; проверка завершается ошибкой при замечании в любом другом файле и при перечисленном файле без замечаний, поэтому список только сокращается. Она печатает `файл:строка` для каждого замечания и итоги. Её собственный тест на синтетических деревьях запускается в CTest.
+
+```sh
+java src/dev/checks/CheckPlatformMacros.java .
 ```
 
 Пути инструментов по умолчанию берутся из пинов в `src/app/toolchain.json`; `VOYEMU_CLANG_FORMAT`, `VOYEMU_GOOGLE_JAVA_FORMAT` и `VOYEMU_CLANG_TIDY` задают другие исполняемые файлы той же версии.
