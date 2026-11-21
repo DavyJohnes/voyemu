@@ -54,6 +54,9 @@ struct QnxAdapterSpec {
     // preparation checks it against initial_native_state before the guest build and the MCU
     // delivery of a session reads it.
     bool mcu_layout_embedded;
+    // Whether the guest sets the theme skin through the OEM setters and its theme receipt reports
+    // the requested theme and skin getters.
+    bool theme_receipt_skin;
 };
 
 inline constexpr std::array qnx_adapter_registry{
@@ -76,6 +79,7 @@ inline constexpr std::array qnx_adapter_registry{
                        {},
                        {},
                        {},
+                       false,
                        false},
         QnxAdapterSpec{QnxGuestAdapter::sa8155_qinggan11_731,
                        "sa8155-qinggan11-731",
@@ -96,7 +100,8 @@ inline constexpr std::array qnx_adapter_registry{
                        "6c381808b343adba849fa22f1efd18547de90cba7f3f3b43e43970a7f7222f39",
                        "20a4ec0855a4e1955156dd13ec8e6731af0c28a0a5344db91be7d83e7a93d74a",
                        {},
-                       true},
+                       true,
+                       false},
         QnxAdapterSpec{QnxGuestAdapter::sa8155_passion_21480,
                        "sa8155-passion-21480",
                        QnxGuestPlatform::passion,
@@ -116,6 +121,7 @@ inline constexpr std::array qnx_adapter_registry{
                        {},
                        {},
                        {},
+                       false,
                        false},
         QnxAdapterSpec{QnxGuestAdapter::sa8155_qinggan11_611,
                        "sa8155-qinggan11-611",
@@ -136,6 +142,7 @@ inline constexpr std::array qnx_adapter_registry{
                        "a830d876d9091190096025f4f4eb81294078b3002d955283b3a9dec296414f05",
                        "faeb580b46c5c92d7ecd5b707be15b85874c838471f5cb9ca010b9a90e9ae195",
                        "-DQGFX_QINGGAN11_611=1",
+                       true,
                        true}};
 
 inline const QnxAdapterSpec &qnx_adapter(QnxGuestAdapter adapter) {

@@ -1146,9 +1146,12 @@ void Session::poll_qnx() {
 
     if (theme_sequence_ && deliveries_["qnx"].contains("theme") &&
         deliveries_["qnx"]["theme"].value("status", std::string{}) != "guest_acknowledged") {
-        // Only the 6.11.1 guest sets the skin and reports both OEM getters back.
-        const bool skin_receipt = cluster_boot_spec_.value("hardware_adapter", std::string{}) ==
-                                  qnx_adapter(QnxGuestAdapter::sa8155_qinggan11_611).name;
+        const auto adapter = cluster_boot_spec_.value("hardware_adapter", std::string{});
+        const bool skin_receipt =
+                std::any_of(qnx_adapter_registry.begin(), qnx_adapter_registry.end(),
+                            [&](const QnxAdapterSpec &spec) {
+                                return spec.name == adapter && spec.theme_receipt_skin;
+                            });
 
         if (auto receipt = find_qnx_theme_receipt(
                     directory_, producers_, theme_sequence_,
