@@ -12,7 +12,7 @@
 | `lint` | Ubuntu 24.04 | Настраивает дерево Linux с Zig и запускает `lint` с закреплёнными средствами форматирования, Checkstyle, clang-tidy, Error Prone, библиотеками Java, D8 и apksigner |
 | `linux` | Ubuntu 24.04 | Собирает дерево Linux с Zig, запускает `voyemu --help` и CTest без меток `oem` и `deps` |
 | `tidy-check-windows` | Ubuntu 24.04 | Настраивает дерево кросс-сборки для Windows с Zig и запускает `tidy-check` |
-| `macos-native` | macOS 15 | Собирает с SDK из Command Line Tools без графики, запускает `voyemu --help`, проверяет подпись кода и запускает CTest без меток `oem` и `deps` |
+| `macos-native` | macOS 15 | Собирает с SDK из Command Line Tools и графикой, как релиз, запускает `voyemu --help`, проверяет подпись кода и запускает CTest без меток `oem` и `deps` |
 | `windows-cross` | Ubuntu 24.04 | Собирает Windows кросс-сборкой, проверяет отсутствие PDB и запускает выбранные поведенческие PE-тесты под закреплённым Wine |
 | `windows-native` | Windows Server 2022 | Собирает на Windows, запускает `voyemu.exe --help` и CTest без меток `oem` и `deps` |
 

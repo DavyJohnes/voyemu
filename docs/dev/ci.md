@@ -12,7 +12,7 @@ Twelve GitHub Actions workflows live in `.github/workflows/`: `ci` checks the so
 | `lint` | Ubuntu 24.04 | Configures a Linux tree with Zig and runs `lint` with the pinned formatters, Checkstyle, clang-tidy, Error Prone, Java libraries, D8 and apksigner |
 | `linux` | Ubuntu 24.04 | Builds a Linux tree with Zig, runs `voyemu --help` and runs CTest without the `oem` and `deps` labels |
 | `tidy-check-windows` | Ubuntu 24.04 | Configures a Windows cross tree with Zig and runs `tidy-check` |
-| `macos-native` | macOS 15 | Builds with the Command Line Tools SDK and graphics off, runs `voyemu --help`, verifies the code signature and runs CTest without the `oem` and `deps` labels |
+| `macos-native` | macOS 15 | Builds with the Command Line Tools SDK and graphics on, as the release does, runs `voyemu --help`, verifies the code signature and runs CTest without the `oem` and `deps` labels |
 | `windows-cross` | Ubuntu 24.04 | Cross-builds Windows executables, checks that no PDB was produced and runs selected PE behavior suites under pinned Wine |
 | `windows-native` | Windows Server 2022 | Builds natively, runs `voyemu.exe --help` and runs CTest without the `oem` and `deps` labels |
 

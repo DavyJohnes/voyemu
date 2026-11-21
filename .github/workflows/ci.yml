@@ -126,8 +126,8 @@ jobs:
               with:
                   set: macos
             - run: sudo xcode-select --switch /Library/Developer/CommandLineTools && xcrun --sdk macosx --show-sdk-path
-            # Real ANGLE tests require the pinned SDK and are separate from source-only checks.
-            - run: cmake -S src/app -B .local/build/native-host -G Ninja -DCMAKE_TOOLCHAIN_FILE="$PWD/src/dev/toolchains/zig-macos-arm64.cmake" -DBUILD_TESTING=ON -DVOYEMU_BUILD_GRAPHICS=OFF
+            # Graphics is on as in the release build; real ANGLE tests are labeled deps and need the pinned SDK.
+            - run: cmake -S src/app -B .local/build/native-host -G Ninja -DCMAKE_TOOLCHAIN_FILE="$PWD/src/dev/toolchains/zig-macos-arm64.cmake" -DBUILD_TESTING=ON
             - run: cmake --build .local/build/native-host --parallel 3
             - run: ./.local/build/native-host/voyemu --help
             - run: codesign --verify --strict ./.local/build/native-host/voyemu
