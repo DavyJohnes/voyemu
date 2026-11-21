@@ -38,9 +38,7 @@ src/app/prepare/java_runtime.test.cpp group 8 prepare: archives, Java runtime an
 src/app/prepare/java_toolchain.cpp group 8 prepare: archives, Java runtime and e2fs helpers
 src/app/prepare/java_toolchain.test.cpp group 8 prepare: archives, Java runtime and e2fs helpers
 src/app/prepare/update_image.test.cpp group 8 prepare: archives, Java runtime and e2fs helpers
-src/app/profiles/candidate_ui_observer_transport.hpp group 11 profiles: candidate transport and image clone
-src/app/profiles/image_clone.hpp group 11 profiles: candidate transport and image clone
-src/app/profiles/inactive_profile.hpp group 11 profiles: candidate transport and image clone
+src/app/profiles/image_clone.hpp later: macOS clonefile used only by the data-out and profile-sweep files
 src/app/profiles/inactive_profile.test.cpp group 11 profiles: candidate transport and image clone
 src/app/profiles/machine_preparation.test.cpp later: data-out and profile-sweep branches pending
 src/app/profiles/machine_preparation_internal.hpp later: data-out and profile-sweep branches pending
@@ -55,7 +53,6 @@ src/app/profiles/profile_build.cpp later: data-out and profile-sweep branches pe
 src/app/profiles/profile_build.test.cpp later: data-out and profile-sweep branches pending
 src/app/profiles/profile_build_finalize.cpp later: data-out and profile-sweep branches pending
 src/app/profiles/profile_build_internal.hpp later: data-out and profile-sweep branches pending
-src/app/profiles/profile_preparation.cpp group 11 profiles: candidate transport and image clone
 src/app/profiles/profile_runtime.test.cpp group 11 profiles: candidate transport and image clone
 src/app/profiles/wine_native_root_guard.test.cpp group 11 profiles: candidate transport and image clone
 src/app/qnx/qnx_checkpoint.test.cpp group 9 qnx: checkpoint, storage, update and shutdown

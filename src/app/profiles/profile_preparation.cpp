@@ -14,6 +14,7 @@
 #include "native_component.hpp"
 #include "ordinary_path.hpp"
 #include "os/fs.hpp"
+#include "os/platform.hpp"
 #include "owner_lock.hpp"
 #include "process.hpp"
 #include "profile_catalog.hpp"
@@ -524,11 +525,7 @@ ProfilePreparationArtifacts prepare_profile_artifacts(const std::filesystem::pat
     const auto base_cert = sha256_bytes(pinned_apk_v2_certificate(framework, framework_pin));
     load_pinned_apk_identity(inputs.key, inputs.key_sha256, inputs.certificate,
                              inputs.certificate_sha256, base_cert);
-#ifdef _WIN32
-    const std::string exe = ".exe";
-#else
-    const std::string exe;
-#endif
+    const std::string exe(os::executable_suffix);
     const auto manifest = project_file_json(root, "src/app/toolchain.json", 128 * 1024);
     const auto build_version = manifest.at("sdk").at("buildTools").get<std::string>();
 

@@ -3,8 +3,12 @@
 #include <iostream>
 #include <thread>
 #ifndef _WIN32
+#include <fcntl.h>
+#include <sys/file.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/un.h>
+#include <unistd.h>
 #endif
 #ifdef _WIN32
 #ifndef WIN32_LEAN_AND_MEAN

@@ -1,19 +1,10 @@
 #pragma once
 #include "android_adb_route.hpp"
 #include "error.hpp"
-#include "os/net.hpp"
+#include "os/socket.hpp"
 #include "ui_observer.hpp"
 #include <charconv>
 #include <sstream>
-#ifdef _WIN32
-#include <winsock2.h>
-#else
-#include <cerrno>
-#include <fcntl.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <unistd.h>
-#endif
 
 namespace voyemu {
 // Machine preparation deliberately retains its pinned SDK ADB transport. Runtime
@@ -120,32 +111,20 @@ private:
     class Socket {
     public:
         explicit Socket(unsigned port) {
-#ifdef _WIN32
-            WSADATA network{};
-
-            if (::WSAStartup(MAKEWORD(2, 2), &network) != 0) {
+            if (library_.error()) {
                 throw VoyemuError("TREE_TRANSPORT_UNKNOWN", "socket unavailable");
             }
-            network_ = true;
-#endif
-            fd_ = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 
-            if (fd_ == invalid) {
+            fd_ = os::open_stream_socket(AF_INET);
+
+            if (fd_ == os::no_socket) {
                 close();
                 throw VoyemuError("TREE_TRANSPORT_UNKNOWN", "socket unavailable");
             }
 
-#ifdef _WIN32
-            u_long nonblocking = 1;
-            const bool configured = ::ioctlsocket(fd_, FIONBIO, &nonblocking) == 0;
-#else
-            os::suppress_sigpipe(fd_);
-            const bool configured = ::fcntl(fd_, F_SETFL, ::fcntl(fd_, F_GETFL, 0) | O_NONBLOCK) ==
-                                            0 &&
-                                    ::fcntl(fd_, F_SETFD, FD_CLOEXEC) == 0;
-#endif
+            (void)os::suppress_socket_signal(fd_);
 
-            if (!configured) {
+            if (!os::set_nonblocking_socket(fd_)) {
                 close();
                 throw VoyemuError("TREE_TRANSPORT_UNKNOWN", "socket unavailable");
             }
@@ -154,14 +133,10 @@ private:
             address.sin_family = AF_INET;
             address.sin_port = htons(static_cast<std::uint16_t>(port));
             address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-            opened_ = ::connect(fd_, reinterpret_cast<sockaddr *>(&address), sizeof(address)) == 0;
-#ifdef _WIN32
-            const bool pending = ::WSAGetLastError() == WSAEWOULDBLOCK;
-#else
-            const bool pending = errno == EINPROGRESS;
-#endif
+            opened_ = os::connect_socket(fd_, reinterpret_cast<sockaddr *>(&address),
+                                         sizeof(address));
 
-            if (!opened_ && !pending) {
+            if (!opened_ && !os::socket_connecting()) {
                 close();
                 throw VoyemuError("TREE_TRANSPORT_UNKNOWN", "observer unavailable");
             }
@@ -179,31 +154,13 @@ private:
             }
 
             if (!opened_) {
-                fd_set writable, failed;
-                FD_ZERO(&writable);
-                FD_ZERO(&failed);
-                FD_SET(fd_, &writable);
-                FD_SET(fd_, &failed);
-                timeval no_wait{};
-#ifdef _WIN32
-                const int width = 0;
-                int length = sizeof(int);
-#else
-                const int width = fd_ + 1;
-                socklen_t length = sizeof(int);
-#endif
-                const auto ready = ::select(width, nullptr, &writable, &failed, &no_wait);
+                const auto ready = os::wait_socket(fd_, true, 0);
 
                 if (ready == 0) {
                     return {false, {}, std::nullopt};
                 }
 
-                int error = 0;
-
-                if (ready < 0 || FD_ISSET(fd_, &failed) ||
-                    ::getsockopt(fd_, SOL_SOCKET, SO_ERROR, reinterpret_cast<char *>(&error),
-                                 &length) != 0 ||
-                    error) {
+                if (ready < 0 || os::pending_socket_error(fd_) != 0) {
                     return terminal();
                 }
 
@@ -211,7 +168,7 @@ private:
             }
 
             char bytes[65536];
-            const auto count = ::recv(fd_, bytes, sizeof(bytes), 0);
+            const auto count = os::receive_socket(fd_, bytes, sizeof(bytes));
 
             if (count < 0 && would_block()) {
                 return {true, {}, std::nullopt};
@@ -225,7 +182,7 @@ private:
         }
 
         std::size_t write(std::string_view bytes) {
-            const auto count = ::send(fd_, bytes.data(), static_cast<int>(bytes.size()), 0);
+            const auto count = os::send_socket(fd_, bytes.data(), bytes.size());
 
             if (count > 0) {
                 return static_cast<std::size_t>(count);
@@ -240,13 +197,7 @@ private:
 
     private:
         static bool would_block() {
-#ifdef _WIN32
-            const auto error = ::WSAGetLastError();
-
-            return error == WSAEWOULDBLOCK || error == WSAEINTR;
-#else
-            return errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR;
-#endif
+            return os::socket_would_block() || os::socket_interrupted();
         }
 
         Poll terminal() const {
@@ -254,29 +205,13 @@ private:
         }
 
         void close() {
-#ifdef _WIN32
-            if (fd_ != invalid) {
-                ::closesocket(fd_);
+            if (fd_ != os::no_socket) {
+                os::close_socket(fd_);
             }
-
-            if (network_) {
-                ::WSACleanup();
-            }
-#else
-            if (fd_ != invalid) {
-                ::close(fd_);
-            }
-#endif
         }
 
-#ifdef _WIN32
-        static constexpr SOCKET invalid = INVALID_SOCKET;
-        SOCKET fd_ = invalid;
-        bool network_ = false;
-#else
-        static constexpr int invalid = -1;
-        int fd_ = invalid;
-#endif
+        os::SocketLibrary library_;
+        os::SocketHandle fd_ = os::no_socket;
         bool opened_ = false, failed_ = false;
     };
     std::filesystem::path directory_;
