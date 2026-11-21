@@ -57,12 +57,12 @@ inline Json nxp_wheel_adapter() {
 
 // The Free/Dreamer platform on the NXP board presents the OEM screens as they are.
 inline bool nxp_presentation(const Json &android) {
-    const auto reference = android.value("reference_profile", std::string{});
-
     if (!android.contains("presentation_adapter") ||
         !record_declares(android, ProfilePlatform::qinggan09, ProfileBoard::nxp)) {
         return false;
     }
+
+    const auto reference = android.value("reference_profile", std::string{});
 
     if (reference.empty() ||
         android.at("presentation_adapter") != nxp_presentation_contract(reference) ||
