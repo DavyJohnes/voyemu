@@ -47,8 +47,8 @@ static const std::string &qinggan09_profile() {
 }
 
 // Opens path for writing as a new file owned by the current user. An elevated Windows process
-// creates files owned by Administrators, while the SDK descriptor and the supervisor log readers
-// require the current user as owner.
+// creates files owned by Administrators, while the readers of the SDK descriptor, the supervisor
+// log and the supervisor lock require the current user as owner.
 static std::ofstream user_owned_file(const std::filesystem::path &path) {
     std::filesystem::remove(path);
 #ifdef _WIN32
@@ -4163,8 +4163,8 @@ int main(int argc, char **argv) try {
         thread.join();
     }
     {
-        std::ofstream file(root / ".local/machines" / name / "active" /
-                           (name + ".supervisor.lock"));
+        auto file = user_owned_file(root / ".local/machines" / name / "active" /
+                                    (name + ".supervisor.lock"));
         file << "owned-lock-fixture";
     }
     Json stopped;
