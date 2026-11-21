@@ -21,6 +21,9 @@ std::string project_file_bytes(const std::filesystem::path &root, std::string_vi
                                std::uint64_t maximum);
 Json project_file_json(const std::filesystem::path &root, std::string_view name,
                        std::uint64_t maximum);
+// The copy of name that the build embedded in the launcher, for a process without the project
+// root.
+Json embedded_project_file_json(std::string_view name, std::uint64_t maximum);
 // The regular files directly in directory or, with recursive, anywhere below it, sorted by name.
 std::vector<ProjectFile> project_directory_files(const std::filesystem::path &root,
                                                  std::string_view directory, bool recursive);

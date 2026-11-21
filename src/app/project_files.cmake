@@ -5,6 +5,7 @@ set(voyemu_project_files
     src/app/android-wheel-routes.json
     src/app/toolchain.json
     src/assets/voyemu-logo-white-black-1920-720.png
+    src/guest/qnx/native_mcu_qinggan11.json
     src/guest/qnx/native_mcu_qinggan11_611.json
     src/guest/qnx/persistent-runtime.sh
     src/guest/qnx/qnx-passion-runtime.sh

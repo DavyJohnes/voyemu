@@ -88,6 +88,14 @@ int main(int argc, char **argv) {
                   project_file_bytes(root, "src/prepare/toolchain.json", 1);
               }).starts_with("PROJECT_FILE:"),
               "the bound applies to embedded content");
+        // A process without the project root reads the embedded copy within its bound.
+        const auto layout = "src/guest/qnx/native_mcu_qinggan11.json";
+        check(embedded_project_file_json(layout, 256 * 1024) ==
+                              read_private_json(project / layout, 256 * 1024) &&
+                      failure([&] {
+                          embedded_project_file_json(layout, 1);
+                      }).starts_with("PROJECT_FILE:"),
+              "embedded MCU layout without a root");
         // The javaHelper pin identifies the helper of an installation; a checkout names its
         // sources.
         const auto installed = java_helper_source_inputs(root, false),

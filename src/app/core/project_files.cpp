@@ -88,6 +88,18 @@ Json project_file_json(const std::filesystem::path &root, std::string_view name,
     return Json::parse(project_file_bytes(root, name, maximum));
 }
 
+Json embedded_project_file_json(std::string_view name, std::uint64_t maximum) {
+    const auto &file = embedded(name);
+
+    if (file.bytes > maximum) {
+        throw VoyemuError("PROJECT_FILE",
+                          "embedded project file exceeds its bound: " + std::string(name));
+    }
+
+    return Json::parse(reinterpret_cast<const char *>(file.content),
+                       reinterpret_cast<const char *>(file.content) + file.bytes);
+}
+
 std::vector<ProjectFile> project_directory_files(const std::filesystem::path &root,
                                                  std::string_view directory, bool recursive) {
     std::vector<ProjectFile> result;
