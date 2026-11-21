@@ -380,7 +380,6 @@ Json refresh_observer(const std::filesystem::path &root, const std::filesystem::
     normalize_ready_android_adb(updated);
     const bool observer_changed = !host.ui_observer.empty() &&
                                   original.value("ui_observer", Json::object()) != host.ui_observer;
-    const bool observer_added = observer_changed && !original.contains("ui_observer");
     std::filesystem::path old_dex, dex, program;
     std::string old_sha, new_sha, old_program_sha, new_program_sha;
 
@@ -389,18 +388,14 @@ Json refresh_observer(const std::filesystem::path &root, const std::filesystem::
                                           record.at("profile").get<std::string>()),
              "exact new observer binding required");
 
-        if (observer_added) {
-            need(host.ui_observer.size() == 3,
-                 "initial observer refresh requires exact API30 profile binding");
-        } else {
-            need(portable_ui_observer_binding(original.at("ui_observer"),
-                                              record.at("profile").get<std::string>()),
-                 "existing exact observer binding required");
-            old_dex = original.at("ui_observer").at("dex").get<std::string>();
-            old_sha = original.at("ui_observer").at("sha256").get<std::string>();
-            inside(root, old_dex);
-            checked_file(old_dex, old_sha, 8 * mib);
-        }
+        need(original.contains("ui_observer") &&
+                     portable_ui_observer_binding(original.at("ui_observer"),
+                                                  record.at("profile").get<std::string>()),
+             "existing exact observer binding required");
+        old_dex = original.at("ui_observer").at("dex").get<std::string>();
+        old_sha = original.at("ui_observer").at("sha256").get<std::string>();
+        inside(root, old_dex);
+        checked_file(old_dex, old_sha, 8 * mib);
 
         dex = host.ui_observer.at("dex").get<std::string>();
         new_sha = host.ui_observer.at("sha256").get<std::string>();
@@ -568,12 +563,7 @@ Json refresh_observer(const std::filesystem::path &root, const std::filesystem::
         }
     }
 
-    need(!observer_changed || observer_pins == (observer_added ? 0u : 1u),
-         "exactly one old observer pin required");
-
-    if (observer_added) {
-        add_pin(updated["pins"], dex, new_sha);
-    }
+    need(!observer_changed || observer_pins == 1u, "exactly one old observer pin required");
 
     auto disk_inventory = [&] {
         Json result = Json::object();

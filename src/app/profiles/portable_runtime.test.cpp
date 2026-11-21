@@ -6481,38 +6481,8 @@ int main(int argc, char **argv) {
                 check(denied && read_private_json(free_scoped / "activation.json") == free_record,
                       "initial observer rejection mutated activation");
             };
-            initial_refused(); // Legacy two-field bindings cannot add an observer to an existing
-                               // launch.
             host.ui_observer["profile"] = qinggan11_731;
-            host.pins[new_dex.string()] = std::string(64, '0');
-            initial_refused();
-            host.pins[new_dex.string()] = sha256_file(new_dex);
-            put(old_dex, "changed existing pin");
-            initial_refused();
-            put(old_dex, "old observer");
-            auto changed = missing;
-            changed["foreign"] = true;
-            write_private_json(free_scoped / "android-launch.json", changed);
-            initial_refused();
-            write_private_json(free_scoped / "android-launch.json", missing);
-            const auto lock = free_scoped.parent_path() / (qinggan11_731 + ".activation.lock");
-            ensure_private_directory(lock);
-            initial_refused();
-            std::filesystem::remove(lock);
-            const auto added = activate_portable_runtime(root, qinggan11_731, qinggan11_machine,
-                                                         host, 0);
-            const auto added_launch = read_private_json(free_scoped / "android-launch.json");
-            check(added.at("host_refreshed") == true &&
-                          added_launch.at("ui_observer") == host.ui_observer &&
-                          added_launch.at("pins").size() == 2 &&
-                          added_launch.at("pins").at(0) == missing.at("pins").at(0) &&
-                          added_launch.at("pins").at(1).at("path") == new_dex.string() &&
-                          added_launch.at("pins").at(1).at("sha256") == sha256_file(new_dex),
-                  "initial scoped observer pin publication differs");
-            check(read_private_json(free_scoped / "activation.json").at("android_launch_sha256") ==
-                                  sha256_file(free_scoped / "android-launch.json") &&
-                          sha256_file(writable) == sha256_bytes("installed user data"),
-                  "initial scoped observer activation CAS or writable data differs");
+            initial_refused(); // An existing launch without an observer never gains one.
             host.seed = saved_seed;
             host.refresh_host = false;
             host.ui_observer = Json::object();
