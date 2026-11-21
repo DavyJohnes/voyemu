@@ -44,15 +44,15 @@ struct QnxAdapterSpec {
     // Named MCU fields that the guest projects, an earlier accepted runtime scope and an earlier
     // scope that only a stopped QNX upgrade reads; 0 for none.
     unsigned mcu_projected_fields, mcu_previous_projected_fields, mcu_upgrade_source_fields;
-    // Whether the OEM MCU engine reports settings back to the guest, and whether the OEM takes
-    // the IVI language from its MCU wire rather than from IPP_LANGUAGE_SET.
-    bool mcu_settings_feedback, mcu_language_on_wire;
+    // Whether the OEM MCU engine reports settings back to the guest.
+    bool mcu_settings_feedback;
     // Named MCU field layout in src/guest/qnx and the OEM parser and engine it was derived from.
     std::string_view mcu_layout_file, mcu_parser_sha256, mcu_engine_sha256;
     // Extra compile definition of the guest modules; empty for none.
     std::string_view guest_define;
     // Whether the launcher embeds mcu_layout_file (src/app/project_files.cmake), so that
-    // preparation checks it against initial_native_state before the guest build.
+    // preparation checks it against initial_native_state before the guest build and the MCU
+    // delivery of a session reads it.
     bool mcu_layout_embedded;
 };
 
@@ -71,7 +71,6 @@ inline constexpr std::array qnx_adapter_registry{
                        0,
                        0,
                        0,
-                       false,
                        false,
                        {},
                        {},
@@ -93,12 +92,11 @@ inline constexpr std::array qnx_adapter_registry{
                        0,
                        0,
                        true,
-                       true,
                        "native_mcu_qinggan11.json",
                        "6c381808b343adba849fa22f1efd18547de90cba7f3f3b43e43970a7f7222f39",
                        "20a4ec0855a4e1955156dd13ec8e6731af0c28a0a5344db91be7d83e7a93d74a",
                        {},
-                       false},
+                       true},
         QnxAdapterSpec{QnxGuestAdapter::sa8155_passion_21480,
                        "sa8155-passion-21480",
                        QnxGuestPlatform::passion,
@@ -113,7 +111,6 @@ inline constexpr std::array qnx_adapter_registry{
                        0,
                        0,
                        0,
-                       false,
                        false,
                        {},
                        {},
@@ -134,7 +131,6 @@ inline constexpr std::array qnx_adapter_registry{
                        56,
                        34,
                        33,
-                       false,
                        false,
                        "native_mcu_qinggan11_611.json",
                        "a830d876d9091190096025f4f4eb81294078b3002d955283b3a9dec296414f05",

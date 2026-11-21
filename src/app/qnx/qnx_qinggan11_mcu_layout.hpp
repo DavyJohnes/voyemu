@@ -44,6 +44,21 @@ qnx_qinggan11_simulated_initial_state(const Json &values,
                 {"value", values.at("eps_calibrationFlag")}}}}}};
 }
 
+// The raw_oem that a guest of the named MCU layout definition receives: a field without a wire
+// position carries its unsupported_initial, the only value the guest accepts for it, while the
+// model keeps the logical value. Projected fields pass unchanged.
+inline Json qnx_qinggan11_guest_state(const Json &definition, const Json &raw_oem) {
+    auto result = raw_oem;
+
+    for (const auto &row : definition.at("fields")) {
+        if (!row.contains("wire")) {
+            result[row.at("name").get<std::string>()] = row.at("unsupported_initial");
+        }
+    }
+
+    return result;
+}
+
 // Versioned source data is tied to genuine parser and named engine DWARF.
 inline std::string qnx_qinggan11_mcu_layout(const Json &definition,
                                             const Json &initial_native = Json::object()) {

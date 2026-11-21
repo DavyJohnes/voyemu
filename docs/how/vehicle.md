@@ -20,7 +20,7 @@ On the Free 6.0.3, 6.11.1 and 7.3.1 profiles a cold boot of the cluster with the
 
 ## Delivery to the guests
 
-The cluster receives the model through the adapter of the OEM MCU protocol, see [guests and the interguest link](guests.md). Each profile's adapter supports its own set of MCU fields and rejects a change to a field it does not support. The multimedia receives vehicle state through the simulated CAN bus of its guest.
+The cluster receives the model through the adapter of the OEM MCU protocol, see [guests and the interguest link](guests.md). Each profile's adapter supports its own set of MCU fields; a field it does not support reaches the cluster with its initial value, while the model keeps the written value. The multimedia receives vehicle state through the simulated CAN bus of its guest.
 
 `session.status` shows the delivery of the current model revision to the cluster in `deliveries.qnx.vehicle`: `queued` until the QNX process that owns the OEM MCU input confirms it, then `guest_acknowledged` with the revision in `source_sequence`. Only a receipt of the current revision from the current receiver counts: its channel address (`producer_address`), guest process, incarnation (`producer_incarnation`) and cluster generation must match. When the receiver exits, the status is `unavailable` with `reason: receiver_retired`, the exited `receiver` and `last_acknowledged`, the last confirmed revision or `null`; a new receiver returns the status to `queued` until its own receipt. Running cluster frames (`graphics_running`) do not mean that the MCU path is ready.
 

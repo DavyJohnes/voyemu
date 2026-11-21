@@ -644,15 +644,19 @@ static void theme_request_logging(const std::filesystem::path &parent,
     }
 }
 
-static void qinggan11_out_of_band_language(const std::filesystem::path &parent,
-                                           const std::filesystem::path &angle,
-                                           const std::filesystem::path &ram) {
+static void qinggan11_unprojected_fields(const std::filesystem::path &parent,
+                                         const std::filesystem::path &angle,
+                                         const std::filesystem::path &ram) {
     auto run = [&](std::string_view name, unsigned projection, unsigned language) {
         const auto directory = parent / name;
         ensure_private_directory(directory);
-        auto state = initial_state();
-        state["raw_oem"]["ivi_languageSet"] = language;
-        state["raw_oem"]["hcm_adbFuctionStsLt_bak"] = 1;
+        auto state = apply_patch(initial_state(), {{"ivi_languageSet", language},
+                                                   {"hcm_adbFuctionStsLt_bak", 1},
+                                                   {"acc_mode", 3},
+                                                   {"mpc_icaSts", 1},
+                                                   {"mrr_vSetDis", 160},
+                                                   {"time_gap_set", 1},
+                                                   {"speed", 80}});
         write_private_json(directory / "vehicle-state.json", state);
         Backend backend({ram, directory, angle, {}, ram_base + 73728, true, false});
         auto reply = backend.dispatch(364, {0, 650, 736, projection}, {});
@@ -660,10 +664,14 @@ static void qinggan11_out_of_band_language(const std::filesystem::path &parent,
         unsigned values[581];
         std::memcpy(values, reply.payload.data(), sizeof values);
         assert(values[2 + 320] == (projection == 462 ? language : 0));
-        // Other unmapped signals remain visible to the guest's fail-closed guard.
-        assert(values[2 + 6] == state["raw_oem"].at("hcm_adbFuctionStsLt_bak").get<unsigned>());
-        assert(read_private_json(directory / "vehicle-state.json")["raw_oem"]["ivi_languageSet"] ==
-               language);
+        // Signals outside the MCU layout, the AdasEcu ones included, reach the guest with their
+        // initial values, and the projected speed passes.
+        for (const unsigned position : {6U, 43U, 44U, 224U, 225U}) {
+            assert(values[2 + position] == 0);
+        }
+
+        assert(values[2 + 310] == 80 && values[2 + 358] == 800);
+        assert(read_private_json(directory / "vehicle-state.json") == state);
     };
 
     run("qinggan11-611-language-legacy", 34, 1);
@@ -892,7 +900,7 @@ int main(int argc, char **argv) try {
         worker_terminal_reasons(directory, argv[1]);
         owner_liveness_protocol(directory, argv[1], ram);
         configured_ram_geometry(directory, argv[1]);
-        qinggan11_out_of_band_language(directory, argv[1], ram);
+        qinggan11_unprojected_fields(directory, argv[1], ram);
         input_wake_protocol(directory, argv[1], ram);
         control_idle_polling(directory, argv[1], ram);
         control_idle_mode_guards(directory, argv[1], ram);

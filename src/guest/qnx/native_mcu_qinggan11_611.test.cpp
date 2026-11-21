@@ -1,3 +1,4 @@
+#include "adas_ecu.hpp"
 #include "model.hpp"
 #include "native_mcu_qinggan11.h"
 #include "qnx_qinggan11_mcu_layout.hpp"
@@ -247,6 +248,59 @@ int main(int argc, char **argv) {
             ++offered;
             assert(dataParser_makedumydata(out, 650) == 650 && qinggan11_ack == offered &&
                    packed(signal.bit, signal.width) == previous);
+        }
+
+        // AdasEcu acc and cancel, the parking brake, the engine speed and the language write
+        // fields that this layout does not project. The guest rejects the logical revision as a
+        // whole, and the host state for the guest carries their initial values and the new speed.
+        {
+            auto state = voyemu::apply_patch(voyemu::initial_state(),
+                                             {{"speed", 80}, {"gear", 3}, {"gear_valid", 1}});
+            voyemu::AdasEcu adas;
+            const auto now = voyemu::AdasEcu::Clock::now();
+            std::uint32_t sequence = 0;
+            auto press = [&](const char *button) {
+                assert(adas.input(state, ++sequence, button, "down", "test", now).handled);
+                const auto outcome = adas.input(state, ++sequence, button, "up", "test", now);
+                state = voyemu::apply_patch(state, outcome.patch);
+            };
+            press("acc");
+            assert(state.at("raw_oem").at("acc_mode") == 3);
+            press("cancel");
+            state = voyemu::apply_patch(
+                    state,
+                    {{"speed", 60}, {"epb_parking", 1}, {"rpm", 1500}, {"ivi_languageSet", 1}});
+            const auto &raw = state.at("raw_oem");
+            assert(raw.at("acc_mode") == 0 && raw.at("mpc_icaSts") == 1 &&
+                   raw.at("mrr_vSetDis") == 160 && raw.at("time_gap_set") == 1);
+            const auto &speed = qinggan11_fields[310];
+            auto deliver = [&](const Json &values) {
+                for (unsigned i = 0; i < 579; i++) {
+                    normal[i] = values.at(fields[i].name).get<unsigned>();
+                }
+
+                ++offered;
+
+                return dataParser_makedumydata(out, 650) == 650 && qinggan11_ack == offered &&
+                       packed(speed.bit, speed.width) == 60;
+            };
+            const auto rejects = qinggan11_rejects;
+            assert(!deliver(raw) && qinggan11_rejects == rejects + 1);
+            const auto guest = voyemu::qnx_qinggan11_guest_state(source, raw);
+
+            for (const auto *name : {"acc_mode", "mpc_icaSts", "mrr_vSetDis", "time_gap_set",
+                                     "epb_parking", "rpm", "ivi_languageSet"}) {
+                assert(guest.at(name) == 0);
+            }
+
+            assert(deliver(guest) && qinggan11_rejects == rejects + 1);
+
+            for (unsigned i = 0; i < 579; i++) {
+                normal[i] = initial.at(fields[i].name).get<unsigned>();
+            }
+
+            ++offered;
+            assert(dataParser_makedumydata(out, 650) == 650 && qinggan11_ack == offered);
         }
 
         normal[286] = normal[373] = normal[404] = 1023;

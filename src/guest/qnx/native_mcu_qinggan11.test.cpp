@@ -1,4 +1,5 @@
 #include "native_mcu_qinggan11.h"
+#include "adas_ecu.hpp"
 #include "model.hpp"
 #include "qnx_qinggan11_mcu_layout.hpp"
 #include <cassert>
@@ -725,6 +726,51 @@ int main(int argc, char **argv) {
             native_async_poll();
             assert(native_async_mcu_staged == 2 && rpc_calls == fetched && !qinggan11_ack);
             assert(dataParser_makedumydata(frame, 650) == 650 && qinggan11_ack == 2);
+        }
+
+        // AdasEcu acc and cancel write acc_mode, mpc_icaSts, mrr_vSetDis and time_gap_set, which
+        // this layout does not project. The guest rejects the logical revision as a whole, and
+        // the host state for the guest carries their initial values and the new speed.
+        {
+            auto state = voyemu::apply_patch(voyemu::initial_state(),
+                                             {{"speed", 80}, {"gear", 3}, {"gear_valid", 1}});
+            voyemu::AdasEcu adas;
+            const auto now = voyemu::AdasEcu::Clock::now();
+            std::uint32_t sequence = 0;
+            auto press = [&](const char *button) {
+                assert(adas.input(state, ++sequence, button, "down", "test", now).handled);
+                const auto outcome = adas.input(state, ++sequence, button, "up", "test", now);
+                state = voyemu::apply_patch(state, outcome.patch);
+            };
+            press("acc");
+            assert(state.at("raw_oem").at("acc_mode") == 3);
+            press("cancel");
+            state = voyemu::apply_patch(state, {{"speed", 60}});
+            const auto &raw = state.at("raw_oem");
+            assert(raw.at("acc_mode") == 0 && raw.at("mpc_icaSts") == 1 &&
+                   raw.at("mrr_vSetDis") == 160 && raw.at("time_gap_set") == 1);
+            auto deliver = [&](const Json &values) {
+                for (unsigned i = 0; i < 579; i++) {
+                    normal[i] = values.at(catalog[i].name).get<unsigned>();
+                }
+
+                reset();
+                unsigned char frame[650];
+                const bool accepted = dataParser_makedumydata(frame, 650) == 650 &&
+                                      qinggan11_ack == offered;
+
+                return accepted && field(frame, 310) == 60;
+            };
+            assert(!deliver(raw) && qinggan11_rejects == 1);
+            const auto guest = voyemu::qnx_qinggan11_guest_state(source, raw);
+            assert(guest.at("acc_mode") == 0 && guest.at("mpc_icaSts") == 0 &&
+                   guest.at("mrr_vSetDis") == 0 && guest.at("time_gap_set") == 0 &&
+                   guest.at("ivi_languageSet") == raw.at("ivi_languageSet"));
+            assert(deliver(guest) && !qinggan11_rejects);
+
+            for (unsigned i = 0; i < 579; i++) {
+                normal[i] = initial.at(catalog[i].name).get<unsigned>();
+            }
         }
 
         // The originals are resolved once per process: a per-frame dlopen leaves a loader

@@ -11,7 +11,9 @@
 #include "os/platform.hpp"
 #include "os/process.hpp"
 #include "process.hpp"
+#include "project_files.hpp"
 #include "qnx_mcu_projection.hpp"
+#include "qnx_qinggan11_mcu_layout.hpp"
 #include "toolchain_manifest.hpp"
 #include <algorithm>
 #include <atomic>
@@ -1050,6 +1052,7 @@ struct Backend::Impl {
                   theme_issued = 0, theme_acked = 0, theme_reported = 0;
     bool theme_already_selected = false;
     U theme_mode_issued = 0, theme_skin_issued = 0, theme_last_outcome = 0;
+    std::map<std::string_view, Json> mcu_layouts;
 
     explicit Impl(Options o) : options(std::move(o)), ram(options) {
         if (options.profile_rpc) {
@@ -1251,6 +1254,20 @@ struct Backend::Impl {
 
         replace_json((canonical ? options.session : producer) / name, value, options.address);
         recorded = acknowledged;
+    }
+
+    // The MCU layout of a qinggan11 adapter, checked against the registry and the model.
+    const Json &mcu_layout(const QnxAdapterSpec &spec) {
+        auto at = mcu_layouts.find(spec.name);
+
+        if (at == mcu_layouts.end()) {
+            auto definition = embedded_project_file_json(
+                    "src/guest/qnx/" + std::string(spec.mcu_layout_file), 256 * 1024);
+            qnx_qinggan11_mcu_layout(definition);
+            at = mcu_layouts.emplace(spec.name, std::move(definition)).first;
+        }
+
+        return at->second;
     }
 
     Reply controls_reply(U op, const Arguments &a, std::span<const std::byte> data) {
@@ -1521,15 +1538,16 @@ struct Backend::Impl {
 
         const auto scope = qnx_mcu_request_projection(a[1], a[2], a[3],
                                                       options.passion_vehicle_topics);
-        const auto scope_adapter =
-                scope.is_object() ? scope.value("hardware_adapter", std::string{}) : std::string{};
-        const bool language_off_wire =
-                std::any_of(qnx_adapter_registry.begin(), qnx_adapter_registry.end(),
-                            [&](const QnxAdapterSpec &spec) {
-                                return spec.name == scope_adapter &&
-                                       spec.platform == QnxGuestPlatform::qinggan11 &&
-                                       !spec.mcu_language_on_wire;
-                            });
+        const Json *layout = nullptr;
+
+        if (!options.passion_vehicle_topics && a[1] == 650 && a[2] == 736) {
+            for (const auto &spec : qnx_adapter_registry) {
+                if (qnx_mcu_runtime_scope(spec, a[3])) {
+                    layout = &mcu_layout(spec);
+                }
+            }
+        }
+
         ack("vehicle-ack.json", a[0], vehicle_issued, vehicle_acked, true, scope);
         auto path = (std::filesystem::exists(options.session / "mcu-state.json")
                              ? options.session / "mcu-state.json"
@@ -1550,6 +1568,9 @@ struct Backend::Impl {
         need(seq >= 1 && seq < 0x100000000ULL, "Full vehicle sequence");
         const auto &raw = value.at("raw_oem");
         need(raw.is_object() && raw.size() == 579, "Complete 579-field vehicle state required");
+        // A qinggan11 guest rejects the whole revision when a field outside its MCU layout leaves
+        // the initial value, so that field reaches it as the initial value.
+        const auto guest = layout ? qnx_qinggan11_guest_state(*layout, raw) : raw;
         Reply out{seq, {}, "persistent-full-MCU-input"};
         append(out.payload, U(1));
         append(out.payload, U(579));
@@ -1557,19 +1578,11 @@ struct Backend::Impl {
         for (auto f : field_specs) {
             need(raw.contains(f.name) && raw.at(f.name).is_number_integer(),
                  "OEM field integer required");
-            auto v = raw.at(f.name).get<std::int64_t>();
+            const auto v = raw.at(f.name).get<std::int64_t>();
             need(v >= 0 && std::uint64_t(v) < (1ULL << f.width) &&
                          (!std::string_view(f.name).starts_with("swm_") || !v),
                  "OEM field width/transient state");
-
-            // An adapter whose OEM takes the language from IPP_LANGUAGE_SET, not its MCU wire,
-            // keeps the logical source while this unmapped wire word stays initial. Every other
-            // unsupported field still reaches the guest's fail-closed guard.
-            if (language_off_wire && std::string_view(f.name) == "ivi_languageSet") {
-                v = 0;
-            }
-
-            append(out.payload, U(v));
+            append(out.payload, guest.at(f.name).get<U>());
         }
 
         need(raw.at("speed").get<U>() <= 255 &&
