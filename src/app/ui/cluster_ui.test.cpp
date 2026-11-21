@@ -1062,7 +1062,7 @@ void qinggan11_adversarial_wheel_acceptance(const std::filesystem::path &assets,
             check(rgba.size() == static_cast<std::size_t>(900u * 770u) * 4u,
                   "A11 RGBA fixture keeps the exact original wheel photo size");
 
-            return Texture{0u, 900, 770, {0, 0, 1, 1}};
+            return Texture{0u, 900, 770};
         };
         const auto left_pixels = load_bin("wheel-left.png"),
                    right_pixels = load_bin("wheel-right.png");
@@ -1070,7 +1070,7 @@ void qinggan11_adversarial_wheel_acceptance(const std::filesystem::path &assets,
                 right_texture = make_texture(right_pixels);
         left_texture.id = 1002;
         right_texture.id = 1003;
-        const Texture frame_texture{0, 1920, 720, {0, 0, 1, 1}};
+        const Texture frame_texture{0, 1920, 720};
         auto frame = [&](ImVec2 mouse, bool pressed = false, float wheel = 0) {
             io.AddMousePosEvent(mouse.x, mouse.y);
             io.AddMouseButtonEvent(ImGuiMouseButton_Left, pressed);
