@@ -3,19 +3,19 @@
 #include "private_json_reader.hpp"
 #include "private_state_security.hpp"
 #include <cerrno>
+#include <chrono>
 #include <cstdio>
 #include <ctime>
 #include <fstream>
 #include <set>
 #include <stdexcept>
+#include <thread>
 #ifdef _WIN32
 #include <windows.h>
 #include <aclapi.h>
-
-#include <chrono>
-#include <thread>
 #else
 #include <fcntl.h>
+#include <sys/file.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #endif
@@ -1261,6 +1261,43 @@ static void write_private_json_text(const std::filesystem::path &path, const std
                                   "; pending_cleaned=" + (cleaned ? "true" : "false"));
     }
 #else
+    // Writers of the files of one directory exclude each other through an exclusive lock on the
+    // directory, so an existing staging file is the remainder of a writer that died before
+    // publishing it. The lock adds no file, and readers need none: rename keeps an open file.
+    const auto parent = path.parent_path().empty() ? std::filesystem::path(".")
+                                                   : path.parent_path();
+    struct DirectoryLock {
+        int fd;
+
+        ~DirectoryLock() {
+            if (fd >= 0) {
+                ::close(fd);
+            }
+        }
+    } directory{::open(parent.c_str(), O_RDONLY | O_DIRECTORY | O_CLOEXEC)};
+
+    if (directory.fd < 0) {
+        throw VoyemuError("STATE_LOCK", "state directory unavailable");
+    }
+
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+
+    while (::flock(directory.fd, LOCK_EX | LOCK_NB) != 0) {
+        if (errno != EWOULDBLOCK && errno != EINTR) {
+            throw VoyemuError("STATE_LOCK", "coordination failed");
+        }
+
+        if (std::chrono::steady_clock::now() >= deadline) {
+            throw VoyemuError("STATE_LOCK_TIMEOUT", "state operation exceeded five seconds");
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    }
+
+    if (::unlink(pending.c_str()) != 0 && errno != ENOENT) {
+        throw VoyemuError("STATE_WRITE", "staging file of a terminated writer remains");
+    }
+
     int fd = ::open(pending.c_str(), O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, 0600);
 
     if (fd < 0) {

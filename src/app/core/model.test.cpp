@@ -11,6 +11,10 @@
 #include <thread>
 #ifdef _WIN32
 #include <aclapi.h>
+#else
+#include <fcntl.h>
+#include <sys/file.h>
+#include <unistd.h>
 #endif
 using namespace voyemu;
 
@@ -699,6 +703,43 @@ int main(int argc, char **argv) try {
     });
     assert(restored.state() == original);
 #ifndef _WIN32
+    {
+        // A writer terminated after creating its staging file leaves it behind.
+        const auto file = dir / "replace-state.json", pending = dir / "replace-state.json.pending";
+        { std::ofstream(pending, std::ios::binary) << "{\"epoch\":"; }
+        write_private_json(file, {{"epoch", 1}});
+        assert(read_private_json(file).at("epoch") == 1 && !std::filesystem::exists(pending));
+        assert((std::filesystem::status(file).permissions() & std::filesystem::perms::all) ==
+               (std::filesystem::perms::owner_read | std::filesystem::perms::owner_write));
+        // Writers wait for the lock another writer of the directory holds.
+        const int held = ::open(dir.c_str(), O_RDONLY | O_DIRECTORY | O_CLOEXEC);
+        assert(held >= 0 && ::flock(held, LOCK_EX) == 0);
+        auto waiting = std::async(std::launch::async, [&] {
+            write_private_json(file, {{"epoch", 2}});
+        });
+        assert(waiting.wait_for(std::chrono::milliseconds(200)) == std::future_status::timeout &&
+               read_private_json(file).at("epoch") == 1 && !std::filesystem::exists(pending));
+        ::close(held);
+        waiting.get();
+        assert(read_private_json(file).at("epoch") == 2);
+        // Concurrent writers of one file publish whole records.
+        std::vector<std::future<void>> writers;
+
+        for (int writer = 0; writer < 4; ++writer) {
+            writers.push_back(std::async(std::launch::async, [&, writer] {
+                for (int epoch = 0; epoch < 50; ++epoch) {
+                    write_private_json(file, {{"epoch", writer * 100 + epoch}});
+                }
+            }));
+        }
+
+        for (auto &writer : writers) {
+            writer.get();
+        }
+
+        assert(read_private_json(file).at("epoch").get<int>() % 100 == 49 &&
+               !std::filesystem::exists(pending));
+    }
     // Missing parents of a private directory are private as well.
     ensure_private_directory(dir / "missing/parents/leaf");
 
