@@ -319,7 +319,6 @@ int main() {
             check(rejected, "duplicate unsafe linked or corrupt archive rejected");
         }
 
-#ifdef __APPLE__
         const std::string replacement("updated\0manifest", 16), added("own\0native", 10);
         const auto candidate = directory / "candidate.apk";
         const std::vector<ZipReplacement> replacements{{"AndroidManifest.xml",
@@ -409,9 +408,8 @@ int main() {
             check(item.path().filename().string().find(".pending-") == std::string::npos,
                   "rewrite leaves no staging files");
         }
-#endif
         // Portable rewriter scenario: replace, remove, add and preserve entries; every result is
-        // read back through the independent reader and the structural index on both hosts.
+        // read back through the independent reader and the structural index.
         {
             const auto fixture = store("rewrite.zip", decode(rewrite_hex));
             const auto fixture_pin = sha256_file(fixture);

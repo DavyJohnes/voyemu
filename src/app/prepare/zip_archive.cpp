@@ -18,12 +18,6 @@
 #include <mutex>
 #include <set>
 #include <stdexcept>
-#ifdef __APPLE__
-#include <archive.h>
-#include <archive_entry.h>
-#include <fcntl.h>
-#include <unistd.h>
-#endif
 #ifdef _WIN32
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -76,26 +70,20 @@ void safe_name(std::string_view name) {
     }
 }
 
-#ifndef __APPLE__
-// Decodes exactly one declared ordinary entry in process with the vendored miniz decoder. The
-// structural index already validated the local header, so the payload extent, method and CRC come
-// from the pinned archive; no host tool, temporary file or process launch is involved.
-std::string unpack_selected_entry(const std::filesystem::path &file, const ZipMember &member,
-                                  std::size_t maximum) {
-    const auto size = static_cast<std::size_t>(member.bytes);
+// The failures of decode_zip_member as each caller reports them.
+struct ZipDecodeErrors {
+    const char *extent, *corrupt, *growth_code, *growth;
+};
 
-    if (size > maximum || member.compressed_bytes > maximum + 65536 ||
-        (member.method == 0 && member.compressed_bytes != member.bytes)) {
-        throw VoyemuError("ZIP_BOUND", "selected entry exceeds bound");
-    }
-
-    std::ifstream input(file, std::ios::binary);
-
-    if (!input) {
-        throw VoyemuError("ZIP_DATA", "archive unavailable");
-    }
-
+// Decodes the payload of member from input in process with the vendored miniz decoder and checks
+// its CRC. The structural index already validated the local header, so the payload extent, method
+// and CRC come from the pinned archive; no host tool, temporary file or process launch is
+// involved.
+std::string decode_zip_member(std::ifstream &input, const ZipMember &member,
+                              const ZipDecodeErrors &errors) {
+    input.clear();
     input.seekg(static_cast<std::streamoff>(member.data_offset));
+    const auto size = static_cast<std::size_t>(member.bytes);
     std::string data;
 
     if (member.method == 0) {
@@ -103,14 +91,14 @@ std::string unpack_selected_entry(const std::filesystem::path &file, const ZipMe
         input.read(data.data(), static_cast<std::streamsize>(size));
 
         if (static_cast<std::size_t>(input.gcount()) != size) {
-            throw VoyemuError("ZIP_DATA", "selected entry extent mismatch");
+            throw VoyemuError("ZIP_DATA", errors.extent);
         }
     } else {
         std::string compressed(static_cast<std::size_t>(member.compressed_bytes), '\0');
         input.read(compressed.data(), static_cast<std::streamsize>(compressed.size()));
 
         if (static_cast<std::size_t>(input.gcount()) != compressed.size()) {
-            throw VoyemuError("ZIP_DATA", "selected entry extent mismatch");
+            throw VoyemuError("ZIP_DATA", errors.extent);
         }
 
         std::vector<unsigned char> out(size ? size : 1);
@@ -129,8 +117,12 @@ std::string unpack_selected_entry(const std::filesystem::path &file, const ZipMe
         const auto produced = stream.total_out;
         mz_inflateEnd(&stream);
 
+        if (status == MZ_BUF_ERROR) {
+            throw VoyemuError(errors.growth_code, errors.growth);
+        }
+
         if (status != MZ_STREAM_END || produced != size || consumed != compressed.size()) {
-            throw VoyemuError("ZIP_DATA", "decoding or CRC failure");
+            throw VoyemuError("ZIP_DATA", errors.corrupt);
         }
 
         data.assign(reinterpret_cast<const char *>(out.data()), size);
@@ -138,12 +130,32 @@ std::string unpack_selected_entry(const std::filesystem::path &file, const ZipMe
 
     if (mz_crc32(MZ_CRC32_INIT, reinterpret_cast<const unsigned char *>(data.data()),
                  static_cast<std::size_t>(data.size())) != member.crc) {
-        throw VoyemuError("ZIP_DATA", "decoding or CRC failure");
+        throw VoyemuError("ZIP_DATA", errors.corrupt);
     }
 
     return data;
 }
-#endif
+
+// Decodes exactly one declared ordinary entry selected by a reader.
+std::string unpack_selected_entry(const std::filesystem::path &file, const ZipMember &member,
+                                  std::size_t maximum) {
+    const auto size = static_cast<std::size_t>(member.bytes);
+
+    if (size > maximum || member.compressed_bytes > maximum + 65536 ||
+        (member.method == 0 && member.compressed_bytes != member.bytes)) {
+        throw VoyemuError("ZIP_BOUND", "selected entry exceeds bound");
+    }
+
+    std::ifstream input(file, std::ios::binary);
+
+    if (!input) {
+        throw VoyemuError("ZIP_DATA", "archive unavailable");
+    }
+
+    return decode_zip_member(input, member,
+                             {"selected entry extent mismatch", "decoding or CRC failure",
+                              "ZIP_DATA", "decoding or CRC failure"});
+}
 
 ZipData scan(const std::filesystem::path &file, const std::string &pin, const std::string &selected,
              std::size_t maximum, ZipNamePolicy policy = ZipNamePolicy::portable) {
@@ -159,114 +171,6 @@ ZipData scan(const std::filesystem::path &file, const std::string &pin, const st
         (void)zip_layout(file, policy);
     }
 
-#ifdef __APPLE__
-    struct archive *reader = archive_read_new();
-
-    if (!reader) {
-        throw VoyemuError("ZIP_OPEN", "cannot allocate reader");
-    }
-
-    struct Cleanup {
-        struct archive *reader;
-
-        ~Cleanup() {
-            archive_read_free(reader);
-        }
-    } cleanup{reader};
-
-    if (archive_read_support_format_zip(reader) != ARCHIVE_OK ||
-        archive_read_open_filename(reader, file.c_str(), 65536) != ARCHIVE_OK) {
-        throw VoyemuError("ZIP_OPEN", "cannot open ZIP archive");
-    }
-
-    ZipData result;
-    std::set<std::string> names;
-    std::uint64_t total = 0;
-    struct archive_entry *entry = nullptr;
-
-    while (true) {
-        const auto next = archive_read_next_header(reader, &entry);
-
-        if (next == ARCHIVE_EOF) {
-            break;
-        }
-
-        if (next != ARCHIVE_OK) {
-            throw VoyemuError("ZIP_HEADER", "invalid entry header");
-        }
-
-        const auto *path = archive_entry_pathname_utf8(entry);
-
-        if (!path) {
-            throw VoyemuError("ZIP_PATH", "UTF8 name required");
-        }
-
-        const std::string name(path);
-        safe_name(name);
-
-        if (!names.insert(name).second) {
-            throw VoyemuError("ZIP_DUPLICATE", "duplicate entry");
-        }
-
-        if (names.size() > 100000 || !archive_entry_size_is_set(entry) ||
-            archive_entry_size(entry) < 0) {
-            throw VoyemuError("ZIP_BOUND", "invalid entry count or size");
-        }
-
-        const auto size = static_cast<std::uint64_t>(archive_entry_size(entry));
-
-        if (size > (16ULL << 30) || size > (32ULL << 30) - total) {
-            throw VoyemuError("ZIP_BOUND", "uncompressed extent exceeds limit");
-        }
-
-        total += size;
-        const auto type = archive_entry_filetype(entry);
-
-        if ((type != AE_IFREG && type != AE_IFDIR) || archive_entry_is_encrypted(entry)) {
-            throw VoyemuError("ZIP_TYPE", "only ordinary unencrypted files/directories allowed");
-        }
-
-        result.entries.push_back({name, size, type == AE_IFDIR});
-
-        if (name == selected) {
-            if (type != AE_IFREG || size > maximum) {
-                throw VoyemuError("ZIP_BOUND", "selected entry exceeds bound");
-            }
-
-            result.selected.reserve(static_cast<std::size_t>(size));
-            char buffer[16384];
-
-            while (true) {
-                interruption::check();
-                const auto got = archive_read_data(reader, buffer, sizeof buffer);
-
-                if (got < 0) {
-                    throw VoyemuError("ZIP_DATA", "decoding or CRC failure");
-                }
-
-                if (!got) {
-                    break;
-                }
-
-                if (static_cast<std::size_t>(got) > maximum - result.selected.size()) {
-                    throw VoyemuError("ZIP_BOUND", "selected entry grew");
-                }
-
-                result.selected.append(buffer, static_cast<std::size_t>(got));
-            }
-
-            if (result.selected.size() != size) {
-                throw VoyemuError("ZIP_DATA", "selected entry extent mismatch");
-            }
-
-            result.found = true;
-        } else if (archive_read_data_skip(reader) != ARCHIVE_OK) {
-            throw VoyemuError("ZIP_DATA", "invalid skipped entry");
-        }
-    }
-
-    return result;
-#else
     // Metadata uses the portable structural index shared with pinned_zip_inventory; only the
     // selected payload needs the vendored in-process decompressor.
     const auto layout = zip_layout(file, policy);
@@ -316,7 +220,6 @@ ZipData scan(const std::filesystem::path &file, const std::string &pin, const st
     result.found = true;
 
     return result;
-#endif
 }
 
 template <class Write, class Progress>
@@ -924,242 +827,8 @@ std::string rewrite_pinned_zip(const std::filesystem::path &source, const std::s
 
     require_disk_space("ZIP_SPACE", existing, peak, reserve_bytes);
 
-#ifdef __APPLE__
-    ensure_private_directory(destination.parent_path());
-    const auto pending = destination.parent_path() /
-                         ("." + destination.filename().string() + ".pending-" + random_token());
-    struct Cleanup {
-        struct archive *reader = nullptr;
-        struct archive *writer = nullptr;
-        int fd = -1;
-        std::filesystem::path pending;
-        bool owned = false;
-
-        ~Cleanup() {
-            if (reader) {
-                archive_read_free(reader);
-            }
-
-            if (writer) {
-                archive_write_free(writer);
-            }
-
-            if (fd >= 0) {
-                ::close(fd);
-            }
-
-            if (owned) {
-                std::error_code error;
-                std::filesystem::remove(pending, error);
-            }
-        }
-    } cleanup;
-    cleanup.pending = pending;
-    cleanup.fd = ::open(pending.c_str(), O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW, 0600);
-
-    if (cleanup.fd < 0) {
-        throw VoyemuError("ZIP_OUTPUT", "exclusive staging file failed");
-    }
-
-    cleanup.owned = true;
-    cleanup.reader = archive_read_new();
-    cleanup.writer = archive_write_new();
-
-    if (!cleanup.reader || !cleanup.writer) {
-        throw VoyemuError("ZIP_WRITE", "archive allocation failed");
-    }
-
-    if (archive_read_support_format_zip(cleanup.reader) != ARCHIVE_OK ||
-        archive_read_open_filename(cleanup.reader, source.c_str(), 65536) != ARCHIVE_OK ||
-        archive_write_set_format_zip(cleanup.writer) != ARCHIVE_OK ||
-        archive_write_set_options(cleanup.writer, "!zip64") != ARCHIVE_OK ||
-        archive_write_set_bytes_per_block(cleanup.writer, 0) != ARCHIVE_OK ||
-        archive_write_open_fd(cleanup.writer, cleanup.fd) != ARCHIVE_OK) {
-        throw VoyemuError("ZIP_WRITE", "cannot open streams");
-    }
-
-    auto header = [&](struct archive_entry *entry, const std::string &name) {
-        const bool stored = name == "resources.arsc" || name.ends_with(".dex") ||
-                            (name.starts_with("lib/") && name.ends_with(".so"));
-
-        if ((stored ? archive_write_zip_set_compression_store(cleanup.writer)
-                    : archive_write_zip_set_compression_deflate(cleanup.writer)) != ARCHIVE_OK ||
-            archive_write_header(cleanup.writer, entry) != ARCHIVE_OK) {
-            throw VoyemuError("ZIP_WRITE", "entry header failed");
-        }
-    };
-    auto write = [&](const char *bytes, std::size_t count) {
-        while (count) {
-            const auto done = archive_write_data(cleanup.writer, bytes, count);
-
-            if (done <= 0 || static_cast<std::size_t>(done) > count) {
-                throw VoyemuError("ZIP_WRITE", "entry write failed");
-            }
-
-            bytes += done;
-            count -= static_cast<std::size_t>(done);
-        }
-    };
-    struct archive_entry *entry = nullptr;
-    std::size_t index = 0;
-
-    while (true) {
-        const auto next = archive_read_next_header(cleanup.reader, &entry);
-
-        if (next == ARCHIVE_EOF) {
-            break;
-        }
-
-        if (next != ARCHIVE_OK || index >= inventory.size()) {
-            throw VoyemuError("ZIP_WRITE", "source header changed");
-        }
-
-        const auto *path = archive_entry_pathname_utf8(entry);
-
-        if (!path || path != inventory[index].name || archive_entry_size(entry) < 0 ||
-            std::uint64_t(archive_entry_size(entry)) != inventory[index].bytes) {
-            throw VoyemuError("ZIP_WRITE", "source entry changed");
-        }
-
-        const auto name = inventory[index++].name;
-
-        if (removed.contains(name)) {
-            if (archive_read_data_skip(cleanup.reader) != ARCHIVE_OK) {
-                throw VoyemuError("ZIP_DATA", "cannot skip removed entry");
-            }
-
-            continue;
-        }
-
-        struct EntryCleanup {
-            struct archive_entry *value;
-
-            ~EntryCleanup() {
-                archive_entry_free(value);
-            }
-        } copy{archive_entry_clone(entry)};
-
-        if (!copy.value) {
-            throw VoyemuError("ZIP_WRITE", "cannot clone metadata");
-        }
-
-        if (changed.contains(name)) {
-            const auto &bytes = changed.at(name)->bytes;
-            archive_entry_set_size(copy.value, bytes.size());
-            header(copy.value, name);
-            write(bytes.data(), bytes.size());
-
-            if (archive_read_data_skip(cleanup.reader) != ARCHIVE_OK) {
-                throw VoyemuError("ZIP_DATA", "cannot skip replaced entry");
-            }
-        } else {
-            header(copy.value, name);
-            std::uint64_t copied = 0;
-            char buffer[65536];
-
-            while (true) {
-                interruption::check();
-                const auto got = archive_read_data(cleanup.reader, buffer, sizeof buffer);
-
-                if (got < 0) {
-                    throw VoyemuError("ZIP_DATA", "source decoding/CRC failure");
-                }
-
-                if (!got) {
-                    break;
-                }
-
-                copied += got;
-
-                if (copied > original.at(name).bytes) {
-                    throw VoyemuError("ZIP_BOUND", "source entry grew");
-                }
-
-                write(buffer, static_cast<std::size_t>(got));
-            }
-
-            if (copied != original.at(name).bytes) {
-                throw VoyemuError("ZIP_DATA", "source extent mismatch");
-            }
-        }
-
-        if (archive_write_finish_entry(cleanup.writer) != ARCHIVE_OK) {
-            throw VoyemuError("ZIP_WRITE", "incomplete entry");
-        }
-    }
-
-    if (index != inventory.size()) {
-        throw VoyemuError("ZIP_WRITE", "missing source entries");
-    }
-
-    for (const auto &item : additions) {
-        struct EntryCleanup {
-            struct archive_entry *value;
-
-            ~EntryCleanup() {
-                archive_entry_free(value);
-            }
-        } added{archive_entry_new()};
-
-        if (!added.value) {
-            throw VoyemuError("ZIP_WRITE", "cannot allocate entry");
-        }
-
-        archive_entry_set_pathname_utf8(added.value, item.name.c_str());
-        archive_entry_set_filetype(added.value, AE_IFREG);
-        archive_entry_set_perm(added.value, 0644);
-        archive_entry_set_uid(added.value, 0);
-        archive_entry_set_gid(added.value, 0);
-        archive_entry_set_mtime(added.value, 0, 0);
-        archive_entry_set_size(added.value, item.bytes.size());
-        header(added.value, item.name);
-        write(item.bytes.data(), item.bytes.size());
-
-        if (archive_write_finish_entry(cleanup.writer) != ARCHIVE_OK) {
-            throw VoyemuError("ZIP_WRITE", "incomplete added entry");
-        }
-    }
-
-    if (archive_write_close(cleanup.writer) != ARCHIVE_OK) {
-        throw VoyemuError("ZIP_WRITE", "finalization failed");
-    }
-
-    archive_write_free(cleanup.writer);
-    cleanup.writer = nullptr;
-    archive_read_free(cleanup.reader);
-    cleanup.reader = nullptr;
-
-    if (::fsync(cleanup.fd) != 0) {
-        throw VoyemuError("ZIP_OUTPUT", "sync failed");
-    }
-
-    const auto closed = ::close(cleanup.fd);
-    cleanup.fd = -1;
-
-    if (closed != 0) {
-        throw VoyemuError("ZIP_OUTPUT", "close failed");
-    }
-
-    if (pinned_file_sha256(source) != source_pin) {
-        throw VoyemuError("ZIP_PIN", "source changed during rewrite");
-    }
-
-    const auto digest = sha256_file(pending);
-
-    if (::link(pending.c_str(), destination.c_str()) != 0) {
-        throw VoyemuError("ZIP_OUTPUT", "exclusive publication failed");
-    }
-
-    std::error_code cleanup_error;
-
-    if (std::filesystem::remove(pending, cleanup_error)) {
-        cleanup.owned = false;
-    }
-
-    return digest;
-#else
-    // Mirrors the macOS branch: entry payloads stream through the vendored miniz decoder/encoder
-    // while the container is emitted directly, so no host archiver or ZIP64 records are involved.
+    // Entry payloads stream through the vendored miniz decoder/encoder while the container is
+    // emitted directly, so no host archiver or ZIP64 records are involved.
     ensure_private_directory(destination.parent_path());
     const auto pending = destination.parent_path() /
                          ("." + destination.filename().string() + ".pending-" + random_token());
@@ -1295,62 +964,14 @@ std::string rewrite_pinned_zip(const std::filesystem::path &source, const std::s
     }
 
     auto decode = [&](const ZipMember &member) {
-        input.clear();
-        input.seekg(static_cast<std::streamoff>(member.data_offset));
-        const auto size = static_cast<std::size_t>(member.bytes);
-        std::string data;
-
-        if (member.method == 0) {
-            data.assign(size, '\0');
-            input.read(data.data(), static_cast<std::streamsize>(size));
-
-            if (static_cast<std::size_t>(input.gcount()) != size) {
-                throw VoyemuError("ZIP_DATA", "source extent mismatch");
-            }
-        } else {
-            std::string compressed(static_cast<std::size_t>(member.compressed_bytes), '\0');
-            input.read(compressed.data(), static_cast<std::streamsize>(compressed.size()));
-
-            if (static_cast<std::size_t>(input.gcount()) != compressed.size()) {
-                throw VoyemuError("ZIP_DATA", "source extent mismatch");
-            }
-
-            std::vector<unsigned char> out(size ? size : 1);
-            mz_stream stream{};
-            stream.next_in = reinterpret_cast<const unsigned char *>(compressed.data());
-            stream.avail_in = static_cast<unsigned>(compressed.size());
-            stream.next_out = out.data();
-            stream.avail_out = static_cast<unsigned>(out.size());
-
-            if (mz_inflateInit2(&stream, -MZ_DEFAULT_WINDOW_BITS) != MZ_OK) {
-                throw VoyemuError("ZIP_DATA", "decoder initialization failed");
-            }
-
-            const auto status = mz_inflate(&stream, MZ_FINISH);
-            const auto consumed = stream.total_in;
-            const auto produced = stream.total_out;
-            mz_inflateEnd(&stream);
-
-            if (status == MZ_BUF_ERROR) {
-                throw VoyemuError("ZIP_BOUND", "source entry grew");
-            }
-
-            if (status != MZ_STREAM_END || produced != size || consumed != compressed.size()) {
-                throw VoyemuError("ZIP_DATA", "source decoding/CRC failure");
-            }
-
-            data.assign(reinterpret_cast<const char *>(out.data()), size);
-        }
-
-        if (mz_crc32(MZ_CRC32_INIT, reinterpret_cast<const unsigned char *>(data.data()),
-                     static_cast<std::size_t>(data.size())) != member.crc) {
-            throw VoyemuError("ZIP_DATA", "source decoding/CRC failure");
-        }
-
-        return data;
+        return decode_zip_member(input, member,
+                                 {"source extent mismatch", "source decoding/CRC failure",
+                                  "ZIP_BOUND", "source entry grew"});
     };
 
     for (const auto &member : layout) {
+        interruption::check();
+
         if (removed.contains(member.name)) {
             continue;
         }
@@ -1415,8 +1036,8 @@ std::string rewrite_pinned_zip(const std::filesystem::path &source, const std::s
     if (std::filesystem::remove(pending, cleanup_error)) {
         cleanup.owned = false;
     }
+
     return digest;
-#endif
 }
 
 namespace {
