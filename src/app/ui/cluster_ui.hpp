@@ -36,6 +36,8 @@ struct Options {
     double smoke_seconds{};
     std::string profile;
     std::optional<std::size_t> inspect_panel;
+    // Developer replay has no observed Android appearance; --appearance light selects the theme.
+    bool light_theme{};
 };
 Options parse_options(int argc, const char *const *argv);
 std::string window_title(const Options &options, std::string_view session_id = {});

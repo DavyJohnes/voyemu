@@ -422,6 +422,33 @@ void parsing() {
                             "--assets",       "assets",         "--smoke-seconds",
                             "0.25",           "--capture-ui",   "capture.png"};
     check(parse_options(9, replay).smoke_seconds == .25, "explicit bounded replay smoke");
+    check(!parse_options(9, replay).light_theme, "replay defaults to the dark theme");
+
+    for (const bool light : {false, true}) {
+        const char *themed[] = {
+                "voyemu-cluster", "--replay-frame", "original.bmp",          "--assets",
+                "assets",         "--appearance",   light ? "light" : "dark"};
+        check(parse_options(7, themed).light_theme == light,
+              "replay selects the requested appearance");
+    }
+
+    const char *blue[] = {"voyemu-cluster", "--replay-frame", "original.bmp", "--assets",
+                          "assets",         "--appearance",   "blue"};
+    const char *live[] = {"voyemu-cluster", "--endpoint", "endpoint",     "--frame", "frame.bgra",
+                          "--assets",       "assets",     "--appearance", "light"};
+
+    for (const auto &[count, arguments] : {std::pair<int, const char *const *>{7, blue},
+                                           std::pair<int, const char *const *>{9, live}}) {
+        rejected = false;
+        try {
+            parse_options(count, arguments);
+        } catch (...) {
+            rejected = true;
+        }
+
+        check(rejected, "appearance is only light or dark and only for a replay");
+    }
+
     check(!options.inspect_panel, "normal launch stays collapsed by default");
     const std::array<const char *, 5> panels = {"movement", "lights", "body", "tyres", "raw"};
 

@@ -137,7 +137,7 @@ Options parse_options(int argc, const char *const *argv) {
 
         if (flag != "--endpoint" && flag != "--frame" && flag != "--assets" &&
             flag != "--replay-frame" && flag != "--smoke-seconds" && flag != "--capture-ui" &&
-            flag != "--profile" && flag != "--inspect-panel") {
+            flag != "--profile" && flag != "--inspect-panel" && flag != "--appearance") {
             throw VoyemuError("CLUSTER_UI", "Unknown cluster option: " + flag);
         }
 
@@ -167,6 +167,16 @@ Options parse_options(int argc, const char *const *argv) {
 
         if (flag == "--capture-ui") {
             options.capture_ui = path;
+        }
+
+        if (flag == "--appearance") {
+            const std::string_view scheme = argv[i];
+
+            if (scheme != "light" && scheme != "dark") {
+                throw VoyemuError("CLUSTER_UI", "--appearance must be light or dark");
+            }
+
+            options.light_theme = scheme == "light";
         }
 
         if (flag == "--inspect-panel") {
@@ -221,6 +231,10 @@ Options parse_options(int argc, const char *const *argv) {
 
     if (!options.capture_ui.empty() && options.smoke_seconds == 0) {
         throw VoyemuError("CLUSTER_UI", "--capture-ui requires --smoke-seconds");
+    }
+
+    if (seen.contains("--appearance") && options.replay_frame.empty()) {
+        throw VoyemuError("CLUSTER_UI", "--appearance requires --replay-frame");
     }
 
     if (options.inspect_panel && options.capture_ui.empty()) {
@@ -913,7 +927,8 @@ void Client::run() {
 }
 
 Window::Window(Options options, Client::Transport transport)
-    : options_(std::move(options)), client_(options_.endpoint, owner_id(), std::move(transport)) {
+    : options_(std::move(options)), client_(options_.endpoint, owner_id(), std::move(transport)),
+      light_theme_(options_.light_theme) {
     if (options_.inspect_panel) {
         if (*options_.inspect_panel >= ParametersLayout::section_count ||
             options_.capture_ui.empty() || !std::isfinite(options_.smoke_seconds) ||
