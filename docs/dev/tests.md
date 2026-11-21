@@ -27,6 +27,7 @@ voyemu_add_test(update_image LABELS deps TIMEOUT 60 COMMAND update_image_test "$
 | `host` | Only the build tree and the pinned build tools, including the JDK |
 | `deps` | Toolchains that `deps` installs, such as the Android SDK, Java libraries or the QNX update codec |
 | `oem` | Imported OEM inputs |
+| `source-fixture` | Together with `deps`: only public pinned tools, so the `source-fixtures` job of [CI](ci.md) runs it |
 
 Select tests by label with `ctest --label-regex` and `--label-exclude`; [CI](ci.md) runs the tests without the `oem` and `deps` labels in the Linux, macOS and Windows native build jobs (the host-only layer):
 
@@ -36,7 +37,7 @@ ctest --test-dir .local/build/linux --label-exclude 'oem|deps' --output-on-failu
 
 ## Java tests
 
-The `source-fixtures` job in [CI](ci.md) runs the public Java behavior suites and native component handoff on Linux, macOS and Windows. The pinned toolchain action installs Java libraries, Android 34, Build Tools 36.1.0, NDK 29 and its CMake/Ninja from repository URL/SHA-256 pins; the handoff builds the native components of Free 6.0.3 from their recipe with that NDK while their release assets are not published. This test setup downloads tools separately from the `fetch` command that imports OEM inputs; it does not install an emulator or build QEMU. The job excludes `oem` explicitly and requires every selected suite to run successfully without skips. Guest Java compiles with `--release 8` on the same pinned JDK 25 used for host tests.
+The `source-fixtures` job in [CI](ci.md) runs the public Java behavior suites and native component handoff on Linux, macOS and Windows. The pinned toolchain action installs Java libraries, Android 34, Build Tools 36.1.0, NDK 29 and its CMake/Ninja from repository URL/SHA-256 pins; the handoff builds the native components of Free 6.0.3 from their recipe with that NDK while their release assets are not published. This test setup downloads tools separately from the `fetch` command that imports OEM inputs; it does not install an emulator or build QEMU. The job selects the `source-fixture` label, excludes `oem` explicitly and requires every selected suite to run successfully without skips. Guest Java compiles with `--release 8` on the same pinned JDK 25 used for host tests.
 
 `passion_carsettings_source`, `canbus_source` and `prepare_java_android_stubs_source` explicitly select repository-owned fixtures with `TEST_OEM=OFF`. Their separate `_oem` suites select `TEST_OEM=ON` and require the imported Passion CarSettings/Multimedia/Camera APKs, the Free 7.3.1 QGAPI/Launcher originals or the CanBus donor APKs of Free 6.0.3, 6.11.1 and 7.3.1 used by their assertions. Missing OEM inputs fail those suites; they are excluded from the public job by the `oem` label.
 

@@ -8,7 +8,7 @@ Twelve GitHub Actions workflows live in `.github/workflows/`: `ci` checks the so
 
 | Job | Runner | What it does |
 | --- | --- | --- |
-| `source-fixtures` | Ubuntu 24.04, macOS 15, Windows Server 2022 | Installs pinned public fixture prerequisites, builds `native_component_test` and runs the selected `deps` behavior suites with `oem` excluded; missing suites and skips fail the job |
+| `source-fixtures` | Ubuntu 24.04, macOS 15, Windows Server 2022 | Installs pinned public fixture prerequisites, builds `native_component_test` and runs the behavior suites labeled `source-fixture` with `oem` excluded; missing suites and skips fail the job |
 | `lint` | Ubuntu 24.04 | Configures a Linux tree with Zig and runs `lint` with the pinned formatters, Checkstyle, clang-tidy, Error Prone, Java libraries, D8 and apksigner |
 | `linux` | Ubuntu 24.04 | Builds a Linux tree with Zig, runs `voyemu --help` and runs CTest without the `oem` and `deps` labels |
 | `tidy-check-windows` | Ubuntu 24.04 | Configures a Windows cross tree with Zig and runs `tidy-check` |

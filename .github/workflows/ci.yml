@@ -49,8 +49,8 @@ jobs:
               run: sudo xcode-select --switch /Library/Developer/CommandLineTools
             - run: cmake -S src/app -B .local/build/source-fixtures -G Ninja -DCMAKE_TOOLCHAIN_FILE="$PWD/src/dev/toolchains/zig-${{ matrix.host }}.cmake" -DBUILD_TESTING=ON -DVOYEMU_BUILD_GRAPHICS=OFF
             - run: cmake --build .local/build/source-fixtures --target native_component_test --parallel 1
-            # Select actual source behavior suites; copyrighted/manual owner inputs stay explicitly excluded.
-            - run: ctest --test-dir .local/build/source-fixtures --label-regex '^deps$' --label-exclude '^oem$' --tests-regex '^(prepare_java_(host_unit|phone_behavior|phone_peer|native_component_handoff|android_stubs_source)|guest_android_api_java|nxp_phone|nxp_music_media|passion_carsettings_source|qinggan09_equipment_artifacts|nxp_climate|canbus_source|nxp_wheel)$' --no-tests=error --output-on-failure --parallel 1 --output-junit source-fixtures.xml
+            # Suites labeled source-fixture need only public pinned tools; OEM inputs stay explicitly excluded.
+            - run: ctest --test-dir .local/build/source-fixtures --label-regex '^source-fixture$' --label-exclude '^oem$' --no-tests=error --output-on-failure --parallel 1 --output-junit source-fixtures.xml
             - run: cmake -DRESULT="$PWD/.local/build/source-fixtures/source-fixtures.xml" -P src/dev/ci/source-fixtures-result.cmake
 
     lint:
