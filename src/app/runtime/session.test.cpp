@@ -2798,7 +2798,6 @@ static void android_avd_config_guards() {
     const Json spec = {
             {"schema", 1},
             {"executable", engine.string()},
-            {"adb", engine.string()},
             {"machine", machine.string()},
             {"base", (machine / "base").string()},
             {"config_template", source.string()},
