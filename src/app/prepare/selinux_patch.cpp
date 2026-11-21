@@ -360,7 +360,7 @@ std::string apply_qinggan11_can_simulator_policy_patch(std::string_view profile,
 }
 
 std::string apply_qinggan11_can_early_policy_patch(std::string_view profile, unsigned api,
-                                                   std::string_view input) {
+                                                   std::string_view input, bool original_navi) {
     if ((profile != "free-11-chinese-20260731-7.3.1" &&
          profile != "free-11-chinese-20250710-6.11.1" &&
          profile != "free-11-russian-20260318-rc1") ||
@@ -370,7 +370,6 @@ std::string apply_qinggan11_can_early_policy_patch(std::string_view profile, uns
                           "exact patched API30 simulator policy required");
     }
 
-    const bool original_navi_profile = profile == "free-11-chinese-20260731-7.3.1";
     auto output =
             std::string(input) +
             R"QINGGAN11ECIL(; candidate early input domain: compile and runtime validation required
@@ -442,14 +441,13 @@ std::string apply_qinggan11_can_early_policy_patch(std::string_view profile, uns
 (allow su can_simulator_observe_socket (sock_file (getattr)))
 )QINGGAN11ECIL";
 
-    if (original_navi_profile) {
+    if (original_navi) {
         output += "(allow su mac_perms_file (file (getattr open read)))\n";
     }
 
     if (sha256_bytes(output) !=
-        (original_navi_profile
-                 ? "e8f3b8cb54b3ec09280cf5c630f495b3202f1c9994e796c5a1cf707a5dcd6cf6"
-                 : "50e7563396d73b053a36a9022d31807121731ecc0ce51b695df65ec7d6838db6")) {
+        (original_navi ? "e8f3b8cb54b3ec09280cf5c630f495b3202f1c9994e796c5a1cf707a5dcd6cf6"
+                       : "50e7563396d73b053a36a9022d31807121731ecc0ce51b695df65ec7d6838db6")) {
         throw VoyemuError("SELINUX_PATCH_MISMATCH", "API30 early policy output differs");
     }
 

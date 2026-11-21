@@ -158,11 +158,11 @@ void read_cold_artifact_file(
     record_cold_check(checks, "artifact:" + item.artifact + ":" + target, output.substr(0, 64),
                       item.sha256);
 
-    if (original_navi_requested(profile) && item.artifact == "patched:original-navi-mac") {
+    if (original_navi_requested(profile) && item.artifact == "patched:original-navi-selinux") {
         const auto label = shell({"ls", "-Zd", target});
         need(std::regex_search(label,
                                std::regex(R"((?:^|\s)u:object_r:mac_perms_file:s0(?:\s|$))")),
-             "Navi MAC file SELinux label differs");
+             "Navi policy file SELinux label differs");
         record_cold_check(checks, "navi-mac-label", "u:object_r:mac_perms_file:s0",
                           "u:object_r:mac_perms_file:s0");
     }
@@ -212,8 +212,8 @@ void verify_cold_policy_files(
             continue;
         }
 
-        if (item.artifact == "patched:original-navi-mac") {
-            need(!navi_mac, "duplicate cold Navi MAC artifact");
+        if (item.artifact == "patched:original-navi-selinux") {
+            need(!navi_mac, "duplicate cold Navi SELinux artifact");
             navi_mac = &item;
         } else {
             verify(item);
@@ -222,7 +222,7 @@ void verify_cold_policy_files(
 
     if (navi_mac) {
         need(static_cast<bool>(root_for_navi_mac),
-             "root proof required to read cold Navi MAC policy");
+             "root proof required to read cold Navi SELinux policy");
         root_for_navi_mac();
         need(shell({"cat", "/proc/sys/kernel/random/boot_id"}) == boot_id,
              "cold policy reader boot identity changed");
@@ -248,7 +248,7 @@ bool cold_policy_verified(const Json &profile, const Installed &item, const Json
         }
     }
 
-    if (original_navi_requested(profile) && item.artifact == "patched:original-navi-mac") {
+    if (original_navi_requested(profile) && item.artifact == "patched:original-navi-selinux") {
         expected.emplace_back("navi-mac-label", "u:object_r:mac_perms_file:s0");
     }
 

@@ -237,7 +237,7 @@ int main(int argc, char **argv) {
               "profile-specific API30 graph inventories preserved");
         const auto original_recipes = api30_file_recipes_for("free-11-chinese-20260731-7.3.1",
                                                              true);
-        check(original_recipes.size() == 9 && original_recipes[2].id == "original-navi-mac" &&
+        check(original_recipes.size() == 9 && original_recipes[2].id == "original-navi-selinux" &&
                       original_recipes[8].id == "selinux-hash-api30" &&
                       original_recipes[6].id == "can-early-policy-api30",
               "only original Navi graph gets MAC and keeps policy-hash dependency order");
@@ -248,7 +248,7 @@ int main(int argc, char **argv) {
             wrong_original = error.code() == "QINGGAN11_ORIGINAL_NAVI";
         }
 
-        check(wrong_original, "original Navi MAC graph rejects foreign profile");
+        check(wrong_original, "original Navi SELinux graph rejects foreign profile");
         bool old_navi_rejected = false;
         try {
             (void)api30_file_recipes_for("free-11-chinese-20250710-6.11.1", true);

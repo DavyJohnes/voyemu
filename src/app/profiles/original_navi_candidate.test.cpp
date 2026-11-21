@@ -15,8 +15,9 @@ static void check(bool b) {
 int main() {
     try {
         const std::string pin(original_navi_sha), cert(original_navi_cert),
-                target(original_navi_target), profile(original_navi_profile), dummy(64, 'a');
-        Json definition = {{"original",
+                target(original_navi_target), profile(qinggan11_731_profile_id), dummy(64, 'a');
+        Json definition = {{"features", {{"original_navi", true}}},
+                           {"original",
                             {{"Navi",
                               {{"sha256", pin},
                                {"source", {{"package", "com.baidu.naviauto"}}},
@@ -82,21 +83,21 @@ int main() {
         const std::string
                 mac = "/system/etc/selinux/plat_mac_permissions.xml",
                 macpin = "c5c361ff9623c3c3798f60210684ae10b5eec48bed7e9e43a3b275f2b36db392";
-        definition["patches"]["original-navi-mac"] = {
+        definition["patches"]["original-navi-selinux"] = {
                 {"type", "file"},
                 {"input", "android:" + mac},
-                {"steps", Json::array({"original-navi-mac.json"})}};
-        definition["install"].push_back({{"artifact", "patched:original-navi-mac"},
+                {"steps", Json::array({"original-navi-selinux.json"})}};
+        definition["install"].push_back({{"artifact", "patched:original-navi-selinux"},
                                          {"type", "file"},
                                          {"target", mac},
                                          {"mode", "0644"}});
-        artifacts["patched:original-navi-mac"] = {{"sha256", macpin}};
-        candidate["installed"].push_back({{"artifact", "patched:original-navi-mac"},
+        artifacts["patched:original-navi-selinux"] = {{"sha256", macpin}};
+        candidate["installed"].push_back({{"artifact", "patched:original-navi-selinux"},
                                           {"target", mac},
                                           {"sha256", macpin},
                                           {"mode", "0644"},
                                           {"mutable", false}});
-        candidate["checks"].push_back({{"id", "artifact:patched:original-navi-mac:" + mac},
+        candidate["checks"].push_back({{"id", "artifact:patched:original-navi-selinux:" + mac},
                                        {"passed", true},
                                        {"expected", macpin},
                                        {"actual", macpin}});
@@ -188,7 +189,7 @@ int main() {
 
             bool rejected = false;
             try {
-                original_navi_preflight(d, profile, 30);
+                original_navi_preflight(d, 30);
             } catch (const std::exception &) {
                 rejected = true;
             }
@@ -210,7 +211,7 @@ int main() {
 
             bool rejected = false;
             try {
-                original_navi_preflight(d, profile, 30);
+                original_navi_preflight(d, 30);
             } catch (const std::exception &) {
                 rejected = true;
             }
@@ -223,7 +224,7 @@ int main() {
         boot["android"]["package"] = "system-images;android-30;default;arm64-v8a";
         boot["components"]["view-observation"] = "components/view-observation";
         api30_framework_boot::verify(boot);
-        check(original_navi_storage_set(definition, profile, 30) ==
+        check(original_navi_storage_set(definition, 30) ==
               std::vector<std::string>({"cmd", "appops", "set", "com.baidu.naviauto",
                                         "NO_ISOLATED_STORAGE", "allow"}));
         check(original_navi_storage_allowed("NO_ISOLATED_STORAGE: allow; time=+1s"));
@@ -235,16 +236,15 @@ int main() {
         }
 
         check(original_navi_storage_set(
-                      Json{{"install", Json::array()}, {"patches", Json::object()}}, "other", 30)
+                      Json{{"install", Json::array()}, {"patches", Json::object()}}, 30)
                       .empty());
 
         for (int mode = 0; mode < 4; ++mode) {
             auto d = definition;
-            auto name = profile;
             int api = 30;
 
             if (mode == 0) {
-                name = "other";
+                d["compatibility"]["privapp_whitelist"]["packages"].erase("com.baidu.naviauto");
             }
 
             if (mode == 1) {
@@ -262,7 +262,7 @@ int main() {
 
             bool rejected = false;
             try {
-                original_navi_storage_set(d, name, api);
+                original_navi_storage_set(d, api);
             } catch (...) {
                 rejected = true;
             }
@@ -322,7 +322,7 @@ int main() {
 
             bool rejected = false;
             try {
-                original_navi_candidate(definition, profile, 30, c, artifacts, cert);
+                original_navi_candidate(definition, 30, c, artifacts, cert);
             } catch (...) {
                 rejected = true;
             }
@@ -330,15 +330,23 @@ int main() {
             check(rejected);
         }
 
-        original_navi_candidate(definition, profile, 30, candidate, artifacts, cert);
+        original_navi_candidate(definition, 30, candidate, artifacts, cert);
+        // The feature, not the profile id, selects the stock navigation app.
+        auto renamed = definition;
+        renamed["id"] = "api30-fixture";
+        original_navi_preflight(renamed, 30);
+        original_navi_candidate(renamed, 30, candidate, artifacts, cert);
+        check(!original_navi_requested(Json{{"features", {{"original_navi", false}}}}) &&
+              !original_navi_requested(Json{{"features", true}}) &&
+              original_navi_requested(Json{{"features", {{"original_navi", true}}}}));
 
         for (int mode = 0; mode < 29; ++mode) {
             auto d = definition, c = candidate, a = artifacts;
-            auto id = profile, sign = cert;
+            auto sign = cert;
             int api = 30;
 
             if (mode == 0) {
-                id = "other";
+                d["features"]["original_navi"] = false;
             }
 
             if (mode == 1) {
@@ -427,11 +435,11 @@ int main() {
             }
 
             if (mode == 22) {
-                a["patched:original-navi-mac"]["sha256"] = dummy;
+                a["patched:original-navi-selinux"]["sha256"] = dummy;
             }
 
             if (mode == 23) {
-                d["patches"].erase("original-navi-mac");
+                d["patches"].erase("original-navi-selinux");
             }
 
             if (mode == 24) {
@@ -456,7 +464,7 @@ int main() {
 
             bool rejected = false;
             try {
-                original_navi_candidate(d, id, api, c, a, sign);
+                original_navi_candidate(d, api, c, a, sign);
             } catch (const std::exception &) {
                 rejected = true;
             }

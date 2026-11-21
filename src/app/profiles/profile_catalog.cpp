@@ -92,7 +92,7 @@ Json declared_patch_plan(const Json &definition) {
     const bool original_navi = original_navi_requested(definition);
 
     if (original_navi) {
-        original_navi_preflight(definition, definition.value("id", std::string{}), 30);
+        original_navi_preflight(definition, 30);
     }
 
     Json ordered = Json::array();

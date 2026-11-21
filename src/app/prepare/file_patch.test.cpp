@@ -36,6 +36,8 @@ int main(int argc, char **argv) {
                                   std::string(policy.output_sha256)};
             early.profile = older ? "free-11-chinese-20250710-6.11.1"
                                   : "free-11-chinese-20260731-7.3.1";
+            // Only the original_navi feature adds the su read of mac_perms_file.
+            early.original_navi = !older;
             early.donor = PinnedFileDependency{system_ext, sha256_file(system_ext)};
             early.vendor_donor = PinnedFileDependency{vendor, sha256_file(vendor)};
             const auto policy_bytes =

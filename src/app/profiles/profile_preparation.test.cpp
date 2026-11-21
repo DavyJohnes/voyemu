@@ -817,7 +817,7 @@ int main(int argc, char **argv) {
                 "can-simulator-policy-api30.json",
                 "original-navi-egl.json",
                 "original-navi-libraries.json",
-                "original-navi-mac.json",
+                "original-navi-selinux.json",
                 "original-navi-vehicle.json",
                 "original-navi-vin.json",
                 "api30-audio-policy.json",

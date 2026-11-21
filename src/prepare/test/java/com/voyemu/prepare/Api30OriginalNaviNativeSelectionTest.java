@@ -8,7 +8,7 @@ public final class Api30OriginalNaviNativeSelectionTest {
         checkNodeSteps();
 
         if (Api30NativeFiles.forPlatform("qinggan11", false).contains(original.get(2))) {
-            throw new AssertionError("The original Navi MAC node must follow its declaration");
+            throw new AssertionError("The original Navi SELinux node must follow its declaration");
         }
 
         for (String platform : java.util.List.of("passion", "qinggan09")) {
@@ -37,7 +37,7 @@ public final class Api30OriginalNaviNativeSelectionTest {
                         .equals(
                                 original.stream()
                                         .filter(spec ->
-                                                !spec.id().equals("original-navi-mac")
+                                                !spec.id().equals("original-navi-selinux")
                                                         && !policyChain.contains(spec.id()))
                                         .toList())
                 || common.size() != 8
@@ -54,7 +54,7 @@ public final class Api30OriginalNaviNativeSelectionTest {
                 java.util.List.of(
                         "keymanager-contexts-api30",
                         "public-qg-runtime-api30",
-                        "original-navi-mac",
+                        "original-navi-selinux",
                         "can-simulator-contexts-api30",
                         "can-early-file-contexts-api30",
                         "can-simulator-policy-api30",

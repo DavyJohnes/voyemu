@@ -28,7 +28,7 @@ final class Api30NativeFiles {
                             "391829e0167f44415e54ba64692ad410b1398b16263869beb22e427130eae766",
                             "99c1b908750a0a1320e160aa9b20dc0129c332e5667dbdb3c29f33982a55561a"));
 
-    /** The qinggan11 graph of a profile that also declares the original Navi MAC node. */
+    /** The qinggan11 graph of a profile with the original_navi feature. */
     static final List<Spec> QINGGAN11_ORIGINAL_NAVI_SPECS =
             List.of(
                     new Spec(
@@ -42,7 +42,7 @@ final class Api30NativeFiles {
                             "34c43bf7099fc57daf2db5de07891eb20f76eafa6d9d8a4f4f01e0cefb48c070",
                             "61307bd17de318871f19ed5effede9e65204d7c510e246d91155cc7162744763"),
                     new Spec(
-                            "original-navi-mac",
+                            "original-navi-selinux",
                             "/system/etc/selinux/plat_mac_permissions.xml",
                             "34309b705a40fbc6a52a96cfc6713c90a683223e0652b936b7227584546169d8",
                             "c5c361ff9623c3c3798f60210684ae10b5eec48bed7e9e43a3b275f2b36db392"),
@@ -82,12 +82,12 @@ final class Api30NativeFiles {
             HASH = "2f158789774a59073cf85bf2c91272416b0da948eea037f9e13586187338f2c9";
 
     /**
-     * The qinggan11 graph without the original Navi MAC node; its early policy omits the su read of
-     * mac_perms_file, which changes the policy and hash pins.
+     * The qinggan11 graph without the original Navi SELinux node; its early policy omits the su
+     * read of mac_perms_file, which changes the policy and hash pins.
      */
     static final List<Spec> QINGGAN11_SPECS =
             QINGGAN11_ORIGINAL_NAVI_SPECS.stream()
-                    .filter(spec -> !spec.id().equals("original-navi-mac"))
+                    .filter(spec -> !spec.id().equals("original-navi-selinux"))
                     .map(spec ->
                             switch (spec.id()) {
                                 case "can-early-policy-api30" -> withOutput(spec, POLICY);
@@ -145,8 +145,8 @@ final class Api30NativeFiles {
     }
 
     /**
-     * The native graph of a profile platform; on qinggan11 the original Navi MAC node joins when
-     * the profile declares it.
+     * The native graph of a profile platform; on qinggan11 the original Navi SELinux node joins
+     * with the original_navi feature.
      */
     static List<Spec> forPlatform(Object platform, boolean originalNavi) {
         if ("qinggan11".equals(platform)) {
@@ -157,9 +157,7 @@ final class Api30NativeFiles {
     }
 
     static List<Spec> forProfile(ProfileRegistry.Profile profile) {
-        return forPlatform(
-                profile.data().get("platform"),
-                Json.obj(profile.data(), "patches").containsKey("original-navi-mac"));
+        return forPlatform(profile.data().get("platform"), profile.originalNavi());
     }
 
     static final String MAPPING = "/system/etc/selinux/mapping/30.0.cil",

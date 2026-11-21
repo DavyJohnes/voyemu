@@ -4,7 +4,7 @@
 #include "codec_timing.hpp"
 #include "init_patch.hpp"
 #include "model.hpp"
-#include "original_navi_mac.hpp"
+#include "original_navi_selinux.hpp"
 #include "os/fs.hpp"
 #include "process.hpp"
 #include "selinux_patch.hpp"
@@ -65,8 +65,8 @@ std::string read_pinned(const std::filesystem::path &path, const std::string &pi
 } // namespace
 
 std::vector<std::string> native_file_patch_steps(std::string_view id) {
-    if (id == "original-navi-mac") {
-        return {"original-navi-mac.json"};
+    if (id == "original-navi-selinux") {
+        return {"original-navi-selinux.json"};
     }
 
     if (id == "ccodec-allocation-a9") {
@@ -190,7 +190,7 @@ std::vector<std::string> prepare_file_patches(std::span<const PinnedFilePatch> p
         const bool free_public = patch.id == "public-qg-runtime-api30",
                    free_property = patch.id == "property-contexts-api30",
                    free_key = patch.id == "keymanager-contexts-api30",
-                   free_mac = patch.id == "original-navi-mac";
+                   navi_selinux = patch.id == "original-navi-selinux";
         const bool qinggan11_can = (patch.id == "can-simulator-contexts-api30" ||
                                     patch.id == "can-early-file-contexts-api30" ||
                                     patch.id == "can-simulator-policy-api30" ||
@@ -201,9 +201,9 @@ std::vector<std::string> prepare_file_patches(std::span<const PinnedFilePatch> p
                                  !patch.profile.empty();
         const bool codec = patch.id == "ccodec-allocation-a9";
 
-        if (patch.certificate_apk && !free_mac) {
+        if (patch.certificate_apk && !navi_selinux) {
             throw VoyemuError("FILE_PATCH_DEPENDENCY",
-                              "certificate APK is restricted to original Navi MAC");
+                              "certificate APK is restricted to original Navi SELinux");
         }
 
         const bool bounded = patch.id == "selinux-canbus-a9" ||
@@ -227,10 +227,15 @@ std::vector<std::string> prepare_file_patches(std::span<const PinnedFilePatch> p
             if (patch.profile != "free-09-chinese-20260106-6.0.3" || patch.api != 28) {
                 throw VoyemuError("FILE_PATCH_PROFILE", "exact A9 API28 codec profile required");
             }
-        } else if (free_public || free_property || free_key || free_policy || free_mac) {
+        } else if (navi_selinux) {
+            if (!patch.original_navi || patch.api != 30) {
+                throw VoyemuError("FILE_PATCH_PROFILE",
+                                  "API30 profile with the original_navi feature required");
+            }
+        } else if (free_public || free_property || free_key || free_policy) {
             if ((patch.profile != "free-11-chinese-20260731-7.3.1" &&
                  patch.profile != "free-11-russian-20260318-rc1" &&
-                 (free_mac || patch.profile != "free-11-chinese-20250710-6.11.1")) ||
+                 patch.profile != "free-11-chinese-20250710-6.11.1") ||
                 patch.api != 30) {
                 throw VoyemuError("FILE_PATCH_PROFILE",
                                   "exact Free A11 API30 file profile required");
@@ -293,15 +298,15 @@ std::vector<std::string> prepare_file_patches(std::span<const PinnedFilePatch> p
                             patch.output_sha256 !=
                                     "36da952afee36f4e768ec74080aa157e92ba29881718dd9d65c8a5a8401b166a")
                             .bytes;
-        } else if (patch.id == "original-navi-mac") {
-            if (patch.profile != "free-11-chinese-20260731-7.3.1" || patch.api != 30 ||
+        } else if (patch.id == "original-navi-selinux") {
+            if (!patch.original_navi || patch.api != 30 ||
                 bool(patch.donor) == bool(patch.certificate_apk) ||
                 patch.input_sha256 !=
                         "34309b705a40fbc6a52a96cfc6713c90a683223e0652b936b7227584546169d8" ||
                 patch.output_sha256 !=
                         "c5c361ff9623c3c3798f60210684ae10b5eec48bed7e9e43a3b275f2b36db392" ||
                 !patch.patched_dependency.empty() || !patch.dependency_sha256.empty()) {
-                throw VoyemuError("QINGGAN11_ORIGINAL_NAVI_MAC",
+                throw VoyemuError("QINGGAN11_ORIGINAL_NAVI_SELINUX",
                                   "exact disabled recipe contract required");
             }
 
@@ -310,7 +315,8 @@ std::vector<std::string> prepare_file_patches(std::span<const PinnedFilePatch> p
             if (patch.certificate_apk) {
                 if (patch.certificate_apk->sha256 !=
                     "dceddff70db38bacb50ebffa46d36da76f70e5596c6184bca51c48c3ed562a05") {
-                    throw VoyemuError("QINGGAN11_ORIGINAL_NAVI_MAC", "original APK pin differs");
+                    throw VoyemuError("QINGGAN11_ORIGINAL_NAVI_SELINUX",
+                                      "original APK pin differs");
                 }
 
                 cert = pinned_apk_v2_certificate(patch.certificate_apk->input,
@@ -318,7 +324,7 @@ std::vector<std::string> prepare_file_patches(std::span<const PinnedFilePatch> p
             } else {
                 if (patch.donor->sha256 !=
                     "b2e962ed163aed0831d6d08ee41ca9406ae970032aa4df8a4c3b41d222b201d3") {
-                    throw VoyemuError("QINGGAN11_ORIGINAL_NAVI_MAC", "donor pin differs");
+                    throw VoyemuError("QINGGAN11_ORIGINAL_NAVI_SELINUX", "donor pin differs");
                 }
 
                 cert = read_pinned(patch.donor->input, patch.donor->sha256, 64 * 1024);
@@ -326,10 +332,10 @@ std::vector<std::string> prepare_file_patches(std::span<const PinnedFilePatch> p
 
             if (sha256_bytes(cert) !=
                 "b2e962ed163aed0831d6d08ee41ca9406ae970032aa4df8a4c3b41d222b201d3") {
-                throw VoyemuError("QINGGAN11_ORIGINAL_NAVI_MAC", "derived certificate differs");
+                throw VoyemuError("QINGGAN11_ORIGINAL_NAVI_SELINUX", "derived certificate differs");
             }
 
-            output = apply_original_navi_mac(patch.profile, patch.api, input, cert);
+            output = apply_original_navi_selinux(patch.api, input, cert);
         } else if (patch.id == "can-simulator-contexts-api30") {
             if (patch.donor || !patch.patched_dependency.empty() ||
                 !patch.dependency_sha256.empty()) {
@@ -370,7 +376,8 @@ std::vector<std::string> prepare_file_patches(std::span<const PinnedFilePatch> p
                             .cil);
 
             if (patch.id == "can-early-policy-api30") {
-                output = apply_qinggan11_can_early_policy_patch(patch.profile, patch.api, output);
+                output = apply_qinggan11_can_early_policy_patch(patch.profile, patch.api, output,
+                                                                patch.original_navi);
             }
         } else if (patch.id == "can-early-property-contexts-api30") {
             if (patch.donor || !patch.patched_dependency.empty() ||

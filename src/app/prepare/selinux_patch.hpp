@@ -26,8 +26,9 @@ std::string apply_qinggan11_can_early_context_patch(std::string_view profile, un
                                                     std::string_view input);
 std::string apply_qinggan11_can_simulator_policy_patch(std::string_view profile, unsigned api,
                                                        std::string_view input);
+// original_navi adds the su read of mac_perms_file that the original_navi feature needs.
 std::string apply_qinggan11_can_early_policy_patch(std::string_view profile, unsigned api,
-                                                   std::string_view input);
+                                                   std::string_view input, bool original_navi);
 std::string apply_qinggan11_can_early_property_patch(std::string_view profile, unsigned api,
                                                      std::string_view input);
 std::string apply_passion_selinux_patch(std::string_view profile, unsigned api, std::string_view id,
@@ -79,7 +80,7 @@ inline constexpr std::array<Api30FileRecipe, 10> qinggan11_731_api30_file_recipe
 inline constexpr std::array<Api30FileRecipe, 9> qinggan11_731_original_navi_api30_file_recipes = {
         {qinggan11_731_api30_file_recipes[1],
          qinggan11_731_api30_file_recipes[2],
-         {"original-navi-mac", "/system/etc/selinux/plat_mac_permissions.xml",
+         {"original-navi-selinux", "/system/etc/selinux/plat_mac_permissions.xml",
           "34309b705a40fbc6a52a96cfc6713c90a683223e0652b936b7227584546169d8",
           "c5c361ff9623c3c3798f60210684ae10b5eec48bed7e9e43a3b275f2b36db392"},
          qinggan11_731_api30_file_recipes[4],

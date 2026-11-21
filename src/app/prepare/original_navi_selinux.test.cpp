@@ -1,4 +1,4 @@
-#include "original_navi_mac.hpp"
+#include "original_navi_selinux.hpp"
 #include "file_patch.hpp"
 #include "process.hpp"
 #include <filesystem>
@@ -10,7 +10,7 @@ using namespace voyemu;
 
 static void check(bool x) {
     if (!x) {
-        throw std::runtime_error("original Navi MAC test failed");
+        throw std::runtime_error("original Navi SELinux test failed");
     }
 }
 
@@ -83,7 +83,7 @@ static void synthetic_mode(const std::filesystem::path &xml_path) {
         cert += static_cast<char>((i * 37 + 11) & 255);
     }
 
-    const auto result = original_navi_mac_insert(xml, cert);
+    const auto result = original_navi_selinux_insert(xml, cert);
     const auto at = xml.find("</policy>");
     check(at != std::string::npos && result.starts_with(xml.substr(0, at)) &&
           result.ends_with(xml.substr(at)));
@@ -96,7 +96,7 @@ static void synthetic_mode(const std::filesystem::path &xml_path) {
     check(exact_mapping(result, std::string(cert.size(), 'x'), "com.baidu.naviauto").empty());
     bool rejected = false;
     try {
-        original_navi_mac_insert(result, cert);
+        original_navi_selinux_insert(result, cert);
     } catch (...) {
         rejected = true;
     }
@@ -104,7 +104,7 @@ static void synthetic_mode(const std::filesystem::path &xml_path) {
     check(rejected);
     rejected = false;
     try {
-        original_navi_mac_insert(xml + "</policy>", cert);
+        original_navi_selinux_insert(xml + "</policy>", cert);
     } catch (...) {
         rejected = true;
     }
@@ -112,7 +112,7 @@ static void synthetic_mode(const std::filesystem::path &xml_path) {
     check(rejected);
     rejected = false;
     try {
-        apply_original_navi_mac("free-11-chinese-20260731-7.3.1", 30, xml, cert);
+        apply_original_navi_selinux(30, xml, cert);
     } catch (...) {
         rejected = true;
     }
@@ -120,7 +120,7 @@ static void synthetic_mode(const std::filesystem::path &xml_path) {
     check(rejected);
     // The donor stands for a non-OEM certificate file; only the OEM pin is accepted.
     PinnedFilePatch patch{
-            "original-navi-mac",
+            "original-navi-selinux",
             30,
             std::filesystem::absolute(xml_path),
             "34309b705a40fbc6a52a96cfc6713c90a683223e0652b936b7227584546169d8",
@@ -130,10 +130,12 @@ static void synthetic_mode(const std::filesystem::path &xml_path) {
                     "b2e962ed163aed0831d6d08ee41ca9406ae970032aa4df8a4c3b41d222b201d3"},
             "",
             "",
-            "free-11-chinese-20260731-7.3.1"};
+            "api30-fixture"};
+    patch.original_navi = true;
     check(patch_error(patch) == "FILE_PATCH_INPUT_SHA: pinned input mismatch");
     auto bad = patch;
-    bad.profile = "other";
+    // The recipe follows the original_navi feature of the profile, not its id.
+    bad.original_navi = false;
     check(patch_error(bad).starts_with("FILE_PATCH_PROFILE:"));
     bad = patch;
     bad.api = 28;
@@ -143,15 +145,15 @@ static void synthetic_mode(const std::filesystem::path &xml_path) {
     check(patch_error(bad) == "FILE_PATCH_INPUT_SHA: pinned input mismatch");
     bad = patch;
     bad.donor.value().sha256 = std::string(64, '0');
-    check(patch_error(bad) == "QINGGAN11_ORIGINAL_NAVI_MAC: donor pin differs");
+    check(patch_error(bad) == "QINGGAN11_ORIGINAL_NAVI_SELINUX: donor pin differs");
     bad = patch;
     bad.output_sha256 = std::string(64, '0');
     check(patch_error(bad) ==
-          "QINGGAN11_ORIGINAL_NAVI_MAC: exact disabled recipe contract required");
+          "QINGGAN11_ORIGINAL_NAVI_SELINUX: exact disabled recipe contract required");
     bad = patch;
     bad.certificate_apk = patch.donor;
     check(patch_error(bad) ==
-          "QINGGAN11_ORIGINAL_NAVI_MAC: exact disabled recipe contract required");
+          "QINGGAN11_ORIGINAL_NAVI_SELINUX: exact disabled recipe contract required");
     std::cout << "PASS synthetic certificate on exact XML: unchanged bytes, signer mapping, "
                  "collision, OEM pin and recipe negatives\n";
 }
@@ -159,7 +161,7 @@ static void synthetic_mode(const std::filesystem::path &xml_path) {
 // Optional pinned original Navi APK: the derived OEM certificate reproduces the output pin.
 static void original_mode(const std::filesystem::path &xml_path,
                           const std::filesystem::path &apk_path) {
-    PinnedFilePatch patch{"original-navi-mac",
+    PinnedFilePatch patch{"original-navi-selinux",
                           30,
                           std::filesystem::absolute(xml_path),
                           "34309b705a40fbc6a52a96cfc6713c90a683223e0652b936b7227584546169d8",
@@ -167,8 +169,9 @@ static void original_mode(const std::filesystem::path &xml_path,
                           std::nullopt,
                           "",
                           "",
-                          "free-11-chinese-20260731-7.3.1"};
+                          "api30-fixture"};
 
+    patch.original_navi = true;
     patch.certificate_apk = PinnedFileDependency{
             std::filesystem::canonical(apk_path),
             "dceddff70db38bacb50ebffa46d36da76f70e5596c6184bca51c48c3ed562a05"};
@@ -184,16 +187,17 @@ static void original_mode(const std::filesystem::path &xml_path,
 int main(int argc, char **argv) try {
     const std::string cert = "abc";
 
-    check(!original_navi_mac_collision("<policy></policy>", cert));
-    check(original_navi_mac_collision("<policy><package name=\"com.baidu.naviauto\"/></policy>",
-                                      cert));
-    check(original_navi_mac_collision("<policy><signer signature=\"616263\"/></policy>", cert));
-    check(original_navi_mac_collision("<policy><signer signature=\"616263\"/></policy>", "abc"));
-    check(native_file_patch_steps("original-navi-mac") ==
-          std::vector<std::string>{"original-navi-mac.json"});
+    check(!original_navi_selinux_collision("<policy></policy>", cert));
+    check(original_navi_selinux_collision("<policy><package name=\"com.baidu.naviauto\"/></policy>",
+                                          cert));
+    check(original_navi_selinux_collision("<policy><signer signature=\"616263\"/></policy>", cert));
+    check(original_navi_selinux_collision("<policy><signer signature=\"616263\"/></policy>",
+                                          "abc"));
+    check(native_file_patch_steps("original-navi-selinux") ==
+          std::vector<std::string>{"original-navi-selinux.json"});
     bool rejected = false;
     try {
-        apply_original_navi_mac("other", 30, "<policy></policy>", cert);
+        apply_original_navi_selinux(28, "<policy></policy>", cert);
     } catch (...) {
         rejected = true;
     }
@@ -210,7 +214,7 @@ int main(int argc, char **argv) try {
     }
 
     if (argc == 1) {
-        std::cout << "PASS MAC collision and profile fail-closed unit\n";
+        std::cout << "PASS policy collision and API fail-closed unit\n";
     }
 
     return 0;

@@ -46,6 +46,12 @@ final class ProfileRegistry {
             return declared(data, "board", BOARDS);
         }
 
+        /** Whether the profile declares the original_navi feature: the stock navigation app. */
+        boolean originalNavi() {
+            return data.get("features") instanceof Map<?, ?> features
+                    && Boolean.TRUE.equals(features.get("original_navi"));
+        }
+
         /** The name of the profile in human text, such as "Free 7.3.1". */
         String title() {
             return title(data);

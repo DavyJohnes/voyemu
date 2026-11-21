@@ -2015,11 +2015,11 @@ int main(int argc, char **argv) {
                 continue;
             }
 
-            if (it.key() == "original-navi-mac") {
+            if (it.key() == "original-navi-selinux") {
                 check(it.value() == Json{{"type", "file"},
                                          {"input",
                                           "android:/system/etc/selinux/plat_mac_permissions.xml"},
-                                         {"steps", Json::array({"original-navi-mac.json"})}},
+                                         {"steps", Json::array({"original-navi-selinux.json"})}},
                       "original Navi certificate policy recipe is exact");
                 continue;
             }
@@ -2063,7 +2063,7 @@ int main(int argc, char **argv) {
             }
 
             if (it.value().at("type") == "file") {
-                if (it.key() == "original-navi-mac") {
+                if (it.key() == "original-navi-selinux") {
                     continue;
                 }
 

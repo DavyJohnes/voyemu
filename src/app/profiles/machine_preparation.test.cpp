@@ -3987,7 +3987,7 @@ int main(int argc, char **argv) {
                                                              return item.target == command.back();
                                                          });
                         check(policy != policies.end());
-                        check(rooted == (policy->artifact == "patched:original-navi-mac"));
+                        check(rooted == (policy->artifact == "patched:original-navi-selinux"));
 
                         if (command.front() == "sha256sum") {
                             ++contents;
@@ -4003,7 +4003,7 @@ int main(int argc, char **argv) {
                         }
 
                         check(command.front() == "ls" &&
-                              policy->artifact == "patched:original-navi-mac");
+                              policy->artifact == "patched:original-navi-selinux");
                         ++labels;
 
                         return std::string("u:object_r:mac_perms_file:s0 ") + policy->target;
@@ -4036,7 +4036,7 @@ int main(int argc, char **argv) {
 
                 const auto mac =
                         std::find_if(policies.begin(), policies.end(), [](const auto &item) {
-                            return item.artifact == "patched:original-navi-mac";
+                            return item.artifact == "patched:original-navi-selinux";
                         });
                 check(mac != policies.end());
                 check(!machine_preparation_detail::cold_policy_verified(actual, *mac, bad_label,
@@ -4651,7 +4651,7 @@ int main(int argc, char **argv) {
                                                         "component:oem-power",
                                                         "patched:api30-stock-statusbar",
                                                         "original:Navi",
-                                                        "patched:original-navi-mac",
+                                                        "patched:original-navi-selinux",
                                                         "component:can-model-observer",
                                                         "files:can-simulator-fixture",
                                                         "files:can-simulator-init",

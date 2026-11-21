@@ -4,6 +4,9 @@
   "title": "Free 7.3.1",
   "platform": "qinggan11",
   "board": "8155",
+  "features": {
+    "original_navi": true
+  },
   "status": "ready",
   "initial_state": {
     "aeb_sts": 1
@@ -767,11 +770,11 @@
         "original-navi-vehicle.json"
       ]
     },
-    "original-navi-mac": {
+    "original-navi-selinux": {
       "type": "file",
       "input": "android:/system/etc/selinux/plat_mac_permissions.xml",
       "steps": [
-        "original-navi-mac.json"
+        "original-navi-selinux.json"
       ]
     },
     "can-simulator-contexts-api30": {
@@ -1121,7 +1124,7 @@
       "mode": "0644"
     },
     {
-      "artifact": "patched:original-navi-mac",
+      "artifact": "patched:original-navi-selinux",
       "type": "file",
       "target": "/system/etc/selinux/plat_mac_permissions.xml",
       "mode": "0644"

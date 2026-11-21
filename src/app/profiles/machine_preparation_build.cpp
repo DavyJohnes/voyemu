@@ -791,7 +791,7 @@ Json build_android_candidate(const std::filesystem::path &root,
     const auto profile = portable_profile_json(profile_bytes);
 
     if (original_navi_requested(profile)) {
-        original_navi_preflight(profile, request.profile, android_candidate_api(profile));
+        original_navi_preflight(profile, android_candidate_api(profile));
     }
 
     android_candidate_api(profile);
@@ -1151,7 +1151,7 @@ Json build_android_candidate(const std::filesystem::path &root,
                     });
         }
 
-        const auto navi_storage = original_navi_storage_set(profile, request.profile,
+        const auto navi_storage = original_navi_storage_set(profile,
                                                             android_candidate_api(profile));
 
         const auto verify_navi_shell = [&] {
@@ -1303,7 +1303,7 @@ Json build_android_candidate(const std::filesystem::path &root,
             verify_cold_original_navi(candidate, checks);
         }
 
-        if (profile.value("id", std::string{}) == original_navi_profile &&
+        if (original_navi_requested(profile) &&
             profile.value("components", Json::object()).contains("view-observation")) {
             candidate.phase("rich-ui-observation");
             candidate.wait(
@@ -1432,7 +1432,7 @@ Json build_android_candidate(const std::filesystem::path &root,
             check_file(apk, std::string(original_navi_sha), 512ULL << 20);
             const auto cert =
                     sha256_bytes(pinned_apk_v2_certificate(apk, std::string(original_navi_sha)));
-            original_navi_candidate(profile, request.profile, 30, receipt, artifacts, cert);
+            original_navi_candidate(profile, 30, receipt, artifacts, cert);
         }
 
         if (!prepared_packages.empty()) {

@@ -697,11 +697,10 @@ bool android_candidate_api30_root_layout(const Json &profile) {
 }
 
 std::uint64_t android_candidate_overlay_scratch_bytes(const Json &profile, std::uint64_t payload) {
-    const bool original_navi = profile.value("id", std::string{}) == original_navi_profile &&
-                               original_navi_requested(profile);
+    const bool original_navi = original_navi_requested(profile);
 
     if (original_navi) {
-        original_navi_preflight(profile, original_navi_profile, android_candidate_api(profile));
+        original_navi_preflight(profile, android_candidate_api(profile));
     }
 
     const bool older = profile.value("id", std::string{}) == "free-11-chinese-20250710-6.11.1";

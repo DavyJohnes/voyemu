@@ -19,7 +19,7 @@ inline void verify(const Json &profile) {
                     {"mode", "0644"}};
 
     if (original_navi_requested(profile)) {
-        original_navi_preflight(profile, profile.value("id", std::string{}), 30);
+        original_navi_preflight(profile, 30);
 
         for (auto p = profile.at("patches").begin(); p != profile.at("patches").end(); ++p) {
             if (p.value().value("input", std::string{}) == "component:view-observation" &&

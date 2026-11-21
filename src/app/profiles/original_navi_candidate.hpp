@@ -10,7 +10,6 @@
 #include <string_view>
 #include <tuple>
 namespace voyemu {
-inline constexpr std::string_view original_navi_profile = "free-11-chinese-20260731-7.3.1";
 inline constexpr std::string_view original_navi_sha =
         "dceddff70db38bacb50ebffa46d36da76f70e5596c6184bca51c48c3ed562a05";
 inline constexpr std::string_view original_navi_cert =
@@ -24,30 +23,12 @@ inline void original_navi_need(bool ok) {
     }
 }
 
+// The stock navigation app of the firmware is installed when the profile declares the
+// original_navi feature; its recipes and graph are details of that feature.
 inline bool original_navi_requested(const Json &definition) {
-    for (const auto &item : definition.value("install", Json::array())) {
-        if (item.value("artifact", std::string{}) == "original:Navi") {
-            return true;
-        }
-    }
+    const auto features = definition.value("features", Json::object());
 
-    for (const auto &node : definition.value("patches", Json::object())) {
-        const auto steps = node.value("steps", Json::array());
-
-        if (!steps.is_array()) {
-            continue;
-        }
-
-        for (const auto &step : steps) {
-            if (step.is_string() &&
-                (step == "original-navi-egl.json" || step == "original-navi-libraries.json" ||
-                 step == "original-navi-vin.json" || step == "original-navi-vehicle.json")) {
-                return true;
-            }
-        }
-    }
-
-    return false;
+    return features.is_object() && features.value("original_navi", Json(false)) == true;
 }
 
 inline Json original_navi_marker() {
@@ -61,10 +42,10 @@ inline Json original_navi_marker() {
              "c602475a9890bbe725a75ede7c8f667635fc1be69f9db65cae22e752c28fa3cd"}};
 }
 
-inline void original_navi_preflight(const Json &definition, std::string_view profile, int api) {
+inline void original_navi_preflight(const Json &definition, int api) {
     const auto need = original_navi_need;
 
-    need(profile == original_navi_profile && api == 30);
+    need(original_navi_requested(definition) && api == 30);
     const auto &original = definition.at("original").at("Navi");
     need(original.at("sha256") == original_navi_sha &&
          original.at("source").at("package") == "com.baidu.naviauto" &&
@@ -120,15 +101,15 @@ inline void original_navi_preflight(const Json &definition, std::string_view pro
     }
 
     need(provider_installs == 1);
-    need(definition.at("patches").at("original-navi-mac") ==
+    need(definition.at("patches").at("original-navi-selinux") ==
          Json({{"type", "file"},
                {"input", "android:/system/etc/selinux/plat_mac_permissions.xml"},
-               {"steps", Json::array({"original-navi-mac.json"})}}));
+               {"steps", Json::array({"original-navi-selinux.json"})}}));
     unsigned mac_installs = 0;
 
     for (const auto &i : definition.at("install")) {
-        if (i.value("artifact", std::string{}) == "patched:original-navi-mac") {
-            need(i == Json({{"artifact", "patched:original-navi-mac"},
+        if (i.value("artifact", std::string{}) == "patched:original-navi-selinux") {
+            need(i == Json({{"artifact", "patched:original-navi-selinux"},
                             {"type", "file"},
                             {"target", "/system/etc/selinux/plat_mac_permissions.xml"},
                             {"mode", "0644"}}));
@@ -175,13 +156,12 @@ inline void original_navi_preflight(const Json &definition, std::string_view pro
     }
 }
 
-inline std::vector<std::string> original_navi_storage_set(const Json &definition,
-                                                          std::string_view profile, int api) {
+inline std::vector<std::string> original_navi_storage_set(const Json &definition, int api) {
     if (!original_navi_requested(definition)) {
         return {};
     }
 
-    original_navi_preflight(definition, profile, api);
+    original_navi_preflight(definition, api);
 
     return {"cmd", "appops", "set", "com.baidu.naviauto", "NO_ISOLATED_STORAGE", "allow"};
 }
@@ -205,13 +185,12 @@ inline std::string original_navi_process_context(const std::string &output,
     return std::regex_match(output, match, row) ? match[1].str() : std::string{};
 }
 
-inline void original_navi_candidate(const Json &definition, std::string_view profile, int api,
-                                    const Json &candidate, const Json &artifacts,
-                                    const std::string &verified_cert) {
+inline void original_navi_candidate(const Json &definition, int api, const Json &candidate,
+                                    const Json &artifacts, const std::string &verified_cert) {
     const auto need = original_navi_need;
 
     need(original_navi_requested(definition));
-    original_navi_preflight(definition, profile, api);
+    original_navi_preflight(definition, api);
     need(!candidate.contains("prepared_packages") && candidate.contains("camera_package") &&
          candidate.contains("original_navi_system"));
     const Json expected = original_navi_marker();
@@ -294,11 +273,11 @@ inline void original_navi_candidate(const Json &definition, std::string_view pro
 
     const std::string mac = "/system/etc/selinux/plat_mac_permissions.xml",
                       macpin = "c5c361ff9623c3c3798f60210684ae10b5eec48bed7e9e43a3b275f2b36db392";
-    need(artifacts.at("patched:original-navi-mac").at("sha256") == macpin);
+    need(artifacts.at("patched:original-navi-selinux").at("sha256") == macpin);
     unsigned macrow = 0, maccheck = 0;
 
     for (const auto &i : candidate.at("installed")) {
-        if (i.value("artifact", std::string{}) == "patched:original-navi-mac") {
+        if (i.value("artifact", std::string{}) == "patched:original-navi-selinux") {
             need(i.at("target") == mac && i.at("sha256") == macpin && i.at("mode") == "0644" &&
                  i.at("mutable") == false);
             ++macrow;
@@ -306,7 +285,7 @@ inline void original_navi_candidate(const Json &definition, std::string_view pro
     }
 
     for (const auto &c : candidate.at("checks")) {
-        if (c.value("id", std::string{}) == "artifact:patched:original-navi-mac:" + mac) {
+        if (c.value("id", std::string{}) == "artifact:patched:original-navi-selinux:" + mac) {
             need(c.at("passed") == true && c.at("expected") == macpin && c.at("actual") == macpin);
             ++maccheck;
         }

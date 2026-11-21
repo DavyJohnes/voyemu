@@ -1,4 +1,4 @@
-#include "original_navi_mac.hpp"
+#include "original_navi_selinux.hpp"
 #include "error.hpp"
 #include "process.hpp"
 #include <algorithm>
@@ -6,7 +6,6 @@
 #include <stdexcept>
 namespace voyemu {
 namespace {
-constexpr std::string_view profile_id = "free-11-chinese-20260731-7.3.1";
 constexpr std::string_view input_pin =
         "34309b705a40fbc6a52a96cfc6713c90a683223e0652b936b7227584546169d8";
 constexpr std::string_view cert_pin =
@@ -29,7 +28,7 @@ std::string hex(std::string_view bytes) {
 }
 } // namespace
 
-bool original_navi_mac_collision(std::string_view xml, std::string_view certificate) {
+bool original_navi_selinux_collision(std::string_view xml, std::string_view certificate) {
     std::string lower(xml);
 
     std::transform(lower.begin(), lower.end(), lower.begin(), [](unsigned char c) {
@@ -40,16 +39,16 @@ bool original_navi_mac_collision(std::string_view xml, std::string_view certific
            lower.find(hex(certificate)) != std::string::npos;
 }
 
-std::string original_navi_mac_insert(std::string_view xml, std::string_view certificate) {
-    if (original_navi_mac_collision(xml, certificate)) {
-        throw VoyemuError("QINGGAN11_ORIGINAL_NAVI_MAC", "signer or package collision");
+std::string original_navi_selinux_insert(std::string_view xml, std::string_view certificate) {
+    if (original_navi_selinux_collision(xml, certificate)) {
+        throw VoyemuError("QINGGAN11_ORIGINAL_NAVI_SELINUX", "signer or package collision");
     }
 
     constexpr std::string_view close = "</policy>";
     const auto at = xml.find(close);
 
     if (at == xml.npos || xml.find(close, at + close.size()) != xml.npos) {
-        throw VoyemuError("QINGGAN11_ORIGINAL_NAVI_MAC", "exact policy terminator required");
+        throw VoyemuError("QINGGAN11_ORIGINAL_NAVI_SELINUX", "exact policy terminator required");
     }
 
     const auto insertion =
@@ -59,18 +58,18 @@ std::string original_navi_mac_insert(std::string_view xml, std::string_view cert
     return std::string(xml.substr(0, at)) + insertion + std::string(xml.substr(at));
 }
 
-std::string apply_original_navi_mac(std::string_view profile, unsigned api, std::string_view xml,
-                                    std::string_view certificate) {
-    if (profile != profile_id || api != 30 || sha256_bytes(std::string(xml)) != input_pin ||
+std::string apply_original_navi_selinux(unsigned api, std::string_view xml,
+                                        std::string_view certificate) {
+    if (api != 30 || sha256_bytes(std::string(xml)) != input_pin ||
         sha256_bytes(std::string(certificate)) != cert_pin) {
-        throw VoyemuError("QINGGAN11_ORIGINAL_NAVI_MAC",
-                          "exact profile, XML and OEM certificate required");
+        throw VoyemuError("QINGGAN11_ORIGINAL_NAVI_SELINUX",
+                          "exact XML and OEM certificate required");
     }
 
-    const auto output = original_navi_mac_insert(xml, certificate);
+    const auto output = original_navi_selinux_insert(xml, certificate);
 
     if (sha256_bytes(output) != output_pin) {
-        throw VoyemuError("QINGGAN11_ORIGINAL_NAVI_MAC", "output pin mismatch");
+        throw VoyemuError("QINGGAN11_ORIGINAL_NAVI_SELINUX", "output pin mismatch");
     }
 
     return output;

@@ -22,6 +22,8 @@ struct PinnedFilePatch {
     std::optional<PinnedFileDependency> certificate_apk;
     // OEM vendor policy of the bounded A9 su; donor is the OEM plat policy.
     std::optional<PinnedFileDependency> vendor_donor;
+    // Whether the profile declares the original_navi feature.
+    bool original_navi = false;
 };
 std::vector<std::string> native_file_patch_steps(std::string_view id);
 // Entire graph is verified in memory; no partial batch is returned on failure.

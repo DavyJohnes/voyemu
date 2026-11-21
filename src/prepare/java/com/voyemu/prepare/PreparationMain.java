@@ -130,7 +130,7 @@ public final class PreparationMain {
         return expected;
     }
 
-    // Only the original Navi MAC output names its certificate source.
+    // Only the original Navi SELinux output names its certificate source.
     private static void requireNativeCertificate(
             Map<String, Object> request,
             ProfileRegistry.Profile profile,
@@ -138,7 +138,7 @@ public final class PreparationMain {
             String id,
             Map<String, Object> output)
             throws Exception {
-        if (id.equals("original-navi-mac")) {
+        if (id.equals("original-navi-selinux")) {
             requireNaviCertificate(request, profile, pinned, output);
         } else {
             Failure.require(
@@ -349,7 +349,7 @@ public final class PreparationMain {
                                 || id.equals("public-qg-runtime-api30")
                                 || id.equals("property-contexts-api30")
                                 || id.equals("keymanager-contexts-api30")
-                                || id.equals("original-navi-mac"))
+                                || id.equals("original-navi-selinux"))
                         ? profile.id().equals(output.get("profile"))
                         : !output.containsKey("profile"),
                 "PREPARATION_NATIVE_FILE",
@@ -425,6 +425,12 @@ public final class PreparationMain {
             PinnedInput pinned,
             Map<String, Object> output)
             throws Exception {
+        Failure.require(
+                profile.originalNavi(),
+                "PREPARATION_NATIVE_FILE",
+                "Original Navi policy requires the original_navi feature",
+                3);
+        String pin = Json.str(Json.obj(Json.obj(profile.data(), "original"), "Navi"), "sha256");
         Path apk =
                 absolute(Json.str(request, "root"))
                         .resolve(".local/profiles")
@@ -440,13 +446,13 @@ public final class PreparationMain {
                                         "apk",
                                         apk.toString(),
                                         "apk_sha256",
-                                        "dceddff70db38bacb50ebffa46d36da76f70e5596c6184bca51c48c3ed562a05",
+                                        pin,
                                         "certificate_sha256",
                                         "b2e962ed163aed0831d6d08ee41ca9406ae970032aa4df8a4c3b41d222b201d3")),
                 "PREPARATION_NATIVE_FILE",
                 "Original Navi certificate provenance differs",
                 3);
-        pinned.verify(apk, "dceddff70db38bacb50ebffa46d36da76f70e5596c6184bca51c48c3ed562a05");
+        pinned.verify(apk, pin);
     }
 
     static Map<String, Path> nativeComponentOutputs(

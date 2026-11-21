@@ -165,12 +165,12 @@ static Json validate_plain_android_system_candidate(const std::filesystem::path 
         const std::filesystem::path native_receipt = native.at("receipt").get<std::string>();
         inside(root / ".local", native_receipt);
         need(hash(native_receipt, 128 * 1024) == native.at("receipt_sha256").get<std::string>(),
-             "Navi MAC native receipt pin differs");
+             "Navi SELinux native receipt pin differs");
         const auto native_proof = read_private_json(native_receipt, 128 * 1024);
         unsigned mac_sources = 0;
 
         for (const auto &row : native_proof.at("files")) {
-            if (row.value("id", std::string{}) == "original-navi-mac") {
+            if (row.value("id", std::string{}) == "original-navi-selinux") {
                 const auto &cert = row.at("certificate_source");
                 need(cert.at("source") == "certificate-from-original:Navi" &&
                              cert.at("apk") ==
@@ -180,12 +180,12 @@ static Json validate_plain_android_system_candidate(const std::filesystem::path 
                              row.at("output_sha256") ==
                                      "c5c361ff9623c3c3798f60210684ae10b5eec48bed7e9e43a3b275f2b36db392" &&
                              !row.contains("donor"),
-                     "Navi MAC certificate origin differs");
+                     "Navi SELinux certificate origin differs");
                 ++mac_sources;
             }
         }
 
-        need(mac_sources == 1, "one native Navi MAC provenance required");
+        need(mac_sources == 1, "one native Navi SELinux provenance required");
         const auto &artifact = result.at("artifacts").at("original:Navi");
         const std::filesystem::path file = artifact.at("file").get<std::string>();
         need(hash(file, 512ULL << 20) == original_navi_sha &&
@@ -193,8 +193,8 @@ static Json validate_plain_android_system_candidate(const std::filesystem::path 
              "original Navi APK bytes differ");
         const auto certificate =
                 sha256_bytes(pinned_apk_v2_certificate(file, std::string(original_navi_sha)));
-        original_navi_candidate(definition, profile, native_base_api(definition.at("android")),
-                                candidate, result.at("artifacts"), certificate);
+        original_navi_candidate(definition, native_base_api(definition.at("android")), candidate,
+                                result.at("artifacts"), certificate);
     }
 
     if (qinggan11_navi_delivery_required(definition, profile) && !original_navi) {

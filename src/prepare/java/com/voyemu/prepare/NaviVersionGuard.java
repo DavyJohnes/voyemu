@@ -23,7 +23,7 @@ final class NaviVersionGuard {
         Failure.require(
                 value,
                 "NAVI_VERSION_CONTRACT",
-                "Exact Free A11 7.3.1 optional Navi version metadata contract required",
+                "Exact optional Navi version metadata contract required",
                 3);
     }
 

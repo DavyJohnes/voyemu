@@ -178,7 +178,7 @@ public final class Api30NativeFileReceiptTest {
 
             if (!added.equals(
                     java.util.Set.of(
-                            "original-navi-mac",
+                            "original-navi-selinux",
                             "can-simulator-contexts-api30",
                             "can-early-file-contexts-api30",
                             "can-simulator-policy-api30",
@@ -307,10 +307,9 @@ public final class Api30NativeFileReceiptTest {
                                 false)));
     }
 
-    // A qinggan11 profile that also declares the original Navi MAC native node.
+    // A qinggan11 profile with the original_navi feature.
     private static boolean originalNaviGraph(ProfileRegistry.Profile profile) {
-        return "qinggan11".equals(profile.data().get("platform"))
-                && Json.obj(profile.data(), "patches").containsKey("original-navi-mac");
+        return "qinggan11".equals(profile.data().get("platform")) && profile.originalNavi();
     }
 
     private static int malformedModes(ProfileRegistry.Profile profile, Map<String, Path> outputs) {

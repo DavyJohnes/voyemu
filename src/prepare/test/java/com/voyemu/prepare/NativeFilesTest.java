@@ -35,30 +35,47 @@ public final class NativeFilesTest {
                         .toList()
                         .equals(
                                 List.of(
-                                        "original-navi-mac",
+                                        "original-navi-selinux",
                                         "can-early-policy-api30",
                                         "selinux-hash-api30")),
-                "Only the Navi MAC node, the policy pin and sidecar may differ");
+                "Only the Navi SELinux node, the policy pin and sidecar may differ");
         require(
                 graph731.stream()
                         .map(Api30NativeFiles.Spec::id)
-                        .filter(id -> !id.equals("original-navi-mac"))
+                        .filter(id -> !id.equals("original-navi-selinux"))
                         .toList()
                         .equals(graph611.stream().map(Api30NativeFiles.Spec::id).toList()),
                 "qinggan11 non-Navi node order differs");
         require(
                 Api30NativeFiles.forProfile(qinggan11(FREE_RC1, Map.of())).equals(graph611),
                 "RC1 must select the common graph");
+        var featured =
+                new ProfileRegistry.Profile(
+                        TestProfiles.SYNTHETIC,
+                        "test",
+                        Map.of(
+                                "platform",
+                                "qinggan11",
+                                "board",
+                                "8155",
+                                "features",
+                                Map.of("original_navi", true),
+                                "patches",
+                                Map.of()),
+                        "");
+        require(
+                Api30NativeFiles.forProfile(featured).equals(graph731),
+                "The original_navi feature must select the original Navi SELinux graph");
         require(
                 Api30NativeFiles.forProfile(
                                 qinggan11(
                                         TestProfiles.SYNTHETIC,
-                                        Map.of("original-navi-mac", Map.of("type", "file"))))
-                        .equals(graph731),
-                "A declared original Navi MAC node must select its graph");
+                                        Map.of("original-navi-selinux", Map.of("type", "file"))))
+                        .equals(graph611),
+                "A step name without the original_navi feature must not select Navi");
         require(
-                graph611.stream().noneMatch(spec -> spec.id().equals("original-navi-mac")),
-                "qinggan11 without original Navi must not select Navi MAC");
+                graph611.stream().noneMatch(spec -> spec.id().equals("original-navi-selinux")),
+                "qinggan11 without original Navi must not select Navi SELinux");
         require(
                 Api30NativeFiles.nodeSteps("can-early-policy-api30")
                         .equals(

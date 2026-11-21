@@ -277,6 +277,7 @@ ProfileFileNodes plan_profile_file_nodes(const std::filesystem::path &root,
             need(installed || intermediate, "API30 native install missing");
             PinnedFilePatch patch{name, 30, system / member, std::string(spec.input_sha256),
                                   std::string(spec.output_sha256)};
+            patch.original_navi = original_navi_requested(definition);
 
             if (bounded) {
                 auto donor = [&](const char *role, const char *file) {
@@ -292,8 +293,8 @@ ProfileFileNodes plan_profile_file_nodes(const std::filesystem::path &root,
                 patch.vendor_donor = donor("VendorSepolicy", "policy/vendor_sepolicy.cil");
             }
 
-            if (name == "original-navi-mac") {
-                original_navi_preflight(definition, profile, 30);
+            if (name == "original-navi-selinux") {
+                original_navi_preflight(definition, 30);
                 const auto apk = profile_originals_directory(root, profile) / "Navi.apk";
                 ordinary(apk);
                 const auto epoch = cache_file_identity(apk);
@@ -324,7 +325,7 @@ ProfileFileNodes plan_profile_file_nodes(const std::filesystem::path &root,
                   name == "can-early-policy-api30" || name == "can-early-property-contexts-api30" ||
                   name == "selinux-services-api30")) ||
                 name == "public-qg-runtime-api30" || name == "property-contexts-api30" ||
-                name == "keymanager-contexts-api30" || name == "original-navi-mac") {
+                name == "keymanager-contexts-api30" || name == "original-navi-selinux") {
                 patch.profile = runtime_profile_reference(definition, profile);
             }
 

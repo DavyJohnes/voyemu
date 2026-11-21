@@ -1116,7 +1116,7 @@ void wake_displays(Candidate &c, const Json &profile) {
     need(std::ranges::find(packages, "package:com.voyemu") != packages.end(),
          "bootstrap service missing");
 
-    if (profile.value("id", std::string{}) == original_navi_profile) {
+    if (original_navi_requested(profile)) {
         start_qinggan11_secondary_service(
                 [&](const auto &command, int timeout) {
                     return c.shell(command, timeout);
