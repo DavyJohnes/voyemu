@@ -199,12 +199,11 @@ Options parse_options(int argc, const char *const *argv) {
         if (flag == "--profile") {
             options.profile = argv[i];
 
-            if (options.profile.size() > 128 || options.profile == "." || options.profile == ".." ||
+            if (options.profile.size() > 128 ||
                 std::any_of(options.profile.begin(), options.profile.end(), [](unsigned char c) {
-                    return !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
-                             (c >= '0' && c <= '9') || c == '-' || c == '_' || c == '.');
+                    return c < 0x20 || c == 0x7f;
                 })) {
-                throw VoyemuError("CLUSTER_UI", "Invalid cluster profile identity");
+                throw VoyemuError("CLUSTER_UI", "Invalid cluster profile title");
             }
         }
 
@@ -246,10 +245,12 @@ Options parse_options(int argc, const char *const *argv) {
     return options;
 }
 
-std::string window_title(const Options &options, std::string_view session_id) {
-    const auto context = options.profile.empty() ? std::string(session_id) : options.profile;
+std::string window_title(const Options &options) {
+    return options.profile.empty() ? std::string("Voyemu") : "Voyemu " + options.profile;
+}
 
-    return context.empty() ? "Voyemu Cluster" : "Voyemu Cluster " + context;
+std::string screens_window_title(const Options &options, std::string_view screens_label) {
+    return window_title(options) + " - " + std::string(screens_label);
 }
 
 std::optional<std::uint64_t> parse_unsigned(std::string_view text, unsigned width) {

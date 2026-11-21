@@ -1124,9 +1124,9 @@ void Session::poll_qnx() {
                           "--frame",    (directory_ / "frame.bgra").string(),
                           "--assets",   assets_.string()};
 
-        if (!ui_profile_.empty()) {
+        if (!ui_profile_title_.empty()) {
             spec.arguments.push_back("--profile");
-            spec.arguments.push_back(ui_profile_);
+            spec.arguments.push_back(ui_profile_title_);
         }
 
 #ifdef _WIN32

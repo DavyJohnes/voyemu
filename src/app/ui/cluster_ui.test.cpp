@@ -390,17 +390,16 @@ void parsing() {
                            "frame.bgra",     "--assets",   "assets"};
     auto options = parse_options(7, valid);
     check(options.frame == "frame.bgra", "live frame option");
-    check(window_title(options, "owned-session") == "Voyemu Cluster owned-session",
-          "session-aware standard title fallback");
-    const char *profiled[] = {"voyemu-cluster", "--endpoint", "socket",
-                              "--frame",        "frame.bgra", "--assets",
-                              "assets",         "--profile",  "free-09-chinese-20260106-6.0.3"};
+    check(window_title(options) == "Voyemu", "standard title without a profile title");
+    const char *profiled[] = {"voyemu-cluster", "--endpoint", "socket",    "--frame", "frame.bgra",
+                              "--assets",       "assets",     "--profile", "Test 1.0"};
     const auto named = parse_options(9, profiled);
-    check(window_title(named, "session") == "Voyemu Cluster free-09-chinese-20260106-6.0.3",
-          "profile-aware standard title");
+    check(window_title(named) == "Voyemu Test 1.0", "title names the profile by its title");
+    check(screens_window_title(named, "HUD") == "Voyemu Test 1.0 - HUD",
+          "screens window title adds its caption");
     const char *invalid_profile[] = {"voyemu-cluster", "--endpoint", "socket",
                                      "--frame",        "frame.bgra", "--assets",
-                                     "assets",         "--profile",  "../other"};
+                                     "assets",         "--profile",  "Test\n1.0"};
     bool profile_rejected = false;
     try {
         parse_options(9, invalid_profile);
@@ -408,7 +407,7 @@ void parsing() {
         profile_rejected = true;
     }
 
-    check(profile_rejected, "unsafe profile identity must reject");
+    check(profile_rejected, "profile title with a control character must reject");
     const char *incomplete[] = {"voyemu-cluster", "--assets", "assets"};
     bool rejected = false;
     try {
@@ -1957,6 +1956,12 @@ void wheel_column_controls(const std::filesystem::path &assets) {
         };
         window.set_screens({"rear"});
         window.set_screens_window(true);
+        check(screens_window_title(Options{}, window.screens_label()) == "Voyemu - Rear screen",
+              "the screens window title carries the English caption");
+        ui::current_language = ui::Language::russian;
+        check(screens_window_title(Options{}, window.screens_label()) == "Voyemu - Задний экран",
+              "the screens window title follows a language change");
+        ui::current_language = ui::Language::english;
         frame(ImVec2(5, 5));
         frame(ImVec2(5, 5));
         check(inks("screens_toggle", true) == inks("cluster_power", false) &&

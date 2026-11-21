@@ -556,7 +556,8 @@ int supervise(Arguments args, const std::filesystem::path &current_program) {
                                                         : args.machine_path;
             const auto assets = voyemu::portable_resource_path(seed, "ui/wheel/wheel-hotspots.json")
                                         .parent_path();
-            session.set_ui(executable, assets, args.profile);
+            session.set_ui(executable, assets,
+                           voyemu::profile_title(profile_startup_definition(args)));
         }
     }
 

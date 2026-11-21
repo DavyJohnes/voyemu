@@ -445,10 +445,8 @@ void App::create_window() {
     SDL_SetHint(SDL_HINT_APP_NAME, "Voyemu");
     need(SDL_Init(SDL_INIT_VIDEO), "WINDOW_VIDEO: cannot initialize SDL video");
     voyemu::window_shell::prepare_application();
-    const auto title = options_.profile.empty() ? std::string("Voyemu")
-                                                : "Voyemu " + options_.profile;
-    window_ = SDL_CreateWindow(title.c_str(), int(cluster::closed_width), 360,
-                               SDL_WINDOW_HIDDEN | SDL_WINDOW_HIGH_PIXEL_DENSITY);
+    window_ = SDL_CreateWindow(cluster::window_title(options_).c_str(), int(cluster::closed_width),
+                               360, SDL_WINDOW_HIDDEN | SDL_WINDOW_HIGH_PIXEL_DENSITY);
     need(window_, "WINDOW_CREATE: cannot create the window");
     renderer_ = SDL_CreateRenderer(window_, nullptr);
     need(renderer_, "WINDOW_RENDERER: no SDL renderer is available");
@@ -613,11 +611,9 @@ void App::open_screens_window(bool open) {
         return;
     }
 
-    const auto title = (options_.profile.empty() ? std::string("Voyemu")
-                                                 : "Voyemu " + options_.profile) +
-                       " - " + ui_->screens_label();
-    screens_window_ = SDL_CreateWindow(title.c_str(), 640, 180,
-                                       SDL_WINDOW_HIDDEN | SDL_WINDOW_HIGH_PIXEL_DENSITY);
+    screens_window_ =
+            SDL_CreateWindow(cluster::screens_window_title(options_, ui_->screens_label()).c_str(),
+                             640, 180, SDL_WINDOW_HIDDEN | SDL_WINDOW_HIGH_PIXEL_DENSITY);
     need(screens_window_, "WINDOW_SCREENS: cannot create the screens window");
     screens_renderer_ = SDL_CreateRenderer(screens_window_, nullptr);
     need(screens_renderer_, "WINDOW_SCREENS: no SDL renderer is available");
@@ -1106,6 +1102,12 @@ void App::apply_shell_request() {
         }
 
         voyemu::window_shell::set_quit_title(ui::tr("Завершить Voyemu"));
+
+        if (screens_window_) {
+            SDL_SetWindowTitle(
+                    screens_window_,
+                    cluster::screens_window_title(options_, ui_->screens_label()).c_str());
+        }
     }
 
     if (request.screens_window) {

@@ -41,7 +41,10 @@ struct Options {
     bool light_theme{};
 };
 Options parse_options(int argc, const char *const *argv);
-std::string window_title(const Options &options, std::string_view session_id = {});
+// The main window names the machine by its profile title, such as "Voyemu Free 7.3.1".
+std::string window_title(const Options &options);
+// The screens window adds its caption in the current UI language to the main window title.
+std::string screens_window_title(const Options &options, std::string_view screens_label);
 struct Point {
     double x{}, y{};
 };
@@ -145,10 +148,6 @@ public:
 
     const Json &inspection() const {
         return inspection_;
-    }
-
-    std::string title() const {
-        return window_title(options_, view_.session_id);
     }
 
     void draw(Texture frame, Texture left, Texture right, unsigned screen_scale = 100);

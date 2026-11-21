@@ -250,17 +250,13 @@ void Session::stop_frontend() {
 }
 
 void Session::set_ui(const std::filesystem::path &executable, const std::filesystem::path &assets,
-                     std::string profile) {
+                     std::string profile_title) {
     std::lock_guard lifecycle(lifecycle_mutex_);
     std::lock_guard lock(mutex_);
 
-    if (!profile.empty() && !valid_profile_name(profile)) {
-        throw VoyemuError("PROFILE_NAME", "unsafe UI profile");
-    }
-
     ui_executable_ = executable;
     assets_ = assets;
-    ui_profile_ = std::move(profile);
+    ui_profile_title_ = std::move(profile_title);
 }
 
 bool Session::fallback_cluster(std::string_view reason) {

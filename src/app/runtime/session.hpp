@@ -285,7 +285,7 @@ public:
     void attach_cluster(const Json &specification, std::optional<unsigned> seconds = std::nullopt);
     void attach_frontend(const Json &specification, bool cluster_panel, bool background = false);
     void set_ui(const std::filesystem::path &executable, const std::filesystem::path &assets,
-                std::string profile = {});
+                std::string profile_title = {});
     bool stopped() const;
 
     const std::filesystem::path &endpoint() const {
@@ -619,7 +619,7 @@ private:
     std::optional<ThemeState> theme_;
     std::optional<unsigned> oem_language_, cluster_language_;
     std::filesystem::path ui_executable_, assets_;
-    std::string ui_profile_;
+    std::string ui_profile_title_;
     std::chrono::steady_clock::time_point next_android_, next_oem_settings_,
             next_display_activation_, next_qnx_, qnx_deadline_, qnx_started_;
     std::chrono::steady_clock::time_point android_started_;
