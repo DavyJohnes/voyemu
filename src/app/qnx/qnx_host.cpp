@@ -1,6 +1,5 @@
 #include "qnx_host.hpp"
 #include "check.hpp"
-#include "embedded_data.hpp"
 #include "error.hpp"
 #include "little_endian.hpp"
 #include "process.hpp"
@@ -12,16 +11,8 @@
 #include <set>
 namespace voyemu {
 namespace {
-#include "qnx_host_catalog.inc"
-
 constexpr Check need{"QNX_HOST"};
 } // namespace
-
-const Json &qnx_host_catalog() {
-    static const Json value = Json::parse(inflate_embedded(qnx_host_json, qnx_host_json_size));
-
-    return value;
-}
 
 std::vector<std::string> qnx_host_elf_needed(const std::filesystem::path &file) {
     std::ifstream input(file, std::ios::binary);
