@@ -1315,10 +1315,7 @@ verified_activation_sdk_pins(const std::filesystem::path &root, const std::files
 
         if (expected.empty()) {
             const auto &recipe = relative.starts_with("emulator/") ? recipes.at(1) : recipes.at(0);
-            const auto legacy = archive_dir / "sdk" / (recipe.pin.sha256 + ".zip");
-            const auto archive = std::filesystem::exists(legacy)
-                                         ? legacy
-                                         : archive_dir / "native" / (recipe.pin.sha256 + ".blob");
+            const auto archive = archive_dir / "native" / (recipe.pin.sha256 + ".blob");
             need(std::filesystem::is_regular_file(archive),
                  "verified runtime SDK pin or cached archive missing for " + relative);
             ordinary(archive);
