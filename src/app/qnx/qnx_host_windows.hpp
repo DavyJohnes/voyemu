@@ -14,6 +14,9 @@ namespace voyemu {
 // provides sha256_bytes/sha256_file/random_token for these host-side validations. Builds the pinned
 // Windows ARM64 QEMU host from source with the pinned MSYS/Zig closure; never changes guest images.
 Json install_qnx_host_windows_source(const std::filesystem::path &, bool, std::uint64_t);
+// Read-only MSI/CAB extraction using Windows APIs; only the pinned extractor payload is selected.
+void extract_qnx_unpacker(const std::filesystem::path &msi,
+                          const std::filesystem::path &destination);
 
 // Shared host-side validations for the source engine install: used by the Windows builder itself
 // and by the focused regression tests on both supported hosts.

@@ -6,6 +6,8 @@
 #include "process.hpp"
 #include "qnx_host.hpp"
 #include "qnx_host_build_diagnostics.hpp"
+#include "qnx_host_prebuilt.hpp"
+#include "qnx_host_windows_cache.hpp"
 #include <algorithm>
 #include <cctype>
 #include <chrono>
@@ -14,14 +16,14 @@
 #include <set>
 #include <string_view>
 #include <thread>
-#ifdef _WIN32
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
 #include <windows.h>
-#endif
+#include <msi.h>
+#include <msiquery.h>
+#include <setupapi.h>
 namespace voyemu {
-#ifdef _WIN32
 namespace {
 constexpr Check require{"QNX_HOST"};
 
@@ -77,22 +79,142 @@ Json inventory(const std::filesystem::path &directory) {
 
     return files;
 }
+
+struct MsiHandle {
+    MSIHANDLE value = 0;
+
+    ~MsiHandle() {
+        if (value) {
+            MsiCloseHandle(value);
+        }
+    }
+};
+struct CabinetOutput {
+    std::filesystem::path directory;
+    std::set<std::string> selected;
+    bool failed = false;
+};
+
+UINT CALLBACK cabinet(void *context, UINT notice, UINT_PTR first, UINT_PTR) {
+    auto &output = *static_cast<CabinetOutput *>(context);
+
+    if (notice == SPFILENOTIFY_FILEINCABINET) {
+        auto &file = *reinterpret_cast<FILE_IN_CABINET_INFO_W *>(first);
+        const std::wstring name = file.NameInCabinet;
+        std::string target;
+
+        if (name == L"_7z.exe") {
+            target = "7z.exe";
+        } else if (name == L"_7z.dll") {
+            target = "7z.dll";
+        } else if (name == L"License.txt") {
+            target = "License.txt";
+        } else {
+            return FILEOP_SKIP;
+        }
+
+        if (file.FileSize > 8 * 1024 * 1024 || !output.selected.insert(target).second) {
+            output.failed = true;
+
+            return FILEOP_ABORT;
+        }
+
+        const auto path = (output.directory / target).wstring();
+
+        if (path.size() >= MAX_PATH || std::filesystem::exists(output.directory / target)) {
+            output.failed = true;
+
+            return FILEOP_ABORT;
+        }
+
+        std::copy(path.begin(), path.end(), file.FullTargetName);
+        file.FullTargetName[path.size()] = 0;
+
+        return FILEOP_DOIT;
+    }
+
+    if (notice == SPFILENOTIFY_FILEEXTRACTED) {
+        auto &file = *reinterpret_cast<FILEPATHS_W *>(first);
+
+        if (file.Win32Error) {
+            output.failed = true;
+
+            return file.Win32Error;
+        }
+    }
+
+    return NO_ERROR;
+}
 } // namespace
-#endif
+
+void extract_qnx_unpacker(const std::filesystem::path &msi,
+                          const std::filesystem::path &destination) {
+    require(std::filesystem::is_regular_file(std::filesystem::symlink_status(msi)) &&
+                    std::filesystem::hard_link_count(msi) == 1 &&
+                    sha256_file(msi) == qnx_host_catalog()
+                                                .at("windows_x64")
+                                                .at("extractor")
+                                                .at("sha256")
+                                                .get<std::string>(),
+            "pinned extractor MSI required");
+    require(!std::filesystem::exists(destination) &&
+                    std::filesystem::is_directory(destination.parent_path()),
+            "fresh unpacker destination required");
+    std::filesystem::create_directory(destination);
+    const auto cab = destination / "product.cab";
+    try {
+        MsiHandle database, view, record;
+        require(MsiOpenDatabaseW(msi.c_str(), reinterpret_cast<LPCWSTR>(0), &database.value) ==
+                        ERROR_SUCCESS,
+                "MSI read-only open failed");
+        require(MsiDatabaseOpenViewW(database.value,
+                                     L"SELECT `Data` FROM `_Streams` WHERE `Name` = 'product.cab'",
+                                     &view.value) == ERROR_SUCCESS &&
+                        MsiViewExecute(view.value, 0) == ERROR_SUCCESS &&
+                        MsiViewFetch(view.value, &record.value) == ERROR_SUCCESS,
+                "MSI cabinet stream missing");
+        std::ofstream output(cab, std::ios::binary);
+        require(bool(output), "cabinet output failed");
+        std::array<char, 65536> bytes;
+        std::uint64_t total = 0;
+
+        for (;;) {
+            DWORD count = bytes.size();
+            require(MsiRecordReadStream(record.value, 1, bytes.data(), &count) == ERROR_SUCCESS,
+                    "MSI stream read failed");
+
+            if (!count) {
+                break;
+            }
+
+            total += count;
+            require(total <= 8ULL << 20, "extractor cabinet exceeds bound");
+            output.write(bytes.data(), count);
+            require(bool(output), "cabinet write failed");
+        }
+
+        output.close();
+        require(total > 0 && bool(output), "empty cabinet or flush failed");
+        CabinetOutput selected{destination, {}, false};
+        require(SetupIterateCabinetW(cab.c_str(), 0, cabinet, &selected) != 0 && !selected.failed &&
+                        selected.selected ==
+                                std::set<std::string>{"7z.exe", "7z.dll", "License.txt"},
+                "extractor cabinet selection failed");
+        std::filesystem::remove(cab);
+    } catch (...) {
+        std::filesystem::remove_all(destination);
+        throw;
+    }
+}
 
 Json install_qnx_host_windows_source(const std::filesystem::path &root, bool offline,
                                      std::uint64_t reserve) {
-    // Host-independent refusal: a non-canonical root is rejected on every supported host before any
-    // catalog lookup, download or publication can begin.
+    // A non-canonical root is rejected before any catalog lookup, download or publication can
+    // begin.
     if (!(root.is_absolute() && std::filesystem::canonical(root) == root)) {
         throw VoyemuError("QNX_HOST", "canonical project root required");
     }
 
-#ifndef _WIN32
-    (void)offline;
-    (void)reserve;
-    throw VoyemuError("QNX_HOST", "Windows source builder requires Windows x64");
-#else
     const auto &recipe = qnx_host_catalog().at("windows_file_backend");
     const auto pin = sha256_bytes(recipe.dump());
     const auto parent = root / ".local/toolchains",
@@ -589,6 +711,25 @@ Json install_qnx_host_windows_source(const std::filesystem::path &root, bool off
     validate_installed_windows_source(target, root, recipe);
 
     return result(false);
-#endif
+}
+
+Json install_qnx_host_engine(const std::filesystem::path &root, bool offline, std::uint64_t reserve,
+                             bool from_source) {
+    if (from_source) {
+        return install_qnx_host_windows_source(root, offline, reserve);
+    }
+
+    const auto &file_backend = qnx_host_catalog().at("windows_file_backend");
+    const auto prebuilt = qnx_host_prebuilt_pin(qnx_host_catalog(), "windows_file_backend");
+
+    if (!prebuilt.is_null()) {
+        return install_cached_windows_qnx_host(root, file_backend, reserve, prebuilt, offline);
+    }
+
+    if (const auto missing = qnx_host_unavailable(root); !missing.empty()) {
+        throw VoyemuError("QNX_HOST_ASSET_MISSING", missing);
+    }
+
+    return install_cached_windows_qnx_host(root, file_backend, reserve);
 }
 } // namespace voyemu

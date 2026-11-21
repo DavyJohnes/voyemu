@@ -1,4 +1,5 @@
 #include "qnx_host_prebuilt.hpp"
+#include "os/platform.hpp"
 #include "process.hpp"
 #include "qnx_host.hpp"
 #include "qnx_host_windows_cache.hpp"
@@ -222,19 +223,13 @@ void installed_pin_tests(const std::filesystem::path &scratch) {
                             ("qnx-host-" + host + "-11.1.2-" + component_pin.substr(0, 12));
         std::filesystem::copy(payload, source, std::filesystem::copy_options::recursive);
         std::filesystem::remove_all(root / ".local/toolchains/downloads");
-#ifdef __APPLE__
-        if (host == "macos") {
-            const auto built = install_qnx_host_macos(root, true, 0, true);
+
+        // Only the host of the recipe builds it.
+        if (os::dependency_host == (host == "macos" ? "darwin/arm64" : "linux/x64")) {
+            const auto built = install_qnx_host_engine(root, true, 0, true);
             check(built.at("cached") == true && built.at("directory") == source.string(),
-                  "source-origin macOS cache needs no published archive");
+                  "source-origin " + host + " cache needs no published archive");
         }
-#elif defined(__linux__) && defined(__x86_64__)
-        if (host == "linux") {
-            const auto built = install_qnx_host_linux(root, true, 0, true);
-            check(built.at("cached") == true && built.at("directory") == source.string(),
-                  "source-origin Linux cache needs no published archive");
-        }
-#endif
     }
 
     // Windows pins the runtime closure in its recipe. Two valid ZIP representations of the same

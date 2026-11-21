@@ -1,12 +1,11 @@
 #include "check.hpp"
 #include "deps.hpp"
 #include "error.hpp"
-#include "little_endian.hpp"
+#include "os/platform.hpp"
 #include "process.hpp"
 #include "qnx_host.hpp"
 #include "qnx_host_prebuilt.hpp"
 #include "qnx_host_source.hpp"
-#include <fstream>
 #include <set>
 namespace voyemu {
 namespace {
@@ -31,95 +30,9 @@ void executable(const std::filesystem::path &path) {
 }
 } // namespace
 
-std::vector<std::string> qnx_host_elf_needed(const std::filesystem::path &file) {
-    std::ifstream input(file, std::ios::binary);
-    const std::string bytes((std::istreambuf_iterator<char>(input)),
-                            std::istreambuf_iterator<char>());
-    const auto read = [&](std::uint64_t at, unsigned size) {
-        return le_read(bytes, at, size, require, "ELF extent");
-    };
-
-    require(bytes.size() > 64 &&
-                    bytes.compare(0, 4,
-                                  "\x7f"
-                                  "ELF") == 0 &&
-                    bytes[4] == 2 && bytes[5] == 1 && read(18, 2) == 62,
-            "x86-64 ELF executable required");
-    const auto phoff = read(32, 8), phentsize = read(54, 2), phnum = read(56, 2);
-    std::vector<std::pair<std::uint64_t, std::uint64_t>> dynamic;
-    std::uint64_t strtab = 0, strsz = 0;
-    std::vector<std::uint64_t> needed;
-    const auto offset = [&](std::uint64_t address) {
-        for (std::uint64_t i = 0; i < phnum; ++i) {
-            const auto header = phoff + i * phentsize;
-
-            if (read(header, 4) == 1) {
-                const auto vaddr = read(header + 16, 8), filesz = read(header + 32, 8);
-
-                if (address >= vaddr && address - vaddr < filesz) {
-                    return read(header + 8, 8) + (address - vaddr);
-                }
-            }
-        }
-
-        throw VoyemuError("QNX_HOST", "ELF address outside the file");
-    };
-
-    for (std::uint64_t i = 0; i < phnum; ++i) {
-        const auto header = phoff + i * phentsize;
-
-        if (read(header, 4) != 2) {
-            continue;
-        }
-
-        const auto start = read(header + 8, 8), size = read(header + 32, 8);
-
-        for (std::uint64_t at = start; at + 16 <= start + size; at += 16) {
-            const auto tag = read(at, 8), value = read(at + 8, 8);
-
-            if (tag == 0) {
-                break;
-            }
-
-            if (tag == 1) {
-                needed.push_back(value);
-            } else if (tag == 5) {
-                strtab = value;
-            } else if (tag == 10) {
-                strsz = value;
-            }
-        }
-    }
-
-    std::vector<std::string> names;
-
-    if (needed.empty()) {
-        return names;
-    }
-
-    require(strtab && strsz, "ELF string table missing");
-    const auto table = offset(strtab);
-
-    for (const auto value : needed) {
-        require(value < strsz, "ELF string extent");
-        const auto at = table + value;
-        const auto end = bytes.find('\0', at);
-        require(end != std::string::npos && end < table + strsz, "ELF string terminator");
-        names.push_back(bytes.substr(at, end - at));
-    }
-
-    return names;
-}
-
-Json install_qnx_host_linux(const std::filesystem::path &root, bool offline, std::uint64_t reserve,
-                            bool from_source) {
-#if !defined(__linux__) || !defined(__x86_64__)
-    (void)root;
-    (void)offline;
-    (void)reserve;
-    (void)from_source;
-    throw VoyemuError("QNX_HOST", "pinned Linux engine requires Linux x64");
-#else
+Json install_qnx_host_engine(const std::filesystem::path &root, bool offline, std::uint64_t reserve,
+                             bool from_source) {
+    require(os::dependency_host == "linux/x64", "pinned Linux engine requires Linux x64");
     const auto &component = qnx_host_catalog().at("linux_x64");
     const auto prebuilt = qnx_host_prebuilt_pin(qnx_host_catalog(), "linux_x64");
 
@@ -380,7 +293,7 @@ Json install_qnx_host_linux(const std::filesystem::path &root, bool offline, std
                                        payload / "licenses" / (name + "-" + file));
         }
     }
+
     return host.publish(payload, engine);
-#endif
 }
 } // namespace voyemu

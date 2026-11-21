@@ -3,6 +3,7 @@
 #include "error.hpp"
 #include "host_payload.hpp"
 #include "host_refresh.hpp"
+#include "little_endian.hpp"
 #include "process.hpp"
 #include "qnx_host_prebuilt.hpp"
 #include "qnx_host_windows_cache.hpp"
@@ -17,15 +18,6 @@
 #include <array>
 #include <fstream>
 #include <set>
-#ifdef _WIN32
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <windows.h>
-#include <msi.h>
-#include <msiquery.h>
-#include <setupapi.h>
-#endif
 namespace voyemu {
 namespace {
 #include "qnx_host_catalog.inc"
@@ -99,109 +91,92 @@ bool managed_windows_bindings(const Json &value) {
     return seen == expected && !engine.empty() &&
            qnx_file_backend_supported(value.at("qnx_file_backend"), engine);
 }
-
-#ifdef _WIN32
-struct MsiHandle {
-    MSIHANDLE value = 0;
-
-    ~MsiHandle() {
-        if (value) {
-            MsiCloseHandle(value);
-        }
-    }
-};
-struct CabinetOutput {
-    std::filesystem::path directory;
-    std::set<std::string> selected;
-    bool failed = false;
-};
-
-UINT CALLBACK cabinet(void *context, UINT notice, UINT_PTR first, UINT_PTR) {
-    auto &output = *static_cast<CabinetOutput *>(context);
-
-    if (notice == SPFILENOTIFY_FILEINCABINET) {
-        auto &file = *reinterpret_cast<FILE_IN_CABINET_INFO_W *>(first);
-        const std::wstring name = file.NameInCabinet;
-        std::string target;
-
-        if (name == L"_7z.exe") {
-            target = "7z.exe";
-        } else if (name == L"_7z.dll") {
-            target = "7z.dll";
-        } else if (name == L"License.txt") {
-            target = "License.txt";
-        } else {
-            return FILEOP_SKIP;
-        }
-
-        if (file.FileSize > 8 * 1024 * 1024 || !output.selected.insert(target).second) {
-            output.failed = true;
-
-            return FILEOP_ABORT;
-        }
-
-        const auto path = (output.directory / target).wstring();
-
-        if (path.size() >= MAX_PATH || std::filesystem::exists(output.directory / target)) {
-            output.failed = true;
-
-            return FILEOP_ABORT;
-        }
-
-        std::copy(path.begin(), path.end(), file.FullTargetName);
-        file.FullTargetName[path.size()] = 0;
-
-        return FILEOP_DOIT;
-    }
-
-    if (notice == SPFILENOTIFY_FILEEXTRACTED) {
-        auto &file = *reinterpret_cast<FILEPATHS_W *>(first);
-
-        if (file.Win32Error) {
-            output.failed = true;
-
-            return file.Win32Error;
-        }
-    }
-
-    return NO_ERROR;
-}
-
-Json tree(const std::filesystem::path &root) {
-    Json files = Json::array();
-
-    for (const auto &item : std::filesystem::recursive_directory_iterator(root)) {
-        need(!item.is_symlink(), "linked installed payload rejected");
-
-        if (item.is_directory()) {
-            continue;
-        }
-
-        need(item.is_regular_file() && std::filesystem::hard_link_count(item.path()) == 1,
-             "ordinary installed file required");
-
-        if (item.path().filename() == "qnx-host.json") {
-            continue;
-        }
-
-        files.push_back({{"path", item.path().lexically_relative(root).generic_string()},
-                         {"bytes", item.file_size()},
-                         {"sha256", sha256_file(item.path())}});
-    }
-
-    std::sort(files.begin(), files.end(), [](const Json &a, const Json &b) {
-        return a.at("path").get<std::string>() < b.at("path").get<std::string>();
-    });
-
-    return files;
-}
-#endif
 } // namespace
 
 const Json &qnx_host_catalog() {
     static const Json value = Json::parse(std::begin(qnx_host_json), std::end(qnx_host_json));
 
     return value;
+}
+
+std::vector<std::string> qnx_host_elf_needed(const std::filesystem::path &file) {
+    std::ifstream input(file, std::ios::binary);
+    const std::string bytes((std::istreambuf_iterator<char>(input)),
+                            std::istreambuf_iterator<char>());
+    const auto read = [&](std::uint64_t at, unsigned size) {
+        return le_read(bytes, at, size, need, "ELF extent");
+    };
+
+    need(bytes.size() > 64 &&
+                 bytes.compare(0, 4,
+                               "\x7f"
+                               "ELF") == 0 &&
+                 bytes[4] == 2 && bytes[5] == 1 && read(18, 2) == 62,
+         "x86-64 ELF executable required");
+    const auto phoff = read(32, 8), phentsize = read(54, 2), phnum = read(56, 2);
+    std::vector<std::pair<std::uint64_t, std::uint64_t>> dynamic;
+    std::uint64_t strtab = 0, strsz = 0;
+    std::vector<std::uint64_t> needed;
+    const auto offset = [&](std::uint64_t address) {
+        for (std::uint64_t i = 0; i < phnum; ++i) {
+            const auto header = phoff + i * phentsize;
+
+            if (read(header, 4) == 1) {
+                const auto vaddr = read(header + 16, 8), filesz = read(header + 32, 8);
+
+                if (address >= vaddr && address - vaddr < filesz) {
+                    return read(header + 8, 8) + (address - vaddr);
+                }
+            }
+        }
+
+        throw VoyemuError("QNX_HOST", "ELF address outside the file");
+    };
+
+    for (std::uint64_t i = 0; i < phnum; ++i) {
+        const auto header = phoff + i * phentsize;
+
+        if (read(header, 4) != 2) {
+            continue;
+        }
+
+        const auto start = read(header + 8, 8), size = read(header + 32, 8);
+
+        for (std::uint64_t at = start; at + 16 <= start + size; at += 16) {
+            const auto tag = read(at, 8), value = read(at + 8, 8);
+
+            if (tag == 0) {
+                break;
+            }
+
+            if (tag == 1) {
+                needed.push_back(value);
+            } else if (tag == 5) {
+                strtab = value;
+            } else if (tag == 10) {
+                strsz = value;
+            }
+        }
+    }
+
+    std::vector<std::string> names;
+
+    if (needed.empty()) {
+        return names;
+    }
+
+    need(strtab && strsz, "ELF string table missing");
+    const auto table = offset(strtab);
+
+    for (const auto value : needed) {
+        need(value < strsz, "ELF string extent");
+        const auto at = table + value;
+        const auto end = bytes.find('\0', at);
+        need(end != std::string::npos && end < table + strsz, "ELF string terminator");
+        names.push_back(bytes.substr(at, end - at));
+    }
+
+    return names;
 }
 
 Json qnx_host_binding_view(const std::filesystem::path &root, const Json &shared) {
@@ -214,67 +189,6 @@ Json qnx_host_binding_view(const std::filesystem::path &root, const Json &shared
 
     return shared;
 }
-
-#ifdef _WIN32
-void extract_qnx_unpacker(const std::filesystem::path &msi,
-                          const std::filesystem::path &destination) {
-    need(std::filesystem::is_regular_file(std::filesystem::symlink_status(msi)) &&
-                 std::filesystem::hard_link_count(msi) == 1 &&
-                 sha256_file(msi) == qnx_host_catalog()
-                                             .at("windows_x64")
-                                             .at("extractor")
-                                             .at("sha256")
-                                             .get<std::string>(),
-         "pinned extractor MSI required");
-    need(!std::filesystem::exists(destination) &&
-                 std::filesystem::is_directory(destination.parent_path()),
-         "fresh unpacker destination required");
-    std::filesystem::create_directory(destination);
-    const auto cab = destination / "product.cab";
-    try {
-        MsiHandle database, view, record;
-        need(MsiOpenDatabaseW(msi.c_str(), reinterpret_cast<LPCWSTR>(0), &database.value) ==
-                     ERROR_SUCCESS,
-             "MSI read-only open failed");
-        need(MsiDatabaseOpenViewW(database.value,
-                                  L"SELECT `Data` FROM `_Streams` WHERE `Name` = 'product.cab'",
-                                  &view.value) == ERROR_SUCCESS &&
-                     MsiViewExecute(view.value, 0) == ERROR_SUCCESS &&
-                     MsiViewFetch(view.value, &record.value) == ERROR_SUCCESS,
-             "MSI cabinet stream missing");
-        std::ofstream output(cab, std::ios::binary);
-        need(bool(output), "cabinet output failed");
-        std::array<char, 65536> bytes;
-        std::uint64_t total = 0;
-
-        for (;;) {
-            DWORD count = bytes.size();
-            need(MsiRecordReadStream(record.value, 1, bytes.data(), &count) == ERROR_SUCCESS,
-                 "MSI stream read failed");
-
-            if (!count) {
-                break;
-            }
-
-            total += count;
-            need(total <= 8ULL << 20, "extractor cabinet exceeds bound");
-            output.write(bytes.data(), count);
-            need(bool(output), "cabinet write failed");
-        }
-
-        output.close();
-        need(total > 0 && bool(output), "empty cabinet or flush failed");
-        CabinetOutput selected{destination, {}, false};
-        need(SetupIterateCabinetW(cab.c_str(), 0, cabinet, &selected) != 0 && !selected.failed &&
-                     selected.selected == std::set<std::string>{"7z.exe", "7z.dll", "License.txt"},
-             "extractor cabinet selection failed");
-        std::filesystem::remove(cab);
-    } catch (...) {
-        std::filesystem::remove_all(destination);
-        throw;
-    }
-}
-#endif
 
 std::string qnx_host_unavailable(const std::filesystem::path &root) {
 #ifdef _WIN32
@@ -299,24 +213,8 @@ std::string qnx_host_unavailable(const std::filesystem::path &root) {
 Json install_qnx_host(const std::filesystem::path &root, bool offline, std::uint64_t reserve) {
     need(root.is_absolute() && std::filesystem::canonical(root) == root,
          "canonical project root required");
-#ifdef _WIN32
-    const auto &file_backend = qnx_host_catalog().at("windows_file_backend");
-    const auto prebuilt = qnx_host_prebuilt_pin(qnx_host_catalog(), "windows_file_backend");
 
-    if (!prebuilt.is_null()) {
-        return install_cached_windows_qnx_host(root, file_backend, reserve, prebuilt, offline);
-    }
-
-    if (const auto missing = qnx_host_unavailable(root); !missing.empty()) {
-        throw VoyemuError("QNX_HOST_ASSET_MISSING", missing);
-    }
-
-    return install_cached_windows_qnx_host(root, file_backend, reserve);
-#elif defined(__APPLE__)
-    return install_qnx_host_macos(root, offline, reserve);
-#else
-    return install_qnx_host_linux(root, offline, reserve);
-#endif
+    return install_qnx_host_engine(root, offline, reserve);
 }
 
 #ifndef _WIN32

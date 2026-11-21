@@ -953,7 +953,7 @@ int main(int argc, char **argv) {
         // and packs the installed directory with its receipt into the release asset.
         if ((argc == 3 || argc == 4) && std::string(argv[1]) == "--source-root") {
             const auto actual = std::filesystem::canonical(argv[2]);
-            const auto installed = install_qnx_host_macos(actual, false, 0, true);
+            const auto installed = install_qnx_host_engine(actual, false, 0, true);
             check(installed.at("ready") == true && installed.at("cached") == false,
                   "Mac recipe source install");
 
@@ -1050,7 +1050,7 @@ int main(int argc, char **argv) {
         // directory with its receipt into the release asset.
         if ((argc == 3 || argc == 4) && std::string(argv[1]) == "--source-root") {
             const auto actual = std::filesystem::canonical(argv[2]);
-            const auto installed = install_qnx_host_linux(actual, false, 0, true);
+            const auto installed = install_qnx_host_engine(actual, false, 0, true);
             check(installed.at("ready") == true && installed.at("cached") == false,
                   "Linux recipe source install");
 

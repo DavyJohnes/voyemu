@@ -180,6 +180,7 @@ int main(int argc, char **argv) {
                 std::filesystem::remove_all(scratch_path, error);
             }
         } scratch_guard{scratch};
+#ifdef _WIN32
         expect_throw(
                 [&] {
                     install_qnx_host_windows_source(scratch / "..", false, 0);
@@ -187,7 +188,7 @@ int main(int argc, char **argv) {
                 "canonical project root",
                 "non-canonical root refused before any download or publication");
         check(!std::filesystem::exists(scratch / ".local/toolchains"), "refusal published nothing");
-#ifdef _WIN32
+
         // While the prebuilt pin is pending and no engine is cached, deps reports the engine
         // unavailable instead of running the source recipe.
         if (qnx_host_prebuilt_pin(qnx_host_catalog(), "windows_file_backend").is_null()) {
@@ -203,14 +204,6 @@ int main(int argc, char **argv) {
 #else
         // macOS and Linux build a pending engine from its recipe.
         check(qnx_host_unavailable(scratch).empty(), "POSIX engine installable from its recipe");
-#endif
-#ifdef __APPLE__
-        expect_throw(
-                [&] {
-                    install_qnx_host_windows_source(scratch, false, 0);
-                },
-                "Windows source builder requires Windows x64",
-                "non-Windows host refused by the actual builder entry");
 #endif
         //----------- SLT listing -> record producer contract (native owner API) -----------
         const auto work = scratch / "slt";

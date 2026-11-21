@@ -1,6 +1,7 @@
 #include "check.hpp"
 #include "deps.hpp"
 #include "error.hpp"
+#include "os/platform.hpp"
 #include "process.hpp"
 #include "qnx_host.hpp"
 #include "qnx_host_prebuilt.hpp"
@@ -12,15 +13,9 @@ namespace {
 constexpr Check require{"QNX_HOST"};
 } // namespace
 
-Json install_qnx_host_macos(const std::filesystem::path &root, bool offline, std::uint64_t reserve,
-                            bool from_source) {
-#if !defined(__aarch64__) && !defined(__arm64__)
-    (void)root;
-    (void)offline;
-    (void)reserve;
-    (void)from_source;
-    throw VoyemuError("QNX_HOST", "pinned macOS engine requires Apple Silicon");
-#else
+Json install_qnx_host_engine(const std::filesystem::path &root, bool offline, std::uint64_t reserve,
+                             bool from_source) {
+    require(os::dependency_host == "darwin/arm64", "pinned macOS engine requires Apple Silicon");
     const auto &component = qnx_host_catalog().at("macos_arm64");
     const auto prebuilt = qnx_host_prebuilt_pin(qnx_host_catalog(), "macos_arm64");
 
@@ -193,6 +188,5 @@ Json install_qnx_host_macos(const std::filesystem::path &root, bool offline, std
     std::filesystem::copy_file(sources / "COPYING.LIB", payload / "licenses/LGPL-2.1.txt");
 
     return host.publish(payload, executable);
-#endif
 }
 } // namespace voyemu
