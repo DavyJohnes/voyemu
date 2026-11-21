@@ -2344,6 +2344,8 @@ static void cleanup_guards() {
            sha256_file(handoff) == finalized.at("handoff_sha256").get<std::string>());
     std::ifstream input(handoff);
     std::string text{std::istreambuf_iterator<char>(input), {}};
+    // Windows neither renames the plans directory nor unlinks the handoff while it is open.
+    input.close();
     assert(text.find("\"frame_count\": 0") != std::string::npos &&
            text.find("guest poll acknowledgement only") != std::string::npos);
     auto passion = make();
@@ -2437,7 +2439,6 @@ static void cleanup_guards() {
     assert(std::filesystem::exists(blocked / "qnx-ram.bin") &&
            std::filesystem::exists(root / "preserved-plans" /
                                    handoff.lexically_relative(root / "plans")));
-    input.close(); // Windows does not unlink an open verification stream.
     std::filesystem::remove_all(root);
 }
 
