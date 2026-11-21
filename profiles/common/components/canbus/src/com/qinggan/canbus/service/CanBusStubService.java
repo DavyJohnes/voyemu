@@ -51,12 +51,14 @@ import com.qinggan.ipksync.IIpkSyncService;
 public class CanBusStubService extends ICanBusService.Stub {
     private final BaseCanBusComponent mComponent;
     private final CanBusState mState;
+    private final IpkSyncBinder mIpkSync;
     private String mRegistration = "pending";
 
     public CanBusStubService(Context context, BaseCanBusComponent component) {
         component.init(context);
         mComponent = component;
         mState = component.state();
+        mIpkSync = new IpkSyncBinder(mState.ipk());
     }
 
     // ------------------------------------------------------------------
@@ -563,10 +565,10 @@ public class CanBusStubService extends ICanBusService.Stub {
         return mComponent.getAccStatus();
     }
 
-    /** The IPK sync service runs over the cluster link of the head unit; the emulator has none. */
+    /** The IPK sync service writes to the cluster over the one IPK link of the guest. */
     @Override
     public IIpkSyncService getIpkSyncSvr() {
-        return null;
+        return mIpkSync;
     }
 
     @Override

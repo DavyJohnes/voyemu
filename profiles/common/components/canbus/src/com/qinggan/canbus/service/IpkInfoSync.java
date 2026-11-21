@@ -379,6 +379,15 @@ final class IpkInfoSync {
         send("ready_to_show", null, origin, IpkFrames.readyToShow(category, current));
     }
 
+    // ------------------------------------------------------------------
+    // Cluster cards 0x75
+    // ------------------------------------------------------------------
+
+    /** The cluster cards the Settings display page selects, in the order of its menu. */
+    long cards(String origin, int[] values) {
+        return send("cards", null, origin, IpkFrames.cards(values));
+    }
+
     /** A complete IVC frame the A9 OEM component API passes to sendSocketCtl. */
     long raw(String origin, byte[] frame) {
         return send("raw", null, origin, new byte[][] {frame.clone()});

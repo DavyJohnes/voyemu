@@ -132,6 +132,13 @@ public final class IpkFramesTest {
                 Arrays.equals(
                         IpkFrames.lanes(new int[] {0x0102, 0x1ff}),
                         new byte[] {10, 16, 0, 0, 6, 0x76, 2, 1, 2, 1, (byte) 0xff, 0, 13}));
+        check(
+                Arrays.equals(
+                        IpkFrames.cards(new int[] {7, 3, 4, 9, 10, 11}),
+                        new byte[] {10, 16, 0, 0, 8, 0x75, 6, 7, 3, 4, 9, 10, 11, 0, 13}));
+        check(
+                Arrays.equals(
+                        IpkFrames.cards(new int[0]), new byte[] {10, 16, 0, 0, 2, 0x75, 0, 0, 13}));
         check(IpkFrames.command(IpkFrames.heartbeat()) == 0x67);
         check(IpkFrames.command(new byte[] {10, 16, 0, 0, 3, 0x67, 1, 0, 13}) == -1);
         check(IpkFrames.command(new byte[] {10, 16, 0, 0, 2, 0x67, 1, 0, 12}) == -1);

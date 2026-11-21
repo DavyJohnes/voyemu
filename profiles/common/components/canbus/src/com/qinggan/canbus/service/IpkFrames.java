@@ -15,6 +15,7 @@ final class IpkFrames {
     static final int PHONE = 0x6a;
     static final int MEDIA = 0x6e;
     static final int RADIO = 0x6f;
+    static final int CARDS = 0x75;
     static final int LANES = 0x76;
     static final int ROAD = 0x77;
     private static final int PART = 60;
@@ -272,6 +273,23 @@ final class IpkFrames {
         byte[] frame = frame(ROAD, 1);
 
         frame[6] = 2;
+
+        return frame;
+    }
+
+    // ------------------------------------------------------------------
+    // 0x75 cluster cards
+    // ------------------------------------------------------------------
+
+    /** syncMenuCardInfo: [6] count, then the CardInfo values in the order of the menu. */
+    static byte[] cards(int[] values) {
+        byte[] frame = frame(CARDS, values.length + 1);
+
+        frame[6] = (byte) values.length;
+
+        for (int i = 0; i < values.length; i++) {
+            frame[i + 7] = (byte) values[i];
+        }
 
         return frame;
     }

@@ -14,8 +14,8 @@ import java.util.Map;
 
 /**
  * QGAPI IInstrumentClusterManagerService Binder endpoint: the cluster theme, and the head-unit
- * information and presentation readiness of the OEM InstrumentClusterService written over the IPK
- * link.
+ * information, presentation readiness and cluster cards of the OEM InstrumentClusterService written
+ * over the IPK link.
  */
 final class ClusterThemeBinder extends Binder {
     static final String DESCRIPTOR = "com.qinggan.cluster.IInstrumentClusterManagerService";
@@ -97,10 +97,9 @@ final class ClusterThemeBinder extends Binder {
         return data.readInt() != 0;
     }
 
-    /** Transactions 3..5 and 8..12 of the OEM AIDL, written to the cluster over the IPK link. */
-    /** Transactions 3..5 and 8..12 go to the cluster; the other OEM operations are unsupported. */
+    /** Transactions 3..5, 8..12 and 22 go to the cluster; other OEM operations are unsupported. */
     private void other(int code, Parcel data) {
-        if ((code < 3 || code > 5) && (code < 8 || code > 12)) {
+        if ((code < 3 || code > 5) && (code < 8 || code > 12) && code != 22) {
             Log.w("CanBusStub", "unsupported cluster operation " + code);
 
             return;
@@ -157,6 +156,9 @@ final class ClusterThemeBinder extends Binder {
                     ipk.lanes("cluster", shown, IpkInfoSync.laneIds(shown ? lanes : null));
                     break;
                 }
+            case 22:
+                ipk.cards("cluster", ClusterCards.read(data));
+                break;
             default:
                 // 10 updateCallListInfo: the OEM cluster service sends no IVC frame for it.
                 break;

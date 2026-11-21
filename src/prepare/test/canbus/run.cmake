@@ -75,13 +75,15 @@ foreach(PLATFORM qinggan09 qinggan11)
 endforeach()
 file(GLOB_RECURSE CLUSTER_FIXTURES "${ROOT}/src/prepare/test/fixtures/cluster-theme/*.java")
 compile("${WORK}/cluster" ${CLUSTER_FIXTURES} "${SERVICE}/ClusterThemeStore.java" "${SERVICE}/ClusterThemeBinder.java"
-    "${SERVICE}/CanObservationJournal.java" "${SERVICE}/IpkFrames.java" "${SERVICE}/IpkInfoSync.java"
-    "${SERVICE}/IpkLink.java" "${COMPONENT}/qinggan11/com/qinggan/canbus/service/ClusterTheme.java"
-    "${TESTS}/ClusterThemeTest.java" "${TESTS}/ClusterThemeBinderTest.java" "${TESTS}/ClusterInfoBinderTest.java"
+    "${SERVICE}/ClusterCards.java" "${SERVICE}/IpkSyncBinder.java" "${SERVICE}/CanObservationJournal.java"
+    "${SERVICE}/IpkFrames.java" "${SERVICE}/IpkInfoSync.java" "${SERVICE}/IpkLink.java"
+    "${COMPONENT}/qinggan11/com/qinggan/canbus/service/ClusterTheme.java" "${TESTS}/ClusterThemeTest.java"
+    "${TESTS}/ClusterThemeBinderTest.java" "${TESTS}/ClusterInfoBinderTest.java" "${TESTS}/IpkSyncBinderTest.java"
     "${TESTS}/IpkLinkTest.java" "${ROOT}/src/prepare/test/fixtures/canbus-hfp/android/system/ErrnoException.java"
     "${ROOT}/src/prepare/test/fixtures/canbus-component/android/content/SharedPreferences.java")
 run_java("${WORK}/cluster" com.qinggan.canbus.service.ClusterThemeTest)
 run_java("${WORK}/cluster" com.qinggan.canbus.service.ClusterInfoBinderTest)
+run_java("${WORK}/cluster" com.qinggan.canbus.service.IpkSyncBinderTest)
 set(QGAPI "${ROOT}/.local/profiles/free-11-chinese-20260731-7.3.1/originals/framework/QGAPI.jar")
 if(TEST_OEM)
 if(EXISTS "${QGAPI}")

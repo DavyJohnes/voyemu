@@ -59,7 +59,7 @@ The single terminology reference for Voyemu docs, README, CHANGELOG, SECURITY an
 | field | One named value of the vehicle model | — |
 | CAN model | The simulated CAN bus of the multimedia guest; API `vehicle.can.*` | — |
 | MCU field | One value of the OEM MCU protocol that a cluster adapter supports | — |
-| cluster data channel | The persistent connection of the multimedia to `ivcd` of the cluster that carries the media title, the phone call and turn-by-turn guidance in OEM IVC frames; API `cluster.ipk.history` | IPK sync link, IPK channel |
+| cluster data channel | The persistent connection of the multimedia to `ivcd` of the cluster that carries the media title, the phone call, turn-by-turn guidance and the cluster card selection in OEM IVC frames; API `cluster.ipk.history` | IPK sync link, IPK channel |
 | observer | The Android component that reads the UI tree for `session.ui` | — |
 | provider | An external process registered as an observation source; an Android content provider is a separate term | — |
 | screenshot | An image of screens taken by `session.screenshot` | capture⁶ |

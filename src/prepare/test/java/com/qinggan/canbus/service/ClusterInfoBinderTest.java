@@ -5,12 +5,14 @@ import android.os.Bundle;
 import android.os.Parcel;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
 /**
- * Transactions 3..5 and 8..12 of qg.cluster.service, written as the OEM QGAPI proxy writes them,
- * reach the IPK link; cluster presentation requests reach the subscribers as setPresentationState.
+ * Transactions 3..5, 8..12 and 22 of qg.cluster.service, written as the OEM QGAPI proxy writes
+ * them, reach the IPK link; cluster presentation requests reach the subscribers as
+ * setPresentationState.
  */
 public final class ClusterInfoBinderTest {
     static void check(boolean condition, String message) {
@@ -94,6 +96,28 @@ public final class ClusterInfoBinderTest {
         p.writeString("destination");
         p.writeInt(0);
         p.writeInt(icon);
+
+        return p;
+    }
+
+    /**
+     * The card map as Parcel.writeMap writes it after the interface token: per pair of card value
+     * and menu position a VAL_PARCELABLE CardInfo (creator name, ordinal, value) and a VAL_INTEGER.
+     */
+    static Parcel cards(String descriptor, int... pairs) {
+        Parcel p = Parcel.obtain();
+
+        p.writeInterfaceToken(descriptor);
+        p.writeInt(pairs.length / 2);
+
+        for (int i = 0; i < pairs.length; i += 2) {
+            p.writeInt(4);
+            p.writeString("com.qinggan.cluster.CardInfo");
+            p.writeInt(i / 2);
+            p.writeInt(pairs[i]);
+            p.writeInt(1);
+            p.writeInt(pairs[i + 1]);
+        }
 
         return p;
     }
@@ -197,6 +221,12 @@ public final class ClusterInfoBinderTest {
         check(commands(link, 10).equals(List.of(0x61, 0x60, 0x61)), "readiness frames");
         check(link.pendingFrames().get(10)[0][10] == 2, "media ready");
         check(link.pendingFrames().get(12)[0][11] == 1, "media ready to show");
+        transact(binder, 22, cards(ClusterThemeBinder.DESCRIPTOR, 10, 4, 7, 0, 3, 1, 9, 3));
+        check(
+                Arrays.equals(
+                        link.pendingFrames().get(13)[0],
+                        new byte[] {10, 16, 0, 0, 6, 0x75, 4, 7, 3, 9, 10, 0, 13}),
+                "cluster cards in menu order");
     }
 
     static void presentation() throws Exception {
