@@ -15,8 +15,8 @@ inline std::filesystem::path qnx_host_bindings_path(const std::filesystem::path 
     return root / ".local/toolchains/installed.json";
 }
 
-// Platform view over the shared binding document: on Windows the "windows" section, else the
-// validated legacy adjacent file, else the flat document; the flat document elsewhere.
+// Platform view over the shared binding document: on Windows the "windows" section, else the flat
+// document; the flat document elsewhere.
 Json qnx_host_binding_view(const std::filesystem::path &root, const Json &shared);
 // Creates local paths and pins from this checkout's build outputs; never replaces explicit
 // bindings.

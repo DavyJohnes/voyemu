@@ -546,7 +546,6 @@ int main(int argc, char **argv) {
                       binding == root / ".local/toolchains/installed.json",
               "single shared host binding file");
 #ifdef _WIN32
-        const auto legacy_windows = root / ".local/toolchains/installed.windows.json";
         const auto windows_section = windows_binding(root / "windows-toolchains");
         const Json flat{{"schema", 1},
                         {"qnx_qemu", "macos-engine"},
@@ -566,25 +565,7 @@ int main(int argc, char **argv) {
         }
 
         check(refused && read_private_json(binding) == flat,
-              "flat shared binding without a legacy Windows file is refused");
-        write_private_json(binding, flat);
-        write_private_json(legacy_windows, windows_section);
-        const auto merged = ensure_qnx_host_bindings(root, true);
-        const auto merged_file = read_private_json(binding);
-        check(merged == windows_section, "Windows migration did not return the Windows section");
-
-        for (const auto *key : {"schema", "qnx_qemu", "graphics", "angle", "pins", "factory"}) {
-            check(merged_file.at(key) == flat.at(key),
-                  "macOS factory key changed by Windows migration");
-        }
-
-        check(merged_file.size() == flat.size() + 1 && merged_file.at("windows") == windows_section,
-              "legacy Windows binding did not migrate into the shared file");
-        const auto migrated_bytes = read_private_json(binding);
-        check(ensure_qnx_host_bindings(root, true) == windows_section &&
-                      read_private_json(binding) == migrated_bytes,
-              "repeat Windows migration is not idempotent");
-        std::filesystem::remove(legacy_windows);
+              "flat shared binding without a Windows section is refused");
         {
             const auto section = windows_binding(root / "windows-toolchains");
             write_private_json(binding, {{"schema", 1}, {"windows", section}});
@@ -601,16 +582,7 @@ int main(int argc, char **argv) {
                           windows_section,
                   "Windows binding view returns the shared windows section");
             check(qnx_host_binding_view(root, plain) == plain,
-                  "Windows binding view falls back to the flat document without a legacy file");
-            write_private_json(legacy_windows, windows_section);
-            check(qnx_host_binding_view(root, plain) == windows_section,
-                  "Windows binding view reads the legacy adjacent file");
-            auto invalid = windows_section;
-            invalid["schema"] = 2;
-            write_private_json(legacy_windows, invalid);
-            check(qnx_host_binding_view(root, plain) == plain,
-                  "invalid legacy Windows binding is not substituted");
-            std::filesystem::remove(legacy_windows);
+                  "Windows binding view falls back to the flat document");
         }
 #else
         const Json explicit_binding{{"schema", 1}, {"qnx_qemu", "explicit-user-engine"}};
@@ -771,61 +743,34 @@ int main(int argc, char **argv) {
                       sha256_file(legacy / "qemu-system-aarch64") == old_binary_pin,
               "new recipe cache preserves old receipt and executable");
 
-        // One recognized legacy factory migrates; explicit user bindings remain untouched.
-        auto legacy_recipe = mac;
-        legacy_recipe["patch"]["sha256"] =
-                "ff41121e355d2c95532f176121af2b971d468e5d614e9ae2d794e1318f6e8d5b";
-        legacy_recipe["patched_sources"]["hw/intc/arm_gicv3_hvf_mmio.h"] =
-                "f283d2840651cc9f02596ef56a1568ad58e6f1165554e32a8cde61749207ac37";
-        const auto legacy_component = sha256_bytes(legacy_recipe.dump());
-        check(legacy_component ==
-                      "da0ad5ed17d8db183366e25702f7d6214745849b70c66df1a04d5be527348edc",
-              "exact historical factory recipe reconstructed");
-        write_private_json(legacy / "qnx-host.json", {{"component_sha256", legacy_component},
-                                                      {"executable_sha256", old_binary_pin},
-                                                      {"recipe", legacy_recipe}});
+        // A factory binding names the current engine and self; explicit user bindings remain
+        // untouched.
         const auto program = root / "voyemu",
                    angle = root / ".local/toolchains/native-sdk/emulator/lib64/gles_angle";
         ensure_private_directory(angle);
         write_private_json(program, Json{{"current-self", true}});
         write_private_json(angle / "libEGL.dylib", Json{{"EGL", true}});
         write_private_json(angle / "libGLESv2.dylib", Json{{"GLES", true}});
-        Json managed_old = {{"schema", 1},
-                            {"qnx_qemu", (legacy / "qemu-system-aarch64").string()},
-                            {"graphics", program.string()},
-                            {"angle", angle.string()},
-                            {"pins", Json::array()}};
-
-        for (const auto &file : {legacy / "qemu-system-aarch64", program, angle / "libEGL.dylib",
-                                 angle / "libGLESv2.dylib"}) {
-            managed_old["pins"].push_back(
-                    {{"path", file.string()},
-                     {"sha256", file == program ? std::string(64, 'a') : sha256_file(file)}});
-        }
-
-        write_private_json(binding, managed_old);
-        const auto binding_pin = sha256_file(binding);
-        const auto migrated = ensure_qnx_host_bindings(root, true);
-        check(migrated.at("qnx_qemu") == (current / "qemu-system-aarch64").string() &&
-                      migrated.contains("factory") &&
-                      migrated.at("pins").at(1).at("sha256") == sha256_file(program),
-              "managed factory did not upgrade engine/current self");
-        check(sha256_file(binding.parent_path() /
-                          ("portable-host-" + binding_pin + ".previous.json")) == binding_pin &&
-                      read_private_json(legacy / "qnx-host.json").at("component_sha256") ==
-                              legacy_component &&
-                      sha256_file(legacy / "qemu-system-aarch64") == old_binary_pin,
-              "migration snapshot/legacy preservation failed");
-        const auto migrated_identity = cache_file_identity(binding);
-        check(ensure_qnx_host_bindings(root, true) == migrated &&
-                      cache_file_identity(binding) == migrated_identity,
+        std::filesystem::remove(binding);
+        const auto created = ensure_qnx_host_bindings(root, true);
+        check(created.at("qnx_qemu") == (current / "qemu-system-aarch64").string() &&
+                      created.contains("factory") &&
+                      created.at("pins").at(1).at("sha256") == sha256_file(program),
+              "managed factory did not name engine/current self");
+        const auto created_identity = cache_file_identity(binding);
+        check(ensure_qnx_host_bindings(root, true) == created &&
+                      cache_file_identity(binding) == created_identity,
               "current managed factory unexpectedly rewritten");
+        const auto binding_pin = sha256_file(binding);
         write_private_json(program, Json{{"new-current-self", true}});
         const auto self_refreshed = ensure_qnx_host_bindings(root, true);
-        check(self_refreshed.at("qnx_qemu") == migrated.at("qnx_qemu") &&
+        check(self_refreshed.at("qnx_qemu") == created.at("qnx_qemu") &&
                       self_refreshed.at("pins").at(1).at("sha256") == sha256_file(program) &&
-                      self_refreshed.at("pins").at(0) == migrated.at("pins").at(0),
+                      self_refreshed.at("pins").at(0) == created.at("pins").at(0),
               "managed self refresh changed engine");
+        check(sha256_file(binding.parent_path() /
+                          ("portable-host-" + binding_pin + ".previous.json")) == binding_pin,
+              "managed self refresh snapshot failed");
         auto rejects_managed = [&](Json value) {
             write_private_json(binding, value);
             const auto before = sha256_file(binding);
@@ -883,33 +828,17 @@ int main(int argc, char **argv) {
         check(foreign_rejected && mutable_record == foreign_record && writes == 0,
               "foreign binding replaced during recognition/publication was overwritten");
 
-        // One shared file carries the macOS factory keys and the Windows binding section; a legacy
-        // adjacent file migrates into it.
-        write_private_json(binding, self_refreshed);
-        const auto legacy_windows = root / ".local/toolchains/installed.windows.json";
+        // One shared file carries the macOS factory keys and the Windows binding section; a macOS
+        // refresh keeps the section.
         const auto windows_section = windows_binding(root / "windows-toolchains");
-        write_private_json(legacy_windows, windows_section);
-        const auto unified = ensure_qnx_host_bindings(root, true);
-
-        for (const auto *key : {"schema", "qnx_qemu", "graphics", "angle", "pins", "factory"}) {
-            check(unified.at(key) == self_refreshed.at(key),
-                  "macOS factory key changed by Windows unification");
-        }
-
-        check(unified.size() == self_refreshed.size() + 1 &&
-                      unified.at("windows") == windows_section &&
-                      read_private_json(binding) == unified,
-              "legacy Windows binding did not migrate into the shared file");
+        auto unified = self_refreshed;
+        unified["windows"] = windows_section;
+        write_private_json(binding, unified);
         const auto unified_bytes = read_private_json(binding);
         check(ensure_qnx_host_bindings(root, true) == unified &&
                       read_private_json(binding) == unified_bytes,
-              "macOS Windows-section unification is not idempotent");
-        std::filesystem::remove(legacy_windows);
-        const auto kept = ensure_qnx_host_bindings(root, true);
-        check(kept == unified && read_private_json(binding) == unified,
-              "macOS refresh dropped the inherited Windows section once the legacy file was gone");
-        // A legacy Windows record is read on macOS too; its path spelling is not a native POSIX
-        // path.
+              "macOS refresh changed the shared Windows section");
+        // A Windows section is read on macOS too; its path spelling is not a native POSIX path.
         const auto foreign_windows = Json{
                 {"schema", 1},
                 {"qnx_qemu", R"(Z:\Users\owner\voyemu\qemu-system-aarch64.exe)"},
@@ -935,20 +864,22 @@ int main(int argc, char **argv) {
                 section["pins"][0]["path"] = section.at("qnx_qemu");
             }
 
-            write_private_json(binding, self_refreshed);
-            write_private_json(legacy_windows, section);
+            auto shared = self_refreshed;
+            shared["windows"] = section;
+            write_private_json(binding, shared);
             const auto joined = ensure_qnx_host_bindings(root, true);
             check(joined.at("windows") == section,
-                  "foreign Windows paths lost their exact spelling during migration");
+                  "foreign Windows paths lost their exact spelling");
             const auto joined_identity = cache_file_identity(binding);
             check(ensure_qnx_host_bindings(root, true) == joined &&
                           cache_file_identity(binding) == joined_identity,
-                  "foreign Windows migration is not idempotent");
+                  "foreign Windows section refresh is not idempotent");
         }
 
         auto rejects_windows = [&](Json value) {
-            write_private_json(binding, self_refreshed);
-            write_private_json(legacy_windows, value);
+            auto shared = self_refreshed;
+            shared["windows"] = value;
+            write_private_json(binding, shared);
             const auto before = sha256_file(binding);
             bool rejected = false;
             try {
@@ -1002,7 +933,6 @@ int main(int argc, char **argv) {
             value["qnx_file_backend"]["engine_sha256"] = std::string(64, '0');
             rejects_windows(value);
         }
-        std::filesystem::remove(legacy_windows);
 
         write_private_json(binding, explicit_binding);
         const auto custom_identity = cache_file_identity(binding);

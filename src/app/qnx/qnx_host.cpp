@@ -100,29 +100,6 @@ bool managed_windows_bindings(const Json &value) {
            qnx_file_backend_supported(value.at("qnx_file_backend"), engine);
 }
 
-// Explicit one-time write-side migration source: the legacy adjacent Windows binding is the shared
-// file's "windows" section until the first migration; it stays on disk and is invalid input for the
-// write path.
-Json migrated_windows_binding(const std::filesystem::path &root) {
-    const auto legacy = root / ".local/toolchains/installed.windows.json";
-
-    if (!std::filesystem::exists(legacy)) {
-        return Json();
-    }
-
-    const auto value = read_private_json(legacy, 128 * 1024);
-    need(managed_windows_bindings(value), "legacy Windows host binding differs");
-
-    return value;
-}
-
-// Flat macOS keys a merged shared file must retain before a Windows section may be added; never
-// merges into an unrelated object.
-bool flat_macos_keys(const Json &value) {
-    return value.is_object() && value.contains("schema") && value.contains("qnx_qemu") &&
-           value.contains("graphics") && value.contains("angle") && value.contains("pins");
-}
-
 #ifdef _WIN32
 struct MsiHandle {
     MSIHANDLE value = 0;
@@ -228,21 +205,11 @@ const Json &qnx_host_catalog() {
 }
 
 Json qnx_host_binding_view(const std::filesystem::path &root, const Json &shared) {
+    (void)root;
 #ifdef _WIN32
     if (shared.is_object() && shared.contains("windows")) {
         return shared.at("windows");
     }
-
-    // Read-only fallback: an absent or invalid legacy file leaves the flat document, which fails
-    // closed downstream instead of substituting a bad section.
-    try {
-        if (const auto legacy = migrated_windows_binding(root); !legacy.is_null()) {
-            return legacy;
-        }
-    } catch (...) { /* Ignored: an unreadable legacy binding is not migrated. */
-    }
-#else
-    (void)root;
 #endif
 
     return shared;
@@ -388,9 +355,6 @@ public:
         }
     }
 };
-constexpr std::string_view legacy_macos_factory_recipe =
-        "da0ad5ed17d8db183366e25702f7d6214745849b70c66df1a04d5be527348edc";
-
 void factory_file(const std::filesystem::path &file) {
     need(file.is_absolute() && std::filesystem::canonical(file) == file &&
                  std::filesystem::is_regular_file(std::filesystem::symlink_status(file)) &&
@@ -428,50 +392,35 @@ Json macos_factory_bindings(const std::filesystem::path &root, const Json &engin
                   {{"kind", factory_kind},
                    {"component_sha256", component},
                    {"engine_receipt_sha256", sha256_file(receipt)}}}};
-    // The Windows section is inherited from the existing shared file when present, else taken from
-    // the legacy adjacent file; it is never dropped by a macOS refresh.
-    const auto windows = inherited_windows.is_null() ? migrated_windows_binding(root)
-                                                     : inherited_windows;
-
-    if (!windows.is_null()) {
-        need(managed_windows_bindings(windows), "Windows host binding section differs");
-        binding["windows"] = windows;
+    // The Windows section is inherited from the existing shared file; a macOS refresh never drops
+    // it.
+    if (!inherited_windows.is_null()) {
+        need(managed_windows_bindings(inherited_windows), "Windows host binding section differs");
+        binding["windows"] = inherited_windows;
     }
 
     return binding;
 }
 
 bool managed_macos_bindings(const std::filesystem::path &root, const Json &value) {
-    const bool marked = value.is_object() && value.contains("factory");
-
-    if (!value.is_object() || !value.contains("qnx_qemu") || !value.contains("graphics") ||
-        !value.contains("angle") || !value.contains("pins")) {
-        need(!marked, "factory binding fields missing");
-
+    if (!value.is_object() || !value.contains("factory")) {
         return false;
     }
 
+    need(value.contains("qnx_qemu") && value.contains("graphics") && value.contains("angle") &&
+                 value.contains("pins"),
+         "factory binding fields missing");
     const std::filesystem::path qemu = value.at("qnx_qemu").get<std::string>(),
                                 graphics = value.at("graphics").get<std::string>(),
                                 angle = value.at("angle").get<std::string>();
-    const auto legacy = root / ".local/toolchains/qnx-host-macos-11.1.2/qemu-system-aarch64";
-    const bool paths = graphics == host_program(root) &&
-                       angle == root / ".local/toolchains/native-sdk/emulator/lib64/gles_angle" &&
-                       qemu.parent_path().parent_path() == root / ".local/toolchains" &&
-                       qemu.filename() == "qemu-system-aarch64";
-
-    if (!paths || (!marked && qemu != legacy)) {
-        need(!marked, "factory paths differ");
-
-        return false;
-    }
-
-    if (value.size() != (marked ? 6U : 5U) + (value.contains("windows") ? 1U : 0U) ||
-        value.at("schema") != 1 || !value.at("pins").is_array() || value.at("pins").size() != 4) {
-        need(!marked, "factory metadata differs");
-
-        return false;
-    }
+    need(graphics == host_program(root) &&
+                 angle == root / ".local/toolchains/native-sdk/emulator/lib64/gles_angle" &&
+                 qemu.parent_path().parent_path() == root / ".local/toolchains" &&
+                 qemu.filename() == "qemu-system-aarch64",
+         "factory paths differ");
+    need(value.size() == 6U + (value.contains("windows") ? 1U : 0U) && value.at("schema") == 1 &&
+                 value.at("pins").is_array() && value.at("pins").size() == 4,
+         "factory metadata differs");
 
     if (value.contains("windows")) {
         need(managed_windows_bindings(value.at("windows")), "Windows host binding section differs");
@@ -481,24 +430,16 @@ bool managed_macos_bindings(const std::filesystem::path &root, const Json &value
     factory_file(receipt_file);
     const auto receipt = read_private_json(receipt_file, 128 * 1024);
     const auto component = receipt.value("component_sha256", std::string{});
-
-    if (!marked && component != legacy_macos_factory_recipe) {
-        return false;
-    }
-
     need(sha256_bytes(receipt.at("recipe").dump()) == component,
          "factory installed recipe identity differs");
-
-    if (marked) {
-        need(value.at("factory") == Json{{"kind", factory_kind},
-                                         {"component_sha256", component},
-                                         {"engine_receipt_sha256", sha256_file(receipt_file)}} &&
-                     qemu.parent_path().filename() ==
-                             std::string(factory_engine) +
-                                     qnx_host_cache_key(component, receipt.value("archive_sha256",
-                                                                                 std::string{})),
-             "factory marker differs");
-    }
+    need(value.at("factory") == Json{{"kind", factory_kind},
+                                     {"component_sha256", component},
+                                     {"engine_receipt_sha256", sha256_file(receipt_file)}} &&
+                 qemu.parent_path().filename() ==
+                         std::string(factory_engine) +
+                                 qnx_host_cache_key(component,
+                                                    receipt.value("archive_sha256", std::string{})),
+         "factory marker differs");
 
     factory_file(qemu);
     need(sha256_file(qemu) == receipt.at("executable_sha256").get<std::string>(),
@@ -597,15 +538,6 @@ Json ensure_qnx_host_bindings(const std::filesystem::path &root, bool offline) {
         need(section.is_object() && managed_windows_bindings(section),
              "Windows host binding section missing from the shared binding file");
 
-        if (!previous.contains("windows")) {
-            // Deterministic migration on Windows too: a flat shared file gains the legacy section
-            // in one write, preserving every macOS key.
-            need(flat_macos_keys(previous), "shared host binding is not a flat macOS binding");
-            auto merged = previous;
-            merged["windows"] = section;
-            ensure_private_directory(file.parent_path());
-            write_private_json(file, merged);
-        }
         return section;
 #endif
     }
