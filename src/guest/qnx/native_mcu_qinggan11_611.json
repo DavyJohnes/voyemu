@@ -4,7 +4,7 @@
   "map_sha256": "255335b86bb5fd782d23086018dcfc3874d088364ad5f15b264cfb12020d800e",
   "packet_bytes": 650,
   "wire_fields": 736,
-  "projected_fields": 218,
+  "projected_fields": 228,
   "source_parser_sha256": "a830d876d9091190096025f4f4eb81294078b3002d955283b3a9dec296414f05",
   "source_engine_sha256": "faeb580b46c5c92d7ecd5b707be15b85874c838471f5cb9ca010b9a90e9ae195",
   "fields": [
@@ -446,37 +446,97 @@
       "position": 29,
       "name": "fuel_low_alert",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 30,
+        "start_bit": 47,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_lightitems_struct",
+        "case_address": "0x4fcc",
+        "output_bit": 48,
+        "output_width": 2
+      }
     },
     {
       "position": 30,
       "name": "mil_lamp",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 31,
+        "start_bit": 49,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_lightitems_struct",
+        "case_address": "0x4fbc",
+        "output_bit": 50,
+        "output_width": 2
+      }
     },
     {
       "position": 31,
       "name": "eng_coolant_temp_high",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 32,
+        "start_bit": 51,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_lightitems_struct",
+        "case_address": "0x4fac",
+        "output_bit": 52,
+        "output_width": 2
+      }
     },
     {
       "position": 32,
       "name": "eng_coolant_temp",
       "normalized_width": 8,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 33,
+        "start_bit": 53,
+        "width": 8,
+        "order": 1,
+        "named_consumer": "_lightitems_struct",
+        "case_address": "0x4f9c",
+        "output_bit": 54,
+        "output_width": 8
+      }
     },
     {
       "position": 33,
       "name": "engine_oil_low",
       "normalized_width": 1,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 34,
+        "start_bit": 61,
+        "width": 1,
+        "order": 1,
+        "named_consumer": "_lightitems_struct",
+        "case_address": "0x4f8c",
+        "output_bit": 62,
+        "output_width": 1
+      }
     },
     {
       "position": 34,
       "name": "cool_ant_low",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 35,
+        "start_bit": 62,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_lightitems_struct",
+        "case_address": "0x4f7c",
+        "output_bit": 64,
+        "output_width": 2
+      }
     },
     {
       "position": 35,
@@ -2954,13 +3014,33 @@
       "position": 275,
       "name": "fuel_instant",
       "normalized_width": 8,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 275,
+        "start_bit": 1039,
+        "width": 8,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2a24",
+        "output_bit": 1069,
+        "output_width": 8
+      }
     },
     {
       "position": 276,
       "name": "fuel_instant_last1km",
       "normalized_width": 8,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 276,
+        "start_bit": 1047,
+        "width": 8,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2a14",
+        "output_bit": 1077,
+        "output_width": 8
+      }
     },
     {
       "position": 277,
@@ -2972,7 +3052,17 @@
       "position": 278,
       "name": "rpm",
       "normalized_width": 13,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 278,
+        "start_bit": 1065,
+        "width": 13,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x29f4",
+        "output_bit": 1098,
+        "output_width": 13
+      }
     },
     {
       "position": 279,
@@ -3002,7 +3092,17 @@
       "position": 283,
       "name": "vcu_stEgyFlowEngAndGenMot",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 283,
+        "start_bit": 1086,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x29a4",
+        "output_bit": 1120,
+        "output_width": 2
+      }
     },
     {
       "position": 284,

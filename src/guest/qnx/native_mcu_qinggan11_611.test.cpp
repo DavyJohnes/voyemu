@@ -431,6 +431,19 @@ int main(int argc, char **argv) {
                 {"SeatBeltLamp", 1546, 2, 3},
         });
 
+        deliver_cases({
+                {"fuel_low_alert", 47, 2, 3},
+                {"mil_lamp", 49, 2, 3},
+                {"eng_coolant_temp_high", 51, 2, 3},
+                {"eng_coolant_temp", 53, 8, 171},
+                {"engine_oil_low", 61, 1, 1},
+                {"cool_ant_low", 62, 2, 3},
+                {"fuel_instant", 1039, 8, 171},
+                {"fuel_instant_last1km", 1047, 8, 171},
+                {"rpm", 1065, 13, 2731},
+                {"vcu_stEgyFlowEngAndGenMot", 1086, 2, 3},
+        });
+
         // AdasEcu acc and cancel, the power-off request, the lane departure lamp and the language
         // write fields that this layout does not project. The guest rejects the logical revision as
         // a whole, and the host state for the guest carries their initial values and the new speed.
