@@ -217,39 +217,3 @@ jobs:
                   # Supervisor logs and session state live under each fixture's .local directory.
                   include-hidden-files: true
                   if-no-files-found: ignore
-            - name: Diagnose Windows admission storage
-              if: failure() && steps.host-tests.outcome == 'failure'
-              run: |
-                  whoami /user
-                  $test = Join-Path $PWD '.local/build/windows-native/admission_windows_test.exe'
-                  $parents = @((Join-Path $PWD '.local/build/tmp'), $env:USERPROFILE)
-                  $seen = @{}
-                  foreach ($parent in $parents) {
-                      for ($path = [IO.DirectoryInfo]::new($parent); $path; $path = $path.Parent) {
-                          if ($seen.ContainsKey($path.FullName)) { continue }
-                          $seen[$path.FullName] = $true
-                          try {
-                              $acl = Get-Acl -LiteralPath $path.FullName
-                              [pscustomobject]@{
-                                  Path = $path.FullName
-                                  Attributes = $path.Attributes
-                                  Owner = $acl.Owner
-                                  Group = $acl.Group
-                                  Sddl = $acl.Sddl
-                              } | Format-List
-                          } catch {
-                              Write-Host "ACL read failed for $($path.FullName): $($_.Exception.Message)"
-                          }
-                      }
-                      $probe = Join-Path $parent ("voyemu-admission-probe-" + [guid]::NewGuid())
-                      try {
-                          $PSNativeCommandUseErrorActionPreference = $false
-                          & $test --worker $probe
-                          Write-Host "Admission worker under $parent returned $LASTEXITCODE (10 = admitted)"
-                      } finally {
-                          if (Test-Path -LiteralPath $probe) {
-                              Remove-Item -LiteralPath $probe -Recurse -Force
-                          }
-                      }
-                  }
-                  exit 0
