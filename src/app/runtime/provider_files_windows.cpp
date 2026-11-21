@@ -1,11 +1,10 @@
-#pragma once
-#include "error.hpp"
-#ifdef _WIN32
 #include "../core/private_state_security.hpp"
+#include "error.hpp"
+#include "provider_files.hpp"
 #include <memory>
 #include <vector>
 namespace voyemu::runtime::detail {
-inline void provider_require(bool condition) {
+void provider_require(bool condition) {
     if (!condition) {
         throw VoyemuError("PROVIDER_INVALID", "invalid provider");
     }
@@ -25,7 +24,7 @@ struct ProviderHandle {
     ProviderHandle(const ProviderHandle &) = delete;
 };
 
-inline void provider_path(const std::filesystem::path &path) {
+void provider_path(const std::filesystem::path &path) {
     const auto drive = path.root_name().wstring();
 
     provider_require(
@@ -41,7 +40,7 @@ inline void provider_path(const std::filesystem::path &path) {
     }
 }
 
-inline void provider_object(HANDLE file, bool directory, bool private_access) {
+void provider_object(HANDLE file, bool directory, bool private_access) {
     BY_HANDLE_FILE_INFORMATION info{};
 
     provider_require(GetFileType(file) == FILE_TYPE_DISK &&
@@ -55,52 +54,55 @@ inline void provider_object(HANDLE file, bool directory, bool private_access) {
 
 // Retaining each ancestor without delete sharing fences component replacement.
 // Only the DOS volume mapping is resolved; no non-root reparse is followed.
-class ProviderDirectory {
+struct ProviderDirectory::State {
     std::vector<std::unique_ptr<ProviderHandle>> held_;
-
-public:
-    ProviderDirectory(const std::filesystem::path &path, bool private_leaf = false,
-                      bool create_leaf = false, bool fresh = false) {
-        provider_path(path);
-        provider_require((!private_leaf && !create_leaf) || path != path.root_path());
-        auto current = path.root_path();
-        const auto open = [&](bool root, bool leaf) {
-            auto handle = std::make_unique<ProviderHandle>(CreateFileW(
-                    current.c_str(), FILE_READ_ATTRIBUTES | READ_CONTROL,
-                    FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING,
-                    FILE_FLAG_BACKUP_SEMANTICS | (root ? 0 : FILE_FLAG_OPEN_REPARSE_POINT),
-                    nullptr));
-            BY_HANDLE_FILE_INFORMATION info{};
-            provider_require(GetFileType(handle->value) == FILE_TYPE_DISK &&
-                             GetFileInformationByHandle(handle->value, &info) &&
-                             (info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) &&
-                             !(info.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT));
-
-            if (leaf && private_leaf) {
-                provider_object(handle->value, true, true);
-            }
-
-            held_.push_back(std::move(handle));
-        };
-        open(true, false);
-
-        for (const auto &part : path.relative_path()) {
-            current /= part;
-            const bool leaf = current == path;
-
-            if (leaf && create_leaf) {
-                voyemu::detail::PrivateStateSecurity security;
-
-                if (!CreateDirectoryW(current.c_str(), &security.attributes)) {
-                    provider_require(!fresh && GetLastError() == ERROR_ALREADY_EXISTS);
-                }
-            }
-
-            open(false, leaf);
-        }
-    }
 };
-class ProviderPinnedFile {
+
+ProviderDirectory::ProviderDirectory(const std::filesystem::path &path, bool private_leaf,
+                                     bool create_leaf, bool fresh)
+    : state_(std::make_unique<State>()) {
+    provider_path(path);
+    provider_require((!private_leaf && !create_leaf) || path != path.root_path());
+    auto current = path.root_path();
+    const auto open = [&](bool root, bool leaf) {
+        auto handle = std::make_unique<ProviderHandle>(CreateFileW(
+                current.c_str(), FILE_READ_ATTRIBUTES | READ_CONTROL,
+                FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING,
+                FILE_FLAG_BACKUP_SEMANTICS | (root ? 0 : FILE_FLAG_OPEN_REPARSE_POINT), nullptr));
+        BY_HANDLE_FILE_INFORMATION info{};
+        provider_require(GetFileType(handle->value) == FILE_TYPE_DISK &&
+                         GetFileInformationByHandle(handle->value, &info) &&
+                         (info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) &&
+                         !(info.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT));
+
+        if (leaf && private_leaf) {
+            provider_object(handle->value, true, true);
+        }
+
+        state_->held_.push_back(std::move(handle));
+    };
+    open(true, false);
+
+    for (const auto &part : path.relative_path()) {
+        current /= part;
+        const bool leaf = current == path;
+
+        if (leaf && create_leaf) {
+            voyemu::detail::PrivateStateSecurity security;
+
+            if (!CreateDirectoryW(current.c_str(), &security.attributes)) {
+                provider_require(!fresh && GetLastError() == ERROR_ALREADY_EXISTS);
+            }
+        }
+
+        open(false, leaf);
+    }
+}
+
+ProviderDirectory::~ProviderDirectory() = default;
+
+namespace {
+class PinnedFile {
     std::filesystem::path path_;
     ProviderDirectory parents_;
     ProviderHandle file_;
@@ -115,7 +117,7 @@ class ProviderPinnedFile {
     }
 
 public:
-    ProviderPinnedFile(const std::filesystem::path &path, std::size_t limit, bool private_access)
+    PinnedFile(const std::filesystem::path &path, std::size_t limit, bool private_access)
         : path_(path), parents_(parent(path)),
           file_(CreateFileW(path.c_str(), GENERIC_READ | READ_CONTROL, FILE_SHARE_READ, nullptr,
                             OPEN_EXISTING, FILE_FLAG_OPEN_REPARSE_POINT, nullptr)),
@@ -171,16 +173,34 @@ public:
         return out;
     }
 };
+} // namespace
 
-inline std::string provider_read(const std::filesystem::path &path, std::size_t limit,
-                                 bool private_access) {
-    ProviderPinnedFile file(path, limit, private_access);
+struct ProviderPinnedFile::State {
+    PinnedFile file;
+
+    State(const std::filesystem::path &path, std::size_t limit, bool private_access)
+        : file(path, limit, private_access) {}
+};
+
+ProviderPinnedFile::ProviderPinnedFile(const std::filesystem::path &path, std::size_t limit,
+                                       bool private_access)
+    : state_(std::make_unique<State>(path, limit, private_access)) {}
+
+ProviderPinnedFile::~ProviderPinnedFile() = default;
+
+std::string ProviderPinnedFile::text() {
+    return state_->file.text();
+}
+
+std::string provider_read(const std::filesystem::path &path, std::size_t limit,
+                          bool private_access) {
+    PinnedFile file(path, limit, private_access);
 
     return file.text();
 }
 
-inline void provider_request(const std::filesystem::path &pending,
-                             const std::filesystem::path &request, const std::string &bytes) {
+void provider_request(const std::filesystem::path &pending, const std::filesystem::path &request,
+                      const std::string &bytes) {
     provider_require(pending.parent_path() == request.parent_path() && bytes.size() <= 16384);
     {
         voyemu::detail::PrivateStateSecurity security;
@@ -196,4 +216,3 @@ inline void provider_request(const std::filesystem::path &pending,
     provider_require(MoveFileExW(pending.c_str(), request.c_str(), MOVEFILE_WRITE_THROUGH));
 }
 } // namespace voyemu::runtime::detail
-#endif

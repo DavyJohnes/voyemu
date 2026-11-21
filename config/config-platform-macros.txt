@@ -86,9 +86,7 @@ src/app/runtime/media_discovery.hpp group 10 runtime: the Wine path translation 
 src/app/runtime/media_discovery.test.cpp group 10 runtime: interguest link, media, providers and sessions
 src/app/runtime/media_rpc.test.cpp group 10 runtime: interguest link, media, providers and sessions
 src/app/runtime/provider_process.test.cpp group 10 runtime: interguest link, media, providers and sessions
-src/app/runtime/provider_registry.cpp group 10 runtime: interguest link, media, providers and sessions
 src/app/runtime/provider_registry.test.cpp group 10 runtime: interguest link, media, providers and sessions
-src/app/runtime/provider_windows_files.hpp group 10 runtime: interguest link, media, providers and sessions
 src/app/runtime/quickboot.test.cpp group 10 runtime: interguest link, media, providers and sessions
 src/app/runtime/runtime_fixture.cpp group 10 runtime: interguest link, media, providers and sessions
 src/app/runtime/runtime_fixture_media.hpp group 10 runtime: interguest link, media, providers and sessions

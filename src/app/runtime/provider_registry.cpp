@@ -1,16 +1,10 @@
 #include "provider_registry.hpp"
 #include "error.hpp"
-#include "provider_windows_files.hpp"
+#include "provider_files.hpp"
 #include <chrono>
 #include <regex>
 #include <set>
 #include <stdexcept>
-#ifndef _WIN32
-#include "os/stat_time.hpp"
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#endif
 namespace voyemu::runtime {
 namespace {
 [[noreturn]] void invalid() {
@@ -40,104 +34,10 @@ bool text(const Json &j, std::size_t bound = 256) {
            j.get_ref<const std::string &>().size() <= bound;
 }
 
-#ifndef _WIN32
-struct FD {
-    int n;
-
-    explicit FD(int v) : n(v) {
-        if (n < 0) {
-            invalid();
-        }
-    }
-
-    ~FD() {
-        close(n);
-    }
-
-    FD(const FD &) = delete;
-};
-
-void path_check(const std::filesystem::path &p) {
-    if (!p.is_absolute() || p.lexically_normal() != p) {
-        invalid();
-    }
-
-    std::filesystem::path prefix = "/";
-
-    for (const auto &part : p.relative_path()) {
-        prefix /= part;
-        struct stat s{};
-
-        if (lstat(prefix.c_str(), &s) || S_ISLNK(s.st_mode)) {
-            invalid();
-        }
-    }
-}
-
-std::string read_file(const std::filesystem::path &p, std::size_t limit,
-                      bool private_file = false) {
-    path_check(p);
-    FD directory(open("/", O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC));
-
-    for (const auto &part : p.parent_path().relative_path()) {
-        FD next(openat(directory.n, part.c_str(), O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC));
-        std::swap(directory.n, next.n);
-    }
-
-    FD fd(openat(directory.n, p.filename().c_str(), O_RDONLY | O_NOFOLLOW | O_CLOEXEC));
-    struct stat a{}, b{};
-
-    if (fstat(fd.n, &a) || !S_ISREG(a.st_mode) || a.st_uid != geteuid() || a.st_nlink != 1 ||
-        (a.st_mode & 022) || a.st_size < 0 || static_cast<std::uint64_t>(a.st_size) > limit ||
-        (private_file && (a.st_mode & 077))) {
-        invalid();
-    }
-
-    std::string out;
-    char bytes[8192];
-
-    while (true) {
-        auto n = read(fd.n, bytes, sizeof bytes);
-
-        if (n < 0) {
-            invalid();
-        }
-
-        if (!n) {
-            break;
-        }
-
-        out.append(bytes, n);
-
-        if (out.size() > limit) {
-            invalid();
-        }
-    }
-
-    if (fstat(fd.n, &b) || a.st_dev != b.st_dev || a.st_ino != b.st_ino || a.st_size != b.st_size ||
-        os::modified_time(a).tv_sec != os::modified_time(b).tv_sec ||
-        os::modified_time(a).tv_nsec != os::modified_time(b).tv_nsec ||
-        os::changed_time(a).tv_sec != os::changed_time(b).tv_sec ||
-        os::changed_time(a).tv_nsec != os::changed_time(b).tv_nsec ||
-        out.size() != static_cast<std::size_t>(b.st_size)) {
-        invalid();
-    }
-
-    struct stat current{};
-
-    if (fstatat(directory.n, p.filename().c_str(), &current, AT_SYMLINK_NOFOLLOW) ||
-        current.st_dev != a.st_dev || current.st_ino != a.st_ino) {
-        invalid();
-    }
-
-    return out;
-}
-#else
 std::string read_file(const std::filesystem::path &path, std::size_t limit,
                       bool private_file = false) {
     return detail::provider_read(path, limit, private_file);
 }
-#endif
 
 void pin_definition(const Json &j) {
     keys(j, {"path", "sha256"});
@@ -157,7 +57,6 @@ void pin(const Json &j) {
     }
 }
 
-#ifdef _WIN32
 using PinLeases = std::vector<std::unique_ptr<detail::ProviderPinnedFile>>;
 
 void pin(const Json &j, PinLeases &leases) {
@@ -171,24 +70,14 @@ void pin(const Json &j, PinLeases &leases) {
 
     leases.push_back(std::move(file));
 }
-#endif
 } // namespace
 
 void ensure_provider_jobs_directory(const std::filesystem::path &jobs) {
-#ifdef _WIN32
-    detail::ProviderDirectory held(jobs, true, true);
-#else
-    if (::mkdir(jobs.c_str(), 0700) != 0 && errno != EEXIST) {
+    try {
+        detail::ProviderDirectory held(jobs, true, true);
+    } catch (const VoyemuError &) {
         throw VoyemuError("PROVIDER_JOBS", "provider job limit reached");
     }
-
-    struct stat status{};
-
-    if (::lstat(jobs.c_str(), &status) || !S_ISDIR(status.st_mode) || status.st_uid != geteuid() ||
-        (status.st_mode & 077)) {
-        throw VoyemuError("PROVIDER_JOBS", "provider job limit reached");
-    }
-#endif
 }
 
 void ProviderRegistry::load(const Json &m) {
@@ -272,16 +161,11 @@ Json ProviderRegistry::collect(const std::string &id, const ProviderContext &c, 
             return unavailable("PROVIDER_DEADLINE_OR_FENCE");
         }
 
-#ifdef _WIN32
+        // The pinned files stay held until the provider run ends where the host can hold them.
         PinLeases leases;
         const auto verify = [&](const Json &value) {
             pin(value, leases);
         };
-#else
-        const auto verify = [](const Json &value) {
-            pin(value);
-        };
-#endif
         const auto &m = found->second;
         verify(m["worker"]);
         verify(m["runtime"]);
@@ -297,25 +181,9 @@ Json ProviderRegistry::collect(const std::string &id, const ProviderContext &c, 
             invalid();
         }
 
-#ifdef _WIN32
         detail::ProviderDirectory held_jobs(jobs_, true);
-#else
-        path_check(jobs_);
-        struct stat root{};
-
-        if (lstat(jobs_.c_str(), &root) || !S_ISDIR(root.st_mode) || root.st_uid != geteuid() ||
-            (root.st_mode & 077)) {
-            invalid();
-        }
-#endif
         auto candidate = jobs_ / ("provider-" + random_token());
-#ifdef _WIN32
         detail::ProviderDirectory held_job(candidate, true, true, true);
-#else
-        if (mkdir(candidate.c_str(), 0700)) {
-            invalid();
-        }
-#endif
         job = candidate;
         auto request = job / "request.json", result = job / "result.json",
              pending = job / "request.pending";
@@ -335,33 +203,7 @@ Json ProviderRegistry::collect(const std::string &id, const ProviderContext &c, 
             invalid();
         }
 
-#ifdef _WIN32
         detail::provider_request(pending, request, bytes);
-#else
-        {
-            FD fd(open(pending.c_str(), O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC,
-                       0600));
-            std::size_t pos = 0;
-
-            while (pos < bytes.size()) {
-                auto n = write(fd.n, bytes.data() + pos, bytes.size() - pos);
-
-                if (n <= 0) {
-                    invalid();
-                }
-
-                pos += n;
-            }
-
-            if (fsync(fd.n)) {
-                invalid();
-            }
-        }
-
-        if (rename(pending.c_str(), request.c_str())) {
-            invalid();
-        }
-#endif
         auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
                                std::chrono::steady_clock::now() - start)
                                .count();
