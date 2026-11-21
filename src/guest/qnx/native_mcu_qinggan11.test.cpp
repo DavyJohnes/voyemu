@@ -2,6 +2,7 @@
 #include "adas_ecu.hpp"
 #include "model.hpp"
 #include "qnx_qinggan11_mcu_layout.hpp"
+#include <algorithm>
 #include <cassert>
 #include <chrono>
 #include <condition_variable>
@@ -16,7 +17,7 @@ using u64 = unsigned long long;
 using usize = unsigned long;
 static Qinggan11McuField qinggan11_fields[579];
 static unsigned qinggan11_calibration_fixture = 0, qinggan11_calibration_fixture_enabled = 0;
-static unsigned qinggan11_projected_fields = 462, qinggan11_settings_feedback_enabled = 1;
+static unsigned qinggan11_projected_fields = 0, qinggan11_settings_feedback_enabled = 1;
 #define QGFX_QINGGAN11_LAYOUT_DEFINED 1
 #include "mcu_catalog.inc"
 static u32 normal[579];
@@ -148,7 +149,8 @@ static u64 call(u32 op, const u64 *args, unsigned count, const void *, unsigned)
     storage = {};
 
     if (op == 364) {
-        assert(args[0] == qinggan11_ack && args[1] == 650 && args[2] == 736 && args[3] == 462);
+        assert(args[0] == qinggan11_ack && args[1] == 650 && args[2] == 736 &&
+               args[3] == qinggan11_projected_fields);
         u32 values[581] = {1, 579};
         std::memcpy(values + 2, normal, sizeof normal);
 
@@ -249,6 +251,9 @@ static unsigned field(const unsigned char *out, unsigned position) {
 int main(int argc, char **argv) {
     try {
         assert(argc == 2);
+        qinggan11_projected_fields =
+                voyemu::qnx_adapter(voyemu::QnxGuestAdapter::sa8155_qinggan11_731)
+                        .mcu_projected_fields;
         const auto root = std::filesystem::canonical(argv[1]);
         const auto source = voyemu::read_private_json(
                 root / "src/guest/qnx/native_mcu_qinggan11.json", 256 * 1024);
@@ -274,7 +279,7 @@ int main(int argc, char **argv) {
 
         assert(adapter_profiles > 0);
         const auto generated = voyemu::qnx_qinggan11_mcu_layout(source);
-        assert(generated.find("{1228,8,0U}") != std::string::npos);
+        assert(generated.find("{1228,8,0U,0U,0U}") != std::string::npos);
         const auto initial = voyemu::initial_state().at("raw_oem");
         const auto &catalog = voyemu::catalog();
         unsigned mapped = 0;
@@ -292,12 +297,13 @@ int main(int argc, char **argv) {
         }
 
         assert(qinggan11_fields[52].bit == 110 && qinggan11_fields[52].width == 3);
-        assert(mapped == 462 && qinggan11_fields[310].bit == 1228 &&
+        assert(mapped == qinggan11_projected_fields && qinggan11_fields[310].bit == 1228 &&
                qinggan11_fields[358].bit == 1383 && qinggan11_fields[312].bit == 1243);
         assert(qinggan11_fields[104].bit == 185 && qinggan11_fields[105].bit == 186 &&
                qinggan11_fields[106].bit == 187 && qinggan11_fields[107].bit == 188);
+        // All ten wheel signals have wire bits, the photo and night vision ones included.
         assert(qinggan11_fields[322].bit == 1286 && qinggan11_fields[327].bit == 1291 &&
-               !qinggan11_fields[321].width && !qinggan11_fields[328].width);
+               qinggan11_fields[321].bit == 1285 && qinggan11_fields[328].bit == 1292);
         // OEM parser case 53 writes the input value to lightitems output bit 109.
         unsigned char adjacent[650] = {};
 
@@ -393,7 +399,7 @@ int main(int argc, char **argv) {
             assert(dataParser_makedumydata(out, 650) == 650 && qinggan11_wheel_ack == 11 &&
                    field(out, 322) == 0);
             wheel_sequence = 12;
-            wheel_index = 322;
+            wheel_index = 332;
             wheel_value = 1;
             assert(dataParser_makedumydata(out, 650) == 650 && qinggan11_wheel_ack == 11);
             normal[310] = normal[358] = normal[104] = 0;
@@ -728,9 +734,71 @@ int main(int argc, char **argv) {
             assert(dataParser_makedumydata(frame, 650) == 650 && qinggan11_ack == 2);
         }
 
-        // AdasEcu acc and cancel write acc_mode, mpc_icaSts, mrr_vSetDis and time_gap_set, which
-        // this layout does not project. The guest rejects the logical revision as a whole, and
-        // the host state for the guest carries their initial values and the new speed.
+        // Fields that reach the OEM ADAS, APA/PDC and power manager items or that no parser case of
+        // this firmware reads; start bits and widths from the OEM 7.3.1 parser descriptors.
+        {
+            struct Case {
+                std::string_view name;
+                unsigned bit, width, value;
+            };
+            auto packed = [](const unsigned char *frame, unsigned bit, unsigned width) {
+                unsigned value = 0;
+
+                for (unsigned i = 0; i < width; ++i) {
+                    value |= unsigned((frame[(bit + i) / 8] >> ((bit + i) % 8)) & 1U) << i;
+                }
+
+                return value;
+            };
+
+            for (const Case &signal : std::initializer_list<Case>{
+                         {"gsm_warnInformation_bak", 205, 2, 3},
+                         {"can_v1_5_bcm_tpmsLFSts", 227, 3, 5},
+                         {"can_v1_5_bcm_tpmsRFSts", 246, 3, 5},
+                         {"can_v1_5_bcm_tpmsLRSts", 265, 3, 5},
+                         {"can_v1_5_bcm_tpmsRRSts", 284, 3, 5},
+                         {"tbox_vehicleMode", 1449, 4, 11},
+                         {"apa_WarningReq", 1527, 1, 1},
+                         {"APA_PDCSysSts", 1528, 2, 3},
+                         {"APA_PDCFailureWarning", 1530, 1, 1},
+                         {"APA_PDCAudibleFrontBeepRate", 1531, 3, 5},
+                         {"APA_PDCAudibleRearBeepRate", 1534, 3, 5},
+                         {"pdc_sysSts", 1537, 2, 3},
+                         {"pdc_failureWarning", 1539, 1, 1},
+                         {"pdc_audibleFrontBeepRate", 1540, 3, 5},
+                         {"pdc_audibleRearBeepRate", 1543, 3, 5},
+                         {"apa_AbortWarningReq", 1598, 1, 1},
+                         {"apa_ActiveWarningReq", 1599, 1, 1},
+                         {"cfg_reserve_14", 2192, 8, 171},
+                         {"acc_mode", 80, 3, 2},
+                         {"mpc_icaSts", 83, 3, 2},
+                         {"mpc_isa_speed_limit", 96, 6, 12},
+                         {"mpc_isaOnOffSts", 102, 2, 1},
+                         {"isa_limit_warning", 104, 1, 1},
+                         {"left_visualization", 455, 2, 2},
+                         {"right_visualization", 457, 2, 2},
+                         {"time_gap_set", 692, 3, 3},
+                         {"SeatBeatFlash", 1548, 1, 1},
+                 }) {
+                const auto at = std::find_if(catalog.begin(), catalog.end(), [&](const auto &f) {
+                    return f.name == signal.name;
+                });
+                assert(at != catalog.end());
+                const auto position = static_cast<unsigned>(at - catalog.begin());
+                const auto previous = normal[position];
+                normal[position] = signal.value;
+                reset();
+                unsigned char frame[650];
+                assert(dataParser_makedumydata(frame, 650) == 650 && qinggan11_ack == offered &&
+                       packed(frame, signal.bit, signal.width) == signal.value);
+                normal[position] = previous;
+            }
+        }
+
+        // AdasEcu acc and cancel write acc_mode, mpc_icaSts and time_gap_set, which reach their OEM
+        // ADAS items, and mrr_vSetDis, which this layout does not project. The guest rejects the
+        // logical revision as a whole, and the host state for the guest carries the initial
+        // mrr_vSetDis beside the new speed and the ADAS states.
         {
             auto state = voyemu::apply_patch(voyemu::initial_state(),
                                              {{"speed", 80}, {"gear", 3}, {"gear_valid", 1}});
@@ -765,8 +833,8 @@ int main(int argc, char **argv) {
             };
             assert(!deliver(raw) && qinggan11_rejects == 1);
             const auto guest = voyemu::qnx_qinggan11_guest_state(source, raw);
-            assert(guest.at("acc_mode") == 0 && guest.at("mpc_icaSts") == 0 &&
-                   guest.at("mrr_vSetDis") == 0 && guest.at("time_gap_set") == 0 &&
+            assert(guest.at("acc_mode") == 0 && guest.at("mpc_icaSts") == 1 &&
+                   guest.at("mrr_vSetDis") == 0 && guest.at("time_gap_set") == 1 &&
                    guest.at("ivi_languageSet") == raw.at("ivi_languageSet"));
             assert(deliver(guest) && !qinggan11_rejects);
 
@@ -792,7 +860,7 @@ int main(int argc, char **argv) {
         }
 
         std::cout
-                << "qinggan11 adapter genuine650 projection, 462 named fields, original-bit preservation, vehicle/wheel ACK/error guards passed\n";
+                << "qinggan11 adapter genuine650 projection, named fields, original-bit preservation, vehicle/wheel ACK/error guards passed\n";
 
         return 0;
     } catch (const std::exception &e) {

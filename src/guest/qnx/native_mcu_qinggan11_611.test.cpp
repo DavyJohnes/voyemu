@@ -670,9 +670,46 @@ int main(int argc, char **argv) {
         // The language of the model reaches the MCU word of the OEM cluster beside its mcd command.
         deliver_cases({{"ivi_languageSet", 1283, 2, 1}});
 
-        // AdasEcu acc and cancel and the lane departure lamp write fields that this layout does not
-        // project. The guest rejects the logical revision as a whole, and the host
-        // state for the guest carries their initial values and the new speed.
+        // Fields that reach the OEM ADAS, APA/PDC and power manager items or that no parser case of
+        // this firmware reads.
+        deliver_cases({
+                {"gsm_warnInformation_bak", 205, 2, 3},
+                {"can_v1_5_bcm_tpmsLFSts", 227, 3, 5},
+                {"can_v1_5_bcm_tpmsRFSts", 246, 3, 5},
+                {"can_v1_5_bcm_tpmsLRSts", 265, 3, 5},
+                {"can_v1_5_bcm_tpmsRRSts", 284, 3, 5},
+                {"tbox_vehicleMode", 1449, 4, 11},
+                {"apa_WarningReq", 1527, 1, 1},
+                {"APA_PDCSysSts", 1528, 2, 3},
+                {"APA_PDCFailureWarning", 1530, 1, 1},
+                {"APA_PDCAudibleFrontBeepRate", 1531, 3, 5},
+                {"APA_PDCAudibleRearBeepRate", 1534, 3, 5},
+                {"pdc_sysSts", 1537, 2, 3},
+                {"pdc_failureWarning", 1539, 1, 1},
+                {"pdc_audibleFrontBeepRate", 1540, 3, 5},
+                {"pdc_audibleRearBeepRate", 1543, 3, 5},
+                {"apa_AbortWarningReq", 1598, 1, 1},
+                {"apa_ActiveWarningReq", 1599, 1, 1},
+                {"cfg_reserve_14", 2192, 8, 171},
+                {"acc_mode", 80, 3, 2},
+                {"mpc_icaSts", 83, 3, 2},
+                {"mpc_isa_speed_limit", 96, 6, 12},
+                {"mpc_isaOnOffSts", 102, 2, 1},
+                {"isa_limit_warning", 104, 1, 1},
+                {"left_visualization", 455, 2, 2},
+                {"right_visualization", 457, 2, 2},
+                {"time_gap_set", 692, 3, 3},
+                {"SeatBeatFlash", 1548, 1, 1},
+        });
+        // All ten wheel signals have wire bits for the wheel phases.
+        for (unsigned index = 322; index <= 331; ++index) {
+            assert(qinggan11_mcu_wheel_supported(qinggan11_fields, index, 1));
+        }
+
+        // AdasEcu acc and cancel write acc_mode, mpc_icaSts and time_gap_set, which reach their OEM
+        // ADAS items; mrr_vSetDis and the lane departure lamp stay outside this layout. The guest
+        // rejects the logical revision as a whole, and the host state for the guest carries the
+        // initial values of the two beside the new speed and the ADAS states.
         {
             auto state = voyemu::apply_patch(voyemu::initial_state(),
                                              {{"speed", 80}, {"gear", 3}, {"gear_valid", 1}});
@@ -707,13 +744,10 @@ int main(int argc, char **argv) {
             const auto rejects = qinggan11_rejects;
             assert(!deliver(raw) && qinggan11_rejects == rejects + 1);
             const auto guest = voyemu::qnx_qinggan11_guest_state(source, raw);
-
-            for (const auto *name :
-                 {"acc_mode", "mpc_icaSts", "mrr_vSetDis", "time_gap_set", "ldws_lamp"}) {
-                assert(guest.at(name) == 0);
-            }
-
-            assert(deliver(guest) && qinggan11_rejects == rejects + 1);
+            assert(guest.at("mrr_vSetDis") == 0 && guest.at("ldws_lamp") == 0 &&
+                   guest.at("mpc_icaSts") == 1 && guest.at("time_gap_set") == 1);
+            assert(deliver(guest) && qinggan11_rejects == rejects + 1 && packed(83, 3) == 1 &&
+                   packed(692, 3) == 1);
 
             for (unsigned i = 0; i < 579; i++) {
                 normal[i] = initial.at(fields[i].name).get<unsigned>();
@@ -761,12 +795,16 @@ int main(int argc, char **argv) {
         wrong = source;
         wrong["fields"][286]["wire"]["unknown"]["wire"] = 4095;
         reject(wrong);
-        // A row that names its engine item states the case and the output bits it writes.
+        // A row that names its engine item states the case and the output bits it writes; a row
+        // without one states neither.
         wrong = source;
         wrong["fields"][37]["wire"].erase("output_width");
         reject(wrong);
         wrong = source;
         wrong["fields"][37]["wire"]["oem_name"] = "ready_lamp";
+        reject(wrong);
+        wrong = source;
+        wrong["fields"][120]["wire"]["case_address"] = "0x0";
         reject(wrong);
         bool old_scope_rejected = false;
         try {

@@ -39,8 +39,10 @@ int main() try {
     const auto qinggan11_731 = cluster(
             {{"hardware_adapter", "sa8155-qinggan11-731"},
              {"mcu_projection", qnx_mcu_projection(QnxGuestAdapter::sa8155_qinggan11_731)}});
-    check(qinggan11_731.size() == 462 && qinggan11_731.contains("speed") &&
-                  qinggan11_731.contains("epb_parking") && !qinggan11_731.contains("acc_mode"),
+    check(qinggan11_731.size() ==
+                          qnx_adapter(QnxGuestAdapter::sa8155_qinggan11_731).mcu_projected_fields &&
+                  qinggan11_731.contains("speed") && qinggan11_731.contains("epb_parking") &&
+                  qinggan11_731.contains("acc_mode") && !qinggan11_731.contains("mrr_vSetDis"),
           "qinggan11 7.3.1 delivers the fields of its MCU layout");
     const auto qinggan11_611 = cluster(
             {{"hardware_adapter", "sa8155-qinggan11-611"},
@@ -48,8 +50,9 @@ int main() try {
     check(qinggan11_611.size() ==
                           qnx_adapter(QnxGuestAdapter::sa8155_qinggan11_611).mcu_projected_fields &&
                   qinggan11_611.contains("remain_mileage_e") &&
-                  qinggan11_611.contains("mrr_fcwSts") && !qinggan11_611.contains("acc_mode") &&
-                  qinggan11_611.contains("ivi_languageSet"),
+                  qinggan11_611.contains("mrr_fcwSts") && qinggan11_611.contains("acc_mode") &&
+                  qinggan11_611.contains("ivi_languageSet") &&
+                  !qinggan11_611.contains("mrr_vSetDis"),
           "qinggan11 6.11.1 delivers the fields of its MCU layout");
     check(cluster({{"hardware_adapter", "sa8155-qinggan11-611"},
                    {"mcu_projection",

@@ -167,7 +167,7 @@ int main() try {
     const auto projection = qnx_mcu_projection(QnxGuestAdapter::sa8155_qinggan11_731);
     Json delivery = {{"vehicle",
                       {{"status", "guest_acknowledged"},
-                       {"fields", 462},
+                       {"fields", projection.at("projected_fields")},
                        {"source_sequence", 2},
                        {"full_wire_verified", false},
                        {"mcu_projection", projection}}},
@@ -231,7 +231,8 @@ int main() try {
     missing["vehicle"].erase("mcu_projection");
     assert(!qnx_qinggan11_post_ack_frame(missing, owner, owner, 101, 2, projection));
     auto wrong = delivery;
-    wrong["vehicle"]["mcu_projection"]["projected_fields"] = 462.0;
+    wrong["vehicle"]["mcu_projection"]["projected_fields"] =
+            double(projection.at("projected_fields").get<unsigned>());
     assert(!qnx_qinggan11_post_ack_frame(wrong, owner, owner, 101, 2, projection));
     wrong = delivery;
     wrong["vehicle"]["fields"] = 579;

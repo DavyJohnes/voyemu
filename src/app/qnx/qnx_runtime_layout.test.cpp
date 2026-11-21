@@ -326,7 +326,8 @@ int main() try {
     }
 
     auto fractional = metadata;
-    fractional["mcu_projection"]["projected_fields"] = 462.0;
+    fractional["mcu_projection"]["projected_fields"] =
+            double(metadata.at("mcu_projection").at("projected_fields").get<unsigned>());
     rejects([&] {
         qnx_runtime_layout(qinggan11_profile, fractional);
     });

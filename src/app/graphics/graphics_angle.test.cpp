@@ -657,12 +657,13 @@ static void qinggan11_unprojected_fields(const std::filesystem::path &parent,
         std::memcpy(values, reply.payload.data(), sizeof values);
         // Both qinggan11 layouts carry the language of the model in the MCU word.
         assert(values[2 + 320] == language);
-
-        // Signals outside the MCU layout, the AdasEcu ones included, reach the guest with their
-        // initial values, and the projected speed passes.
-        for (const unsigned position : {6U, 43U, 44U, 224U, 225U}) {
+        // Signals outside the MCU layout, mrr_vSetDis of AdasEcu included, reach the guest with
+        // their initial values; the projected ADAS states and speed pass.
+        for (const unsigned position : {6U, 224U}) {
             assert(values[2 + position] == 0);
         }
+
+        assert(values[2 + 43] == 3 && values[2 + 44] == 1 && values[2 + 225] == 1);
 
         assert(values[2 + 310] == 80 && values[2 + 358] == 800);
         assert(read_private_json(directory / "vehicle-state.json") == state);
