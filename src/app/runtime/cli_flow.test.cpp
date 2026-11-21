@@ -1721,6 +1721,7 @@ int main(int argc, char **argv) try {
             require(std::find(audible.begin(), audible.end(), Json("-no-audio")) == audible.end(),
                     "normal native presentation disabled prepared audio");
 #ifndef _WIN32
+            const auto free_launch = android;
             android["api"] = 30;
             android["reference_profile"] = "synthetic-passion";
             android["platform"] = "passion";
@@ -1764,6 +1765,14 @@ int main(int argc, char **argv) try {
                     "Passion background presentation did not retain the native cockpit without focus");
             android.erase("presentation_adapter");
             android.erase("reference_profile");
+            // The Free probe returns to the platform and board of the qinggan09 machine.
+            for (const auto *key : {"platform", "board"}) {
+                if (free_launch.contains(key)) {
+                    android[key] = free_launch.at(key);
+                } else {
+                    android.erase(key);
+                }
+            }
             android["home"] = {
                     {"package", "com.qinggan.app.launcher"},
                     {"component",
