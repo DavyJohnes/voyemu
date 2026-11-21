@@ -9,6 +9,7 @@
 #include "os/platform.hpp"
 #include "process.hpp"
 #include "project_files.hpp"
+#include "qnx_adapter.hpp"
 #include "qnx_originals_directory.hpp"
 #include "qnx_qinggan11.hpp"
 #include "qnx_update_import.hpp"
@@ -164,15 +165,30 @@ Json materialize_qnx_originals(const std::filesystem::path &root, std::string_vi
     const auto *adapter = adapter_name.empty() ? nullptr : &qnx_adapter(adapter_name);
 
     if (adapter && adapter->platform == QnxGuestPlatform::passion) {
-        const Json expected_originals = Json::parse(std::string(R"PASSION({"mifs_hyp_la.img":{"file":"mifs_hyp_la.img","bytes":2254664,"sha256":"1e7c487aae4f4353621f8d0301b352cc974e9037d114ff3ec2556d048512ad28","acquisition":{"kind":"raw-tar-member","member":"otaPack/mifs_hyp_la.img"}},"mifs_recovery_hyp_la.img":{"file":"mifs_recovery_hyp_la.img","bytes":2330096,"sha256":"8376e6340f719d8a4b6e572fee7a675dd7bd6e88e14c589ba2eba27ee60c239b","acquisition":{"kind":"raw-tar-member","member":"otaPack/mifs_recovery_hyp_la.img"}},"ifs2_la.img":{"file":"ifs2_la.img","bytes":200925932,"sha256":"1e942ab83e59ab78ff0096f474d3677ba7e83f6a00f86a1ebe9f0ae755a3e157","acquisition":{"kind":"raw-tar-member","member":"otaPack/ifs2_la.img"}},"ifs2_recovery_la.img":{"file":"ifs2_recovery_la.img","bytes":32080412,"sha256":"1635c921b73544411a08028005b906e677d029c047d2a6e0a041598c9847709c","acquisition":{"kind":"raw-tar-member","member":"otaPack/ifs2_recovery_la.img"}},"system_la.img":{"file":"system_la.img","bytes":2684354560,"sha256":"9e6395255f9bc51d926fd5ab604612d779de93da59ba71832ee580c8534f42ec","acquisition":{"kind":"raw-tar-member","member":"otaPack/system_la.img"}}})PASSION")),
-                   expected_update = Json::parse(std::string(
-                           R"PASSION({"source":"owner-update","container":"zip-stored-tgz","sha256":"a1b651223453ed23d1835a70a5cac64c43247a21165ccd88d56a21cc3215ddb9","nested_member":"h53y-cdc-8155-H53_8155_OTA_1.4.0_release-soc_ota-user-secure-2.1.4.80-20260403174306.tgz","nested_sha256":"00d41ae4ff1283040e97276d3b287daf381b2ee9843a7b0f3977ec5b7a06eae4"})PASSION"));
+        // The five owner-update roles come from the profile; the host image is the one the
+        // Passion adapter is built for.
+        const auto originals = config.value("originals", Json{});
+        const auto update = config.value("update", Json{});
+        bool roles = originals.is_object() && originals.size() == 5;
 
-        if (!config.contains("schema") || config.at("schema") != 1 || !config.contains("status") ||
-            config.at("status") != "incomplete" || !config.contains("hardware_adapter") ||
-            config.at("hardware_adapter") != "sa8155-passion-21480" ||
-            !config.contains("originals") || config.at("originals") != expected_originals ||
-            !config.contains("update") || config.at("update") != expected_update) {
+        for (const auto *role : {"mifs_hyp_la.img", "mifs_recovery_hyp_la.img", "ifs2_la.img",
+                                 "ifs2_recovery_la.img", "system_la.img"}) {
+            const auto entry = roles ? originals.value(role, Json{}) : Json{};
+            roles = roles && entry.is_object() && entry.value("file", Json{}) == role &&
+                    entry.value("bytes", Json{}).is_number_unsigned() &&
+                    entry.value("sha256", Json{}).is_string() &&
+                    sha(entry.at("sha256").get<std::string>());
+        }
+
+        if (config.value("schema", 0) != 1 || config.value("status", Json{}) != "incomplete" ||
+            config.value("hardware_adapter", Json{}) != "sa8155-passion-21480" || !roles ||
+            originals.at("mifs_hyp_la.img").at("sha256") !=
+                    std::string(qnx_adapter(QnxGuestAdapter::sa8155_passion_21480).hyp_sha256) ||
+            originals.at("mifs_hyp_la.img").at("bytes") !=
+                    qnx_adapter(QnxGuestAdapter::sa8155_passion_21480).hyp_bytes ||
+            !update.is_object() || update.value("source", Json{}) != "owner-update" ||
+            !update.value("sha256", Json{}).is_string() ||
+            !sha(update.at("sha256").get<std::string>())) {
             throw VoyemuError(
                     "QNX_ORIGINALS_PROFILE",
                     "exact incomplete Passion owner-update five-role descriptor required");
@@ -181,7 +197,7 @@ Json materialize_qnx_originals(const std::filesystem::path &root, std::string_vi
         const auto definition_pin = sha256_file(definition);
         Json epochs = Json::object();
 
-        for (auto it = expected_originals.begin(); it != expected_originals.end(); ++it) {
+        for (auto it = originals.begin(); it != originals.end(); ++it) {
             const auto file = root / ".local/profiles" / std::string(profile) / "qnx" / it.key();
             ordinary_qnx(file);
 

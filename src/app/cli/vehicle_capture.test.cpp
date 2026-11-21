@@ -245,7 +245,27 @@ int main(int argc, char **argv) {
                                      passion_error);
         }
 
-        for (unsigned variant = 0; variant < 5; ++variant) {
+        // The descriptor is read from the profile: other bytes and pins of a non-host role are
+        // the profile's own data and reach the cache check.
+        auto edited = passion;
+        edited["originals"]["system_la.img"]["bytes"] = 4096;
+        edited["originals"]["system_la.img"]["sha256"] = std::string(64, 'b');
+        edited["update"]["sha256"] = std::string(64, 'c');
+        write_private_json(passion_directory / "profile-qnx.json", edited);
+        passion_missing = false;
+        try {
+            materialize_qnx_originals(root, passion_id, {}, true);
+        } catch (const std::exception &error) {
+            passion_error = error.what();
+            passion_missing = passion_error.starts_with("QNX_ORIGINALS_MISSING:");
+        }
+
+        if (!passion_missing) {
+            throw std::runtime_error("Passion descriptor was compared with a copy in code: " +
+                                     passion_error);
+        }
+
+        for (unsigned variant = 0; variant < 6; ++variant) {
             auto bad = passion;
 
             if (variant == 0) {
@@ -261,11 +281,15 @@ int main(int argc, char **argv) {
             }
 
             if (variant == 3) {
-                bad["originals"].begin().value()["sha256"] = std::string(64, '0');
+                bad["originals"]["mifs_hyp_la.img"]["sha256"] = std::string(64, '0');
             }
 
             if (variant == 4) {
-                bad["update"]["sha256"] = std::string(64, '0');
+                bad["update"]["sha256"] = "update";
+            }
+
+            if (variant == 5) {
+                bad["originals"]["ifs2_la.img"]["file"] = "system_la.img";
             }
 
             write_private_json(passion_directory / "profile-qnx.json", bad);
