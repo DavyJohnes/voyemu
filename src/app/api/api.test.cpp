@@ -30,6 +30,8 @@
 #define NOMINMAX
 #include <windows.h>
 #include <wincodec.h>
+
+#include "private_state_security.hpp"
 #else
 #include <CoreGraphics/CoreGraphics.h>
 #include <ImageIO/ImageIO.h>
@@ -3651,6 +3653,16 @@ int main(int argc, char **argv) try {
     }
     {
         const auto descriptor = directory / "pid_123.ini";
+#ifdef _WIN32
+        // An elevated Windows process creates files owned by Administrators, and the SDK
+        // descriptor must be owned by the current user.
+        {
+            detail::PrivateStateSecurity security;
+            HANDLE owned = CreateFileW(descriptor.c_str(), GENERIC_WRITE, 0, &security.attributes,
+                                       CREATE_NEW, FILE_ATTRIBUTE_NORMAL, nullptr);
+            assert(owned != INVALID_HANDLE_VALUE && CloseHandle(owned));
+        }
+#endif
         {
             std::ofstream file(descriptor);
             file << "grpc.port=35554\nport.serial=5554\ngrpc.token=private-fixture-bearer\n";
