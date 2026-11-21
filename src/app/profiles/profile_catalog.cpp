@@ -1,9 +1,9 @@
 #include "profile_catalog.hpp"
+#include "embedded_data.hpp"
 #include "error.hpp"
 #include "file_patch.hpp"
 #include "qinggan11_startup.hpp"
 #include <functional>
-#include <iterator>
 #include <map>
 #include <stdexcept>
 namespace voyemu {
@@ -11,8 +11,8 @@ namespace voyemu {
 
 const Json &embedded_profile_catalog() {
     static const Json catalog = [] {
-        auto parsed = Json::parse(std::begin(embedded_catalog_json),
-                                  std::end(embedded_catalog_json));
+        auto parsed =
+                Json::parse(inflate_embedded(embedded_catalog_json, embedded_catalog_json_size));
 
         for (const auto &record : parsed) {
             const auto &definition = record.at("definition");

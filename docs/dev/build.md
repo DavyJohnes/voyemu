@@ -31,6 +31,8 @@ Release compiles every target with `-Os`, the pinned third-party sources include
 
 Sources that touch every pixel or byte of a frame compile with `-O2`. `voyemu_frame_path_sources` lists the QNX frame conversion, the graphics worker, the Android frame stream, the PNG decoder of the window, the boot animation and the startup videos; the SDL3 sources of stb_image, surfaces, pixel formats and blitters follow them. Every source on the per-frame path of the window belongs to this list. Link-time optimization stays off; the reasons are in [size-optimized Release](../why/size-optimized-release.md).
 
+The data that the launcher embeds, the profile catalog, the project files of `src/app/project_files.cmake` and the fonts and images of the window, is stored as raw deflate streams that `src/app/embedded_deflate.cmake` writes with the deflate of CMake; the launcher inflates each with miniz on first use.
+
 ## Options
 
 | Option | Default | Effect |

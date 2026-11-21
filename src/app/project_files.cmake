@@ -1,6 +1,6 @@
 # Project files whose content deps, fetch, build and check read. An installation without src/ reads
 # the copies that project_files.inc embeds in the launcher; a source checkout reads its tree.
-# Included, it registers the build step; with -P it writes project_files.inc.
+# Included, it registers the build step; with -P it writes project_files.inc with the files deflated.
 set(voyemu_project_files
     src/app/android-wheel-routes.json
     src/app/toolchain.json
@@ -15,15 +15,14 @@ set(voyemu_project_files
     src/prepare/toolchain.json)
 if(CMAKE_SCRIPT_MODE_FILE)
     cmake_policy(VERSION 3.22)
+    include("${CMAKE_CURRENT_LIST_DIR}/embedded_deflate.cmake")
     set(voyemu_contents "")
     set(voyemu_entries "static constexpr EmbeddedProjectFile embedded_project_files[]={\n")
     set(voyemu_index 0)
     foreach(name IN LISTS voyemu_project_files)
         set(path "${VOYEMU_PROJECT_ROOT}/${name}")
-        file(SIZE "${path}" bytes)
-        file(READ "${path}" hex HEX)
-        string(REGEX REPLACE "(..)" "0x\\1," hex "${hex}")
-        string(APPEND voyemu_contents "static constexpr unsigned char project_file_${voyemu_index}[]={${hex}0};\n")
+        voyemu_deflate_initializer("${path}" "${VOYEMU_PROJECT_FILE_OUTPUT}.gz" hex bytes)
+        string(APPEND voyemu_contents "static constexpr unsigned char project_file_${voyemu_index}[]={${hex}};\n")
         string(APPEND voyemu_entries "{\"${name}\",${bytes},project_file_${voyemu_index}},\n")
         math(EXPR voyemu_index "${voyemu_index} + 1")
     endforeach()
@@ -37,5 +36,5 @@ add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/project_files.inc"
     COMMAND "${CMAKE_COMMAND}" "-DVOYEMU_PROJECT_ROOT=${voyemu_project_root_directory}"
         "-DVOYEMU_PROJECT_FILE_OUTPUT=${CMAKE_CURRENT_BINARY_DIR}/project_files.inc"
         -P "${CMAKE_CURRENT_SOURCE_DIR}/project_files.cmake"
-    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/project_files.cmake" ${voyemu_project_paths}
+    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/project_files.cmake" "${CMAKE_CURRENT_SOURCE_DIR}/embedded_deflate.cmake" ${voyemu_project_paths}
     COMMENT "Embedding the project files" VERBATIM)

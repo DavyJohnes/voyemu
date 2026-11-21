@@ -1,4 +1,5 @@
 #include "project_files.hpp"
+#include "embedded_data.hpp"
 #include "error.hpp"
 #include "process.hpp"
 #include <algorithm>
@@ -9,7 +10,7 @@ namespace {
 struct EmbeddedProjectFile {
     std::string_view name;
     std::uint64_t bytes;
-    const unsigned char *content;
+    std::span<const unsigned char> deflated;
 };
 #include "project_files.inc"
 
@@ -76,7 +77,7 @@ std::string project_file_bytes(const std::filesystem::path &root, std::string_vi
                           "embedded project file exceeds its bound: " + std::string(name));
     }
 
-    return {reinterpret_cast<const char *>(file.content), static_cast<std::size_t>(file.bytes)};
+    return inflate_embedded(file.deflated, static_cast<std::size_t>(file.bytes));
 }
 
 Json project_file_json(const std::filesystem::path &root, std::string_view name,
@@ -96,8 +97,7 @@ Json embedded_project_file_json(std::string_view name, std::uint64_t maximum) {
                           "embedded project file exceeds its bound: " + std::string(name));
     }
 
-    return Json::parse(reinterpret_cast<const char *>(file.content),
-                       reinterpret_cast<const char *>(file.content) + file.bytes);
+    return Json::parse(inflate_embedded(file.deflated, static_cast<std::size_t>(file.bytes)));
 }
 
 std::vector<ProjectFile> project_directory_files(const std::filesystem::path &root,

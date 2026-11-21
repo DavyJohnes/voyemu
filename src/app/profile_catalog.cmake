@@ -38,7 +38,8 @@ if(NOT voyemu_profile_files)
     message(FATAL_ERROR "At least one source profile required")
 endif()
 string(APPEND voyemu_catalog "]")
-# Byte initializers avoid compiler string-literal limits and preserve UTF-8 verbatim.
-string(HEX "${voyemu_catalog}" voyemu_catalog_hex)
-string(REGEX REPLACE "(..)" "0x\\1," voyemu_catalog_bytes "${voyemu_catalog_hex}")
-file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/profile_catalog.inc" "static constexpr unsigned char embedded_catalog_json[]={${voyemu_catalog_bytes}};\n")
+# The catalog is embedded deflated; byte initializers avoid compiler string-literal limits.
+include("${CMAKE_CURRENT_LIST_DIR}/embedded_deflate.cmake")
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/profile_catalog.json" "${voyemu_catalog}")
+voyemu_deflate_initializer("${CMAKE_CURRENT_BINARY_DIR}/profile_catalog.json" "${CMAKE_CURRENT_BINARY_DIR}/profile_catalog.json.gz" voyemu_catalog_bytes voyemu_catalog_size)
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/profile_catalog.inc" "static constexpr unsigned char embedded_catalog_json[]={${voyemu_catalog_bytes}};\nstatic constexpr std::size_t embedded_catalog_json_size=${voyemu_catalog_size};\n")
