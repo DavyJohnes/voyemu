@@ -2,9 +2,21 @@
 
 English | [Русский](CHANGELOG.ru.md) | [README](README.md)
 
-## 1.0.0-beta2 — 2026-11-18
+## 1.0.0-beta2
 
-Windows x64 prerelease. This release includes the Windows archive and fixes for Windows storage checks, Android Quick Boot and native CI. Windows machines now run the QNX cluster: `deps` installs the CI-built QNX engine of Windows from its pinned release asset, as on macOS and Linux. `deps` and the downloads of `fetch` and `build` now report each download with its size, progress, rate and remaining time, each extraction and each step already installed, in the language of the command output; a disk space error names the free and required space, how much to free and the installation root, and `deps` and `fetch` keep 2 GiB free instead of 20 GiB. The known issues from beta1 still apply.
+Unreleased prerelease. It fixes Windows storage checks, Android Quick Boot and native CI. The known issues from beta1 still apply.
+
+- Profiles: Free Sport+ 2026-03-18 RC1 (`free-11-russian-20260318-rc1`), experimental, with multimedia and cluster from a Russian partition snapshot.
+- QNX cluster on Windows: `deps` installs the QNX engine of Windows, built in CI from the patched QEMU source, from its pinned release asset, as on macOS and Linux.
+- Console of `deps`, `fetch` and `build`: phases, each download with its size, progress, rate and remaining time, each extraction and each step already installed, in the language of the command output; `build` ends with its time and the command that starts the machine. A failed download names its cause. A disk space error names the free and required space, how much to free and the installation root, and `deps` and `fetch` keep 2 GiB free instead of 20 GiB.
+- Command log: every command except `check`, `list` and `status` writes its records to `.local/build/logs/<command>-<time>.log`, and the newest 20 logs stay; a failed or interrupted command names its log. `--verbose` on `deps`, `fetch`, `build`, `start` and `restart` also prints the records on `stderr`.
+- Ctrl+C stops `deps`, `fetch`, `build` and `start`, removes partial downloads and temporary files and exits with code `130`; an interrupted `start` stops the session it started.
+- Paths in CLI options may be relative, start with `~/` and contain symbolic links.
+- `build` refuses an existing machine. For profiles that support it, `build --force` updates the Android system of an existing stopped machine and keeps its writable disks.
+- Preparation and installation locks are OS file locks that the system releases when the process exits, so a killed `build` no longer blocks the next one.
+- Window: Voyemu draws the toggles, the selected radio option and the light panel background itself instead of using OEM textures; the gear, scale and language radios are as high as the input fields.
+- Errors: a failure without its own code reports `FILESYSTEM` with the operation, the path and the reason given by the system, or `SYSTEM` or `JSON` with its reason, instead of `INTERNAL_ERROR`.
+- There is no default profile: `deps` without a profile installs only the tools, and `deps` and `build` reject an unknown profile.
 
 ## 1.0.0-beta1 — 2026-11-18
 
