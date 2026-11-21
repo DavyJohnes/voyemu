@@ -52,8 +52,9 @@ inline void qnx_capture_journal(const std::filesystem::path &root, std::string_v
 }
 
 inline Json qnx_capture_initial_state(const Json &profile) {
-    const auto state = select_vehicle_startup(VehicleStartup::fresh, profile.at("initial_state"),
-                                              nullptr);
+    const auto state = select_vehicle_startup(
+            VehicleStartup::fresh, vehicle_catalog(profile.at("platform").get<std::string>()),
+            profile.at("initial_state"), nullptr);
 
     if (state.at("raw_oem").at("speed") != 0 || state.at("raw_oem").at("gear") != 0) {
         throw std::runtime_error("QNX_CAPTURE_SEED: neutral profile defaults required");

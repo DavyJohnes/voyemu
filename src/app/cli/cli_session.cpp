@@ -343,33 +343,33 @@ void wait_stopped_epoch(const Arguments &args, const voyemu::Json &reply, bool f
                       "own stopped epoch still holds supervisor lock");
 }
 
-voyemu::Json profile_startup_values(const Arguments &args) {
-    if (args.profile != voyemu::qinggan11_731_profile_id &&
-        args.profile != voyemu::passion_profile_id &&
+voyemu::Json profile_startup_definition(const Arguments &args) {
+    if (args.profile == voyemu::qinggan11_731_profile_id ||
+        args.profile == voyemu::passion_profile_id ||
         voyemu::portable_runtime_available(args.root, args.profile, args.machine,
                                            args.machine_path)) {
         return voyemu::portable_profile_definition(args.root, args.profile, args.machine,
-                                                   args.machine_path)
-                .value("initial_state", voyemu::Json::object());
+                                                   args.machine_path);
     }
 
+    return voyemu::embedded_profile(args.profile).at("definition");
+}
+
+voyemu::Json profile_startup_values(const Arguments &args, const voyemu::Json &definition) {
     if (args.profile == voyemu::qinggan11_731_profile_id) {
-        return voyemu::qinggan11_startup_values(voyemu::portable_profile_definition(
-                args.root, args.profile, args.machine, args.machine_path));
+        return voyemu::qinggan11_startup_values(definition);
     }
 
     if (args.profile == voyemu::passion_profile_id) {
-        return voyemu::passion_startup_values(voyemu::portable_profile_definition(
-                args.root, args.profile, args.machine, args.machine_path));
+        return voyemu::passion_startup_values(definition);
     }
 
-    return voyemu::embedded_profile(args.profile)
-            .at("definition")
-            .value("initial_state", voyemu::Json::object());
+    return definition.value("initial_state", voyemu::Json::object());
 }
 
 voyemu::Json startup_vehicle_state(const Arguments &args) {
-    auto profile_values = profile_startup_values(args);
+    const auto definition = profile_startup_definition(args);
+    auto profile_values = profile_startup_values(args, definition);
     voyemu::Json saved;
 
     if (args.resume) {
@@ -388,9 +388,10 @@ voyemu::Json startup_vehicle_state(const Arguments &args) {
         saved = voyemu::read_private_json(path);
     }
 
-    return voyemu::select_vehicle_startup(args.resume ? voyemu::VehicleStartup::resume
-                                                      : voyemu::VehicleStartup::fresh,
-                                          profile_values, args.resume ? &saved : nullptr);
+    return voyemu::select_vehicle_startup(
+            args.resume ? voyemu::VehicleStartup::resume : voyemu::VehicleStartup::fresh,
+            voyemu::vehicle_catalog(definition.at("platform").get<std::string>()), profile_values,
+            args.resume ? &saved : nullptr);
 }
 } // namespace
 

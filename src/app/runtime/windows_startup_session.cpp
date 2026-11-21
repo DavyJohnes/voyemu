@@ -1607,7 +1607,7 @@ void Session::advance_windows_android_transaction() {
                     android_revision_ = state.at("sequence").get<std::uint32_t>();
                     android.update({{"guest_acknowledged", true},
                                     {"sequence", android_revision_},
-                                    {"fields", 579},
+                                    {"fields", state.at("raw_oem").size()},
                                     {"typed_projection",
                                      receipt.value("typed_projection", Json::object())}});
                 }
@@ -2091,7 +2091,7 @@ void Session::advance_windows_android_transaction() {
 
                     android.update({{"status", "protected_state_verified"},
                                     {"guest_acknowledged", false},
-                                    {"fields", 579},
+                                    {"fields", transaction.submitted_state.at("raw_oem").size()},
                                     {"transport", "DUMP-protected read-only provider"},
                                     {"typed_projection",
                                      receipt.value("typed_projection", Json::object())},

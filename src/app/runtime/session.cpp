@@ -70,10 +70,11 @@ Session::Session(std::filesystem::path directory, std::string session_id, Machin
 }
 
 Session::Session(std::filesystem::path directory, std::string session_id,
-                 std::filesystem::path canonical_state)
+                 std::filesystem::path canonical_state, VehicleCatalog catalog)
     : directory_(std::move(directory)), session_id_(std::move(session_id)),
       guest_auth_token_(random_token()),
-      model_(canonical_state.empty() ? directory_ / "vehicle-state.json" : canonical_state) {
+      model_(canonical_state.empty() ? directory_ / "vehicle-state.json" : canonical_state,
+             catalog) {
     owner_valid(session_id_);
 
     while (guest_auth_token_ == session_id_) {
@@ -194,7 +195,7 @@ Json Session::snapshot() const {
             {"session_id", session_id_},
             {"revision", model_.state()["sequence"]},
             {"state", model_.state()},
-            {"catalog", catalog_json()},
+            {"catalog", catalog_json(state_catalog(model_.state()))},
             {"field_delivery", field_delivery_status(field_delivery(cluster_spec_, android_spec_))},
             {"deliveries", observed_deliveries},
             {"wheel_routes", wheel_routes},

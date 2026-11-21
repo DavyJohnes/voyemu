@@ -239,8 +239,9 @@ bool android_vehicle_receipt_matches(const Json &receipt, const Json &state) {
 
         if (!receipt.is_object() || receipt.value("schema", 0) != 1 ||
             receipt.value("status", std::string{}) != "applied" ||
-            receipt.value("map_sha256", std::string{}) != map_sha256 ||
-            receipt.value("field_count", 0) != 579 ||
+            receipt.value("map_sha256", std::string{}) !=
+                    catalog_map_sha256(state_catalog(state)) ||
+            receipt.value("field_count", 0U) != state.at("raw_oem").size() ||
             receipt.at("sequence") != state.at("sequence")) {
             return false;
         }

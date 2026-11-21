@@ -329,9 +329,11 @@ Json run(const std::filesystem::path &root, const std::string &profile,
     const auto started = Clock::now();
     std::unique_ptr<Session> session;
     try {
-        session = std::make_unique<Session>(directory, nonce);
-        const auto profile_values =
-                read_private_json(profile_file, 1 << 20).value("initial_state", Json::object());
+        const auto definition = read_private_json(profile_file, 1 << 20);
+        session = std::make_unique<Session>(
+                directory, nonce, std::filesystem::path{},
+                vehicle_catalog(definition.at("platform").get<std::string>()));
+        const auto profile_values = definition.value("initial_state", Json::object());
 
         if (!profile_values.empty()) {
             const auto seeded = session->handle({{"op", "patch"}, {"values", profile_values}});

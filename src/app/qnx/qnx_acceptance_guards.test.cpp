@@ -173,18 +173,15 @@ int main() try {
                        {"mcu_projection", projection}}},
                      {"presentation", {{"after_timestamp_ns", 100}}}};
     assert(qnx_qinggan11_post_ack_frame(delivery, owner, owner, 101, 2, projection));
-    const auto projection_without_feedback =
-            qnx_mcu_projection(QnxGuestAdapter::sa8155_qinggan11_611);
-    auto delivery_without_feedback = delivery;
-    delivery_without_feedback["vehicle"]["fields"] =
+    const auto projection_611 = qnx_mcu_projection(QnxGuestAdapter::sa8155_qinggan11_611);
+    auto delivery_611 = delivery;
+    delivery_611["vehicle"]["fields"] =
             qnx_adapter(QnxGuestAdapter::sa8155_qinggan11_611).mcu_projected_fields;
-    delivery_without_feedback["vehicle"]["mcu_projection"] = projection_without_feedback;
-    assert(qnx_qinggan11_post_ack_frame(delivery_without_feedback, owner, owner, 101, 2,
-                                        projection_without_feedback));
-    assert(!qnx_qinggan11_post_ack_frame(delivery_without_feedback, owner, owner, 101, 2,
-                                         projection));
-    assert(!qnx_qinggan11_post_ack_frame(delivery, owner, owner, 101, 2,
-                                         projection_without_feedback));
+    delivery_611["vehicle"]["mcu_projection"] = projection_611;
+    assert(qnx_qinggan11_post_ack_frame(delivery_611, owner, owner, 101, 2, projection_611));
+    // Each adapter names itself, so the equal scopes of the two firmwares stay distinct.
+    assert(!qnx_qinggan11_post_ack_frame(delivery_611, owner, owner, 101, 2, projection));
+    assert(!qnx_qinggan11_post_ack_frame(delivery, owner, owner, 101, 2, projection_611));
 
     const auto passion_projection = qnx_passion_mcu_projection();
     auto passion = delivery;

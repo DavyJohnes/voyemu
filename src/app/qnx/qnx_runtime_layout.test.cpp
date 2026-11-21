@@ -215,47 +215,19 @@ int main() try {
            accepted_scoped.projection.at("projected_fields") ==
                    qnx_adapter(QnxGuestAdapter::sa8155_qinggan11_611).mcu_projected_fields &&
            accepted_scoped.projection.at("unsupported_fields") ==
-                   579 - qnx_adapter(QnxGuestAdapter::sa8155_qinggan11_611).mcu_projected_fields);
-    auto scope34 = portable_scoped;
-    scope34["mcu_projection"] = qnx_mcu_projection(
-            QnxGuestAdapter::sa8155_qinggan11_611,
-            qnx_adapter(QnxGuestAdapter::sa8155_qinggan11_611).mcu_previous_projected_fields);
-    assert(qnx_portable_layout(scoped_profile, scope34).projection.at("projected_fields") == 34);
-    auto fractional_scoped = scope34;
-    fractional_scoped["mcu_projection"]["projected_fields"] = 34.0;
+                   736 - qnx_adapter(QnxGuestAdapter::sa8155_qinggan11_611).mcu_projected_fields);
+    // A machine of an earlier guest build with a smaller projected field count is rebuilt.
+    auto earlier_scope = portable_scoped;
+    earlier_scope["mcu_projection"]["projected_fields"] = 493;
+    earlier_scope["mcu_projection"]["unsupported_fields"] = 243;
+    rejects([&] {
+        qnx_portable_layout(scoped_profile, earlier_scope);
+    });
+    auto fractional_scoped = portable_scoped;
+    fractional_scoped["mcu_projection"]["projected_fields"] =
+            double(qnx_adapter(QnxGuestAdapter::sa8155_qinggan11_611).mcu_projected_fields);
     rejects([&] {
         qnx_portable_layout(scoped_profile, fractional_scoped);
-    });
-    auto scope33 = portable_scoped;
-    scope33["mcu_projection"]["projected_fields"] = 33;
-    scope33["mcu_projection"]["unsupported_fields"] = 546;
-    rejects([&] {
-        qnx_portable_layout(scoped_profile, scope33);
-    });
-    assert(qnx_portable_upgrade_source_layout(scoped_profile, scope33)
-                   .projection.at("projected_fields") == 33);
-    assert(qnx_portable_upgrade_source_layout(qinggan11_profile, scope33)
-                   .projection.at("projected_fields") == 33);
-    auto bad_previous = scope33;
-    bad_previous["mcu_projection"]["projected_fields"] = 32;
-    rejects([&] {
-        qnx_portable_upgrade_source_layout(scoped_profile, bad_previous);
-    });
-    bad_previous = scope33;
-    bad_previous["mcu_projection"]["projected_fields"] = 19;
-    bad_previous["mcu_projection"]["unsupported_fields"] = 560;
-    rejects([&] {
-        qnx_portable_upgrade_source_layout(scoped_profile, bad_previous);
-    });
-    bad_previous = scope33;
-    bad_previous["hardware_adapter"] = "sa8155-qinggan11-731";
-    rejects([&] {
-        qnx_portable_upgrade_source_layout(scoped_profile, bad_previous);
-    });
-    bad_previous = scope33;
-    bad_previous["mcu_projection"]["unsupported_field_policy"] = "ignore";
-    rejects([&] {
-        qnx_portable_upgrade_source_layout(scoped_profile, bad_previous);
     });
     auto wrong_scoped = portable_scoped;
     wrong_scoped["mcu_projection"] = qnx_mcu_projection(QnxGuestAdapter::sa8155_qinggan11_731);

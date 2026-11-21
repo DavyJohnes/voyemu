@@ -333,13 +333,9 @@ static Json upgrade_profile_qnx_impl(const std::filesystem::path &root, std::str
     const auto target = explicit_seed.empty() ? build_target(root, profile, machine)
                                               : explicit_seed;
     const auto expected = hash(target / "runtime.json", 128 * 1024);
-    const bool upgrade_scope = qnx_adapter(layout.adapter).mcu_upgrade_source_fields != 0;
-    const auto previous = upgrade_scope
-                                  ? inspect_qinggan11_qnx_upgrade_source(root, profile, machine)
-                                  : inspect_portable_runtime(root, profile, machine, explicit_seed);
+    const auto previous = inspect_portable_runtime(root, profile, machine, explicit_seed);
     need(previous.contains("qnx") &&
-                 qnx_portable_upgrade_source_layout(profile, previous.at("qnx")).persistence ==
-                         layout.persistence,
+                 qnx_portable_layout(profile, previous.at("qnx")).persistence == layout.persistence,
          "existing nonpersistent QNX machine required");
     need(hash(target / "runtime.json", 128 * 1024) == expected,
          "machine changed during QNX upgrade preflight");
@@ -365,11 +361,6 @@ static Json upgrade_profile_qnx_impl(const std::filesystem::path &root, std::str
     inspect_portable_runtime(root, profile, machine, explicit_seed);
     result["qnx_acceptance_sha256"] = qnx_pin;
     result["runtime_sha256"] = hash(target / "runtime.json", 128 * 1024);
-
-    if (upgrade_scope && previous.at("qnx").at("mcu_projection") != layout.projection) {
-        result["migration_reason"] =
-                "MCU projection scope33 to34: deliver genuine HDC availability";
-    }
 
     return result;
 }

@@ -9,7 +9,7 @@
 
 namespace voyemu {
 namespace {
-// Named fields with a wire position in the MCU layout of each qinggan11 adapter.
+// Catalogue fields that the guest of each qinggan11 adapter writes into the OEM packet.
 const std::set<std::string> &qinggan11_projected_fields(const QnxAdapterSpec &spec) {
     static const auto layouts = [] {
         std::map<std::string_view, std::set<std::string>> result;
@@ -20,11 +20,11 @@ const std::set<std::string> &qinggan11_projected_fields(const QnxAdapterSpec &sp
             }
 
             const auto layout = embedded_project_file_json(
-                    "src/guest/qnx/" + std::string(adapter.mcu_layout_file), 256 * 1024);
+                    "src/guest/qnx/" + std::string(adapter.mcu_layout_file), 512 * 1024);
             auto &names = result[adapter.name];
 
             for (const auto &row : layout.at("fields")) {
-                if (row.contains("wire")) {
+                if (!row.contains("unprojected")) {
                     names.insert(row.at("name").get<std::string>());
                 }
             }
@@ -65,14 +65,13 @@ std::set<std::string> cluster_fields(const Json &cluster) {
     if (spec->platform == QnxGuestPlatform::qinggan09 && projection.is_null()) {
         std::set<std::string> names;
 
-        for (const auto &field : catalog()) {
+        for (const auto &field : catalog(VehicleCatalog::qinggan09)) {
             names.insert(field.name);
         }
 
         return names;
     }
 
-    // An earlier accepted scope has no layout of its own, so it names no field.
     if (spec->platform == QnxGuestPlatform::qinggan11 &&
         projection == qnx_mcu_projection(spec->adapter)) {
         return qinggan11_projected_fields(*spec);

@@ -971,7 +971,7 @@ static Json publish_machine_qnx_impl(const std::filesystem::path &root, std::str
                  manifest.at("kind") == "portable-guest-runtime" &&
                  manifest.at("android").at("api") == (persistent ? 28 : 30),
          "prepared Free A11 machine required");
-    const auto old_layout = qnx_portable_upgrade_source_layout(profile, manifest.at("qnx")),
+    const auto old_layout = qnx_portable_layout(profile, manifest.at("qnx")),
                layout = qnx_portable_layout(profile, replacement);
     need(old_layout.adapter == layout.adapter &&
                  (persistent ? !old_layout.persistence.is_null() &&

@@ -12,7 +12,7 @@ static void check(bool value, const char *message) {
 int main() try {
     BodyEcu body;
     const auto now = BodyEcu::Clock::time_point{};
-    auto logical = initial_state();
+    auto logical = initial_state(VehicleCatalog::qinggan09);
     const auto original = logical;
 
     check(body.update(logical, now), "initial publication");

@@ -2,14 +2,20 @@ package com.qinggan.canbus.service;
 
 import java.util.Arrays;
 
-/** Immutable complete OEM input revision; no Android or UI dependencies. */
+/**
+ * Immutable complete OEM input revision of the vehicle field catalogue of the platform; no Android
+ * or UI dependencies.
+ */
 final class VehicleInputSnapshot {
     static final int UNKNOWN = -9999;
     final long sequence;
-    private final int[] values;
+    private final long[] values;
 
-    VehicleInputSnapshot(long sequence, int[] values) {
-        if (sequence < 1 || sequence > 0xffffffffL || values == null || values.length != 579) {
+    VehicleInputSnapshot(long sequence, long[] values) {
+        if (sequence < 1
+                || sequence > 0xffffffffL
+                || values == null
+                || values.length != VehicleSignalCatalog.NAMES.length) {
             throw new IllegalArgumentException("Complete vehicle revision required");
         }
 
@@ -31,12 +37,20 @@ final class VehicleInputSnapshot {
         this.sequence = sequence;
     }
 
+    /** The value of a field that the component reads; each such field has at most 31 bits. */
     int raw(String name) {
+        return Math.toIntExact(value(name));
+    }
+
+    /** The value of any field of the catalogue, up to the 38 bits of the widest one. */
+    long value(String name) {
         return values[VehicleSignalCatalog.index(name)];
     }
 
-    int[] copyValues() {
-        return values.clone();
+    /** Whether the value of the field is the all-ones of its width, an unknown OEM range. */
+    private boolean allOnes(String name) {
+        return values[VehicleSignalCatalog.index(name)]
+                == VehicleSignalCatalog.MAXIMA[VehicleSignalCatalog.index(name)];
     }
 
     boolean sameValues(VehicleInputSnapshot other) {
@@ -44,7 +58,7 @@ final class VehicleInputSnapshot {
     }
 
     VehicleInputSnapshot withLegacy(long next, int speed, int soc, int door, int left, int right) {
-        int[] result = values.clone();
+        long[] result = values.clone();
         String[] names = {"speed", "speed10x", "soc", "door_fl", "turn_left", "turn_right"};
         int[] updates = {speed, speed * 10, soc, door, left, right};
 
@@ -67,29 +81,26 @@ final class VehicleInputSnapshot {
         return raw("ambient_temp") / 2 - 40;
     }
 
-    // QNX enginecore DataIDs279/280: preserve the wire sentinel, otherwise saturate at999km.
-    int evRangeKm() {
-        int n = raw("remain_mileage_e");
+    // QNX enginecore DataIDs279/280: preserve the all-ones wire sentinel of the slot, 10 bits for
+    // the qinggan09 ICE range and 11 bits for the others, otherwise saturate at999km.
+    private int rangeKm(String name) {
+        return allOnes(name) ? UNKNOWN : Math.min(raw(name), 999);
+    }
 
-        return n == 2047 ? UNKNOWN : Math.min(n, 999);
+    int evRangeKm() {
+        return rangeKm("remain_mileage_e");
     }
 
     int fuelRangeKm() {
-        int n = raw("remain_mileage_f");
-
-        return n == 1023 ? UNKNOWN : Math.min(n, 999);
+        return rangeKm("remain_mileage_f");
     }
 
     int evRealRangeKm() {
-        int n = raw("vcu_remainingMileageReal");
-
-        return n == 2047 ? UNKNOWN : Math.min(n, 999);
+        return rangeKm("vcu_remainingMileageReal");
     }
 
     int evCycleRangeKm() {
-        int n = raw("vcu_remainingMileageCLTCWLTC");
-
-        return n == 2047 ? UNKNOWN : Math.min(n, 999);
+        return rangeKm("vcu_remainingMileageCLTCWLTC");
     }
 
     float tyrePressure(String corner) {

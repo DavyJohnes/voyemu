@@ -7,49 +7,36 @@ namespace voyemu {
 inline Json qnx_passion_mcu_projection() {
     return {{"hardware_adapter", "sa8155-passion-21480"},
             {"transport", "oem-ipc-topics"},
-            {"normalized_fields", 579},
+            {"catalog_fields", 579},
             {"projected_fields", 3},
             {"unsupported_fields", 576},
             {"published_fields", Json::array({"speed", "spd_valid", "soc"})}};
 }
 
-// The MCU projection of a qinggan11 adapter at its current scope, or at the given earlier scope.
-// Without settings feedback the projection names its adapter and rejects changes of the fields it
-// does not project.
-inline Json qnx_mcu_projection(QnxGuestAdapter adapter, unsigned fields = 0) {
+// The MCU projection of a qinggan11 adapter: the guest writes the projected fields of the
+// qinggan11 catalogue into each OEM packet and keeps the OEM bits of the others. The adapter name
+// keeps the equal scopes of the two firmwares distinct.
+inline Json qnx_mcu_projection(QnxGuestAdapter adapter) {
     const auto &spec = qnx_adapter(adapter);
 
     if (spec.platform != QnxGuestPlatform::qinggan11) {
         throw VoyemuError("QNX_MCU_PROJECTION", "adapter has no MCU projection");
     }
 
-    const unsigned projected = fields ? fields : spec.mcu_projected_fields;
-
-    if (spec.mcu_settings_feedback) {
-        return {{"packet_bytes", 650},
-                {"wire_fields", 736},
-                {"normalized_fields", 579},
-                {"projected_fields", projected},
-                {"unsupported_fields", 579 - projected},
-                {"unmapped_wire_bits", "preserved-original-each-call"}};
-    }
+    const auto fields = static_cast<unsigned>(catalog(VehicleCatalog::qinggan11).size());
 
     return {{"hardware_adapter", spec.name},
-            {"settings_feedback_supported", false},
-            {"unsupported_field_policy", "reject_changes_from_initial_state"},
             {"packet_bytes", 650},
-            {"wire_fields", 736},
-            {"normalized_fields", 579},
-            {"projected_fields", projected},
-            {"unsupported_fields", 579 - projected},
+            {"wire_fields", fields},
+            {"catalog_fields", fields},
+            {"projected_fields", spec.mcu_projected_fields},
+            {"unsupported_fields", fields - spec.mcu_projected_fields},
             {"unmapped_wire_bits", "preserved-original-each-call"}};
 }
 
-// Whether fields is the current or the earlier accepted runtime scope of the adapter.
+// Whether fields is the projected field count of the adapter.
 inline bool qnx_mcu_runtime_scope(const QnxAdapterSpec &spec, std::uint64_t fields) {
-    return spec.platform == QnxGuestPlatform::qinggan11 &&
-           (fields == spec.mcu_projected_fields ||
-            (spec.mcu_previous_projected_fields && fields == spec.mcu_previous_projected_fields));
+    return spec.platform == QnxGuestPlatform::qinggan11 && fields == spec.mcu_projected_fields;
 }
 
 // A qinggan11 request names its scope by the projected field count; adapter, when given, selects
@@ -73,7 +60,7 @@ inline Json qnx_mcu_request_projection(std::uint64_t packet_bytes, std::uint64_t
         for (const auto &spec : qnx_adapter_registry) {
             if ((adapter.empty() || spec.name == adapter) &&
                 qnx_mcu_runtime_scope(spec, projected_fields)) {
-                return qnx_mcu_projection(spec.adapter, static_cast<unsigned>(projected_fields));
+                return qnx_mcu_projection(spec.adapter);
             }
         }
     }
@@ -93,7 +80,7 @@ inline std::optional<Json> qnx_mcu_delivery_scope(const Json &ack, const Json &e
         projection->at("hardware_adapter") == "sa8155-passion-21480") {
         const auto passion = qnx_passion_mcu_projection();
         const auto matches_passion = [&passion](const Json &scope) {
-            return scope == passion && scope.at("normalized_fields").is_number_integer() &&
+            return scope == passion && scope.at("catalog_fields").is_number_integer() &&
                    scope.at("projected_fields").is_number_integer() &&
                    scope.at("unsupported_fields").is_number_integer();
         };
@@ -121,7 +108,7 @@ inline std::optional<Json> qnx_mcu_delivery_scope(const Json &ack, const Json &e
         return std::nullopt;
     }
 
-    for (const auto *key : {"packet_bytes", "wire_fields", "normalized_fields", "projected_fields",
+    for (const auto *key : {"packet_bytes", "wire_fields", "catalog_fields", "projected_fields",
                             "unsupported_fields"}) {
         if (!scope.contains(key) || !scope.at(key).is_number_integer()) {
             return std::nullopt;
@@ -133,9 +120,7 @@ inline std::optional<Json> qnx_mcu_delivery_scope(const Json &ack, const Json &e
             continue;
         }
 
-        if (scope == qnx_mcu_projection(spec.adapter) ||
-            (spec.mcu_previous_projected_fields &&
-             scope == qnx_mcu_projection(spec.adapter, spec.mcu_previous_projected_fields))) {
+        if (scope == qnx_mcu_projection(spec.adapter)) {
             return Json{{"fields", scope.at("projected_fields")},
                         {"mcu_projection", scope},
                         {"full_wire_verified", false}};

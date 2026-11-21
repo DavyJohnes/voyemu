@@ -6,7 +6,7 @@
 #ifndef QGFX_QINGGAN11_LAYOUT_DEFINED
 #include "native_mcu_qinggan11_layout.inc"
 #endif
-static u32 qinggan11_values[579], qinggan11_wheel[10];
+static u32 qinggan11_values[QINGGAN11_FIELDS], qinggan11_wheel[10];
 static u64 qinggan11_ack, qinggan11_wheel_ack;
 static unsigned qinggan11_have, qinggan11_rejects;
 static Qinggan11SettingsFeedback qinggan11_settings;
@@ -51,7 +51,7 @@ static void qinggan11_settings_observe(unsigned lane, const unsigned char *bytes
     encoded[20] = 0;
     qinggan11_settings_trace[lane].have = 1;
     qinggan11_settings_trace[lane].count++;
-    snprintf(line, sizeof(line), "QG3 SETTINGS Free A11 7.3.1 lane=%u sample=%u bytes=%s\n", lane,
+    snprintf(line, sizeof(line), "QG3 SETTINGS Free A11 lane=%u sample=%u bytes=%s\n", lane,
              qinggan11_settings_trace[lane].count, encoded);
     emit(line);
 }
@@ -59,44 +59,39 @@ static void qinggan11_settings_observe(unsigned lane, const unsigned char *bytes
 static void qinggan11_reject(void) {
     if (qinggan11_rejects++ < 4) {
         char line[128];
-        snprintf(
-                line, sizeof(line),
-                "QG3 MCU Free A11 rejected unsupported or invalid normalized state; projection=%u/579\n",
-                qinggan11_projected_fields);
+        snprintf(line, sizeof(line),
+                 "QG3 MCU Free A11 rejected unsupported or invalid state; projection=%u/%u\n",
+                 qinggan11_projected_fields, QINGGAN11_FIELDS);
         emit(line);
     }
 }
 
 static int qinggan11_payload_valid(const u32 *values) {
-    if (values[0] != 1 || values[1] != 579) {
+    if (values[0] != 1 || values[1] != QINGGAN11_FIELDS) {
         return 0;
     }
 
-    for (unsigned i = 0; i < 579; i++) {
-        if (values[i + 2] > mcu_field_max[i] || (mcu_transient[i] && values[i + 2])) {
+    /* Wheel presses arrive only as wheel phases. */
+    for (unsigned i = 0; i < 10; i++) {
+        if (qinggan11_wheel_fields[i] < QINGGAN11_FIELDS && values[qinggan11_wheel_fields[i] + 2]) {
             return 0;
         }
     }
 
-    return values[312] <= 255 && values[360] == values[312] * 10 && values[314] <= 100 &&
-           qinggan11_mcu_valid(qinggan11_fields, values + 2);
+    return values[qinggan11_speed + 2] <= 255 &&
+           values[qinggan11_speed10x + 2] == values[qinggan11_speed + 2] * 10 &&
+           values[qinggan11_soc + 2] <= 100 && qinggan11_mcu_valid(qinggan11_fields, values + 2);
 }
 
 /* Wheel phases override only the mapped transient fields of the current values. */
 static int qinggan11_pack(void *output, unsigned capacity, int result) {
-    u32 applied[579];
+    u32 applied[QINGGAN11_FIELDS];
 
     copy(applied, qinggan11_values, sizeof(applied));
 
     for (unsigned i = 0; i < 10; i++) {
-        if (qinggan11_mcu_wheel_supported(qinggan11_fields, 322 + i, 0)) {
-            applied[321 + i] = qinggan11_wheel[i];
-        }
-    }
-
-    for (unsigned i = 0; i < 579; i++) {
-        if (qinggan11_fields[i].unknown_wire && applied[i] == qinggan11_fields[i].unknown_input) {
-            applied[i] = qinggan11_fields[i].unknown_wire;
+        if (qinggan11_mcu_wheel_supported(qinggan11_fields, qinggan11_wheel_fields, 322 + i, 0)) {
+            applied[qinggan11_wheel_fields[i]] = qinggan11_wheel[i];
         }
     }
 
@@ -115,7 +110,7 @@ static int qinggan11_pack(void *output, unsigned capacity, int result) {
 }
 
 static void native_async_poll(void) {
-    u32 values[581];
+    u32 values[QINGGAN11_FIELDS + 2];
     u64 args[] = {0, 650, 736, qinggan11_projected_fields};
     u64 seq = native_async_fetch(364, args, 4, &qinggan11_ack, &native_async_mcu_staged, 0, values,
                                  sizeof(values));
@@ -140,7 +135,9 @@ static void native_async_poll(void) {
     seq = native_async_fetch(363, wheel_args, 1, &qinggan11_wheel_ack, &native_async_wheel_staged,
                              &qinggan11_ack, wheel, sizeof(wheel));
 
-    if (seq && qinggan11_mcu_wheel_supported(qinggan11_fields, wheel[0], wheel[1]) &&
+    if (seq &&
+        qinggan11_mcu_wheel_supported(qinggan11_fields, qinggan11_wheel_fields, wheel[0],
+                                      wheel[1]) &&
         !__atomic_load_n(&native_async_stop, __ATOMIC_ACQUIRE) && native_cache_try()) {
         if (native_async_wheel_staged == qinggan11_wheel_ack) {
             qinggan11_wheel[wheel[0] - 322] = wheel[1];
@@ -229,7 +226,7 @@ int dataParser_makedumydata(void *output, unsigned short capacity) {
     }
 
     acquire();
-    u32 values[581];
+    u32 values[QINGGAN11_FIELDS + 2];
     u64 args[] = {qinggan11_ack, 650, 736, qinggan11_projected_fields};
     u64 seq = call(364, args, 4, 0, 0);
     unsigned valid = seq && seq > qinggan11_ack && seq < 0x100000000ULL && packet &&
@@ -257,7 +254,8 @@ int dataParser_makedumydata(void *output, unsigned short capacity) {
 
     if (wvalid) {
         copy(wheel, packet->data, sizeof(wheel));
-        wvalid = qinggan11_mcu_wheel_supported(qinggan11_fields, wheel[0], wheel[1]);
+        wvalid = qinggan11_mcu_wheel_supported(qinggan11_fields, qinggan11_wheel_fields, wheel[0],
+                                               wheel[1]);
 
         if (wvalid) {
             qinggan11_wheel[wheel[0] - 322] = wheel[1];

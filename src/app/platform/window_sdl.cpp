@@ -1708,9 +1708,10 @@ int App::run() {
     if (media_options_ && media_options_->keyboard_smoke) {
         // The keyboard smoke edits a local canonical state instead of the session cluster.
         keyboard_patches_ = std::make_shared<Patches>();
+        constexpr auto catalog = voyemu::VehicleCatalog::qinggan09;
         keyboard_transport =
                 [patches = keyboard_patches_, id = media_options_->session.filename().string(),
-                 canonical = voyemu::apply_patch(voyemu::initial_state(),
+                 canonical = voyemu::apply_patch(voyemu::initial_state(catalog),
                                                  {{"speed", 114}, {"speed10x", 1140}})](
                         const Json &operation) mutable {
                     if (operation.at("op") == "patch") {
@@ -1723,7 +1724,7 @@ int App::run() {
                                 {"session_id", id},
                                 {"revision", canonical.at("sequence")},
                                 {"state", canonical},
-                                {"catalog", voyemu::catalog_json()}};
+                                {"catalog", voyemu::catalog_json(catalog)}};
                 };
     }
 

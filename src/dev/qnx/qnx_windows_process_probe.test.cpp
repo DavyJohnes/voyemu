@@ -14,7 +14,7 @@ void control_file_positive_test(const std::filesystem::path &directory) {
     control.enabled = true;
     control.phase = "waiting_command";
     control.nonce = "synthetic-host-file-fixture";
-    Json state = initial_state(), before = state.at("raw_oem"), status;
+    Json state = initial_state(VehicleCatalog::qinggan09), before = state.at("raw_oem"), status;
     auto update = [&](const char *delivery, std::uint64_t sequence) {
         status = {{"ok", true},
                   {"qnx_pid", 123},

@@ -827,13 +827,9 @@ void Session::poll_qnx() {
 
     if (free_uart) {
         const auto projection = cluster_boot_spec_.value("mcu_projection", Json());
-        const auto previous = free_spec->mcu_previous_projected_fields;
-        const auto expected = previous && projection == qnx_mcu_projection(free_spec->adapter,
-                                                                           previous)
-                                      ? qnx_mcu_projection(free_spec->adapter, previous)
-                                      : qnx_mcu_projection(free_spec->adapter);
 
-        if (!qnx_mcu_delivery_scope(Json{{"mcu_projection", projection}}, expected)) {
+        if (!qnx_mcu_delivery_scope(Json{{"mcu_projection", projection}},
+                                    qnx_mcu_projection(free_spec->adapter))) {
             throw VoyemuError("QNX_READY", "exact Free projection required for UART discovery");
         }
     }

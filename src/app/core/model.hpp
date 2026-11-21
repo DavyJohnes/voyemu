@@ -40,10 +40,27 @@ struct Field {
     unsigned width;
     std::uint32_t initial;
 };
-const std::vector<Field> &catalog();
-Json catalog_json();
-inline constexpr const char *map_sha256 =
+// The field catalogue of a vehicle platform, taken from the OEM MCU packet of that platform: the
+// 579 fields of the qinggan09 mcusimulator contract, also used by Passion, and the 736 wire fields
+// of the qinggan11 libdataparser descriptors. A field the platforms share has one name in both.
+enum class VehicleCatalog {
+    qinggan09,
+    qinggan11
+};
+// The catalogue of a platform value of profile.json.
+VehicleCatalog vehicle_catalog(std::string_view platform);
+const std::vector<Field> &catalog(VehicleCatalog catalog);
+Json catalog_json(VehicleCatalog catalog);
+// The identity of a catalogue in map_sha256 of a vehicle state: for qinggan09 the pinned
+// mcusimulator wire contract, for qinggan11 the SHA-256 of the first 16 bytes (index, start bit,
+// width, byte order) of each of the 736 libdataparser descriptors, equal in 6.11.1 and 7.3.1.
+inline constexpr const char *qinggan09_map_sha256 =
         "255335b86bb5fd782d23086018dcfc3874d088364ad5f15b264cfb12020d800e";
+inline constexpr const char *qinggan11_map_sha256 =
+        "1d29086a8bb11c1b7c3a1876c49339d769de3fbd76c08bb7ec04c7184cd61f54";
+const char *catalog_map_sha256(VehicleCatalog catalog);
+// The catalogue that map_sha256 of a vehicle state names.
+VehicleCatalog state_catalog(const Json &state);
 std::string utc_now();
 
 constexpr bool qnx_theme_display_matches(unsigned requested, std::uint64_t displayed) {
@@ -63,16 +80,16 @@ constexpr bool qnx_theme_display_matches(unsigned requested, std::uint64_t displ
     }
 }
 
-Json normal_initial_values();
-Json initial_state();
+Json normal_initial_values(VehicleCatalog catalog);
+Json initial_state(VehicleCatalog catalog);
 // Guest quickboot is independent of the host scenario startup policy.
 // Pure selection only: never overwrites the caller's saved scenario.
 enum class VehicleStartup {
     fresh,
     resume
 };
-Json select_vehicle_startup(VehicleStartup mode, const Json &profile_values, const Json *saved,
-                            std::uint32_t guest_sequence = 0);
+Json select_vehicle_startup(VehicleStartup mode, VehicleCatalog catalog, const Json &profile_values,
+                            const Json *saved, std::uint32_t guest_sequence = 0);
 void validate_state(const Json &state);
 Json apply_patch(const Json &state, const Json &values);
 // Bounded validated JSON bytes retain formatting for exact transaction rollback.
@@ -88,7 +105,8 @@ void ensure_private_directory(const std::filesystem::path &path);
 void ensure_local_roots(const std::filesystem::path &root);
 class VehicleModel {
 public:
-    explicit VehicleModel(std::filesystem::path path);
+    // Reads the state at path, or creates it with the initial state of catalog.
+    VehicleModel(std::filesystem::path path, VehicleCatalog catalog);
 
     const Json &state() const noexcept {
         return state_;

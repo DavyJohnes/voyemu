@@ -2184,11 +2184,11 @@ int main(int argc, char **argv) {
         const auto qinggan09 =
                 embedded_profile_names(ProfilePlatform::qinggan09, ProfileBoard::sa8155).at(0);
         const auto fresh = select_vehicle_startup(
-                VehicleStartup::fresh,
+                VehicleStartup::fresh, VehicleCatalog::qinggan09,
                 embedded_profile(qinggan09).at("definition").at("initial_state"), nullptr);
         check(fresh.at("raw_oem").at("aeb_sts") == 1 && fresh.at("raw_oem").at("cfg_aeb") == 1,
               "fresh first-vehicle fixture keeps AEB configured and selects the verified no-OFF input");
-        check(initial_state().at("raw_oem").at("aeb_sts") == 0,
+        check(initial_state(VehicleCatalog::qinggan09).at("raw_oem").at("aeb_sts") == 0,
               "profile display fixture must not change the recovered raw protocol defaults");
         check(declared_patch_plan(Json::object()).at("patches").empty(),
               "profiles without patch operations have an empty plan");

@@ -362,7 +362,7 @@ Json build_qnx_guest_recipe(const std::filesystem::path &root, const std::filesy
         const auto layout_file = std::string(spec.mcu_layout_file);
         copy_source(layout_file);
         write(work / "src/native_mcu_qinggan11_layout.inc",
-              qnx_qinggan11_mcu_layout(read_private_json(work / "src" / layout_file, 256 * 1024),
+              qnx_qinggan11_mcu_layout(read_private_json(work / "src" / layout_file, 512 * 1024),
                                        initial_native_state));
     }
 

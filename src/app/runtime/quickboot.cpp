@@ -200,7 +200,7 @@ Json android_quickboot_key(const Json &specification) {
     Json key{{"protocol", 2},
              {"wheel_protocol", 1},
              {"vehicle_protocol", 1},
-             {"vehicle_map", map_sha256},
+             {"vehicle_maps", Json::array({qinggan09_map_sha256, qinggan11_map_sha256})},
              {"prepared", prepared}};
 
     if (specification.contains("interguest_network")) {

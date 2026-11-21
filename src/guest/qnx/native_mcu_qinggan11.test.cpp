@@ -15,12 +15,15 @@ using Json = voyemu::Json;
 using u32 = unsigned;
 using u64 = unsigned long long;
 using usize = unsigned long;
-static Qinggan11McuField qinggan11_fields[579];
+static Qinggan11McuField qinggan11_fields[QINGGAN11_FIELDS];
+static unsigned short qinggan11_wheel_fields[10];
+static unsigned qinggan11_speed, qinggan11_speed10x, qinggan11_soc;
 static unsigned qinggan11_calibration_fixture = 0, qinggan11_calibration_fixture_enabled = 0;
 static unsigned qinggan11_projected_fields = 0, qinggan11_settings_feedback_enabled = 1;
 #define QGFX_QINGGAN11_LAYOUT_DEFINED 1
-#include "mcu_catalog.inc"
-static u32 normal[579];
+static u32 normal[QINGGAN11_FIELDS];
+// Catalogue positions of an unprojected field and of a two-bit projected field.
+static unsigned unprojected_position, narrow_position;
 static unsigned char original_bytes[650];
 struct TestPacket {
     u32 fault, out_len;
@@ -151,7 +154,7 @@ static u64 call(u32 op, const u64 *args, unsigned count, const void *, unsigned)
     if (op == 364) {
         assert(args[0] == qinggan11_ack && args[1] == 650 && args[2] == 736 &&
                args[3] == qinggan11_projected_fields);
-        u32 values[581] = {1, 579};
+        u32 values[QINGGAN11_FIELDS + 2] = {1, QINGGAN11_FIELDS};
         std::memcpy(values + 2, normal, sizeof normal);
 
         if (bad == 1) {
@@ -159,31 +162,31 @@ static u64 call(u32 op, const u64 *args, unsigned count, const void *, unsigned)
         }
 
         if (bad == 2) {
-            values[1] = 736;
+            values[1] = 579;
         }
 
         if (bad == 3) {
-            values[312] = 256;
+            values[2 + qinggan11_speed] = 256;
         }
 
         if (bad == 4) {
-            values[360] = 1;
+            values[2 + qinggan11_speed10x] = 1;
         }
 
         if (bad == 5) {
-            values[314] = 101;
+            values[2 + qinggan11_soc] = 101;
         }
 
         if (bad == 6) {
-            values[323] = 1;
+            values[2 + qinggan11_wheel_fields[0]] = 1;
         }
 
         if (bad == 7) {
-            values[2 + 6] ^= 1;
+            values[2 + unprojected_position] ^= 1;
         }
 
         if (bad == 8) {
-            values[2 + 181] = 4;
+            values[2 + narrow_position] = 4;
         }
 
         storage.out_len = sizeof values;
@@ -256,7 +259,7 @@ int main(int argc, char **argv) {
                         .mcu_projected_fields;
         const auto root = std::filesystem::canonical(argv[1]);
         const auto source = voyemu::read_private_json(
-                root / "src/guest/qnx/native_mcu_qinggan11.json", 256 * 1024);
+                root / "src/guest/qnx/native_mcu_qinggan11.json", 512 * 1024);
         unsigned adapter_profiles = 0;
 
         // Every profile of this hardware adapter starts fresh with AEB on.
@@ -271,39 +274,75 @@ int main(int argc, char **argv) {
 
             const auto profile = voyemu::read_private_json(entry.path() / "profile.json",
                                                            1024 * 1024);
-            const auto fresh = voyemu::select_vehicle_startup(voyemu::VehicleStartup::fresh,
-                                                              profile.at("initial_state"), nullptr);
+            const auto fresh = voyemu::select_vehicle_startup(
+                    voyemu::VehicleStartup::fresh,
+                    voyemu::vehicle_catalog(profile.at("platform").get<std::string>()),
+                    profile.at("initial_state"), nullptr);
             assert(fresh.at("raw_oem").at("aeb_sts") == 1);
             ++adapter_profiles;
         }
 
         assert(adapter_profiles > 0);
         const auto generated = voyemu::qnx_qinggan11_mcu_layout(source);
-        assert(generated.find("{1228,8,0U,0U,0U}") != std::string::npos);
-        const auto initial = voyemu::initial_state().at("raw_oem");
-        const auto &catalog = voyemu::catalog();
+        assert(generated.find("{1228,8,0U}") != std::string::npos &&
+               generated.find("qinggan11_fields[736]") != std::string::npos);
+        const auto initial = voyemu::initial_state(voyemu::VehicleCatalog::qinggan11).at("raw_oem");
+        const auto &catalog = voyemu::catalog(voyemu::VehicleCatalog::qinggan11);
+        auto pos = [&](std::string_view name) {
+            const auto at = std::find_if(catalog.begin(), catalog.end(), [&](const auto &f) {
+                return f.name == name;
+            });
+            assert(at != catalog.end());
+
+            return static_cast<unsigned>(at - catalog.begin());
+        };
         unsigned mapped = 0;
 
-        for (unsigned i = 0; i < 579; i++) {
+        for (unsigned i = 0; i < QINGGAN11_FIELDS; i++) {
             const auto &row = source.at("fields").at(i);
             normal[i] = initial.at(catalog[i].name).get<unsigned>();
             qinggan11_fields[i] = {65535, 0, normal[i]};
 
-            if (row.contains("wire")) {
+            if (!row.contains("unprojected")) {
                 qinggan11_fields[i].bit = row.at("wire").at("start_bit");
                 qinggan11_fields[i].width = row.at("wire").at("width");
                 mapped++;
             }
         }
 
-        assert(qinggan11_fields[52].bit == 110 && qinggan11_fields[52].width == 3);
-        assert(mapped == qinggan11_projected_fields && qinggan11_fields[310].bit == 1228 &&
-               qinggan11_fields[358].bit == 1383 && qinggan11_fields[312].bit == 1243);
-        assert(qinggan11_fields[104].bit == 185 && qinggan11_fields[105].bit == 186 &&
-               qinggan11_fields[106].bit == 187 && qinggan11_fields[107].bit == 188);
+        const char *buttons[] = {"swm_Photo",     "swm_menu",     "swm_OK",        "swm_upAdd",
+                                 "swm_downMinus", "swm_leftLast", "swm_rightNext", "swm_nvsSwitch",
+                                 "swm_phone",     "swm_voice"};
+
+        for (unsigned i = 0; i < 10; i++) {
+            qinggan11_wheel_fields[i] = static_cast<unsigned short>(pos(buttons[i]));
+        }
+
+        qinggan11_speed = pos("speed");
+        qinggan11_speed10x = pos("speed10x");
+        qinggan11_soc = pos("soc");
+        unprojected_position = pos("set_byte0");
+        narrow_position = pos("mpc_laneAssitType");
+        const auto aeb = pos("aeb_sts"), speed = pos("speed"), speed10x = pos("speed10x"),
+                   soc = pos("soc"), door = pos("door_fl"),
+                   menu = static_cast<unsigned>(qinggan11_wheel_fields[1]);
+        assert(generated.find("qinggan11_wheel_fields[10]={" + std::to_string(pos("swm_Photo")) +
+                              ",") != std::string::npos);
+        assert(qinggan11_fields[aeb].bit == 110 && qinggan11_fields[aeb].width == 3);
+        assert(mapped == qinggan11_projected_fields && qinggan11_fields[speed].bit == 1228 &&
+               qinggan11_fields[speed10x].bit == 1383 && qinggan11_fields[soc].bit == 1243);
+        assert(qinggan11_fields[door].bit == 185 && qinggan11_fields[pos("door_fr")].bit == 186 &&
+               qinggan11_fields[pos("door_rl")].bit == 187 &&
+               qinggan11_fields[pos("door_rr")].bit == 188);
         // All ten wheel signals have wire bits, the photo and night vision ones included.
-        assert(qinggan11_fields[322].bit == 1286 && qinggan11_fields[327].bit == 1291 &&
-               qinggan11_fields[321].bit == 1285 && qinggan11_fields[328].bit == 1292);
+        assert(qinggan11_fields[menu].bit == 1286 &&
+               qinggan11_fields[pos("swm_rightNext")].bit == 1291 &&
+               qinggan11_fields[pos("swm_Photo")].bit == 1285 &&
+               qinggan11_fields[pos("swm_nvsSwitch")].bit == 1292);
+        // The settings feedback owns bytes 250..259 and a 34-bit reserved field stays unwritten.
+        assert(!qinggan11_fields[pos("set_byte0")].width &&
+               !qinggan11_fields[pos("reserved_03")].width &&
+               !qinggan11_fields[pos("eps_calibrationFlag")].width);
         // OEM parser case 53 writes the input value to lightitems output bit 109.
         unsigned char adjacent[650] = {};
 
@@ -312,11 +351,11 @@ int main(int argc, char **argv) {
                 original_bytes[i] = (unsigned char)(i * 73 + 41);
             }
 
-            normal[52] = value;
+            normal[aeb] = value;
             reset();
             unsigned char out[650];
             assert(dataParser_makedumydata(out, 650) == 650);
-            assert(field(out, 52) == value);
+            assert(field(out, aeb) == value);
 
             if (value == 0) {
                 std::memcpy(adjacent, out, 650);
@@ -332,7 +371,7 @@ int main(int argc, char **argv) {
             assert((light13 >> 5) == value && (light13 & 0x1f) == 0x1f);
         }
 
-        normal[52] = 0;
+        normal[aeb] = 0;
         unsigned char mask[650] = {};
 
         for (const auto &f : qinggan11_fields) {
@@ -374,35 +413,35 @@ int main(int argc, char **argv) {
 
             assert(detected);
 
-            for (unsigned i = 0; i < 579; i++) {
+            for (unsigned i = 0; i < QINGGAN11_FIELDS; i++) {
                 if (qinggan11_fields[i].width) {
                     assert(field(out, i) == normal[i]);
                 }
             }
 
-            assert(field(out, 312) == 55 && field(out, 310) == 0);
-            normal[310] = 42;
-            normal[358] = 420;
-            normal[104] = 1;
+            assert(field(out, soc) == 55 && field(out, speed) == 0);
+            normal[speed] = 42;
+            normal[speed10x] = 420;
+            normal[door] = 1;
             // The model ignition reaches the OEM power items: off during a cluster cold boot.
             assert(qinggan11_fields[0].width == 1 && field(out, 0) == (seed ? 0U : 1U));
             normal[0] = 0;
             offered = 3;
             assert(dataParser_makedumydata(out, 650) == 650 && qinggan11_ack == 3 &&
-                   field(out, 310) == 42 && field(out, 358) == 420 && field(out, 104) == 1 &&
-                   field(out, 0) == 0);
+                   field(out, speed) == 42 && field(out, speed10x) == 420 &&
+                   field(out, door) == 1 && field(out, 0) == 0);
             wheel_sequence = 10;
             assert(dataParser_makedumydata(out, 650) == 650 && qinggan11_wheel_ack == 10 &&
-                   field(out, 322) == 1);
+                   field(out, menu) == 1);
             wheel_sequence = 11;
             wheel_value = 0;
             assert(dataParser_makedumydata(out, 650) == 650 && qinggan11_wheel_ack == 11 &&
-                   field(out, 322) == 0);
+                   field(out, menu) == 0);
             wheel_sequence = 12;
             wheel_index = 332;
             wheel_value = 1;
             assert(dataParser_makedumydata(out, 650) == 650 && qinggan11_wheel_ack == 11);
-            normal[310] = normal[358] = normal[104] = 0;
+            normal[speed] = normal[speed10x] = normal[door] = 0;
             wheel_index = 323;
             wheel_value = 1;
             wheel_sequence = 0;
@@ -422,7 +461,7 @@ int main(int argc, char **argv) {
         bad = 7;
         offered = 3;
         assert(dataParser_makedumydata(cached, 650) == 650 && qinggan11_ack == 2 &&
-               field(cached, 310) == 0);
+               field(cached, speed) == 0);
 
         for (int result : {-1, 0, 280, 649, 651}) {
             reset();
@@ -524,7 +563,7 @@ int main(int argc, char **argv) {
                 invalid["fields"][1]["wire"]["index"] = 1;
                 break;
             case 5:
-                invalid["fields"][0]["unsupported_initial"] = 0;
+                invalid["fields"][0]["initial"] = 0;
                 break;
             case 6:
                 invalid["fields"][0]["wire"]["width"] = 33;
@@ -549,9 +588,7 @@ int main(int argc, char **argv) {
         const Json simulated = {{"eps_calibrationFlag", 1}};
         assert(voyemu::qnx_qinggan11_mcu_layout(source, simulated)
                        .find("qinggan11_calibration_fixture=1U") != std::string::npos);
-        auto legacy = source;
-        legacy.erase("native_initial_fields");
-        assert(voyemu::qnx_qinggan11_mcu_layout(legacy).find("qinggan11_calibration_fixture=0U") !=
+        assert(voyemu::qnx_qinggan11_mcu_layout(source).find("qinggan11_calibration_fixture=0U") !=
                std::string::npos);
 
         for (const auto &invalid : Json::array({nullptr,
@@ -572,19 +609,23 @@ int main(int argc, char **argv) {
             assert(rejected);
         }
 
-        for (unsigned mutation = 0; mutation < 5; ++mutation) {
+        // The calibration fixture owns eps_calibrationFlag, the settings feedback bytes 250..259,
+        // and a field wider than a guest value stays unwritten.
+        const auto fixture_row = pos("eps_calibrationFlag");
+
+        for (unsigned mutation = 0; mutation < 6; ++mutation) {
             auto invalid = source;
 
             if (mutation == 0) {
-                invalid["native_initial_fields"]["eps_calibrationFlag"]["width"] = 1;
+                invalid["fields"][fixture_row]["unprojected"] = "settings_feedback";
             }
 
             if (mutation == 1) {
-                invalid["native_initial_fields"]["eps_calibrationFlag"]["start_bit"] = 464;
+                invalid["fields"][fixture_row].erase("unprojected");
             }
 
             if (mutation == 2) {
-                invalid["native_initial_fields"]["eps_calibrationFlag"]["index"] = 184;
+                invalid["fields"][pos("set_byte0")].erase("unprojected");
             }
 
             if (mutation == 3) {
@@ -592,7 +633,11 @@ int main(int argc, char **argv) {
             }
 
             if (mutation == 4) {
-                invalid.erase("native_initial_fields");
+                invalid["fields"][pos("reserved_04")].erase("unprojected");
+            }
+
+            if (mutation == 5) {
+                invalid["fields"][pos("speed")]["unprojected"] = "wider_than_guest_value";
             }
 
             bool rejected = false;
@@ -684,7 +729,7 @@ int main(int argc, char **argv) {
             }
 
             assert(!qinggan11_ack && dataParser_makedumydata(frame, 650) == 650 &&
-                   qinggan11_ack == 2 && field(frame, 310) == normal[310]);
+                   qinggan11_ack == 2 && field(frame, speed) == normal[speed]);
             native_async_shutdown();
             assert(!worker);
 
@@ -734,57 +779,23 @@ int main(int argc, char **argv) {
             assert(dataParser_makedumydata(frame, 650) == 650 && qinggan11_ack == 2);
         }
 
-        // Fields that reach the OEM ADAS, APA/PDC and power manager items or that no parser case of
-        // this firmware reads; start bits and widths from the OEM 7.3.1 parser descriptors.
-        {
-            struct Case {
-                std::string_view name;
-                unsigned bit, width, value;
-            };
-            auto packed = [](const unsigned char *frame, unsigned bit, unsigned width) {
-                unsigned value = 0;
+        // Each written field reaches its start bit and width of the OEM 7.3.1 parser descriptor.
+        struct Case {
+            std::string_view name;
+            unsigned bit, width, value;
+        };
+        auto packed = [](const unsigned char *frame, unsigned bit, unsigned width) {
+            unsigned value = 0;
 
-                for (unsigned i = 0; i < width; ++i) {
-                    value |= unsigned((frame[(bit + i) / 8] >> ((bit + i) % 8)) & 1U) << i;
-                }
+            for (unsigned i = 0; i < width; ++i) {
+                value |= unsigned((frame[(bit + i) / 8] >> ((bit + i) % 8)) & 1U) << i;
+            }
 
-                return value;
-            };
-
-            for (const Case &signal : std::initializer_list<Case>{
-                         {"gsm_warnInformation_bak", 205, 2, 3},
-                         {"can_v1_5_bcm_tpmsLFSts", 227, 3, 5},
-                         {"can_v1_5_bcm_tpmsRFSts", 246, 3, 5},
-                         {"can_v1_5_bcm_tpmsLRSts", 265, 3, 5},
-                         {"can_v1_5_bcm_tpmsRRSts", 284, 3, 5},
-                         {"tbox_vehicleMode", 1449, 4, 11},
-                         {"apa_WarningReq", 1527, 1, 1},
-                         {"APA_PDCSysSts", 1528, 2, 3},
-                         {"APA_PDCFailureWarning", 1530, 1, 1},
-                         {"APA_PDCAudibleFrontBeepRate", 1531, 3, 5},
-                         {"APA_PDCAudibleRearBeepRate", 1534, 3, 5},
-                         {"pdc_sysSts", 1537, 2, 3},
-                         {"pdc_failureWarning", 1539, 1, 1},
-                         {"pdc_audibleFrontBeepRate", 1540, 3, 5},
-                         {"pdc_audibleRearBeepRate", 1543, 3, 5},
-                         {"apa_AbortWarningReq", 1598, 1, 1},
-                         {"apa_ActiveWarningReq", 1599, 1, 1},
-                         {"cfg_reserve_14", 2192, 8, 171},
-                         {"acc_mode", 80, 3, 2},
-                         {"mpc_icaSts", 83, 3, 2},
-                         {"mpc_isa_speed_limit", 96, 6, 12},
-                         {"mpc_isaOnOffSts", 102, 2, 1},
-                         {"isa_limit_warning", 104, 1, 1},
-                         {"left_visualization", 455, 2, 2},
-                         {"right_visualization", 457, 2, 2},
-                         {"time_gap_set", 692, 3, 3},
-                         {"SeatBeatFlash", 1548, 1, 1},
-                 }) {
-                const auto at = std::find_if(catalog.begin(), catalog.end(), [&](const auto &f) {
-                    return f.name == signal.name;
-                });
-                assert(at != catalog.end());
-                const auto position = static_cast<unsigned>(at - catalog.begin());
+            return value;
+        };
+        auto deliver_cases = [&](std::initializer_list<Case> cases) {
+            for (const Case &signal : cases) {
+                const auto position = pos(signal.name);
                 const auto previous = normal[position];
                 normal[position] = signal.value;
                 reset();
@@ -793,15 +804,280 @@ int main(int argc, char **argv) {
                        packed(frame, signal.bit, signal.width) == signal.value);
                 normal[position] = previous;
             }
-        }
+        };
+        // Fields that reach the OEM ADAS, APA/PDC and power manager items or that no parser case of
+        // this firmware reads.
+        deliver_cases({
+                {"gsm_warnInformation_bak", 205, 2, 3},
+                {"can_v1_5_bcm_tpmsLFSts", 227, 3, 5},
+                {"can_v1_5_bcm_tpmsRFSts", 246, 3, 5},
+                {"can_v1_5_bcm_tpmsLRSts", 265, 3, 5},
+                {"can_v1_5_bcm_tpmsRRSts", 284, 3, 5},
+                {"tbox_vehicleMode", 1449, 4, 11},
+                {"apa_WarningReq", 1527, 1, 1},
+                {"APA_PDCSysSts", 1528, 2, 3},
+                {"APA_PDCFailureWarning", 1530, 1, 1},
+                {"APA_PDCAudibleFrontBeepRate", 1531, 3, 5},
+                {"APA_PDCAudibleRearBeepRate", 1534, 3, 5},
+                {"pdc_sysSts", 1537, 2, 3},
+                {"pdc_failureWarning", 1539, 1, 1},
+                {"pdc_audibleFrontBeepRate", 1540, 3, 5},
+                {"pdc_audibleRearBeepRate", 1543, 3, 5},
+                {"apa_AbortWarningReq", 1598, 1, 1},
+                {"apa_ActiveWarningReq", 1599, 1, 1},
+                {"cfg_reserve_14", 2192, 8, 171},
+                {"acc_mode", 80, 3, 2},
+                {"mpc_icaSts", 83, 3, 2},
+                {"mpc_isa_speed_limit", 96, 6, 12},
+                {"mpc_isaOnOffSts", 102, 2, 1},
+                {"isa_limit_warning", 104, 1, 1},
+                {"left_visualization", 455, 2, 2},
+                {"right_visualization", 457, 2, 2},
+                {"time_gap_set", 692, 3, 3},
+                {"SeatBeatFlash", 1548, 1, 1},
+        });
+        // The wire fields that only the qinggan11 catalogue has, one list per group.
+        // ADAS lanes, targets and assistance states.
+        deliver_cases({
+                {"ADCU_ANP_TxtInfo", 86, 8, 171},
+                {"ADCU_WarningDis", 108, 2, 3},
+                {"mpc_lasSts", 116, 3, 7},
+                {"Elk_SysSts", 168, 3, 7},
+                {"Elk_Warningtype_L", 171, 3, 7},
+                {"Elk_Warningtype_R", 174, 3, 7},
+                {"TSR_Textinfo", 303, 5, 11},
+                {"ADCU_LeTargetPosition", 444, 2, 3},
+                {"ADCU_RiTargetPosition", 446, 2, 3},
+                {"ADCU_LeRoadColorFct", 448, 2, 3},
+                {"ADCU_RiRoadColorFct", 450, 2, 3},
+                {"ADCU_LeLineType", 470, 4, 11},
+                {"ADCU_RiLineType", 474, 4, 11},
+                {"ADCU_LLeLineType", 478, 4, 11},
+                {"ADCU_RRiLineType", 482, 4, 11},
+                {"ADCU_LeLineDst", 486, 10, 683},
+                {"ADCU_RiLineDst", 496, 10, 683},
+                {"ADCU_LeLeLineDst", 506, 11, 683},
+                {"ADCU_RiRiLineDst", 517, 11, 683},
+                {"ADCU_LeLineColorFct", 528, 3, 7},
+                {"ADCU_RiLineColorFct", 531, 3, 7},
+                {"ADCU_LLeLineColorFct", 534, 3, 7},
+                {"ADCU_RRiLineColorFct", 537, 3, 7},
+                {"ADCU_Lane_curvatureRate", 547, 12, 2731},
+                {"ADCU_Lane_C1", 559, 9, 171},
+                {"FCTA_SwSt", 568, 1, 1},
+                {"Rear_mrr_systemErrorSts", 569, 1, 1},
+                {"Front_mrr_systemErrorSts", 570, 1, 1},
+                {"mpc_tjaSts", 571, 3, 7},
+                {"mpc_adasTakeoverReq", 574, 2, 3},
+                {"ELK_Mainswitch", 579, 2, 3},
+                {"ESA_Mainswitch", 581, 2, 3},
+                {"mpc_LaneAssistOnOffSts", 583, 2, 3},
+                {"ADCU_Lane_Radius", 585, 10, 683},
+                {"Elk_SysS_Feedback", 595, 2, 3},
+                {"ESA_SysS_Feedback", 597, 2, 3},
+                {"SWS_PilotSW", 600, 1, 1},
+                {"ADCU_VsetDis", 683, 8, 171},
+                {"ADCU_timeGapdisReq", 691, 1, 1},
+                {"ADCU_OverrideSts", 695, 1, 1},
+                {"Angular_radar_status_display", 726, 2, 3},
+                {"Angle_radar_alarm", 753, 2, 3},
+                {"RCTA_SwSt", 755, 1, 1},
+                {"RCW_SwSt", 756, 1, 1},
+                {"DOW_SwSt", 757, 1, 1},
+                {"LCDA_SwSt", 758, 1, 1},
+                {"ADCU_GLA_Left_Sts", 1166, 3, 7},
+                {"ADCU_GLA_Stright_Sts", 1169, 4, 11},
+                {"ADCU_GLA_Right_Sts", 1173, 3, 7},
+                {"ADCU_HANPMode", 1278, 3, 7},
+                {"mpc_AcousticWarningReq", 1431, 2, 3},
+                {"ADCU_ANPSoundRmd", 1655, 4, 11},
+                {"ADCU_PlanLineSts", 1659, 2, 3},
+                {"ADCU_ICAandANP_Animation_Display", 1661, 2, 3},
+                {"ADCU_ISLCStatus", 1663, 4, 11},
+                {"ADCU_ISLCSpdCtlLamp", 1667, 2, 3},
+                {"mrr_accState1", 1669, 2, 3},
+                {"mrr_accState2", 1671, 2, 3},
+                {"ADCU_FVSRStatus", 1674, 3, 7},
+                {"ADCU_ALCStatus", 1677, 3, 7},
+                {"ADCU_PLCFuncSts", 1680, 3, 7},
+                {"ADCU_GLAStatus", 1683, 2, 3},
+                {"HMI_LED_Enable", 1685, 1, 1},
+                {"ESA_status", 1686, 3, 7},
+                {"TSR_SysSts", 1689, 3, 7},
+                {"ADCU_RippleDis", 1692, 3, 7},
+                {"ADCU_ALC_LLCArrow", 1695, 2, 3},
+                {"ADCU_ALC_RiLCArrow", 1697, 2, 3},
+                {"ADCU_LeLineSts", 1699, 2, 3},
+                {"ADCU_RiLineSts", 1701, 2, 3},
+                {"ADCU_TargetType_1", 2240, 3, 7},
+                {"ADCU_TargetColor_1", 2243, 3, 7},
+                {"ADCU_LateralDist_1", 2246, 7, 43},
+                {"ADCU_LongitudinalDist_1", 2253, 9, 171},
+                {"ADCU_LateralDistFlag_1", 2262, 1, 1},
+                {"ADCU_TargetAngle_1", 2263, 3, 7},
+                {"ADCU_TargetType_2", 2266, 3, 7},
+                {"ADCU_TargetColor_2", 2269, 3, 7},
+                {"ADCU_LateralDist_2", 2272, 7, 43},
+                {"ADCU_LongitudinalDist_2", 2279, 9, 171},
+                {"ADCU_LateralDistFlag_2", 2288, 1, 1},
+                {"ADCU_TargetAngle_2", 2289, 3, 7},
+                {"ADCU_TargetType_3", 2304, 3, 7},
+                {"ADCU_TargetColor_3", 2307, 3, 7},
+                {"ADCU_LateralDist_3", 2310, 7, 43},
+                {"ADCU_LongitudinalDist_3", 2317, 9, 171},
+                {"ADCU_LateralDistFlag_3", 2326, 1, 1},
+                {"ADCU_TargetAngle_3", 2327, 3, 7},
+                {"ADCU_TargetType_4", 2330, 3, 7},
+                {"ADCU_TargetColor_4", 2333, 3, 7},
+                {"ADCU_LateralDist_4", 2336, 7, 43},
+                {"ADCU_LongitudinalDist_4", 2343, 9, 171},
+                {"ADCU_LateralDistFlag_4", 2352, 1, 1},
+                {"ADCU_TargetAngle_4", 2353, 3, 7},
+                {"ADCU_TargetType_5", 2368, 3, 7},
+                {"ADCU_TargetColor_5", 2371, 3, 7},
+                {"ADCU_LateralDist_5", 2374, 7, 43},
+                {"ADCU_LongitudinalDist_5", 2381, 9, 171},
+                {"ADCU_LateralDistFlag_5", 2390, 1, 1},
+                {"ADCU_TargetAngle_5", 2391, 3, 7},
+                {"ADCU_TargetType_6", 2394, 3, 7},
+                {"ADCU_TargetColor_6", 2397, 3, 7},
+                {"ADCU_LateralDist_6", 2400, 7, 43},
+                {"ADCU_LongitudinalDist_6", 2407, 9, 171},
+                {"ADCU_LateralDistFlag_6", 2416, 1, 1},
+                {"ADCU_TargetAngle_6", 2417, 3, 7},
+                {"ADCU_TargetType_7", 2432, 3, 7},
+                {"ADCU_TargetColor_7", 2435, 3, 7},
+                {"ADCU_LateralDist_7", 2438, 7, 43},
+                {"ADCU_LongitudinalDist_7", 2445, 9, 171},
+                {"ADCU_LateralDistFlag_7", 2454, 1, 1},
+                {"ADCU_TargetAngle_7", 2455, 3, 7},
+                {"ADCU_TargetType_8", 2458, 3, 7},
+                {"ADCU_TargetColor_8", 2461, 3, 7},
+                {"ADCU_LateralDist_8", 2464, 7, 43},
+                {"ADCU_LongitudinalDist_8", 2471, 9, 171},
+                {"ADCU_LateralDistFlag_8", 2480, 1, 1},
+                {"ADCU_TargetAngle_8", 2481, 3, 7},
+                {"ADCU_TargetType_9", 2496, 3, 7},
+                {"ADCU_TargetColor_9", 2499, 3, 7},
+                {"ADCU_LateralDist_9", 2502, 7, 43},
+                {"ADCU_LongitudinalDist_9", 2509, 9, 171},
+                {"ADCU_LateralDistFlag_9", 2518, 1, 1},
+                {"ADCU_TargetAngle_9", 2519, 3, 7},
+                {"ADCU_TargetType_10", 2522, 3, 7},
+                {"ADCU_TargetColor_10", 2525, 3, 7},
+                {"ADCU_LateralDist_10", 2528, 7, 43},
+                {"ADCU_LongitudinalDist_10", 2535, 9, 171},
+                {"ADCU_LateralDistFlag_10", 2544, 1, 1},
+                {"ADCU_TargetAngle_10", 2545, 3, 7},
+                {"ADCU_TargetType_11", 2560, 3, 7},
+                {"ADCU_TargetColor_11", 2563, 3, 7},
+                {"ADCU_LateralDist_11", 2566, 7, 43},
+                {"ADCU_LongitudinalDist_11", 2573, 9, 171},
+                {"ADCU_LateralDistFlag_11", 2582, 1, 1},
+                {"ADCU_TargetAngle_11", 2583, 3, 7},
+                {"ADCU_TargetType_12", 2586, 3, 7},
+                {"ADCU_TargetColor_12", 2589, 3, 7},
+                {"ADCU_LateralDist_12", 2592, 7, 43},
+                {"ADCU_LongitudinalDist_12", 2599, 9, 171},
+                {"ADCU_LateralDistFlag_12", 2608, 1, 1},
+                {"ADCU_TargetAngle_12", 2609, 3, 7},
+                {"ADCU_TargetType_13", 2624, 2, 3},
+                {"ADCU_LateralDist_13", 2626, 7, 43},
+                {"ADCU_LongitudinalDist_13", 2633, 9, 171},
+                {"ADCU_LateralDistFlag_13", 2642, 1, 1},
+                {"ADCU_TargetType_14", 2643, 2, 3},
+                {"ADCU_LateralDist_14", 2645, 7, 43},
+                {"ADCU_LongitudinalDist_14", 2652, 9, 171},
+                {"ADCU_LateralDistFlag_14", 2661, 1, 1},
+                {"ADCU_TargetType_15", 2688, 2, 3},
+                {"ADCU_LateralDist_15", 2690, 7, 43},
+                {"ADCU_LongitudinalDist_15", 2697, 9, 171},
+                {"ADCU_LateralDistFlag_15", 2706, 1, 1},
+                {"ADCU_TargetType_16", 2707, 2, 3},
+                {"ADCU_LateralDist_16", 2709, 7, 43},
+                {"ADCU_LongitudinalDist_16", 2716, 9, 171},
+                {"ADCU_LateralDistFlag_16", 2725, 1, 1},
+                {"ADCU_TargetType_17", 2752, 2, 3},
+                {"ADCU_LateralDist_17", 2754, 7, 43},
+                {"ADCU_LongitudinalDist_17", 2761, 9, 171},
+                {"ADCU_LateralDistFlag_17", 2770, 1, 1},
+                {"ADCU_TargetType_18", 2771, 2, 3},
+                {"ADCU_LateralDist_18", 2773, 7, 43},
+                {"ADCU_LongitudinalDist_18", 2780, 9, 171},
+                {"ADCU_LateralDistFlag_18", 2789, 1, 1},
+        });
+        // Driver monitoring and multimedia camera settings.
+        deliver_cases({
+                {"ivi_dvrPhotoReceive", 1673, 1, 1},
+                {"ivi_dmsCameraCtl", 1724, 2, 3},
+                {"ivi_dmsWearySet", 1726, 2, 3},
+                {"ivi_dmsSenSet", 1728, 2, 3},
+                {"ivi_roaCameraCtl", 1730, 1, 1},
+                {"ivi_cameraChange", 1731, 3, 7},
+                {"ivi_dmsWearyAssisSet", 1734, 2, 3},
+                {"ivi_faceIDSet", 1736, 2, 3},
+                {"ivi_gestureIDSet", 1738, 2, 3},
+                {"ivi_dmsFaceIDRegiReq", 1740, 2, 3},
+                {"ivi_FaceIDLoginReq", 1742, 2, 3},
+                {"ivi_dmsRegiFaceID", 1744, 4, 11},
+                {"ivi_dmsDeleteFaceID", 1748, 4, 11},
+                {"ivi_FaceIDEmptydataResp", 1752, 1, 1},
+        });
+        // Body, steering, powertrain and range states.
+        deliver_cases({
+                {"EMS_GPFLmp", 9, 1, 1},
+                {"bcm_rsm_lightSWReason", 461, 3, 7},
+                {"break_warning_pop", 464, 1, 1},
+                {"reserved_05", 467, 3, 7},
+                {"reserved_06", 540, 7, 43},
+                {"VCU_textinfo", 576, 3, 7},
+                {"esc_cdpActive", 599, 1, 1},
+                {"SOC_Calibrated_Flag", 601, 1, 1},
+                {"eps_sasSteeringAngleValid", 744, 1, 1},
+                {"remain_mileage_f_old", 1101, 10, 683},
+                {"Trailer_EnabState", 1582, 3, 7},
+                {"remain_mileage_f_wltc_reserved", 1585, 10, 683},
+                {"Driver_SeatBeltSts", 1703, 1, 1},
+                {"bcm_doorFLLockSts", 1704, 1, 1},
+                {"bcm_antiTheftSts", 1705, 3, 7},
+                {"eps_sasSteeringAngle", 1708, 16, 43691},
+                {"bcm_RLReadLightSts", 1753, 1, 1},
+                {"bcm_RRReadLightSts", 1754, 1, 1},
+                {"vcu_ready", 1755, 1, 1},
+                {"VCU_SOCmodesetnew", 1798, 3, 7},
+        });
+        // CAN message timeouts.
+        deliver_cases({
+                {"can_msg_timeout_346", 1878, 2, 3}, {"can_msg_timeout_379", 1888, 2, 3},
+                {"can_msg_timeout_381", 1890, 2, 3}, {"can_msg_timeout_10d", 1942, 2, 3},
+                {"can_msg_timeout_204", 1950, 2, 3}, {"can_msg_timeout_205", 1952, 2, 3},
+                {"can_msg_timeout_15E", 1954, 2, 3}, {"can_msg_timeout_206", 1966, 2, 3},
+                {"can_msg_timeout_268", 1968, 2, 3}, {"can_msg_timeout_269", 1970, 2, 3},
+                {"can_msg_timeout_2fb", 1972, 2, 3}, {"can_msg_timeout_308", 1974, 2, 3},
+                {"can_msg_timeout_36f", 1976, 2, 3}, {"can_msg_timeout_370", 1978, 2, 3},
+                {"can_msg_timeout_371", 1980, 2, 3}, {"can_msg_timeout_372", 1982, 2, 3},
+                {"can_msg_timeout_373", 1984, 2, 3}, {"can_msg_timeout_375", 1986, 2, 3},
+                {"can_msg_timeout_376", 1988, 2, 3}, {"can_msg_timeout_377", 1990, 2, 3},
+                {"can_msg_timeout_378", 1992, 2, 3}, {"can_msg_timeout_395", 1994, 2, 3},
+                {"can_msg_timeout_37A", 1996, 2, 3}, {"can_msg_timeout_37B", 1998, 2, 3},
+        });
+        // Vehicle configuration.
+        deliver_cases({
+                {"cfg_reserve_11", 2172, 4, 11},
+                {"cfg_steer_heat", 2176, 2, 3},
+                {"cfg_rearseat_heat", 2178, 2, 3},
+                {"cfg_smart_drive", 2180, 2, 3},
+                {"cfg_battery_pack", 2182, 2, 3},
+        });
 
         // AdasEcu acc and cancel write acc_mode, mpc_icaSts and time_gap_set, which reach their OEM
-        // ADAS items, and mrr_vSetDis, which this layout does not project. The guest rejects the
-        // logical revision as a whole, and the host state for the guest carries the initial
-        // mrr_vSetDis beside the new speed and the ADAS states.
+        // ADAS items; the qinggan11 catalogue has no mrr_vSetDis. A settings byte, which the
+        // settings feedback owns, makes the guest reject the logical revision as a whole, and the
+        // host state for the guest carries its initial value beside the new speed and ADAS states.
         {
-            auto state = voyemu::apply_patch(voyemu::initial_state(),
-                                             {{"speed", 80}, {"gear", 3}, {"gear_valid", 1}});
+            auto state =
+                    voyemu::apply_patch(voyemu::initial_state(voyemu::VehicleCatalog::qinggan11),
+                                        {{"speed", 80}, {"gear", 3}, {"gear_valid", 1}});
             voyemu::AdasEcu adas;
             const auto now = voyemu::AdasEcu::Clock::now();
             std::uint32_t sequence = 0;
@@ -818,9 +1094,9 @@ int main(int argc, char **argv) {
             state = voyemu::apply_patch(state, {{"speed", 60}});
             const auto &raw = state.at("raw_oem");
             assert(raw.at("acc_mode") == 0 && raw.at("mpc_icaSts") == 1 &&
-                   raw.at("mrr_vSetDis") == 160 && raw.at("time_gap_set") == 1);
+                   !raw.contains("mrr_vSetDis") && raw.at("time_gap_set") == 1);
             auto deliver = [&](const Json &values) {
-                for (unsigned i = 0; i < 579; i++) {
+                for (unsigned i = 0; i < QINGGAN11_FIELDS; i++) {
                     normal[i] = values.at(catalog[i].name).get<unsigned>();
                 }
 
@@ -829,16 +1105,19 @@ int main(int argc, char **argv) {
                 const bool accepted = dataParser_makedumydata(frame, 650) == 650 &&
                                       qinggan11_ack == offered;
 
-                return accepted && field(frame, 310) == 60;
+                return accepted && field(frame, speed) == 60;
             };
-            assert(!deliver(raw) && qinggan11_rejects == 1);
-            const auto guest = voyemu::qnx_qinggan11_guest_state(source, raw);
+            assert(deliver(raw) && !qinggan11_rejects);
+            const auto settings_state = voyemu::apply_patch(state, {{"set_byte0", 5}});
+            const auto &settings_raw = settings_state.at("raw_oem");
+            assert(!deliver(settings_raw) && qinggan11_rejects == 1);
+            const auto guest = voyemu::qnx_qinggan11_guest_state(source, settings_raw);
             assert(guest.at("acc_mode") == 0 && guest.at("mpc_icaSts") == 1 &&
-                   guest.at("mrr_vSetDis") == 0 && guest.at("time_gap_set") == 1 &&
+                   guest.at("set_byte0") == 0 && guest.at("time_gap_set") == 1 &&
                    guest.at("ivi_languageSet") == raw.at("ivi_languageSet"));
             assert(deliver(guest) && !qinggan11_rejects);
 
-            for (unsigned i = 0; i < 579; i++) {
+            for (unsigned i = 0; i < QINGGAN11_FIELDS; i++) {
                 normal[i] = initial.at(catalog[i].name).get<unsigned>();
             }
         }

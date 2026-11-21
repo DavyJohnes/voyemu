@@ -5218,6 +5218,26 @@ static void graphics_launch_angle_pins() {
     std::filesystem::remove_all(root);
 }
 
+// A session of a qinggan11 machine works on the 736 fields of the qinggan11 catalogue: status,
+// patch read and write its fields, and qinggan09 fields are unknown.
+static void qinggan11_vehicle_catalog() {
+    const auto root = std::filesystem::canonical(std::filesystem::temp_directory_path()) /
+                      ("voyemu-qinggan11-catalog-" + random_token());
+
+    ensure_private_directory(root);
+    {
+        Session session(root, random_token(), {}, VehicleCatalog::qinggan11);
+        auto status = session.handle({{"op", "status"}});
+        assert(status["catalog"].size() == 736 &&
+               status["state"]["map_sha256"] == qinggan11_map_sha256);
+        auto patched = session.handle({{"op", "patch"}, {"values", {{"ADCU_TargetType_1", 3}}}});
+        assert(patched["ok"] == true && patched["state"]["raw_oem"]["ADCU_TargetType_1"] == 3);
+        auto foreign = session.handle({{"op", "patch"}, {"values", {{"mrr_vSetDis", 1}}}});
+        assert(foreign["ok"] == false);
+    }
+    std::filesystem::remove_all(root);
+}
+
 int main(int argc, char **argv) try {
 #ifdef _WIN32
     if (argc == 2 && std::string_view(argv[1]) == "--windows-wheel-pair-flush-only") {
@@ -5241,6 +5261,7 @@ int main(int argc, char **argv) try {
     qnx_startup_markers_interleaved();
     graphics_launch_angle_pins();
     qnx_vehicle_receipts();
+    qinggan11_vehicle_catalog();
     SessionPersistenceFixture::vehicle_receiver_lifecycle();
     SessionPersistenceFixture::cluster_language_single_source();
 
@@ -5809,11 +5830,13 @@ int main(int argc, char **argv) try {
     assert(!passion_qnx_wheel_index("photo") && !passion_qnx_wheel_index("night_vision") &&
            !passion_qnx_wheel_index("unknown"));
     // Lower Night Vision sends the real OEM momentary switch, not an ADAS action.
-    const auto nvs_field = std::find_if(catalog().begin(), catalog().end(), [](const Field &field) {
-        return field.index == 329;
-    });
-    assert(nvs_field != catalog().end() && nvs_field->name == "swm_nvsSwitch" &&
-           nvs_field->width == 1);
+    const auto nvs_field = std::find_if(catalog(VehicleCatalog::qinggan09).begin(),
+                                        catalog(VehicleCatalog::qinggan09).end(),
+                                        [](const Field &field) {
+                                            return field.index == 329;
+                                        });
+    assert(nvs_field != catalog(VehicleCatalog::qinggan09).end() &&
+           nvs_field->name == "swm_nvsSwitch" && nvs_field->width == 1);
     EventQueue nvs_events;
     auto nvs_down = nvs_events.submit("night_vision", "down", "nvs-owner");
     auto nvs_up = nvs_events.submit("night_vision", "up", "nvs-owner");
@@ -6162,10 +6185,10 @@ int main(int argc, char **argv) try {
     rejects([&] {
         theme_change(std::nullopt, {2, 6001});
     });
-    auto source = initial_state();
+    auto source = initial_state(VehicleCatalog::qinggan09);
     Json receipt{{"schema", 1},
                  {"status", "applied"},
-                 {"map_sha256", map_sha256},
+                 {"map_sha256", qinggan09_map_sha256},
                  {"field_count", 579},
                  {"sequence", source["sequence"]},
                  {"raw_oem", source["raw_oem"]}};

@@ -26,7 +26,7 @@ std::set<std::string> multimedia(const Json &launch) {
 int main() try {
     std::set<std::string> names;
 
-    for (const auto &field : catalog()) {
+    for (const auto &field : catalog(VehicleCatalog::qinggan09)) {
         names.insert(field.name);
     }
 
@@ -42,7 +42,10 @@ int main() try {
     check(qinggan11_731.size() ==
                           qnx_adapter(QnxGuestAdapter::sa8155_qinggan11_731).mcu_projected_fields &&
                   qinggan11_731.contains("speed") && qinggan11_731.contains("epb_parking") &&
-                  qinggan11_731.contains("acc_mode") && !qinggan11_731.contains("mrr_vSetDis"),
+                  qinggan11_731.contains("acc_mode") && qinggan11_731.contains("vcu_ready") &&
+                  qinggan11_731.contains("ADCU_TargetType_18") &&
+                  !qinggan11_731.contains("set_byte0") && !qinggan11_731.contains("reserved_03") &&
+                  !qinggan11_731.contains("eps_calibrationFlag"),
           "qinggan11 7.3.1 delivers the fields of its MCU layout");
     const auto qinggan11_611 = cluster(
             {{"hardware_adapter", "sa8155-qinggan11-611"},
@@ -52,11 +55,12 @@ int main() try {
                   qinggan11_611.contains("remain_mileage_e") &&
                   qinggan11_611.contains("mrr_fcwSts") && qinggan11_611.contains("acc_mode") &&
                   qinggan11_611.contains("ivi_languageSet") &&
-                  !qinggan11_611.contains("mrr_vSetDis"),
+                  qinggan11_611.contains("Driver_SeatBeltSts") &&
+                  !qinggan11_611.contains("set_byte9"),
           "qinggan11 6.11.1 delivers the fields of its MCU layout");
-    check(cluster({{"hardware_adapter", "sa8155-qinggan11-611"},
-                   {"mcu_projection",
-                    qnx_mcu_projection(QnxGuestAdapter::sa8155_qinggan11_611, 34)}})
+    auto earlier = qnx_mcu_projection(QnxGuestAdapter::sa8155_qinggan11_611);
+    earlier["projected_fields"] = 493;
+    check(cluster({{"hardware_adapter", "sa8155-qinggan11-611"}, {"mcu_projection", earlier}})
                   .empty(),
           "an earlier scope without its own layout names no field");
     check(cluster({{"hardware_adapter", "sa8155-qinggan11-731"}}).empty(),

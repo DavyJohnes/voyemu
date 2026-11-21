@@ -6,7 +6,7 @@ using namespace voyemu;
 using namespace std::chrono_literals;
 
 int main() try {
-    auto ready = apply_patch(initial_state(),
+    auto ready = apply_patch(initial_state(VehicleCatalog::qinggan09),
                              {{"gear", 3}, {"gear_valid", 1}, {"speed", 80}, {"soc", 62}});
     auto now = AdasEcu::Clock::time_point{} + 10s;
     AdasEcu ecu;

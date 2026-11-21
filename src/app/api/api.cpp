@@ -1704,20 +1704,31 @@ Json Api::dispatch_catalog(const std::string &op, const Json &request, Clock::ti
     }
 
     if (op == "vehicle.fields") {
-        auto fields = catalog_json();
-        // With a session each field names the guests of its running machine that receive it.
+        // The catalogue of the platform of the running machine, or of the named profile; with a
+        // session each field names the guests of its running machine that receive it.
         std::optional<FieldDelivery> delivery;
+        VehicleCatalog catalog = VehicleCatalog::qinggan09;
 
         if (request.contains("session")) {
             const auto status = control(request, {{"op", "status"}});
 
-            if (!status.contains("field_delivery")) {
+            if (!status.contains("field_delivery") || !status.contains("state")) {
                 throw VoyemuError("TEST_UNSUPPORTED",
                                   "stopped runtime no longer exposes field delivery");
             }
 
+            catalog = state_catalog(status.at("state"));
             delivery = field_delivery_from_status(status.at("field_delivery"));
+        } else if (request.contains("profile")) {
+            catalog = vehicle_catalog(embedded_profile(profile(request))
+                                              .at("definition")
+                                              .at("platform")
+                                              .get<std::string>());
+        } else {
+            throw VoyemuError("TEST_ARGUMENT", "vehicle.fields needs a session or a profile");
         }
+
+        auto fields = catalog_json(catalog);
 
         for (auto &field : fields) {
             auto name = field.at("name").get<std::string>();
@@ -1742,7 +1753,7 @@ Json Api::dispatch_catalog(const std::string &op, const Json &request, Clock::ti
             }
         }
 
-        return {{"map_sha256", map_sha256},
+        return {{"map_sha256", catalog_map_sha256(catalog)},
                 {"fields", fields},
                 {"validation", "atomic OEM widths and coupled fields; SOC <= 100; whole km/h"},
                 {"raw_adas_injection", true}};

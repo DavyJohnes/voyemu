@@ -79,7 +79,7 @@ public final class VehicleStateProvider extends ContentProvider {
                 JSONObject raw = new JSONObject();
 
                 for (String name : VehicleSignalCatalog.NAMES) {
-                    raw.put(name, snapshot.raw(name));
+                    raw.put(name, snapshot.value(name));
                 }
 
                 receipt.put("status", "applied");

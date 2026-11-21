@@ -2,6 +2,7 @@
 #include "model.hpp"
 #include "process.hpp"
 #include "qnx_adapter.hpp"
+#include <algorithm>
 #include <cassert>
 #include <chrono>
 #include <cstring>
@@ -12,6 +13,7 @@
 #include <sstream>
 #include <string>
 #include <thread>
+#include <vector>
 #ifdef _WIN32
 #define NOMINMAX
 #include <windows.h>
@@ -638,43 +640,65 @@ static void theme_request_logging(const std::filesystem::path &parent,
 static void qinggan11_unprojected_fields(const std::filesystem::path &parent,
                                          const std::filesystem::path &angle,
                                          const std::filesystem::path &ram) {
-    auto run = [&](std::string_view name, unsigned projection, unsigned language) {
+    const auto &fields = catalog(VehicleCatalog::qinggan11);
+    auto position = [&](std::string_view name) {
+        const auto at = std::find_if(fields.begin(), fields.end(), [&](const Field &field) {
+            return field.name == name;
+        });
+        assert(at != fields.end());
+
+        return static_cast<std::size_t>(at - fields.begin());
+    };
+    auto run = [&](std::string_view name, const QnxAdapterSpec &adapter, unsigned language) {
         const auto directory = parent / name;
         ensure_private_directory(directory);
-        auto state = apply_patch(initial_state(), {{"ivi_languageSet", language},
-                                                   {"hcm_adbFuctionStsLt_bak", 1},
-                                                   {"acc_mode", 3},
-                                                   {"mpc_icaSts", 1},
-                                                   {"mrr_vSetDis", 160},
-                                                   {"time_gap_set", 1},
-                                                   {"speed", 80}});
+        auto state = apply_patch(initial_state(VehicleCatalog::qinggan11),
+                                 {{"ivi_languageSet", language},
+                                  {"set_byte0", 7},
+                                  {"acc_mode", 3},
+                                  {"mpc_icaSts", 1},
+                                  {"time_gap_set", 1},
+                                  {"ADCU_TargetType_1", 5},
+                                  {"speed", 80}});
         write_private_json(directory / "vehicle-state.json", state);
-        Backend backend({ram, directory, angle, {}, ram_base + 73728, true, false});
-        auto reply = backend.dispatch(364, {0, 650, 736, projection}, {});
+        Options options{ram, directory, angle, {}, ram_base + 73728, true, false};
+        options.mcu_adapter = adapter.name;
+        Backend backend(options);
+        auto reply = backend.dispatch(364, {0, 650, 736, adapter.mcu_projected_fields}, {});
         assert(reply.result == state.at("sequence").get<std::uint64_t>() &&
-               reply.payload.size() == 581 * 4);
-        unsigned values[581];
-        std::memcpy(values, reply.payload.data(), sizeof values);
+               reply.payload.size() == (fields.size() + 2) * 4);
+        std::vector<unsigned> values(fields.size() + 2);
+        std::memcpy(values.data(), reply.payload.data(), values.size() * 4);
+        assert(values[0] == 1 && values[1] == fields.size());
         // Both qinggan11 layouts carry the language of the model in the MCU word.
-        assert(values[2 + 320] == language);
-        // Signals outside the MCU layout, mrr_vSetDis of AdasEcu included, reach the guest with
-        // their initial values; the projected ADAS states and speed pass.
-        for (const unsigned position : {6U, 224U}) {
-            assert(values[2 + position] == 0);
+        assert(values[2 + position("ivi_languageSet")] == language);
+        // A settings byte, which the settings feedback owns, reaches the guest with its initial
+        // value; the ADAS states, a lane target and the speed pass.
+        assert(values[2 + position("set_byte0")] == 0);
+        assert(values[2 + position("acc_mode")] == 3 && values[2 + position("mpc_icaSts")] == 1 &&
+               values[2 + position("time_gap_set")] == 1 &&
+               values[2 + position("ADCU_TargetType_1")] == 5);
+        assert(values[2 + position("speed")] == 80 && values[2 + position("speed10x")] == 800);
+        assert(read_private_json(directory / "vehicle-state.json") == state);
+        // A state of the qinggan09 catalogue does not reach a qinggan11 guest.
+        write_private_json(directory / "vehicle-state.json",
+                           apply_patch(initial_state(VehicleCatalog::qinggan09), {{"speed", 80}}));
+        bool rejected = false;
+        try {
+            Backend foreign(options);
+            (void)foreign.dispatch(364, {0, 650, 736, adapter.mcu_projected_fields}, {});
+        } catch (const std::exception &) {
+            rejected = true;
         }
 
-        assert(values[2 + 43] == 3 && values[2 + 44] == 1 && values[2 + 225] == 1);
-
-        assert(values[2 + 310] == 80 && values[2 + 358] == 800);
-        assert(read_private_json(directory / "vehicle-state.json") == state);
+        assert(rejected);
     };
 
     const auto &qinggan11_611 = qnx_adapter(QnxGuestAdapter::sa8155_qinggan11_611);
-    run("qinggan11-611-language-legacy", qinggan11_611.mcu_previous_projected_fields, 1);
-    run("qinggan11-611-language-en", qinggan11_611.mcu_projected_fields, 1);
-    run("qinggan11-611-language-other", qinggan11_611.mcu_projected_fields, 2);
-    run("qinggan11-731-language",
-        qnx_adapter(QnxGuestAdapter::sa8155_qinggan11_731).mcu_projected_fields, 1);
+
+    run("qinggan11-611-language-en", qinggan11_611, 1);
+    run("qinggan11-611-language-other", qinggan11_611, 2);
+    run("qinggan11-731-language", qnx_adapter(QnxGuestAdapter::sa8155_qinggan11_731), 1);
 }
 
 static void input_wake_protocol(const std::filesystem::path &parent,
@@ -716,7 +740,7 @@ static void input_wake_protocol(const std::filesystem::path &parent,
     page(8192, magic);
     Backend owner({ram, directory, angle, {}, ram_base + 8192, true, false});
     assert(!owner.service() && !word(8192 + 184));
-    auto state = initial_state();
+    auto state = initial_state(VehicleCatalog::qinggan09);
     write_private_json(directory / "vehicle-state.json", state);
     assert(owner.dispatch(364, {}, {}).result == 1);
     cookie(0);
@@ -769,7 +793,7 @@ static void control_idle_polling(const std::filesystem::path &parent,
     const auto directory = parent / "control-idle";
 
     ensure_private_directory(directory);
-    write_private_json(directory / "vehicle-state.json", initial_state());
+    write_private_json(directory / "vehicle-state.json", initial_state(VehicleCatalog::qinggan09));
     std::array<std::byte, 4096> page{};
     std::array<std::uint32_t, 8> header{rpc_magic, rpc_version, 1, 364, 1, 0, 0, 0};
     std::memcpy(page.data(), header.data(), sizeof(header));
@@ -804,7 +828,7 @@ static void control_idle_mode_guards(const std::filesystem::path &parent,
     const auto directory = parent / "idle-mode";
 
     ensure_private_directory(directory);
-    write_private_json(directory / "vehicle-state.json", initial_state());
+    write_private_json(directory / "vehicle-state.json", initial_state(VehicleCatalog::qinggan09));
     auto request = [&](Backend &backend, std::size_t offset, unsigned opcode, unsigned sequence) {
         std::array<std::byte, 4096> bytes{};
         std::array<std::uint32_t, 8> header{rpc_magic, rpc_version, 1, opcode, sequence, 0, 0, 0};
@@ -831,7 +855,8 @@ static void control_idle_mode_guards(const std::filesystem::path &parent,
     assert(foreign.idle_wait_us() == 100);
     const auto mixed_directory = parent / "idle-mixed";
     ensure_private_directory(mixed_directory);
-    write_private_json(mixed_directory / "vehicle-state.json", initial_state());
+    write_private_json(mixed_directory / "vehicle-state.json",
+                       initial_state(VehicleCatalog::qinggan09));
     Backend mixed({ram, mixed_directory, angle, {}, ram_base + 28672, true, false});
     request(mixed, 28672, 42, 1);
     assert(mixed.idle_wait_us() == 100);

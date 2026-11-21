@@ -313,7 +313,7 @@ Json qnx_checkpoint_key(const Json &cold, const std::string &profile) {
 
     return {{"schema", 1},
             {"renderer_wire", 1},
-            {"vehicle_map", map_sha256},
+            {"vehicle_maps", Json::array({qinggan09_map_sha256, qinggan11_map_sha256})},
             {"profile", profile},
             {"prepared", prepared}};
 }

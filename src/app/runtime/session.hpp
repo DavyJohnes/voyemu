@@ -262,8 +262,10 @@ void bootstrap_owned_adbd(
         int timeout_ms);
 class Session {
 public:
+    // A directory without a vehicle state starts from the initial state of catalog.
     Session(std::filesystem::path directory, std::string session_id,
-            std::filesystem::path canonical_state = {});
+            std::filesystem::path canonical_state = {},
+            VehicleCatalog catalog = VehicleCatalog::qinggan09);
     // Ordinary machine consumption reads configuration; explicit preparation/check
     // remains responsible for SHA auditing. Existing Session callers stay audited.
     static std::unique_ptr<Session> for_machine_start(std::filesystem::path directory,

@@ -1752,8 +1752,7 @@ Json checked_development_kernel(const std::filesystem::path &seed, const Json &d
 
 static Json inspect_portable_runtime_impl(const std::filesystem::path &root,
                                           std::string_view profile, const MachineIdentity &machine,
-                                          const std::filesystem::path &explicit_seed,
-                                          bool qnx_upgrade_read) {
+                                          const std::filesystem::path &explicit_seed) {
     ordinary(root);
     need(portable_runtime_available(root, profile, machine, explicit_seed),
          "portable seed missing");
@@ -1925,8 +1924,7 @@ static Json inspect_portable_runtime_impl(const std::filesystem::path &root,
 
     if (manifest.contains("qnx")) {
         const auto &qnx = manifest.at("qnx");
-        const auto layout = qnx_upgrade_read ? qnx_portable_upgrade_source_layout(family, qnx)
-                                             : qnx_portable_layout(family, qnx);
+        const auto layout = qnx_portable_layout(family, qnx);
         image_group(seed, qnx.at("images"), qnx_image_roles(layout), "qnx", api,
                     layout.persistence.is_null() ? std::set<std::string>{}
                                                  : std::set<std::string>{"sysla-gpt-ramdisk-v3.img",
@@ -1951,13 +1949,6 @@ static Json inspect_portable_runtime_impl(const std::filesystem::path &root,
 
 Json inspect_portable_runtime(const std::filesystem::path &root, std::string_view profile,
                               const MachineIdentity &machine, const std::filesystem::path &seed) {
-    return inspect_portable_runtime_impl(root, profile, machine, seed, false);
-}
-
-Json inspect_qinggan11_qnx_upgrade_source(const std::filesystem::path &root,
-                                          std::string_view profile,
-                                          const MachineIdentity &machine) {
-    // The upgrade-source layout relaxes only the upgrade-only MCU scope that an adapter declares.
-    return inspect_portable_runtime_impl(root, profile, machine, {}, true);
+    return inspect_portable_runtime_impl(root, profile, machine, seed);
 }
 } // namespace voyemu

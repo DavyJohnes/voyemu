@@ -244,9 +244,6 @@ bool portable_configuration_from_other_host(const Json &record, const std::files
                                             const MachineIdentity &machine,
                                             const std::filesystem::path &seed,
                                             std::string_view manifest_sha);
-// Stopped upgrade preflight only; runtime inspection remains strict current scope.
-Json inspect_qinggan11_qnx_upgrade_source(const std::filesystem::path &, std::string_view profile,
-                                          const MachineIdentity &machine);
 // Configuration-only first binding of an external portable machine. Uses installed
 // host dependencies and tiny writable overlays; never copies or SHA-audits guest images.
 std::filesystem::path bind_machine_configuration(const std::filesystem::path &root,

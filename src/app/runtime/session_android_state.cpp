@@ -325,7 +325,7 @@ void Session::deliver_android_state() {
         deliveries_["android"].update(
                 {{"status", "guest_acknowledged"},
                  {"guest_acknowledged", true},
-                 {"fields", 579},
+                 {"fields", state.at("raw_oem").size()},
                  {"transport", "DUMP-protected read-only provider"},
                  {"typed_projection", receipt.value("typed_projection", Json::object())},
                  {"visible_effect_verified", false}});

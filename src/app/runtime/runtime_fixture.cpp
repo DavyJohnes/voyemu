@@ -1041,9 +1041,9 @@ int fixture_main(int argc, char **argv) {
                     std::cout << "Result: Bundle[{json="
                               << voyemu::Json({{"schema", 1},
                                                {"status", "applied"},
-                                               {"map_sha256", voyemu::map_sha256},
+                                               {"map_sha256", state.at("map_sha256")},
                                                {"sequence", state.at("sequence")},
-                                               {"field_count", 579},
+                                               {"field_count", state.at("raw_oem").size()},
                                                {"raw_oem", state.at("raw_oem")},
                                                {"typed_projection",
                                                 {{"TJA_HWA_STS",

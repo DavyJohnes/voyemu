@@ -104,12 +104,6 @@ inline QnxRuntimeLayout qnx_runtime_layout(std::string_view profile, const Json 
     const auto &spec = qnx_adapter(adapter);
     const bool free = spec.platform == QnxGuestPlatform::qinggan11;
 
-    if (free && spec.mcu_previous_projected_fields &&
-        metadata.value("mcu_projection", Json()) ==
-                qnx_mcu_projection(spec.adapter, spec.mcu_previous_projected_fields)) {
-        layout.projection = qnx_mcu_projection(spec.adapter, spec.mcu_previous_projected_fields);
-    }
-
     if (free && (!metadata.contains("mcu_projection") ||
                  !qnx_mcu_delivery_scope(Json{{"mcu_projection", metadata.at("mcu_projection")}},
                                          layout.projection))) {
@@ -215,29 +209,6 @@ inline QnxRuntimeLayout qnx_portable_layout(std::string_view profile, const Json
     }
 
     return layout;
-}
-
-// Read the upgrade-only MCU projection scope of an adapter (mcu_upgrade_source_fields) only at the
-// stopped QNX-upgrade boundary; its previous runtime scope is an ordinary accepted runtime.
-inline QnxRuntimeLayout qnx_portable_upgrade_source_layout(std::string_view profile,
-                                                           const Json &metadata) {
-    for (const auto &spec : qnx_adapter_registry) {
-        if (spec.mcu_upgrade_source_fields == 0 ||
-            metadata.value("hardware_adapter", std::string{}) != spec.name ||
-            metadata.value("mcu_projection", Json()) !=
-                    qnx_mcu_projection(spec.adapter, spec.mcu_upgrade_source_fields)) {
-            continue;
-        }
-
-        auto checked = metadata;
-        checked["mcu_projection"] = qnx_mcu_projection(spec.adapter);
-        auto layout = qnx_portable_layout(profile, checked);
-        layout.projection = qnx_mcu_projection(spec.adapter, spec.mcu_upgrade_source_fields);
-
-        return layout;
-    }
-
-    return qnx_portable_layout(profile, metadata);
 }
 
 inline std::set<std::string> qnx_image_roles(const QnxRuntimeLayout &layout) {

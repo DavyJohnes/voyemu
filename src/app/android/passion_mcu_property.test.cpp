@@ -51,7 +51,7 @@ Json notready() {
 
 int main() try {
 #ifndef NDEBUG
-    auto state = apply_patch(initial_state(), Json{{"soc", 23}});
+    auto state = apply_patch(initial_state(VehicleCatalog::qinggan09), Json{{"soc", 23}});
     auto p = passion_mcu_projection(state, boot);
     assert(p.at("soc") == 23 && p.size() == 5 &&
            p.at("source_sha256") == sha256_bytes(state.dump()));

@@ -34,7 +34,7 @@ int main() {
                  std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
         std::filesystem::remove_all(directory);
         ensure_private_directory(directory);
-        VehicleModel model(directory / "vehicle-state.json");
+        VehicleModel model(directory / "vehicle-state.json", VehicleCatalog::qinggan09);
         const auto start = StartupIgnition::Clock::now();
         StartupIgnition ignition;
 

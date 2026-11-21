@@ -9,8 +9,12 @@ constexpr std::array<std::string_view, 6> buttons{"ica",       "acc",         "d
                                                   "cruise_up", "cruise_down", "cancel"};
 constexpr unsigned minimum_speed = 30, maximum_speed = 130;
 
+// A field the catalogue of the platform lacks, such as mrr_vSetDis on qinggan11, reads 0 and is
+// never written.
 unsigned raw(const Json &state, const char *key) {
-    return state.at("raw_oem").at(key).get<unsigned>();
+    const auto &values = state.at("raw_oem");
+
+    return values.contains(key) ? values.at(key).get<unsigned>() : 0;
 }
 
 bool known(const Json &state) {
@@ -51,7 +55,7 @@ std::string readiness(const Json &state, bool ica) {
 }
 
 void changed(Json &patch, const Json &state, const char *name, unsigned value) {
-    if (raw(state, name) != value) {
+    if (state.at("raw_oem").contains(name) && raw(state, name) != value) {
         patch[name] = value;
     }
 }

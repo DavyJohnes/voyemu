@@ -78,7 +78,7 @@ bool selection_vertex(const ImDrawVert &vertex, bool light, float top, float hei
 void appearance_following(const std::filesystem::path &assets) {
     std::mutex mutex;
     std::string scheme = "dark";
-    const auto state = initial_state();
+    const auto state = initial_state(VehicleCatalog::qinggan09);
     auto transport = [&](const Json &operation) {
         if (operation.at("op") != "status") {
             return Json{{"ok", true}, {"accepted", true}};
@@ -91,7 +91,7 @@ void appearance_following(const std::filesystem::path &assets) {
                 {"session_id", "appearance-test"},
                 {"revision", state.at("sequence")},
                 {"state", state},
-                {"catalog", catalog_json()},
+                {"catalog", catalog_json(VehicleCatalog::qinggan09)},
                 {"deliveries",
                  {{"android", {{"appearance", {{"status", "observed"}, {"scheme", scheme}}}}}}}};
     };
@@ -150,7 +150,7 @@ void appearance_following(const std::filesystem::path &assets) {
 
 void startup_frame_gate(const std::filesystem::path &assets) {
     std::mutex mutex;
-    auto canonical = initial_state();
+    auto canonical = initial_state(VehicleCatalog::qinggan09);
     Json qnx = {{"status", "booting"}, {"generation", 1}, {"lifecycle_supported", true}};
     auto transport = [&](const Json &operation) {
         if (operation.at("op") != "status") {
@@ -163,7 +163,7 @@ void startup_frame_gate(const std::filesystem::path &assets) {
                     {"session_id", "first-frame-test"},
                     {"revision", canonical.at("sequence")},
                     {"state", canonical},
-                    {"catalog", catalog_json()},
+                    {"catalog", catalog_json(VehicleCatalog::qinggan09)},
                     {"deliveries", {{"qnx", qnx}}}};
     };
     Options options;
@@ -905,8 +905,8 @@ void window_snapshot_before_frame(const std::filesystem::path &assets) {
         return Json{{"ok", true},
                     {"session_id", "frame-refresh-test"},
                     {"revision", 1},
-                    {"state", initial_state()},
-                    {"catalog", catalog_json()},
+                    {"state", initial_state(VehicleCatalog::qinggan09)},
+                    {"catalog", catalog_json(VehicleCatalog::qinggan09)},
                     {"deliveries",
                      {{"qnx", {{"status", "graphics_running"}, {"generation", generation}}}}}};
     };
@@ -952,8 +952,8 @@ void inspection_lifetime(const std::filesystem::path &assets) {
                 return Json{{"ok", true},
                             {"session_id", "lifetime-test"},
                             {"revision", 1},
-                            {"state", initial_state()},
-                            {"catalog", catalog_json()}};
+                            {"state", initial_state(VehicleCatalog::qinggan09)},
+                            {"catalog", catalog_json(VehicleCatalog::qinggan09)}};
             }
 
             return Json{{"ok", true}, {"accepted", true}};
@@ -1007,7 +1007,7 @@ void qinggan11_adversarial_wheel_acceptance(const std::filesystem::path &assets,
             return Json{{"ok", true}, {"accepted", true}};
         }
 
-        const auto canonical = initial_state();
+        const auto canonical = initial_state(VehicleCatalog::qinggan09);
         Json routes = Json::object();
 
         for (const auto &region : geometry.regions) {
@@ -1018,7 +1018,7 @@ void qinggan11_adversarial_wheel_acceptance(const std::filesystem::path &assets,
                       {"session_id", "qinggan11-adversarial-test"},
                       {"revision", canonical.at("sequence")},
                       {"state", canonical},
-                      {"catalog", catalog_json()},
+                      {"catalog", catalog_json(VehicleCatalog::qinggan09)},
                       {"wheel_routes", routes},
                       {"wheel_capability", nullptr}};
 
@@ -1570,7 +1570,7 @@ void passion_unsupported_wheel(const std::filesystem::path &legacy_assets) {
     Json fixtures;
 
     input >> fixtures;
-    const auto canonical = initial_state();
+    const auto canonical = initial_state(VehicleCatalog::qinggan09);
     std::atomic<unsigned> wheel_events{}, polls{};
     auto transport = [&](const Json &operation) {
         if (operation.at("op") == "wheel") {
@@ -1589,7 +1589,7 @@ void passion_unsupported_wheel(const std::filesystem::path &legacy_assets) {
                     {"session_id", "passion-unsupported-wheel"},
                     {"revision", canonical.at("sequence")},
                     {"state", canonical},
-                    {"catalog", catalog_json()},
+                    {"catalog", catalog_json(VehicleCatalog::qinggan09)},
                     {"wheel_routes", Json::object()},
                     {"wheel_capability", nullptr},
                     {"deliveries",
@@ -1815,13 +1815,13 @@ void wheel_column_controls(const std::filesystem::path &assets) {
             return Json{{"ok", true}, {"accepted", true}};
         }
 
-        const auto canonical = initial_state();
+        const auto canonical = initial_state(VehicleCatalog::qinggan09);
 
         return Json{{"ok", true},
                     {"session_id", "wheel-column-test"},
                     {"revision", canonical.at("sequence")},
                     {"state", canonical},
-                    {"catalog", catalog_json()},
+                    {"catalog", catalog_json(VehicleCatalog::qinggan09)},
                     {"deliveries",
                      {{"qnx", {{"status", "graphics_running"}, {"lifecycle_supported", true}}},
                       {"android", {{"powered", false}, {"lifecycle_supported", true}}}}}};
@@ -2220,14 +2220,14 @@ void lifecycle_glyph_inks(const std::filesystem::path &assets) {
             return Json{{"ok", true}, {"accepted", true}};
         }
 
-        const auto canonical = initial_state();
+        const auto canonical = initial_state(VehicleCatalog::qinggan09);
         std::lock_guard lock(mutex);
 
         return Json{{"ok", true},
                     {"session_id", "lifecycle-glyph-test"},
                     {"revision", canonical.at("sequence")},
                     {"state", canonical},
-                    {"catalog", catalog_json()},
+                    {"catalog", catalog_json(VehicleCatalog::qinggan09)},
                     {"deliveries",
                      {{"qnx",
                        {{"status", running ? "graphics_running" : "off"},
@@ -2397,12 +2397,12 @@ void wheel_hover_without_tooltips(const std::filesystem::path &assets) {
             routes[region.id] = {{"qnx_index", nullptr}, {"android", "unrecovered"}};
         }
 
-        const auto canonical = initial_state();
+        const auto canonical = initial_state(VehicleCatalog::qinggan09);
         Json response{{"ok", true},
                       {"session_id", "wheel-hover-test"},
                       {"revision", canonical.at("sequence")},
                       {"state", canonical},
-                      {"catalog", catalog_json()},
+                      {"catalog", catalog_json(VehicleCatalog::qinggan09)},
                       {"wheel_routes", routes},
                       {"wheel_capability", nullptr}};
 
@@ -3031,7 +3031,7 @@ void unavailable_toggle(const std::filesystem::path &assets) {
         render(ImVec2(rect[0] + 20, rect[1] + 13), false);
         check(patches == 0, "clicking an unknown toggle sends no patch");
         window.close();
-        const auto canonical = initial_state();
+        const auto canonical = initial_state(VehicleCatalog::qinggan09);
         std::atomic_size_t known_patches{};
         auto ready_transport = [&](const Json &operation) -> Json {
             if (operation.at("op") == "patch") {
@@ -3042,7 +3042,7 @@ void unavailable_toggle(const std::filesystem::path &assets) {
                         {"session_id", "known-toggle-fixture"},
                         {"revision", canonical.at("sequence")},
                         {"state", canonical},
-                        {"catalog", catalog_json()}};
+                        {"catalog", catalog_json(VehicleCatalog::qinggan09)}};
         };
         options.endpoint = "known-toggle-fixture";
         Window known(options, ready_transport);
@@ -3153,7 +3153,7 @@ void editor_sections_fill_available_height(const std::filesystem::path &assets,
             fixture["can_v1_5_bcm_tpms" + c + "Sts"] = 1;
         }
 
-        const auto canonical = apply_patch(initial_state(), fixture);
+        const auto canonical = apply_patch(initial_state(VehicleCatalog::qinggan09), fixture);
         std::atomic_bool gear_selected{};
         std::atomic_size_t power_events{}, restart_events{}, media_power_events{},
                 media_restart_events{}, hazard_events{};
@@ -3189,7 +3189,7 @@ void editor_sections_fill_available_height(const std::filesystem::path &assets,
                     {"session_id", "editor-height-test"},
                     {"revision", canonical["sequence"]},
                     {"state", canonical},
-                    {"catalog", catalog_json()},
+                    {"catalog", catalog_json(VehicleCatalog::qinggan09)},
                     {"wheel_routes", EventQueue::routes()},
                     {"deliveries",
                      {{"qnx", {{"status", "graphics_running"}, {"lifecycle_supported", true}}}}}};
@@ -4537,7 +4537,8 @@ void radio_transition_colors(const std::filesystem::path &assets,
         load_ui_font(assets.parent_path().parent_path() / "fonts/Inter-Regular.ttf");
         std::mutex mutex;
         std::string scheme = "dark";
-        auto canonical = apply_patch(initial_state(), {{"gear", 0}, {"gear_valid", 1}});
+        auto canonical = apply_patch(initial_state(VehicleCatalog::qinggan09),
+                                     {{"gear", 0}, {"gear_valid", 1}});
         auto transport = [&](const Json &operation) {
             std::lock_guard lock(mutex);
 
@@ -4549,7 +4550,7 @@ void radio_transition_colors(const std::filesystem::path &assets,
                         {"session_id", "radio-animation-test"},
                         {"revision", canonical.at("sequence")},
                         {"state", canonical},
-                        {"catalog", catalog_json()},
+                        {"catalog", catalog_json(VehicleCatalog::qinggan09)},
                         {"deliveries",
                          {{"qnx", {{"status", "graphics_running"}}},
                           {"android",
@@ -4856,7 +4857,7 @@ void asynchronous_client() {
         }
     }
     std::mutex mutex;
-    Json canonical = initial_state();
+    Json canonical = initial_state(VehicleCatalog::qinggan09);
     std::vector<Json> operations;
     Json qnx = {{"status", "disconnected"}};
     bool fail_next = false;
@@ -4888,10 +4889,40 @@ void asynchronous_client() {
                     {"session_id", "test-session"},
                     {"revision", canonical.at("sequence")},
                     {"state", canonical},
-                    {"catalog", catalog_json()},
+                    {"catalog", catalog_json(VehicleCatalog::qinggan09)},
                     {"deliveries", {{"android", {{"status", "pending"}}}, {"qnx", qnx}}},
                     {"wheel_routes", Json::object()}};
     };
+    {
+        // The window works on the catalogue of the platform of the running machine.
+        auto platform = initial_state(VehicleCatalog::qinggan11);
+        Client platform_client("test-endpoint", "test-owner", [&](const Json &operation) {
+            if (operation.at("op") == "patch") {
+                platform = apply_patch(platform, operation.at("values"));
+            }
+
+            return Json{{"ok", true},
+                        {"session_id", "test-qinggan11"},
+                        {"revision", platform.at("sequence")},
+                        {"state", platform},
+                        {"catalog", catalog_json(VehicleCatalog::qinggan11)},
+                        {"wheel_routes", Json::object()}};
+        });
+        wait(
+                [&] {
+                    return platform_client.state().ready;
+                },
+                "qinggan11 canonical snapshot");
+        check(platform_client.state().raw.size() == 736 &&
+                      !platform_client.state().raw.contains("mrr_vSetDis"),
+              "qinggan11 catalogue values");
+        check(platform_client.patch({{"ADCU_TargetType_1", 2}}), "qinggan11 field patch enqueued");
+        wait(
+                [&] {
+                    return platform_client.state().raw.at("ADCU_TargetType_1") == 2;
+                },
+                "qinggan11 patch acknowledgement");
+    }
     {
         Client client("test-endpoint", "test-owner", transport);
         wait(
@@ -4989,7 +5020,7 @@ static void lifecycle_client_deadlines() {
 #else
     const auto endpoint = native_socket_root() / (random_token() + "-ui.sock");
 #endif
-    const auto canonical = initial_state();
+    const auto canonical = initial_state(VehicleCatalog::qinggan09);
     {
         ControlServer server(endpoint, [&](const Json &input) {
             const auto op = input.value("op", std::string{});
@@ -5004,7 +5035,7 @@ static void lifecycle_client_deadlines() {
                         {"session_id", "lifecycle-wait"},
                         {"revision", canonical.at("sequence")},
                         {"state", canonical},
-                        {"catalog", catalog_json()},
+                        {"catalog", catalog_json(VehicleCatalog::qinggan09)},
                         {"wheel_routes", EventQueue::routes()},
                         {"deliveries", {{"qnx", {{"lifecycle_supported", true}}}}}};
         });
@@ -5078,10 +5109,10 @@ void profile_limited_controls(const std::filesystem::path &assets) {
         io.DisplaySize = ImVec2(geometry.canvas_width, geometry.canvas_height);
         io.DisplayFramebufferScale = ImVec2(1920.f / canonical_ui_width,
                                             1920.f / canonical_ui_width);
-        const auto canonical = initial_state();
+        const auto canonical = initial_state(VehicleCatalog::qinggan09);
         auto cluster = Json::array();
 
-        for (const auto &field : catalog()) {
+        for (const auto &field : catalog(VehicleCatalog::qinggan09)) {
             if (field.name != "door_fl" && field.name != "remain_mileage_e" &&
                 field.name != "hood") {
                 cluster.push_back(field.name);
@@ -5102,7 +5133,7 @@ void profile_limited_controls(const std::filesystem::path &assets) {
                         {"session_id", "profile-limit-fixture"},
                         {"revision", canonical.at("sequence")},
                         {"state", canonical},
-                        {"catalog", catalog_json()},
+                        {"catalog", catalog_json(VehicleCatalog::qinggan09)},
                         {"field_delivery", delivery}};
         };
         auto sent = [&] {

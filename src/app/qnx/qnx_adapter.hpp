@@ -41,9 +41,8 @@ struct QnxAdapterSpec {
     // Bytes 201 and 257 of devb-ram, inside the p_paddr of its two PT_LOAD segments; {0, 0} when
     // the build does not check them.
     std::array<std::uint8_t, 2> ram_driver_paddr;
-    // Named MCU fields that the guest projects, an earlier accepted runtime scope and an earlier
-    // scope that only a stopped QNX upgrade reads; 0 for none.
-    unsigned mcu_projected_fields, mcu_previous_projected_fields, mcu_upgrade_source_fields;
+    // Fields of the qinggan11 catalogue that the guest projects; 0 for none.
+    unsigned mcu_projected_fields;
     // Whether the OEM MCU engine reports settings back to the guest.
     bool mcu_settings_feedback;
     // Named MCU field layout in src/guest/qnx and the OEM parser and engine it was derived from.
@@ -72,8 +71,6 @@ inline constexpr std::array qnx_adapter_registry{
                        0,
                        {0, 0},
                        0,
-                       0,
-                       0,
                        false,
                        {},
                        {},
@@ -92,9 +89,7 @@ inline constexpr std::array qnx_adapter_registry{
                        207048,
                        116824,
                        {0, 0},
-                       493,
-                       0,
-                       0,
+                       723,
                        true,
                        "native_mcu_qinggan11.json",
                        "6c381808b343adba849fa22f1efd18547de90cba7f3f3b43e43970a7f7222f39",
@@ -114,8 +109,6 @@ inline constexpr std::array qnx_adapter_registry{
                        0,
                        {0, 0},
                        0,
-                       0,
-                       0,
                        false,
                        {},
                        {},
@@ -134,10 +127,8 @@ inline constexpr std::array qnx_adapter_registry{
                        207032,
                        116616,
                        {0x50, 0x8b},
-                       493,
-                       34,
-                       33,
-                       false,
+                       723,
+                       true,
                        "native_mcu_qinggan11_611.json",
                        "a830d876d9091190096025f4f4eb81294078b3002d955283b3a9dec296414f05",
                        "faeb580b46c5c92d7ecd5b707be15b85874c838471f5cb9ca010b9a90e9ae195",

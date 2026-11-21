@@ -2,6 +2,7 @@
 #include "os/fs.hpp"
 #include "private_json_reader.hpp"
 #include "private_state_security.hpp"
+#include <algorithm>
 #include <cerrno>
 #include <chrono>
 #include <cstdio>
@@ -39,7 +40,41 @@ bool valid_profile_name(std::string_view name) {
     return true;
 }
 
-const std::vector<Field> &catalog() {
+namespace detail {
+const std::vector<Field> &qinggan11_catalog();
+} // namespace detail
+
+VehicleCatalog vehicle_catalog(std::string_view platform) {
+    if (platform == "qinggan11") {
+        return VehicleCatalog::qinggan11;
+    }
+
+    if (platform == "qinggan09" || platform == "passion") {
+        return VehicleCatalog::qinggan09;
+    }
+
+    throw VoyemuError("VEHICLE_CATALOG", "unknown platform");
+}
+
+const char *catalog_map_sha256(VehicleCatalog catalog) {
+    return catalog == VehicleCatalog::qinggan11 ? qinggan11_map_sha256 : qinggan09_map_sha256;
+}
+
+VehicleCatalog state_catalog(const Json &state) {
+    const auto map = state.is_object() ? state.find("map_sha256") : state.end();
+
+    if (map != state.end() && *map == qinggan09_map_sha256) {
+        return VehicleCatalog::qinggan09;
+    }
+
+    if (map != state.end() && *map == qinggan11_map_sha256) {
+        return VehicleCatalog::qinggan11;
+    }
+
+    throw VoyemuError("VEHICLE_SCHEMA", "unknown vehicle catalog");
+}
+
+static const std::vector<Field> &qinggan09_catalog() {
     static const std::vector<Field> fields = {
             {1, "ign", 1, 1},
             {2, "turn_left", 1, 0},
@@ -625,10 +660,14 @@ const std::vector<Field> &catalog() {
     return fields;
 }
 
-Json catalog_json() {
+const std::vector<Field> &catalog(VehicleCatalog catalog) {
+    return catalog == VehicleCatalog::qinggan11 ? detail::qinggan11_catalog() : qinggan09_catalog();
+}
+
+Json catalog_json(VehicleCatalog catalog) {
     Json output = Json::array();
 
-    for (const auto &field : catalog()) {
+    for (const auto &field : voyemu::catalog(catalog)) {
         output.push_back({{"index", field.index},
                           {"name", field.name},
                           {"width", field.width},
@@ -672,10 +711,11 @@ void validate_state(const Json &state) {
         }
     }
 
-    if (!integer(state["schema"]) || state["schema"] != 1 || state["map_sha256"] != map_sha256 ||
-        state["origin"] != "manual-emulator") {
+    if (!integer(state["schema"]) || state["schema"] != 1 || state["origin"] != "manual-emulator") {
         throw VoyemuError("VEHICLE_SCHEMA", "schema/map/origin mismatch");
     }
+
+    const auto &fields = catalog(state_catalog(state));
 
     if (!integer(state["sequence"]) || state["sequence"].get<std::uint64_t>() == 0 ||
         state["sequence"].get<std::uint64_t>() > UINT32_MAX) {
@@ -695,11 +735,11 @@ void validate_state(const Json &state) {
 
     const auto &raw = state["raw_oem"];
 
-    if (!raw.is_object() || raw.size() != catalog().size()) {
-        throw VoyemuError("VEHICLE_FIELDS", "all 579 fields required");
+    if (!raw.is_object() || raw.size() != fields.size()) {
+        throw VoyemuError("VEHICLE_FIELDS", "all catalog fields required");
     }
 
-    for (const auto &field : catalog()) {
+    for (const auto &field : fields) {
         if (!raw.contains(field.name) || !integer(raw[field.name]) ||
             raw[field.name].get<std::uint64_t>() >= (std::uint64_t{1} << field.width)) {
             throw VoyemuError("VEHICLE_WIDTH", field.name);
@@ -717,7 +757,7 @@ void validate_state(const Json &state) {
     }
 }
 
-Json normal_initial_values() {
+Json normal_initial_values(VehicleCatalog catalog) {
     // Emulator fixture values; SOC, fuel and tyre readings are not OEM recommended defaults.
     Json values{{"gear_valid", 1},       {"gear", 0},
                 {"spd_valid", 1},        {"speed", 0},
@@ -739,22 +779,29 @@ Json normal_initial_values() {
 
     // 13.80 V in the 0.01 V of the OEM powermgr: the DC-DC converter charges the battery at READY.
     values["ic_bat_voltage"] = 1380;
+    Json result = Json::object();
 
-    return values;
+    for (const auto &field : voyemu::catalog(catalog)) {
+        if (values.contains(field.name)) {
+            result[field.name] = values.at(field.name);
+        }
+    }
+
+    return result;
 }
 
-Json initial_state() {
+Json initial_state(VehicleCatalog catalog) {
     Json raw = Json::object();
 
-    for (const auto &field : catalog()) {
+    for (const auto &field : voyemu::catalog(catalog)) {
         raw[field.name] = field.initial;
     }
 
-    raw.update(normal_initial_values());
+    raw.update(normal_initial_values(catalog));
     Json state{{"schema", 1},
                {"sequence", 1},
                {"updated_utc", utc_now()},
-               {"map_sha256", map_sha256},
+               {"map_sha256", catalog_map_sha256(catalog)},
                {"origin", "manual-emulator"},
                {"raw_oem", raw}};
     validate_state(state);
@@ -762,8 +809,8 @@ Json initial_state() {
     return state;
 }
 
-Json select_vehicle_startup(VehicleStartup mode, const Json &profile_values, const Json *saved,
-                            std::uint32_t guest_sequence) {
+Json select_vehicle_startup(VehicleStartup mode, VehicleCatalog catalog, const Json &profile_values,
+                            const Json *saved, std::uint32_t guest_sequence) {
     if (mode != VehicleStartup::fresh && mode != VehicleStartup::resume) {
         throw VoyemuError("VEHICLE_STARTUP", "unsupported policy");
     }
@@ -776,13 +823,18 @@ Json select_vehicle_startup(VehicleStartup mode, const Json &profile_values, con
         }
 
         validate_state(*saved);
+
+        if (state_catalog(*saved) != catalog) {
+            throw VoyemuError("VEHICLE_STARTUP", "saved scenario of another vehicle catalog");
+        }
+
         selected = *saved;
     } else {
         if (!profile_values.is_object()) {
             throw VoyemuError("VEHICLE_STARTUP", "profile values required");
         }
 
-        selected = initial_state();
+        selected = initial_state(catalog);
 
         if (!profile_values.empty()) {
             selected = apply_patch(selected, profile_values);
@@ -845,7 +897,9 @@ const std::vector<FieldCoupling> &field_couplings() {
 Json apply_patch(const Json &original, const Json &values) {
     validate_state(original);
 
-    if (!values.is_object() || values.empty() || values.size() > 579) {
+    const auto &fields = catalog(state_catalog(original));
+
+    if (!values.is_object() || values.empty() || values.size() > fields.size()) {
         throw VoyemuError("VEHICLE_PATCH", "nonempty keyed values required");
     }
 
@@ -868,11 +922,19 @@ Json apply_patch(const Json &original, const Json &values) {
         raw[name] = value;
     }
 
+    // A catalogue without the target leaves the coupling out; a value wider than the target, such
+    // as the all-ones unknown range of a wider slot, saturates to the all-ones of the target.
     for (const auto &coupling : field_couplings()) {
-        if (values.contains(coupling.source) && !values.contains(coupling.target)) {
-            raw[coupling.target] = coupling.scale ? raw[coupling.source].get<std::uint64_t>() *
-                                                            coupling.scale
-                                                  : coupling.value;
+        if (values.contains(coupling.source) && !values.contains(coupling.target) &&
+            raw.contains(coupling.target)) {
+            const auto target = std::find_if(fields.begin(), fields.end(), [&](const Field &field) {
+                return field.name == coupling.target;
+            });
+            const auto maximum = (std::uint64_t{1} << target->width) - 1;
+            raw[coupling.target] = std::min(
+                    maximum, coupling.scale
+                                     ? raw[coupling.source].get<std::uint64_t>() * coupling.scale
+                                     : coupling.value);
         }
     }
 
@@ -1359,14 +1421,15 @@ void write_private_json_bytes(const std::filesystem::path &path, const std::stri
     write_private_json_text(path, text, maximum);
 }
 
-VehicleModel::VehicleModel(std::filesystem::path path) : path_(std::move(path)) {
+VehicleModel::VehicleModel(std::filesystem::path path, VehicleCatalog catalog)
+    : path_(std::move(path)) {
     ensure_private_directory(path_.parent_path());
 
     if (std::filesystem::exists(path_) || std::filesystem::is_symlink(path_)) {
         state_ = read_private_json(path_);
         validate_state(state_);
     } else {
-        state_ = initial_state();
+        state_ = initial_state(catalog);
         write_private_json(path_, state_);
     }
 }

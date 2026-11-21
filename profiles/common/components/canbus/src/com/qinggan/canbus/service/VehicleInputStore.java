@@ -42,7 +42,7 @@ final class VehicleInputStore {
             JSONObject raw = new JSONObject();
 
             for (String name : VehicleSignalCatalog.NAMES) {
-                raw.put(name, snapshot.raw(name));
+                raw.put(name, snapshot.value(name));
             }
 
             JSONObject state = new JSONObject();
@@ -86,11 +86,11 @@ final class VehicleInputStore {
         long sequence = exactInteger(state.get("sequence"));
         JSONObject raw = state.getJSONObject("raw_oem");
 
-        if (raw.length() != 579) {
+        if (raw.length() != VehicleSignalCatalog.NAMES.length) {
             throw new IllegalArgumentException("All OEM signals required");
         }
 
-        int[] values = new int[579];
+        long[] values = new long[VehicleSignalCatalog.NAMES.length];
 
         for (int i = 0; i < values.length; i++) {
             long value = exactInteger(raw.get(VehicleSignalCatalog.NAMES[i]));
@@ -99,7 +99,7 @@ final class VehicleInputStore {
                 throw new IllegalArgumentException("OEM signal bit width");
             }
 
-            values[i] = (int) value;
+            values[i] = value;
         }
 
         return new VehicleInputSnapshot(sequence, values);

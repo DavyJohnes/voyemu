@@ -2226,7 +2226,7 @@ int main(int argc, char **argv) try {
                 "missing resume allocated a session, supervisor or SDK guest");
         require(!std::filesystem::exists(saved_scenario_path.parent_path()),
                 "missing resume created saved state directory");
-        const auto saved_scenario = apply_patch(initial_state(),
+        const auto saved_scenario = apply_patch(initial_state(VehicleCatalog::qinggan09),
                                                 {{"speed", 80}, {"gear", 2}, {"tail_gate", 1}});
 #ifdef _WIN32
         if (identity_backpressure) {
@@ -4105,7 +4105,7 @@ int main(int argc, char **argv) try {
                             voyemu::machine_identity(qinggan09_profile(), std::string_view{}))
                             .parent_path() /
                     "state/vehicle-state.json";
-            write_private_json(canonical, initial_state());
+            write_private_json(canonical, initial_state(VehicleCatalog::qinggan09));
         }
 
         std::uint32_t latest_sequence = 0;
@@ -4457,7 +4457,7 @@ int main(int argc, char **argv) try {
 
         if (state_restore) {
             const auto expected =
-                    select_vehicle_startup(VehicleStartup::fresh,
+                    select_vehicle_startup(VehicleStartup::fresh, VehicleCatalog::qinggan09,
                                            embedded_profile(qinggan09_profile())
                                                    .at("definition")
                                                    .value("initial_state", Json::object()),

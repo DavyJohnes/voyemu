@@ -1,6 +1,7 @@
 #include "model.hpp"
 #include "private_json_reader.hpp"
 #include "process.hpp"
+#include <algorithm>
 #include <atomic>
 #include <cassert>
 #include <fstream>
@@ -8,6 +9,7 @@
 #include <future>
 #include <iostream>
 #include <optional>
+#include <set>
 #include <stdexcept>
 #include <thread>
 #ifdef _WIN32
@@ -363,18 +365,18 @@ int main(int argc, char **argv) try {
     assert(!qnx_theme_display_matches(5, 5) && !qnx_theme_display_matches(6, 6) &&
            !qnx_theme_display_matches(4, 4) && !qnx_theme_display_matches(2, 6) &&
            !qnx_theme_display_matches(0, 0));
-    assert(catalog().size() == 579);
+    assert(catalog(VehicleCatalog::qinggan09).size() == 579);
 
-    for (std::size_t i = 0; i < catalog().size(); ++i) {
-        assert(catalog()[i].index == i + 1);
+    for (std::size_t i = 0; i < catalog(VehicleCatalog::qinggan09).size(); ++i) {
+        assert(catalog(VehicleCatalog::qinggan09)[i].index == i + 1);
     }
 
-    const auto normal = normal_initial_values();
+    const auto normal = normal_initial_values(VehicleCatalog::qinggan09);
     assert(normal.size() == 35);
-    auto initial = initial_state();
+    auto initial = initial_state(VehicleCatalog::qinggan09);
     validate_state(initial);
     const auto &initial_raw = initial.at("raw_oem");
-    assert(initial["sequence"] == 1 && initial["map_sha256"] == map_sha256);
+    assert(initial["sequence"] == 1 && initial["map_sha256"] == qinggan09_map_sha256);
     assert(normal["gear_valid"] == 1 && normal["gear"] == 0 && normal["spd_valid"] == 1);
     assert(normal["speed"] == 0 && normal["speed10x"] == 0 && normal["vcu_ExhibitionSts"] == 0);
     assert(normal["ambient_temp"] == 120 && normal["soc"] == 55 && normal["fuel_percent"] == 50);
@@ -394,7 +396,7 @@ int main(int argc, char **argv) try {
                normal["bcm_tyre" + name + "Temp"] == 81);
     }
 
-    for (const auto &field : catalog()) {
+    for (const auto &field : catalog(VehicleCatalog::qinggan09)) {
         assert(initial_raw[field.name] ==
                (normal.contains(field.name) ? normal[field.name] : Json(field.initial)));
     }
@@ -418,40 +420,109 @@ int main(int argc, char **argv) try {
     assert(customized["raw_oem"]["gear"] == 3 && customized["raw_oem"]["soc"] == 42);
     // A fresh session must not mutate the intentionally saved driving scenario.
     const auto saved_scenario = customized;
-    const auto fresh = select_vehicle_startup(VehicleStartup::fresh, Json::object(),
-                                              &saved_scenario, 200);
+    const auto fresh = select_vehicle_startup(VehicleStartup::fresh, VehicleCatalog::qinggan09,
+                                              Json::object(), &saved_scenario, 200);
     assert(fresh["raw_oem"] == initial_raw && fresh["sequence"] == 201);
     assert(saved_scenario == customized);
-    const auto resumed = select_vehicle_startup(VehicleStartup::resume, Json::object(),
-                                                &saved_scenario, 200);
+    const auto resumed = select_vehicle_startup(VehicleStartup::resume, VehicleCatalog::qinggan09,
+                                                Json::object(), &saved_scenario, 200);
     assert(resumed["raw_oem"] == saved_scenario["raw_oem"] && resumed["sequence"] == 201);
     assert(saved_scenario == customized);
-    const auto configured = select_vehicle_startup(VehicleStartup::fresh, {{"soc", 73}}, nullptr);
+    const auto configured = select_vehicle_startup(VehicleStartup::fresh, VehicleCatalog::qinggan09,
+                                                   {{"soc", 73}}, nullptr);
     assert(configured["raw_oem"]["soc"] == 73 && configured["raw_oem"]["gear"] == 0);
     assert(configured["raw_oem"]["alarm_play_req"] ==
            initial_raw["alarm_play_req"]); // No guessed alarm semantics.
     rejects([&] {
-        select_vehicle_startup(VehicleStartup::resume, Json::object(), nullptr);
+        select_vehicle_startup(VehicleStartup::resume, VehicleCatalog::qinggan09, Json::object(),
+                               nullptr);
     });
     rejects([&] {
-        select_vehicle_startup(VehicleStartup::fresh, {{"invented", 1}}, nullptr);
+        select_vehicle_startup(VehicleStartup::fresh, VehicleCatalog::qinggan09, {{"invented", 1}},
+                               nullptr);
     });
     rejects([&] {
-        select_vehicle_startup(VehicleStartup::fresh, {{"swm_menu", 1}}, nullptr);
+        select_vehicle_startup(VehicleStartup::fresh, VehicleCatalog::qinggan09, {{"swm_menu", 1}},
+                               nullptr);
     });
     rejects([&] {
-        select_vehicle_startup(VehicleStartup::fresh, Json::array(), nullptr);
+        select_vehicle_startup(VehicleStartup::fresh, VehicleCatalog::qinggan09, Json::array(),
+                               nullptr);
     });
     rejects([&] {
-        select_vehicle_startup(VehicleStartup::fresh, Json::object(), nullptr, UINT32_MAX);
+        select_vehicle_startup(VehicleStartup::fresh, VehicleCatalog::qinggan09, Json::object(),
+                               nullptr, UINT32_MAX);
     });
     auto malformed_saved = saved_scenario;
     malformed_saved["raw_oem"].erase("ign");
     rejects([&] {
-        select_vehicle_startup(VehicleStartup::resume, Json::object(), &malformed_saved);
+        select_vehicle_startup(VehicleStartup::resume, VehicleCatalog::qinggan09, Json::object(),
+                               &malformed_saved);
     });
     rejects([&] {
-        select_vehicle_startup(static_cast<VehicleStartup>(42), Json::object(), nullptr);
+        select_vehicle_startup(static_cast<VehicleStartup>(42), VehicleCatalog::qinggan09,
+                               Json::object(), nullptr);
+    });
+    // The qinggan11 catalogue holds the 736 wire fields of the qinggan11 MCU packet in descriptor
+    // order; shared fields keep the qinggan09 name, width aside, and the default.
+    const auto &platform = catalog(VehicleCatalog::qinggan11);
+    assert(platform.size() == 736 && vehicle_catalog("qinggan11") == VehicleCatalog::qinggan11 &&
+           vehicle_catalog("qinggan09") == VehicleCatalog::qinggan09 &&
+           vehicle_catalog("passion") == VehicleCatalog::qinggan09);
+    rejects([] {
+        vehicle_catalog("unknown");
+    });
+    std::set<std::string> platform_names;
+
+    for (std::size_t i = 0; i < platform.size(); ++i) {
+        assert(platform[i].index == i + 1 && platform_names.insert(platform[i].name).second);
+    }
+
+    auto field_of = [](VehicleCatalog which, std::string_view name) {
+        const auto &fields = catalog(which);
+
+        return *std::find_if(fields.begin(), fields.end(), [&](const Field &field) {
+            return field.name == name;
+        });
+    };
+    assert(field_of(VehicleCatalog::qinggan11, "ign").index == 1 &&
+           field_of(VehicleCatalog::qinggan11, "remain_mileage_f").index == 639 &&
+           field_of(VehicleCatalog::qinggan11, "remain_mileage_f").width == 11 &&
+           field_of(VehicleCatalog::qinggan11, "vcu_ready").index == 476 &&
+           field_of(VehicleCatalog::qinggan11, "reserved_04").width == 38 &&
+           field_of(VehicleCatalog::qinggan11, "cfg_acc").initial ==
+                   field_of(VehicleCatalog::qinggan09, "cfg_acc").initial);
+    assert(!platform_names.contains("mrr_vSetDis") && platform_names.contains("ADCU_VsetDis"));
+    const auto platform_initial = initial_state(VehicleCatalog::qinggan11);
+    validate_state(platform_initial);
+    assert(platform_initial["map_sha256"] == qinggan11_map_sha256 &&
+           state_catalog(platform_initial) == VehicleCatalog::qinggan11 &&
+           platform_initial["raw_oem"].size() == 736 && platform_initial["raw_oem"]["soc"] == 55 &&
+           platform_initial["raw_oem"]["ADCU_TargetType_1"] == 0);
+    // A field of one catalogue is unknown to the other, and a state names its own catalogue.
+    rejects([&] {
+        apply_patch(platform_initial, {{"mrr_vSetDis", 1}});
+    });
+    rejects([&] {
+        apply_patch(initial, {{"ADCU_TargetType_1", 0}});
+    });
+    auto foreign = platform_initial;
+    foreign["map_sha256"] = qinggan09_map_sha256;
+    rejects([&] {
+        validate_state(foreign);
+    });
+    rejects([&] {
+        select_vehicle_startup(VehicleStartup::resume, VehicleCatalog::qinggan11, Json::object(),
+                               &saved_scenario);
+    });
+    // A wide range saturates its narrower copy.
+    const auto unknown_range = apply_patch(platform_initial, {{"remain_mileage_f", 2047}});
+    assert(unknown_range["raw_oem"]["remain_mileage_f_wltc"] == 2047 &&
+           unknown_range["raw_oem"]["remain_mileage_f_nedc"] == 1023);
+    const auto wide = apply_patch(platform_initial, {{"reserved_04", 0x3fffffffffULL}});
+    assert(wide["raw_oem"]["reserved_04"] == 0x3fffffffffULL);
+    rejects([&] {
+        apply_patch(platform_initial, {{"reserved_04", 0x4000000000ULL}});
     });
     auto speed = apply_patch(initial, {{"speed", 65}, {"soc", 73}});
     assert(speed["raw_oem"]["speed10x"] == 650);
@@ -682,7 +753,7 @@ int main(int argc, char **argv) try {
         detail::PrivateJsonReader held(shared, 1);
     });
 #endif
-    VehicleModel model(dir / "state.json");
+    VehicleModel model(dir / "state.json", VehicleCatalog::qinggan09);
     assert(model.state()["raw_oem"] == initial_raw);
     model.patch({{"soc", 42},
                  {"gear", 3},
@@ -693,7 +764,7 @@ int main(int argc, char **argv) try {
                  {"bcm_tyreLFPressure", 27},
                  {"odo", 12345}});
     const auto saved = model.state();
-    VehicleModel restored(dir / "state.json");
+    VehicleModel restored(dir / "state.json", VehicleCatalog::qinggan09);
     assert(restored.state() == saved && read_private_json(dir / "state.json") == saved);
     auto before_floor = restored.state();
     restored.advance_revision(1);

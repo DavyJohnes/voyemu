@@ -11,12 +11,15 @@ using Json = voyemu::Json;
 using u32 = unsigned;
 using u64 = unsigned long long;
 using usize = unsigned long;
-static Qinggan11McuField qinggan11_fields[579];
+static Qinggan11McuField qinggan11_fields[QINGGAN11_FIELDS];
+static unsigned short qinggan11_wheel_fields[10];
+static unsigned qinggan11_speed, qinggan11_speed10x, qinggan11_soc;
 static unsigned qinggan11_calibration_fixture = 1, qinggan11_calibration_fixture_enabled = 1;
-static unsigned qinggan11_projected_fields = 0, qinggan11_settings_feedback_enabled = 0;
+static unsigned qinggan11_projected_fields = 0, qinggan11_settings_feedback_enabled = 1;
 #define QGFX_QINGGAN11_LAYOUT_DEFINED 1
-#include "mcu_catalog.inc"
-static u32 normal[579];
+static u32 normal[QINGGAN11_FIELDS];
+// The catalogue position of a field that the guest does not write.
+static unsigned unprojected_position;
 static unsigned char original_bytes[650];
 struct TestPacket {
     u32 fault, out_len;
@@ -87,11 +90,11 @@ static u64 call(u32 op, const u64 *args, unsigned count, const void *, unsigned)
 
     assert(op == 364 && count == 4 && args[1] == 650 && args[2] == 736 &&
            args[3] == qinggan11_projected_fields);
-    u32 values[581] = {1, 579};
+    u32 values[QINGGAN11_FIELDS + 2] = {1, QINGGAN11_FIELDS};
     std::memcpy(values + 2, normal, sizeof normal);
 
     if (bad) {
-        values[2 + 6] ^= 1;
+        values[2 + unprojected_position] ^= 1;
     }
 
     storage.out_len = sizeof values;
@@ -124,39 +127,56 @@ int main(int argc, char **argv) {
                         .mcu_projected_fields;
         const auto root = std::filesystem::canonical(argv[1]);
         const auto source = voyemu::read_private_json(
-                root / "src/guest/qnx/native_mcu_qinggan11_611.json", 256 * 1024);
+                root / "src/guest/qnx/native_mcu_qinggan11_611.json", 512 * 1024);
         const auto generated = voyemu::qnx_qinggan11_mcu_layout(source,
                                                                 Json{{"eps_calibrationFlag", 1}});
         assert(generated.find(
                        "qinggan11_projected_fields=" + std::to_string(qinggan11_projected_fields) +
                        "U") != std::string::npos &&
-               generated.find("qinggan11_settings_feedback_enabled=0U") != std::string::npos);
-        const auto &fields = voyemu::catalog();
-        const auto initial = voyemu::initial_state().at("raw_oem");
+               generated.find("qinggan11_settings_feedback_enabled=1U") != std::string::npos);
+        const auto &fields = voyemu::catalog(voyemu::VehicleCatalog::qinggan11);
+        const auto initial = voyemu::initial_state(voyemu::VehicleCatalog::qinggan11).at("raw_oem");
+        auto pos = [&](std::string_view name) {
+            const auto at = std::find_if(fields.begin(), fields.end(), [&](const auto &f) {
+                return f.name == name;
+            });
+            assert(at != fields.end());
+
+            return static_cast<unsigned>(at - fields.begin());
+        };
         unsigned mapped = 0;
 
-        for (unsigned i = 0; i < 579; i++) {
+        for (unsigned i = 0; i < QINGGAN11_FIELDS; i++) {
             normal[i] = initial.at(fields[i].name).get<unsigned>();
             qinggan11_fields[i] = {65535, 0, normal[i]};
             const auto &row = source.at("fields").at(i);
 
-            if (row.contains("wire")) {
+            if (!row.contains("unprojected")) {
                 qinggan11_fields[i].bit = row.at("wire").at("start_bit");
                 qinggan11_fields[i].width = row.at("wire").at("width");
-
-                if (row.at("wire").contains("unknown")) {
-                    qinggan11_fields[i].unknown_input = row.at("wire").at("unknown").at("input");
-                    qinggan11_fields[i].unknown_wire = row.at("wire").at("unknown").at("wire");
-                }
-
                 mapped++;
             }
         }
 
-        assert(mapped == qinggan11_projected_fields && qinggan11_fields[37].bit == 69 &&
-               qinggan11_fields[287].bit == 1111 && qinggan11_fields[288].bit == 1112 &&
-               qinggan11_fields[290].bit == 1144 && qinggan11_fields[154].bit == 335 &&
-               qinggan11_fields[154].width == 1);
+        const char *buttons[] = {"swm_Photo",     "swm_menu",     "swm_OK",        "swm_upAdd",
+                                 "swm_downMinus", "swm_leftLast", "swm_rightNext", "swm_nvsSwitch",
+                                 "swm_phone",     "swm_voice"};
+
+        for (unsigned i = 0; i < 10; i++) {
+            qinggan11_wheel_fields[i] = static_cast<unsigned short>(pos(buttons[i]));
+        }
+
+        qinggan11_speed = pos("speed");
+        qinggan11_speed10x = pos("speed10x");
+        qinggan11_soc = pos("soc");
+        unprojected_position = pos("set_byte0");
+        const auto hdc = pos("esc_hdcAvailable");
+        assert(mapped == qinggan11_projected_fields &&
+               qinggan11_fields[pos("ready_lamp")].bit == 69 &&
+               qinggan11_fields[pos("gear_valid")].bit == 1111 &&
+               qinggan11_fields[pos("gear")].bit == 1112 &&
+               qinggan11_fields[pos("ambient_temp")].bit == 1144 &&
+               qinggan11_fields[hdc].bit == 335 && qinggan11_fields[hdc].width == 1);
 
         for (unsigned i = 0; i < 650; i++) {
             original_bytes[i] = static_cast<unsigned char>(i * 73 + 19);
@@ -168,7 +188,7 @@ int main(int argc, char **argv) {
         assert(dataParser_makedumydata(out, 650) == 650 && qinggan11_ack == offered);
 
         for (unsigned bit = 0; bit < 5200; bit++) {
-            bool supported = bit == 465 || bit == 466;
+            bool supported = bit == 465 || bit == 466 || (bit >= 2000 && bit < 2080);
 
             for (const auto &field : qinggan11_fields) {
                 if (field.width && bit >= field.bit && bit < field.bit + field.width) {
@@ -181,14 +201,17 @@ int main(int argc, char **argv) {
             }
         }
 
-        assert(((out[58] >> 1) & 3) == 1 && !std::memcmp(out + 250, original_bytes + 250, 10));
+        // The settings feedback of the OEM engine, the same code as on 7.3.1, owns bytes 250..259.
+        const unsigned char settings[10] = {0xab, 0xab, 0xab, 0xab, 0xab,
+                                            0xab, 0xab, 0xab, 0xab, 0xab};
+        assert(((out[58] >> 1) & 3) == 1 && !std::memcmp(out + 250, settings, 10));
         assert(((out[335 / 8] >> (335 % 8)) & 1) == 1);
         offered++;
-        normal[154] = 0;
+        normal[hdc] = 0;
         assert(dataParser_makedumydata(out, 650) == 650 && qinggan11_ack == offered &&
                ((out[335 / 8] >> (335 % 8)) & 1) == 0);
         offered++;
-        normal[154] = 1;
+        normal[hdc] = 1;
         assert(dataParser_makedumydata(out, 650) == 650 && qinggan11_ack == offered &&
                ((out[335 / 8] >> (335 % 8)) & 1) == 1);
         // The model ignition reaches bit 0, the OEM power item of powermgr, in both states.
@@ -701,18 +724,52 @@ int main(int argc, char **argv) {
                 {"time_gap_set", 692, 3, 3},
                 {"SeatBeatFlash", 1548, 1, 1},
         });
+        // The wire fields that only the qinggan11 catalogue has, some of each group.
+        // ADAS lanes, targets and assistance states.
+        deliver_cases({
+                {"ADCU_ANP_TxtInfo", 86, 8, 171},
+                {"ADCU_WarningDis", 108, 2, 3},
+                {"ADCU_LateralDistFlag_18", 2789, 1, 1},
+        });
+        // Driver monitoring and multimedia camera settings.
+        deliver_cases({
+                {"ivi_dvrPhotoReceive", 1673, 1, 1},
+                {"ivi_dmsCameraCtl", 1724, 2, 3},
+                {"ivi_FaceIDEmptydataResp", 1752, 1, 1},
+        });
+        // Body, steering, powertrain and range states.
+        deliver_cases({
+                {"EMS_GPFLmp", 9, 1, 1},
+                {"bcm_rsm_lightSWReason", 461, 3, 7},
+                {"VCU_SOCmodesetnew", 1798, 3, 7},
+        });
+        // CAN message timeouts.
+        deliver_cases({
+                {"can_msg_timeout_346", 1878, 2, 3},
+                {"can_msg_timeout_379", 1888, 2, 3},
+                {"can_msg_timeout_37B", 1998, 2, 3},
+        });
+        // Vehicle configuration.
+        deliver_cases({
+                {"cfg_reserve_11", 2172, 4, 11},
+                {"cfg_steer_heat", 2176, 2, 3},
+                {"cfg_battery_pack", 2182, 2, 3},
+        });
+
         // All ten wheel signals have wire bits for the wheel phases.
         for (unsigned index = 322; index <= 331; ++index) {
-            assert(qinggan11_mcu_wheel_supported(qinggan11_fields, index, 1));
+            assert(qinggan11_mcu_wheel_supported(qinggan11_fields, qinggan11_wheel_fields, index,
+                                                 1));
         }
 
         // AdasEcu acc and cancel write acc_mode, mpc_icaSts and time_gap_set, which reach their OEM
-        // ADAS items; mrr_vSetDis and the lane departure lamp stay outside this layout. The guest
-        // rejects the logical revision as a whole, and the host state for the guest carries the
-        // initial values of the two beside the new speed and the ADAS states.
+        // ADAS items; the qinggan11 catalogue has no mrr_vSetDis. A settings byte, which the
+        // settings feedback owns, makes the guest reject the logical revision as a whole, and the
+        // host state for the guest carries its initial value beside the new speed and ADAS states.
         {
-            auto state = voyemu::apply_patch(voyemu::initial_state(),
-                                             {{"speed", 80}, {"gear", 3}, {"gear_valid", 1}});
+            auto state =
+                    voyemu::apply_patch(voyemu::initial_state(voyemu::VehicleCatalog::qinggan11),
+                                        {{"speed", 80}, {"gear", 3}, {"gear_valid", 1}});
             voyemu::AdasEcu adas;
             const auto now = voyemu::AdasEcu::Clock::now();
             std::uint32_t sequence = 0;
@@ -726,13 +783,13 @@ int main(int argc, char **argv) {
             press("acc");
             assert(state.at("raw_oem").at("acc_mode") == 3);
             press("cancel");
-            state = voyemu::apply_patch(state, {{"speed", 60}, {"ldws_lamp", 1}});
+            state = voyemu::apply_patch(state, {{"speed", 60}, {"set_byte3", 1}});
             const auto &raw = state.at("raw_oem");
             assert(raw.at("acc_mode") == 0 && raw.at("mpc_icaSts") == 1 &&
-                   raw.at("mrr_vSetDis") == 160 && raw.at("time_gap_set") == 1);
-            const auto &speed = qinggan11_fields[310];
+                   !raw.contains("mrr_vSetDis") && raw.at("time_gap_set") == 1);
+            const auto &speed = qinggan11_fields[pos("speed")];
             auto deliver = [&](const Json &values) {
-                for (unsigned i = 0; i < 579; i++) {
+                for (unsigned i = 0; i < QINGGAN11_FIELDS; i++) {
                     normal[i] = values.at(fields[i].name).get<unsigned>();
                 }
 
@@ -744,12 +801,12 @@ int main(int argc, char **argv) {
             const auto rejects = qinggan11_rejects;
             assert(!deliver(raw) && qinggan11_rejects == rejects + 1);
             const auto guest = voyemu::qnx_qinggan11_guest_state(source, raw);
-            assert(guest.at("mrr_vSetDis") == 0 && guest.at("ldws_lamp") == 0 &&
-                   guest.at("mpc_icaSts") == 1 && guest.at("time_gap_set") == 1);
+            assert(guest.at("set_byte3") == 0 && guest.at("mpc_icaSts") == 1 &&
+                   guest.at("time_gap_set") == 1);
             assert(deliver(guest) && qinggan11_rejects == rejects + 1 && packed(83, 3) == 1 &&
                    packed(692, 3) == 1);
 
-            for (unsigned i = 0; i < 579; i++) {
+            for (unsigned i = 0; i < QINGGAN11_FIELDS; i++) {
                 normal[i] = initial.at(fields[i].name).get<unsigned>();
             }
 
@@ -757,16 +814,29 @@ int main(int argc, char **argv) {
             assert(dataParser_makedumydata(out, 650) == 650 && qinggan11_ack == offered);
         }
 
-        normal[286] = normal[373] = normal[404] = 1023;
+        // The ICE range keeps the 11-bit OEM slot, whose all-ones the 6.11.1 engine reads as an
+        // unknown range, and reaches the 10-bit NEDC slot saturated.
+        const auto ice =
+                voyemu::apply_patch(voyemu::initial_state(voyemu::VehicleCatalog::qinggan11),
+                                    {{"remain_mileage_f", 2047}})
+                        .at("raw_oem");
+
+        for (unsigned i = 0; i < QINGGAN11_FIELDS; i++) {
+            normal[i] = ice.at(fields[i].name).get<unsigned>();
+        }
+
         ++offered;
         assert(dataParser_makedumydata(out, 650) == 650 && qinggan11_ack == offered);
         assert(packed(2218, 11) == 2047 && packed(1463, 10) == 1023 && packed(2229, 11) == 2047);
-        assert(voyemu::qnx_qinggan11_mcu_layout(source).find("{2218,11,0U,1023U,2047U}") !=
-               std::string::npos);
-        normal[286] = normal[373] = normal[404] = 0;
+
+        for (unsigned i = 0; i < QINGGAN11_FIELDS; i++) {
+            normal[i] = initial.at(fields[i].name).get<unsigned>();
+        }
+
         offered++;
         bad = true;
         qinggan11_have = 0;
+        qinggan11_settings.have = 0;
         assert(dataParser_makedumydata(out, 650) == 650 && qinggan11_ack == offered - 1 &&
                !std::memcmp(out, original_bytes, 650));
         enabled = false;
@@ -790,21 +860,21 @@ int main(int argc, char **argv) {
         wrong["source_parser_sha256"] = std::string(64, '0');
         reject(wrong);
         wrong = source;
-        wrong["fields"][37]["wire"]["start_bit"] = 0;
+        wrong["fields"][pos("ready_lamp")]["wire"]["start_bit"] = 0;
         reject(wrong);
         wrong = source;
-        wrong["fields"][286]["wire"]["unknown"]["wire"] = 4095;
+        wrong["fields"][pos("set_byte0")].erase("unprojected");
         reject(wrong);
         // A row that names its engine item states the case and the output bits it writes; a row
         // without one states neither.
         wrong = source;
-        wrong["fields"][37]["wire"].erase("output_width");
+        wrong["fields"][pos("ready_lamp")]["wire"].erase("output_width");
         reject(wrong);
         wrong = source;
-        wrong["fields"][37]["wire"]["oem_name"] = "ready_lamp";
+        wrong["fields"][pos("ready_lamp")]["wire"]["oem_name"] = "ready_lamp";
         reject(wrong);
         wrong = source;
-        wrong["fields"][120]["wire"]["case_address"] = "0x0";
+        wrong["fields"][pos("gsm_warnInformation_bak")]["wire"]["case_address"] = "0x0";
         reject(wrong);
         bool old_scope_rejected = false;
         try {
@@ -814,28 +884,24 @@ int main(int argc, char **argv) {
         }
 
         assert(old_scope_rejected);
-        bool previous_scope_rejected = false;
-        try {
-            voyemu::qnx_mcu_request_projection(650, 736, 33);
-        } catch (...) {
-            previous_scope_rejected = true;
+
+        // The scopes of earlier guest builds are no longer served.
+        for (const unsigned earlier : {33U, 34U, 493U}) {
+            bool earlier_rejected = false;
+            try {
+                voyemu::qnx_mcu_request_projection(650, 736, earlier);
+            } catch (...) {
+                earlier_rejected = true;
+            }
+
+            assert(earlier_rejected);
         }
 
-        assert(previous_scope_rejected);
-        const auto previous = voyemu::qnx_mcu_projection(
-                voyemu::QnxGuestAdapter::sa8155_qinggan11_611,
-                voyemu::qnx_adapter(voyemu::QnxGuestAdapter::sa8155_qinggan11_611)
-                        .mcu_previous_projected_fields);
-        assert(voyemu::qnx_mcu_request_projection(650, 736, 34) == previous);
-        assert(!voyemu::qnx_mcu_delivery_scope(
-                Json{{"mcu_projection", previous}},
-                voyemu::qnx_mcu_projection(voyemu::QnxGuestAdapter::sa8155_qinggan11_611)));
         const auto projection =
                 voyemu::qnx_mcu_projection(voyemu::QnxGuestAdapter::sa8155_qinggan11_611);
         assert(voyemu::qnx_mcu_request_projection(650, 736, qinggan11_projected_fields, false,
                                                   "sa8155-qinggan11-611") == projection);
         assert(voyemu::qnx_mcu_delivery_scope(Json{{"mcu_projection", projection}}, projection));
-        assert(!voyemu::qnx_mcu_delivery_scope(Json{{"mcu_projection", projection}}, previous));
         assert(!voyemu::qnx_mcu_delivery_scope(
                 Json{{"mcu_projection", projection}},
                 voyemu::qnx_mcu_projection(voyemu::QnxGuestAdapter::sa8155_qinggan11_731)));
@@ -852,10 +918,12 @@ int main(int argc, char **argv) {
         }
 
         assert(rejected);
-        assert(!projection.at("settings_feedback_supported").get<bool>() &&
-               projection.at("unsupported_fields") == 579 - qinggan11_projected_fields);
+        assert(projection.at("hardware_adapter") == "sa8155-qinggan11-611" &&
+               projection.at("catalog_fields") == QINGGAN11_FIELDS &&
+               projection.at("unsupported_fields") ==
+                       QINGGAN11_FIELDS - qinggan11_projected_fields);
         std::cout
-                << "sa8155-qinggan11-611 source layout, stock controls, range sentinels, scoped RPC and unchanged unsupported bits passed\n";
+                << "sa8155-qinggan11-611 source layout, stock controls, range sentinels, settings feedback, scoped RPC and unchanged unsupported bits passed\n";
 
         return 0;
     } catch (const std::exception &e) {

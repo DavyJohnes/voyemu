@@ -101,7 +101,7 @@
     "src/com/qinggan/canbus/service/RegistrationService.java": "voyemu/profiles/common/components/canbus/src/com/qinggan/canbus/service/RegistrationService.java",
     "src/com/qinggan/canbus/service/VehicleInputSnapshot.java": "voyemu/profiles/common/components/canbus/src/com/qinggan/canbus/service/VehicleInputSnapshot.java",
     "src/com/qinggan/canbus/service/VehicleInputStore.java": "voyemu/profiles/common/components/canbus/src/com/qinggan/canbus/service/VehicleInputStore.java",
-    "src/com/qinggan/canbus/service/VehicleSignalCatalog.java": "voyemu/profiles/common/components/canbus/src/com/qinggan/canbus/service/VehicleSignalCatalog.java",
+    "src/com/qinggan/canbus/service/VehicleSignalCatalog.java": "voyemu/profiles/common/components/canbus/src/qinggan11/com/qinggan/canbus/service/VehicleSignalCatalog.java",
     "src/com/qinggan/canbus/service/VehicleStateProvider.java": "voyemu/profiles/common/components/canbus/src/com/qinggan/canbus/service/VehicleStateProvider.java",
     "src/com/qinggan/canbus/service/VinIdentityPolicy.java": "voyemu/profiles/common/components/canbus/src/com/qinggan/canbus/service/VinIdentityPolicy.java",
     "src/com/qinggan/canbus/service/VinIdentityProvider.java": "voyemu/profiles/common/components/canbus/src/com/qinggan/canbus/service/VinIdentityProvider.java",

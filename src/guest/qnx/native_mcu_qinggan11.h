@@ -1,15 +1,16 @@
 #ifndef VOYEMU_NATIVE_MCU_QINGGAN11_H
 #define VOYEMU_NATIVE_MCU_QINGGAN11_H
-/* Only proven named Free A11 7.3.1 signals are writable. Unmapped bits retain each OEM packet. */
-/* A nonzero unknown_wire replaces the normalized unknown value unknown_input on the wire. */
+/* One element per field of the qinggan11 catalogue, the 736 wire fields of the OEM packet. */
+/* A projected field writes its value at bit; width 0 keeps the OEM bits, accepts only initial. */
+#define QINGGAN11_FIELDS 736
 typedef struct {
     unsigned short bit;
     unsigned char width;
-    unsigned initial, unknown_input, unknown_wire;
+    unsigned initial;
 } Qinggan11McuField;
 
 static int qinggan11_mcu_valid(const Qinggan11McuField *fields, const unsigned *values) {
-    for (unsigned i = 0; i < 579; i++) {
+    for (unsigned i = 0; i < QINGGAN11_FIELDS; i++) {
         if (!fields[i].width) {
             if (values[i] != fields[i].initial) {
                 return 0;
@@ -30,7 +31,7 @@ static int qinggan11_mcu_project(unsigned char *output, unsigned capacity, int o
         return 0;
     }
 
-    for (unsigned i = 0; i < 579; i++) {
+    for (unsigned i = 0; i < QINGGAN11_FIELDS; i++) {
         for (unsigned b = 0; b < fields[i].width; b++) {
             unsigned bit = fields[i].bit + b, mask = 1U << (bit & 7);
             output[bit >> 3] = (unsigned char)((output[bit >> 3] & ~mask) |
@@ -41,12 +42,15 @@ static int qinggan11_mcu_project(unsigned char *output, unsigned capacity, int o
     return 1;
 }
 
-static int qinggan11_mcu_wheel_supported(const Qinggan11McuField *fields, unsigned index,
+/* A wheel button keeps its qinggan09 index 322..331; wheel names its catalogue position. */
+static int qinggan11_mcu_wheel_supported(const Qinggan11McuField *fields,
+                                         const unsigned short *wheel, unsigned index,
                                          unsigned value) {
-    return index >= 322 && index <= 331 && value <= 1 && fields[index - 1].width == 1;
+    return index >= 322 && index <= 331 && value <= 1 && wheel[index - 322] < QINGGAN11_FIELDS &&
+           fields[wheel[index - 322]].width == 1;
 }
 
-/* Exact Free A11 7.3.1 OEM ABI: SoC bits240..319 -> MCU parserset562..571 bits2000..2079. */
+/* Exact Free A11 OEM ABI: SoC bits240..319 -> MCU parserset562..571 bits2000..2079. */
 typedef struct {
     unsigned char bytes[10];
     unsigned have;

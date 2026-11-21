@@ -1255,7 +1255,8 @@ int main(int argc, char **argv) try {
 
             return Json{{"ok", true},
                         {"session_id", id},
-                        {"catalog", catalog_json()},
+                        {"state", initial_state(VehicleCatalog::qinggan09)},
+                        {"catalog", catalog_json(VehicleCatalog::qinggan09)},
                         {"field_delivery",
                          {{"cluster", Json::array({"soc", "speed", "spd_valid"})},
                           {"multimedia", Json::array({"soc"})}}}};
@@ -1274,11 +1275,24 @@ int main(int argc, char **argv) try {
                                                     : Json::array()));
         }
 
-        // Without a session the catalog describes the model alone.
+        // Without a session the catalog of the platform of a named profile describes the model
+        // alone; a request that names neither is rejected.
         const auto bare = fields_api.call(
                 {{"schema", 1}, {"request_id", random_token()}, {"op", "vehicle.fields"}});
-        assert(bare.at("ok") == true && reads == 1 &&
-               !bare.at("result").at("fields").at(0).contains("delivery"));
+        assert(bare.at("ok") == false && reads == 1);
+
+        for (const auto &bundled : embedded_profile_catalog()) {
+            const auto platform = bundled.at("definition").at("platform").get<std::string>();
+            const auto described_profile = fields_api.call({{"schema", 1},
+                                                            {"request_id", random_token()},
+                                                            {"op", "vehicle.fields"},
+                                                            {"profile", bundled.at("id")}});
+            const auto &result = described_profile.at("result");
+            assert(described_profile.at("ok") == true && reads == 1 &&
+                   result.at("fields").size() == catalog(vehicle_catalog(platform)).size() &&
+                   result.at("map_sha256") == catalog_map_sha256(vehicle_catalog(platform)) &&
+                   !result.at("fields").at(0).contains("delivery"));
+        }
     }
     {
         // Same-profile machines remain addressable by their retained SID alone.

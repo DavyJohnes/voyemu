@@ -773,8 +773,11 @@ void Client::ingest(const Json &response) {
 
     const auto &raw = response.at("state").at("raw_oem");
     const auto &catalog = response.at("catalog");
+    // The catalogue of the platform of the running machine, which map_sha256 of its state names.
+    const auto &platform_catalog = voyemu::catalog(state_catalog(response.at("state")));
 
-    if (!raw.is_object() || raw.size() != 579 || !catalog.is_array() || catalog.size() != 579) {
+    if (!raw.is_object() || raw.size() != platform_catalog.size() || !catalog.is_array() ||
+        catalog.size() != platform_catalog.size()) {
         throw VoyemuError("CLUSTER_UI", "Incompatible canonical vehicle catalog");
     }
 
@@ -787,13 +790,14 @@ void Client::ingest(const Json &response) {
                        index = field.at("index").get<unsigned>();
 
         if (!names.insert(name).second || !indexes.insert(index).second ||
-            (index < 1 || index > 579) || width < 1 || width > 32 || !raw.contains(name) ||
-            !raw.at(name).is_number_integer() || raw.at(name).get<std::int64_t>() < 0 ||
+            (index < 1 || index > platform_catalog.size()) || width < 1 || width > 63 ||
+            !raw.contains(name) || !raw.at(name).is_number_integer() ||
+            raw.at(name).get<std::int64_t>() < 0 ||
             raw.at(name).get<std::uint64_t>() > ((std::uint64_t{1} << width) - 1)) {
             throw VoyemuError("CLUSTER_UI", "Malformed canonical vehicle field");
         }
 
-        const auto &expected = voyemu::catalog().at(index - 1);
+        const auto &expected = platform_catalog.at(index - 1);
 
         if (expected.index != index || expected.name != name || expected.width != width) {
             throw VoyemuError("CLUSTER_UI", "Canonical profile catalog mismatch");

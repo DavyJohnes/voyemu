@@ -16,7 +16,7 @@ static unsigned raw(const Json &state, const char *name) {
 int main() try {
     using State = PowerEcu::State;
     PowerEcu power;
-    auto state = initial_state();
+    auto state = initial_state(VehicleCatalog::qinggan09);
     auto apply = [&](const PowerEcu::Outcome &outcome) {
         if (!outcome.patch.empty()) {
             state = apply_patch(state, outcome.patch);

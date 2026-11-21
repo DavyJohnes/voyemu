@@ -1262,7 +1262,7 @@ struct Backend::Impl {
 
         if (at == mcu_layouts.end()) {
             auto definition = embedded_project_file_json(
-                    "src/guest/qnx/" + std::string(spec.mcu_layout_file), 256 * 1024);
+                    "src/guest/qnx/" + std::string(spec.mcu_layout_file), 512 * 1024);
             qnx_qinggan11_mcu_layout(definition);
             at = mcu_layouts.emplace(spec.name, std::move(definition)).first;
         }
@@ -1555,28 +1555,31 @@ struct Backend::Impl {
 
         auto value = read_json(path, 128 * 1024);
         need(value.is_object() && value.size() == 6 && value.at("schema") == 1 &&
-                     value.at("map_sha256") == catalog_pin &&
                      value.at("origin") == "manual-emulator" &&
                      value.at("sequence").is_number_unsigned() &&
                      value.at("updated_utc").is_string(),
              "Full vehicle store schema");
+        // A qinggan11 guest reads the qinggan11 catalogue, every other guest the qinggan09 one.
+        const auto catalog = layout ? VehicleCatalog::qinggan11 : VehicleCatalog::qinggan09;
+        need(value.at("map_sha256") == catalog_map_sha256(catalog), "Vehicle catalog of the guest");
         auto seq = value.at("sequence").get<std::uint64_t>();
         need(seq >= 1 && seq < 0x100000000ULL, "Full vehicle sequence");
         const auto &raw = value.at("raw_oem");
-        need(raw.is_object() && raw.size() == 579, "Complete 579-field vehicle state required");
-        // A qinggan11 guest rejects the whole revision when a field outside its MCU layout leaves
-        // the initial value, so that field reaches it as the initial value.
+        const auto &fields = voyemu::catalog(catalog);
+        need(raw.is_object() && raw.size() == fields.size(), "Complete vehicle state required");
+        // A qinggan11 guest rejects the whole revision when an unprojected field leaves the
+        // initial value, so that field reaches it as the initial value.
         const auto guest = layout ? qnx_qinggan11_guest_state(*layout, raw) : raw;
         Reply out{seq, {}, "persistent-full-MCU-input"};
         append(out.payload, U(1));
-        append(out.payload, U(579));
+        append(out.payload, U(fields.size()));
 
-        for (auto f : field_specs) {
+        for (const auto &f : fields) {
             need(raw.contains(f.name) && raw.at(f.name).is_number_integer(),
                  "OEM field integer required");
             const auto v = raw.at(f.name).get<std::int64_t>();
             need(v >= 0 && std::uint64_t(v) < (1ULL << f.width) &&
-                         (!std::string_view(f.name).starts_with("swm_") || !v),
+                         (!f.name.starts_with("swm_") || !v),
                  "OEM field width/transient state");
             append(out.payload, guest.at(f.name).get<U>());
         }
@@ -1605,7 +1608,8 @@ struct Backend::Impl {
             if (std::filesystem::exists(path)) {
                 auto value = read_json(path, 128 * 1024);
                 need(value.is_object() && value.size() == 6 && value.at("schema") == 1 &&
-                             value.at("map_sha256") == catalog_pin &&
+                             (value.at("map_sha256") == qinggan09_map_sha256 ||
+                              value.at("map_sha256") == qinggan11_map_sha256) &&
                              value.at("origin") == "manual-emulator" &&
                              value.at("sequence").is_number_unsigned(),
                      "Input wake vehicle schema");

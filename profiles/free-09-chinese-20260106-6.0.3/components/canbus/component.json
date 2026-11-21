@@ -98,7 +98,7 @@
     "src/com/qinggan/canbus/service/RegistrationService.java": "voyemu/profiles/common/components/canbus/src/com/qinggan/canbus/service/RegistrationService.java",
     "src/com/qinggan/canbus/service/VehicleInputSnapshot.java": "voyemu/profiles/common/components/canbus/src/com/qinggan/canbus/service/VehicleInputSnapshot.java",
     "src/com/qinggan/canbus/service/VehicleInputStore.java": "voyemu/profiles/common/components/canbus/src/com/qinggan/canbus/service/VehicleInputStore.java",
-    "src/com/qinggan/canbus/service/VehicleSignalCatalog.java": "voyemu/profiles/common/components/canbus/src/com/qinggan/canbus/service/VehicleSignalCatalog.java",
+    "src/com/qinggan/canbus/service/VehicleSignalCatalog.java": "voyemu/profiles/common/components/canbus/src/qinggan09/com/qinggan/canbus/service/VehicleSignalCatalog.java",
     "src/com/qinggan/canbus/service/VehicleStateProvider.java": "voyemu/profiles/common/components/canbus/src/com/qinggan/canbus/service/VehicleStateProvider.java",
     "src/com/qinggan/canbus/service/protocol/dongfeng/DongfengCanBusComponentImpl.java": "voyemu/profiles/common/components/canbus/src/com/qinggan/canbus/service/protocol/dongfeng/DongfengCanBusComponentImpl.java",
     "src/com/qinggan/util/Log.java": "voyemu/profiles/common/components/canbus/src/com/qinggan/util/Log.java"
