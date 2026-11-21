@@ -123,6 +123,26 @@ final class PatchTarget implements Recipes.Target {
     }
 
     @Override
+    public String originalPin() {
+        return originalPin(reference);
+    }
+
+    @Override
+    public String originalPin(String artifact) {
+        Failure.require(
+                artifact.startsWith("original:"),
+                "PATCH_SOURCE",
+                "Profile original reference required",
+                3);
+        Object original =
+                Json.obj(profile.data(), "original").get(artifact.substring("original:".length()));
+        Failure.require(
+                original instanceof Map<?, ?>, "PATCH_SOURCE", "Unknown profile original", 3);
+
+        return Json.str(Json.object(original), "sha256");
+    }
+
+    @Override
     public boolean derivedInput() {
         return reference.startsWith("component:") || reference.startsWith("patched:");
     }

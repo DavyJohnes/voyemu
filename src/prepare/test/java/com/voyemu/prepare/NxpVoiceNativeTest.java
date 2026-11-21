@@ -24,6 +24,7 @@ public final class NxpVoiceNativeTest {
         int api = 28;
         Map<String, Path> uses = new LinkedHashMap<>();
         Map<String, byte[]> entries = new LinkedHashMap<>();
+        Map<String, Object> originals = Map.of();
         int mutations;
 
         @Override
@@ -34,6 +35,17 @@ public final class NxpVoiceNativeTest {
         @Override
         public String originalSha256() {
             return pin;
+        }
+
+        @Override
+        public String originalPin() {
+            return PIN;
+        }
+
+        @Override
+        public String originalPin(String reference) {
+            return Json.str(
+                    Json.obj(originals, reference.substring("original:".length())), "sha256");
         }
 
         @Override
@@ -123,6 +135,17 @@ public final class NxpVoiceNativeTest {
         var recipe = Json.object(Json.parse(Files.readString(recipeFile)));
 
         recipe.put("sourceSha256", FilesSupport.hash(recipeFile));
+        // The native libraries carry the pins that original of the source profile declares.
+        t.originals =
+                Json.obj(
+                        Json.object(
+                                Json.parse(
+                                        Files.readString(
+                                                root.resolve(
+                                                        "profiles/"
+                                                                + TestProfiles.pinning(root, PIN)
+                                                                + "/profile.json")))),
+                        "original");
         Path apk = inputs.resolve("wakeupspeechservice.apk").toRealPath();
         NativeCore.pinned(apk, PIN);
 
@@ -189,6 +212,23 @@ public final class NxpVoiceNativeTest {
         Path donor = t.uses.remove("original:voice-libwakeup.so");
         reject(t, recipe);
         t.uses.put("original:voice-libwakeup.so", donor);
+        Map<String, Object> declared = t.originals;
+        var foreign = new LinkedHashMap<String, Object>(declared);
+        var wakeup = new LinkedHashMap<String, Object>(Json.obj(declared, "voice-libwakeup.so"));
+        wakeup.put("sha256", "0".repeat(64));
+        foreign.put("voice-libwakeup.so", wakeup);
+        t.originals = foreign;
+        int before = t.mutations;
+        boolean mismatch = false;
+
+        try {
+            Recipes.apply(NAME, recipe, t);
+        } catch (IllegalArgumentException expected) {
+            mismatch = expected.getMessage().equals("INPUT_SHA_MISMATCH");
+        }
+
+        need(mismatch && before == t.mutations);
+        t.originals = declared;
         Recipes.apply(NAME, recipe, t);
         need(!t.entries.containsKey("lib/armeabi/libSpeechRecord.so") && t.entries.size() == 21);
 

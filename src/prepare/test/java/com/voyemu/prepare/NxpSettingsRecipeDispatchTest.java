@@ -60,6 +60,11 @@ public final class NxpSettingsRecipeDispatchTest {
         }
 
         @Override
+        public String originalPin() {
+            return "a20c1ee2c682aad846b93010356d434ef7e43ffb314b21186a91f348ba4c497b";
+        }
+
+        @Override
         public void useLibraries(List<String> libraries) {
             events.add("useLibraries:" + libraries);
         }

@@ -3,6 +3,7 @@
 #include "error.hpp"
 #include "little_endian.hpp"
 #include "process.hpp"
+#include "qnx_adapter.hpp"
 #include "qnx_guest_shell.hpp"
 #include "qnx_imagefs.hpp"
 #include "qnx_lzo.hpp"
@@ -13,9 +14,6 @@
 namespace voyemu {
 namespace {
 constexpr std::size_t startup = 0x3000, startup_bytes = 0x66108, stream = 0x69108;
-constexpr std::string_view original_sha =
-        "1e7c487aae4f4353621f8d0301b352cc974e9037d114ff3ec2556d048512ad28";
-
 constexpr CodeCheck need{"Passion QNX input differs"};
 
 std::uint64_t field(std::string_view bytes, std::size_t at, unsigned width) {
@@ -27,7 +25,11 @@ void put(std::string &bytes, std::size_t at, std::uint64_t value, unsigned width
 }
 
 void original_layout(std::string_view bytes) {
-    need(bytes.size() == 2254664 && sha256_bytes(bytes) == original_sha, "QNX_PASSION_SOURCE_SHA");
+    // The pinned OEM host image the Passion adapter is built for.
+    const auto &host = qnx_adapter(QnxGuestAdapter::sa8155_passion_21480);
+
+    need(bytes.size() == host.hyp_bytes && sha256_bytes(bytes) == host.hyp_sha256,
+         "QNX_PASSION_SOURCE_SHA");
     need(bytes.substr(0, 6) == std::string_view("\x7f"
                                                 "ELF\2\1",
                                                 6) &&
@@ -335,7 +337,8 @@ std::string adapt_qnx_passion_startupmgr(std::string_view original, std::string_
 
 void validate_qnx_passion_ram_parent_source(std::string_view original) {
     // ABI preimages only; the caller authenticates the complete Passion original first.
-    need(original.size() == 2254664, "QNX_PASSION_RAM_PARENT_SIZE");
+    need(original.size() == qnx_adapter(QnxGuestAdapter::sa8155_passion_21480).hyp_bytes,
+         "QNX_PASSION_RAM_PARENT_SIZE");
     need(field(original, 0xe06c, 4) == 0x9135e084 && field(original, 0xe080, 4) == 0x94000aa4,
          "QNX_PASSION_RAM_PARENT_INSTRUCTION");
     // Empty asinfo state makes E030 the first root at index zero; B300 retains below4G.

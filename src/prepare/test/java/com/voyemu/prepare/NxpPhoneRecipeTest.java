@@ -8,7 +8,7 @@ public final class NxpPhoneRecipeTest {
     static final String PIN = "55e7602d15f5d677a5ddeaaa44c0c04c355235c5322b51edefa3a6ef29636451";
 
     static final class Target implements Recipes.Target {
-        String id = TestProfiles.SYNTHETIC, pin = PIN;
+        String id = TestProfiles.SYNTHETIC, pin = PIN, declared = PIN;
         int api = 28, calls;
 
         @Override
@@ -19,6 +19,11 @@ public final class NxpPhoneRecipeTest {
         @Override
         public String originalSha256() {
             return pin;
+        }
+
+        @Override
+        public String originalPin() {
+            return declared;
         }
 
         @Override
@@ -113,6 +118,17 @@ public final class NxpPhoneRecipeTest {
         reject(target);
         target.api = 28;
         target.pin = "d5a7417be79e2e4bfd70e643df85ae76e1a8a15332a345f126ccc5781f5ba8a3";
+        reject(target);
+        // The accepted original is the one the profile pins, not a pin in code.
+        target.pin = "1".repeat(64);
+        target.declared = target.pin;
+        Recipes.apply("nxp-phone-provider.json", metadata(), target);
+
+        if (target.calls != 2) {
+            throw new AssertionError("profile-pinned original rejected");
+        }
+
+        target.declared = PIN;
         reject(target);
         System.out.println(
                 "NXP Phone recipe PASS exact profile, API and original guards before mutation");

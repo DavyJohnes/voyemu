@@ -36,7 +36,7 @@ public final class NxpVoiceInitializationTest {
     }
 
     static final class Target implements Recipes.Target {
-        String id = TestProfiles.SYNTHETIC, pin = PIN;
+        String id = TestProfiles.SYNTHETIC, pin = PIN, declared = PIN;
         int api = 28;
         final Path work;
         DexClasses classes;
@@ -58,6 +58,11 @@ public final class NxpVoiceInitializationTest {
         @Override
         public String originalSha256() {
             return pin;
+        }
+
+        @Override
+        public String originalPin() {
+            return declared;
         }
 
         @Override

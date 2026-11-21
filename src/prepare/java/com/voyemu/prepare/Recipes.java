@@ -535,6 +535,16 @@ final class Recipes {
             throw new Failure("PATCH_SOURCE_MISSING", "Original APK pin required", 5);
         }
 
+        /** The SHA-256 that original of the profile declares for the patch input. */
+        default String originalPin() {
+            throw new Failure("PATCH_SOURCE_MISSING", "Profile original pin required", 5);
+        }
+
+        /** The SHA-256 that original of the profile declares for an original:NAME reference. */
+        default String originalPin(String reference) {
+            throw new Failure("PATCH_SOURCE_MISSING", "Profile original pin required", 5);
+        }
+
         /** True when the input is an intermediate artifact our code builds from pinned inputs. */
         default boolean derivedInput() {
             return false;

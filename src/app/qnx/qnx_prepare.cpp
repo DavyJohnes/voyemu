@@ -31,6 +31,7 @@
 #include <set>
 #include <stdexcept>
 #include <utility>
+#include <vector>
 namespace voyemu {
 namespace {
 constexpr CodeCheck need{"QNX preparation check failed"};
@@ -862,21 +863,27 @@ Json prepare_qnx_passion_developer_images(const std::filesystem::path &root,
     const auto &recovery_pin = donor.sha256;
     ordinary(supplemental_recovery);
     struct Original {
-        const char *name;
+        std::string name;
         std::uint64_t bytes;
-        const char *sha;
+        std::string sha;
     };
-    constexpr std::array originals{
-            Original{"mifs_hyp_la.img", 2254664,
-                     "1e7c487aae4f4353621f8d0301b352cc974e9037d114ff3ec2556d048512ad28"},
-            Original{"ifs2_la.img", 200925932,
-                     "1e942ab83e59ab78ff0096f474d3677ba7e83f6a00f86a1ebe9f0ae755a3e157"},
-            Original{"system_la.img", 2684354560ULL,
-                     "9e6395255f9bc51d926fd5ab604612d779de93da59ba71832ee580c8534f42ec"},
-            Original{"mifs_recovery_hyp_la.img", 2330096,
-                     "8376e6340f719d8a4b6e572fee7a675dd7bd6e88e14c589ba2eba27ee60c239b"},
-            Original{"ifs2_recovery_la.img", 32080412,
-                     "1635c921b73544411a08028005b906e677d029c047d2a6e0a041598c9847709c"}};
+    // The five owner-update roles with the sizes and pins that profile-qnx.json declares.
+    std::vector<Original> originals;
+
+    for (const auto *name : {"mifs_hyp_la.img", "ifs2_la.img", "system_la.img",
+                             "mifs_recovery_hyp_la.img", "ifs2_recovery_la.img"}) {
+        const auto &entry = config.at("originals").at(name);
+        need(entry.at("file") == name && entry.at("bytes").is_number_unsigned() &&
+                     entry.at("sha256").is_string() &&
+                     sha256_text(entry.at("sha256").get<std::string>()),
+             "QNX_PASSION_DEVELOPER_ORIGINAL");
+        originals.push_back({name, entry.at("bytes").get<std::uint64_t>(),
+                             entry.at("sha256").get<std::string>()});
+    }
+
+    need(originals[0].sha == qnx_adapter(QnxGuestAdapter::sa8155_passion_21480).hyp_sha256 &&
+                 originals[0].bytes == qnx_adapter(QnxGuestAdapter::sa8155_passion_21480).hyp_bytes,
+         "QNX_PASSION_DEVELOPER_ORIGINAL");
     Json inputs = Json::object(), sources = Json::object();
     std::map<std::string, std::filesystem::path> files;
     std::map<std::string, Json> epochs;

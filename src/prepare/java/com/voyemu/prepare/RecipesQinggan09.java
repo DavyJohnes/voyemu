@@ -19,19 +19,15 @@ final class RecipesQinggan09 {
             Recipes.Target target)
             throws Exception {
         require(
-                Json.str(constants, "INPUT_SHA256")
-                                .equals(
-                                        "602ca641728bbac947147ad8d7e41bbd481c7847a6bb838bf1c5dcbd37a11d8d")
-                        && FilesSupport.hash(Recipes.output(target))
-                                .equals(Json.str(constants, "INPUT_SHA256")),
+                FilesSupport.hash(Recipes.output(target))
+                        .equals(Json.str(constants, "INPUT_SHA256")),
                 "Exact Android 28 ranchu init source required");
         Recipes.literalCalls(name, metadata, target);
     }
 
     static void phoneProvider(Recipes.Target target) throws Exception {
         require(
-                target.originalSha256()
-                        .equals("d5a7417be79e2e4bfd70e643df85ae76e1a8a15332a345f126ccc5781f5ba8a3"),
+                target.originalSha256().equals(target.originalPin()),
                 "Exact A9 Phone APK required");
         target.addPhoneProvider();
     }

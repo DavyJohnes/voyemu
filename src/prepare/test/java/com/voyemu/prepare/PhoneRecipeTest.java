@@ -23,8 +23,11 @@ public final class PhoneRecipeTest {
                                         return 28;
                                     }
 
-                                    if (m.getName().equals("originalSha256")) {
-                                        return "d5a7417be79e2e4bfd70e643df85ae76e1a8a15332a345f126ccc5781f5ba8a3";
+                                    if (m.getName().equals("originalSha256")
+                                            || m.getName().equals("originalPin")) {
+                                        // The profile pins the original; any pin it declares is
+                                        // accepted.
+                                        return "1".repeat(64);
                                     }
 
                                     if (m.getName().equals("addPhoneProvider")) {

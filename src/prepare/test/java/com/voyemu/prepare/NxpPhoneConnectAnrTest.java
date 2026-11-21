@@ -44,7 +44,7 @@ public final class NxpPhoneConnectAnrTest {
         Path work;
         DexClasses classes;
         String profile = TestProfiles.SYNTHETIC;
-        String pin = PIN;
+        String pin = PIN, declared = PIN;
         String abi = "arm64-v8a";
         int api = 28;
 
@@ -56,6 +56,11 @@ public final class NxpPhoneConnectAnrTest {
         @Override
         public String originalSha256() {
             return pin;
+        }
+
+        @Override
+        public String originalPin() {
+            return declared;
         }
 
         @Override
