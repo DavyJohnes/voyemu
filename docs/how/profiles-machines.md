@@ -33,7 +33,7 @@ A machine is a prepared directory under `machines/<name>/`. `voyemu build PROFIL
 | `profile.json` | The embedded copy of the authoring profile |
 | `android/` | Android system and vendor images, the kernel, writable user and cache disks, installed packages |
 | `qnx/` | QNX boot images and the writable QNX disk; only when the cluster is prepared |
-| `ui/` | Voyemu logo, OEM boot animations in `ui/startup/`, steering-wheel artwork, button routes and control artwork |
+| `ui/` | Voyemu logo, OEM boot animations in `ui/startup/`, steering-wheel artwork and button routes |
 
 `runtime.json` appears last, after the guests have booted for verification, so a directory without it is not a machine. Lifecycle commands select a machine by its path, relative or absolute, also outside the installation root, and infer the profile from `runtime.json`.
 

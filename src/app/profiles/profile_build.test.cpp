@@ -2411,52 +2411,6 @@ static void api30_publication_checks(const std::filesystem::path &stage, bool ol
     qnx_acceptance["profile_sha256"] = sha256_file(definition);
     write_private_json(qnx_receipt, qnx_acceptance);
     resource_source_fixture(root, read_private_json(definition));
-    std::string descriptor_bytes;
-
-    if (older) {
-        // The shared free-2024 wheel carries control artwork owned by 7.3.1 only; its unmet
-        // input pins must not reach the 6.11.1 publication.
-        write_private_json(
-                root / "profiles/common/wheels/free-2024/control-artwork.json",
-                {{"schema", 1},
-                 {"inputs",
-                  {{"dark",
-                    {{"path", "originals/Setting.apk"}, {"sha256", std::string(64, '0')}}}}},
-                 {"assets", Json::array({Json{{"file", "toggle-track-dark.png"},
-                                              {"input", "dark"},
-                                              {"member", "res/drawable/checkbox_bg.png"},
-                                              {"png_sha256", std::string(64, '0')}}})},
-                 {"ownerProfiles", Json::array({"free-11-chinese-20260731-7.3.1"})}});
-    } else {
-        const auto artwork = root / "profiles/common/wheels/free-2024/control-artwork.json";
-        write_private_json(artwork,
-                           {{"schema", 1},
-                            {"inputs", Json::object()},
-                            {"assets", Json::array()},
-                            {"note", "Unacquired OEM control artwork; source-owned wheel."}});
-        resource_source_fixture(root, read_private_json(definition));
-        descriptor_bytes = read_private_json_bytes(artwork);
-        // A malformed selected descriptor must fail before publication, leaving no destination.
-        write_private_json(artwork,
-                           {{"schema", 1}, {"inputs", Json::array()}, {"assets", Json::array()}});
-        bool bad_ui = false;
-        try {
-            finalize_profile_build(root, id, machine_identity(id, "bad-artwork-before-publish"),
-                                   candidate, qnx_receipt, sha256_file(qnx_receipt));
-        } catch (...) {
-            bad_ui = true;
-        }
-
-        if (!bad_ui || std::filesystem::exists(root / "machines/bad-artwork-before-publish")) {
-            throw std::runtime_error("invalid artwork published before staged validation");
-        }
-
-        {
-            std::ofstream out(artwork, std::ios::binary);
-            out << descriptor_bytes;
-        }
-    }
-
     const auto combined = finalize_profile_build(root, id,
                                                  machine_identity(id, "api30-combined-fixture"),
                                                  candidate, qnx_receipt, sha256_file(qnx_receipt));
@@ -2468,11 +2422,9 @@ static void api30_publication_checks(const std::filesystem::path &stage, bool ol
         throw std::runtime_error("full portable observer DEX export differs");
     }
 
-    if (older ? full.contains("ui")
-              : (full.at("ui").size() != 1 ||
-                 full.at("ui").at("source-provenance.json").at("sha256") !=
-                         sha256_bytes(descriptor_bytes))) {
-        throw std::runtime_error("Free selected artwork provenance missing from full publication");
+    if (full.contains("ui") ||
+        std::filesystem::exists(root / "machines/api30-combined-fixture/ui/controls")) {
+        throw std::runtime_error("full publication carries OEM control artwork");
     }
 
     if (full.at("qnx").at("images").size() != 10 ||

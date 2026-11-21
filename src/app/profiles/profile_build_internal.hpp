@@ -23,7 +23,6 @@
 #include "portable_resources.hpp"
 #include "portable_runtime.hpp"
 #include "process.hpp"
-#include "profile_artwork.hpp"
 #include "profile_build.hpp"
 #include "profile_identity.hpp"
 #include "profile_preparation.hpp"

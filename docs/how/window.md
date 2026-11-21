@@ -32,7 +32,7 @@ The interface language is shared by all machines and remembered; until a languag
 
 ## Vehicle controls
 
-A panel of vehicle controls changes the [vehicle model](vehicle.md): driving values such as speed and gear, doors, lights, tyres, temperatures, charge and fuel. A list of all 579 fields allows any value to be changed directly; a field outside the support of the profile is marked as a profile limit.
+A panel of vehicle controls changes the [vehicle model](vehicle.md): driving values such as speed and gear, doors, lights, tyres, temperatures, charge and fuel. A list of all 579 fields allows any value to be changed directly; a field outside the support of the profile is marked as a profile limit. Voyemu draws the switches, the choices and the panel background itself, the same for every profile, in the light or dark theme of the multimedia.
 
 ## Background launch
 

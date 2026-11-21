@@ -555,17 +555,6 @@ Json finalize_profile_build(const std::filesystem::path &root, std::string_view 
         runtime["ui_observer"] = observer;
     }
 
-    if (definition.contains("wheel") &&
-        std::filesystem::is_regular_file(root /
-                                         definition.at("wheel").at("assets").get<std::string>() /
-                                         "control-artwork.json")) {
-        const auto artwork = export_profile_artwork(root, profile, stage / "ui/controls");
-
-        if (!artwork.empty()) {
-            runtime["ui"] = artwork;
-        }
-    }
-
     if (passion_power_requested(definition)) {
         runtime["android"]["display_power"] = export_passion_power(definition, candidate, stage,
                                                                    profile_pin);
@@ -710,17 +699,6 @@ Json finalize_android_profile_build(const std::filesystem::path &root, std::stri
     if (passion_mcu_requested(definition)) {
         runtime["android"]["mcu_property"] = export_passion_mcu(definition, candidate, stage,
                                                                 profile_pin);
-    }
-
-    if (definition.contains("wheel") &&
-        std::filesystem::is_regular_file(root /
-                                         definition.at("wheel").at("assets").get<std::string>() /
-                                         "control-artwork.json")) {
-        const auto artwork = export_profile_artwork(root, profile, stage / "ui/controls");
-
-        if (!artwork.empty()) {
-            runtime["ui"] = artwork;
-        }
     }
 
     runtime["android"]["boot_files"] = export_portable_boot_files(

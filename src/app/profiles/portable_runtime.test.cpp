@@ -4542,180 +4542,19 @@ int main(int argc, char **argv) {
             write_private_json(seed30 / "runtime.json", seed_metadata30);
             check(inspect_portable_runtime(app, free30, api30_machine, seed30) == seed_metadata30,
                   "published API30 Android-only seed cannot be inspected");
-            // Free2024 exports its pinned unacquired-artwork provenance, not A9 control PNGs.
+            // Prepared machines carry no OEM control artwork; a ui manifest entry is foreign.
             {
-                auto selected_definition = definition30;
-                selected_definition["wheel"]["assets"] = "profiles/common/wheels/free-2024";
-                write_private_json(profile30, selected_definition);
-                write_private_json(seed30 / "profile.json", selected_definition);
-                const auto descriptor = app /
-                                        "profiles/common/wheels/free-2024/control-artwork.json";
-                write_private_json(
-                        descriptor,
-                        {{"schema", 1},
-                         {"inputs", Json::object()},
-                         {"assets", Json::array()},
-                         {"note", "Unacquired OEM control artwork; source-owned wheel."}});
-                const auto bytes = read_private_json_bytes(descriptor);
-                const auto source = seed30 / "ui/controls/source-provenance.json";
-                put(source, bytes);
                 auto with_ui = seed_metadata30;
-                with_ui["profile_sha256"] = sha256_file(profile30);
-                with_ui["ui"] = {{"source-provenance.json",
-                                  {{"file", "ui/controls/source-provenance.json"},
-                                   {"bytes", bytes.size()},
-                                   {"sha256", sha256_bytes(bytes)}}}};
+                with_ui["ui"] = Json::object();
                 write_private_json(seed30 / "runtime.json", with_ui);
-                check(inspect_portable_runtime(app, free30, api30_machine, seed30) == with_ui,
-                      "actual Free2024 one-provenance export rejected as eight A9 PNGs");
-                auto refuse_ui = [&](const Json &bad) {
-                    write_private_json(seed30 / "runtime.json", bad);
-                    bool denied = false;
-                    try {
-                        inspect_portable_runtime(app, free30, api30_machine, seed30);
-                    } catch (...) {
-                        denied = true;
-                    }
-
-                    check(denied, "invalid Free artwork namespace/source accepted");
-                };
-                auto bad = with_ui;
-                bad["ui"].erase("source-provenance.json");
-                refuse_ui(bad);
-                bad = with_ui;
-                bad["ui"]["unknown.png"] = bad["ui"]["source-provenance.json"];
-                refuse_ui(bad);
-                put(source, "foreign descriptor");
-                bad = with_ui;
-                bad["ui"]["source-provenance.json"]["bytes"] = 18;
-                bad["ui"]["source-provenance.json"]["sha256"] = sha256_file(source);
-                refuse_ui(bad);
-                put(source, bytes);
-                write_private_json(
-                        descriptor,
-                        {{"schema", 1}, {"inputs", Json::array()}, {"assets", Json::array()}});
-                write_private_json(seed30 / "runtime.json", with_ui);
-                check(inspect_portable_runtime(app, free30, api30_machine, seed30) == with_ui,
-                      "shared artwork descriptor mutation changed prepared provenance");
-                put(source, read_private_json_bytes(descriptor));
-                bad = with_ui;
-                bad["ui"]["source-provenance.json"]["bytes"] = std::filesystem::file_size(source);
-                bad["ui"]["source-provenance.json"]["sha256"] = sha256_file(source);
-                refuse_ui(bad);
-                put(source, bytes);
-                put(descriptor, bytes);
-                selected_definition["wheel"]["assets"] = "profiles/common/wheels/test";
-                write_private_json(profile30, selected_definition);
-                write_private_json(seed30 / "profile.json", selected_definition);
-                bad = with_ui;
-                bad["profile_sha256"] = sha256_file(profile30);
-                refuse_ui(bad);
-                // Populated Free artwork is portable, while already-prepared empty descriptors
-                // remain valid.
-                selected_definition["wheel"]["assets"] = "profiles/common/wheels/free-2024";
-                selected_definition["original"] = {
-                        {"Setting", {{"sha256", std::string(64, 'a')}}},
-                        {"theme",
-                         {{"sha256",
-                           {{"simple/Setting-release-signed.apk", std::string(64, 'b')},
-                            {"simple/Launcher-release-signed.apk", std::string(64, 'c')},
-                            {"simple/VehicleSetting-release-signed.apk", std::string(64, 'd')}}}}}};
-                write_private_json(seed30 / "profile.json", selected_definition);
-                Json acquired = {
-                        {"schema", 1},
-                        {"inputs",
-                         {{"dark",
-                           {{"path", "originals/Setting.apk"}, {"sha256", std::string(64, 'a')}}},
-                          {"light",
-                           {{"path",
-                             "originals/theme/defaulttheme/simple/Setting-release-signed.apk"},
-                            {"sha256", std::string(64, 'b')}}},
-                          {"light_launcher",
-                           {{"path",
-                             "originals/theme/defaulttheme/simple/Launcher-release-signed.apk"},
-                            {"sha256", std::string(64, 'c')}}},
-                          {"light_vehicle",
-                           {{"path",
-                             "originals/theme/defaulttheme/simple/VehicleSetting-release-signed.apk"},
-                            {"sha256", std::string(64, 'd')}}}}},
-                        {"assets", Json::array()}};
-                auto populated = with_ui;
-                populated["profile_sha256"] = sha256_file(seed30 / "profile.json");
-
-                for (const auto *name :
-                     {"toggle-track-dark.png", "toggle-knob-dark.png", "toggle-track-light.png",
-                      "toggle-knob-light.png", "radio-selection.png", "radio-selection-light.png",
-                      "panel-background-light.png"}) {
-                    const std::string pixels = std::string("synthetic owned artwork ") + name;
-                    put(seed30 / "ui/controls" / name, pixels);
-                    populated["ui"][name] = {{"file", std::string("ui/controls/") + name},
-                                             {"bytes", pixels.size()},
-                                             {"sha256", sha256_bytes(pixels)}};
-                    acquired["assets"].push_back({{"file", name},
-                                                  {"input", "dark"},
-                                                  {"member", std::string("res/") + name},
-                                                  {"png_sha256", sha256_bytes(pixels)},
-                                                  {"dimensions", {85, 48}}});
+                bool denied = false;
+                try {
+                    inspect_portable_runtime(app, free30, api30_machine, seed30);
+                } catch (...) {
+                    denied = true;
                 }
 
-                const auto publish_provenance = [&](const Json &provenance, Json manifest) {
-                    const auto text = provenance.dump() + "\n";
-                    put(source, text);
-                    manifest["ui"]["source-provenance.json"] = {
-                            {"file", "ui/controls/source-provenance.json"},
-                            {"bytes", text.size()},
-                            {"sha256", sha256_bytes(text)}};
-
-                    return manifest;
-                };
-                populated = publish_provenance(acquired, populated);
-                write_private_json(seed30 / "runtime.json", populated);
-                check(inspect_portable_runtime(app, free30, api30_machine, seed30) == populated,
-                      "exact seven-PNG Free artwork export rejected");
-                write_private_json(descriptor, Json::object());
-                check(inspect_portable_runtime(app, free30, api30_machine, seed30) == populated,
-                      "populated Free machine reads shared artwork descriptor");
-
-                for (unsigned mode = 0; mode < 5; ++mode) {
-                    auto invalid = acquired;
-
-                    if (mode == 0) {
-                        invalid["inputs"]["light"]["sha256"] = std::string(64, '0');
-                    }
-
-                    if (mode == 1) {
-                        invalid["assets"][0]["png_sha256"] = std::string(64, '0');
-                    }
-
-                    if (mode == 2) {
-                        invalid["assets"][0]["dimensions"] = {0, 48};
-                    }
-
-                    if (mode == 3) {
-                        invalid["assets"][1]["file"] = invalid["assets"][0]["file"];
-                    }
-
-                    if (mode == 4) {
-                        invalid["assets"].erase(invalid["assets"].begin());
-                    }
-
-                    refuse_ui(publish_provenance(invalid, populated));
-                }
-
-                populated = publish_provenance(acquired, populated);
-                auto missing = populated;
-                missing["ui"].erase("toggle-track-dark.png");
-                refuse_ui(missing);
-                put(source, bytes);
-                auto legacy_definition = selected_definition;
-                legacy_definition.erase("original");
-                write_private_json(seed30 / "profile.json", legacy_definition);
-                write_private_json(seed30 / "runtime.json", with_ui);
-                write_private_json(descriptor, acquired);
-                check(inspect_portable_runtime(app, free30, api30_machine, seed30) == with_ui,
-                      "new shared artwork descriptor invalidated already-prepared empty Free machine");
-                write_private_json(profile30, definition30);
-                write_private_json(seed30 / "profile.json", definition30);
+                check(denied, "a prepared machine with a ui artwork manifest is accepted");
                 write_private_json(seed30 / "runtime.json", seed_metadata30);
             }
             // Normal start deliberately does not repeat payload checks performed by explicit check.
@@ -6144,24 +5983,6 @@ int main(int argc, char **argv) {
         }
 
         check(rejected, "seed without the prepared cache accepted");
-        {
-            auto one_ui = valid;
-            put(seed / "ui/controls/source-provenance.json", "legacy provenance");
-            one_ui["ui"] = {
-                    {"source-provenance.json",
-                     {{"file", "ui/controls/source-provenance.json"},
-                      {"bytes", 17},
-                      {"sha256", sha256_file(seed / "ui/controls/source-provenance.json")}}}};
-            write_private_json(seed / "runtime.json", one_ui);
-            bool denied = false;
-            try {
-                inspect_portable_runtime(root, profile, default_machine);
-            } catch (...) {
-                denied = true;
-            }
-
-            check(denied, "A9 eight artwork roles weakened to Free provenance only");
-        }
         write_private_json(seed / "runtime.json", valid);
         check(!std::filesystem::exists(root / ".local/machines"),
               "inspection must not activate or launch");

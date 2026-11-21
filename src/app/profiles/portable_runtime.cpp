@@ -1794,7 +1794,6 @@ static Json inspect_portable_runtime_impl(const std::filesystem::path &root,
     }
 
     need(manifest.size() == (android_only ? 8 : (manifest.contains("qnx") ? 6 : 5)) +
-                                    (manifest.contains("ui") ? 1 : 0) +
                                     (manifest.contains("ui_observer") ? 1 : 0) +
                                     (manifest.contains("resources") ? 1 : 0) &&
                  manifest.at("android").size() ==
@@ -1935,82 +1934,6 @@ static Json inspect_portable_runtime_impl(const std::filesystem::path &root,
                     layout.persistence.is_null() ? std::set<std::string>{}
                                                  : std::set<std::string>{"sysla-gpt-ramdisk-v3.img",
                                                                          "userdata-qnx6.img"});
-    }
-
-    if (manifest.contains("ui")) {
-        std::set<std::string> names = {"toggle-track-dark.png",      "toggle-knob-dark.png",
-                                       "toggle-track-light.png",     "toggle-knob-light.png",
-                                       "radio-selection.png",        "radio-selection-light.png",
-                                       "panel-background-light.png", "source-provenance.json"};
-
-        if (qinggan11_profile_id(family)) {
-            need(definition.at("wheel").at("assets") == "profiles/common/wheels/free-2024",
-                 "Free artwork source family differs");
-            const auto bytes = bounded_text(seed / "ui/controls/source-provenance.json");
-            const auto spec = Json::parse(bytes);
-            need(spec.at("schema") == 1 && spec.at("inputs").is_object() &&
-                         spec.at("assets").is_array(),
-                 "Free artwork descriptor required");
-
-            if (spec.at("assets").empty()) {
-                need(spec.at("inputs").empty(), "legacy Free artwork inputs must be empty");
-                names = {"source-provenance.json"};
-            } else {
-                need(spec.at("assets").size() == 7 && spec.at("inputs").size() == 4,
-                     "exact Free artwork graph required");
-                const auto &originals = definition.at("original");
-                const std::array<std::array<std::string_view, 3>, 4> inputs = {
-                        {{"dark", "Setting.apk", ""},
-                         {"light", "theme/defaulttheme/simple/Setting-release-signed.apk",
-                          "simple/Setting-release-signed.apk"},
-                         {"light_launcher", "theme/defaulttheme/simple/Launcher-release-signed.apk",
-                          "simple/Launcher-release-signed.apk"},
-                         {"light_vehicle",
-                          "theme/defaulttheme/simple/VehicleSetting-release-signed.apk",
-                          "simple/VehicleSetting-release-signed.apk"}}};
-
-                for (const auto &source : inputs) {
-                    const auto &input = spec.at("inputs").at(source[0]);
-                    const auto expected =
-                            source[2].empty() ? originals.at("Setting").at("sha256")
-                                              : originals.at("theme").at("sha256").at(source[2]);
-                    need(input.at("path") == "originals/" + std::string(source[1]) &&
-                                 input.at("sha256") == expected,
-                         "Free artwork owner input differs");
-                }
-
-                std::set<std::string> declared = {"source-provenance.json"};
-
-                for (const auto &asset : spec.at("assets")) {
-                    const auto name = asset.at("file").get<std::string>();
-                    need(names.contains(name) && name != "source-provenance.json" &&
-                                 declared.insert(name).second,
-                         "Free artwork declaration differs");
-                    need(spec.at("inputs").contains(asset.at("input").get<std::string>()) &&
-                                 sha256_text(asset.at("png_sha256").get<std::string>()) &&
-                                 manifest.at("ui").at(name).at("sha256") == asset.at("png_sha256"),
-                         "Free artwork PNG provenance differs");
-                    const auto &dimensions = asset.at("dimensions");
-                    need(dimensions.is_array() && dimensions.size() == 2 &&
-                                 dimensions[0].get<unsigned>() > 0 &&
-                                 dimensions[0].get<unsigned>() <= 8192 &&
-                                 dimensions[1].get<unsigned>() > 0 &&
-                                 dimensions[1].get<unsigned>() <= 8192,
-                         "Free artwork dimensions required");
-                }
-
-                need(declared == names, "all Free artwork roles required");
-            }
-
-            need(manifest.at("ui").at("source-provenance.json").at("sha256") == sha256_bytes(bytes),
-                 "Free artwork provenance differs from source descriptor");
-        }
-
-        image_group(seed, manifest.at("ui"), names, "ui/controls");
-
-        for (const auto &item : manifest.at("ui")) {
-            need(item.at("bytes").get<std::uint64_t>() <= 16ULL << 20, "UI artwork byte bound");
-        }
     }
 
     if (manifest.contains("resources")) {
