@@ -1,26 +1,15 @@
 #include "check.hpp"
 #include "deps.hpp"
-#include "download.hpp"
 #include "error.hpp"
-#include "owner_lock.hpp"
 #include "process.hpp"
 #include "qnx_host.hpp"
-#include "qnx_host_build_diagnostics.hpp"
 #include "qnx_host_prebuilt.hpp"
-#include <chrono>
+#include "qnx_host_source.hpp"
 #include <fstream>
 #include <sstream>
-#include <thread>
 namespace voyemu {
 namespace {
 constexpr Check require{"QNX_HOST"};
-
-void text(const std::filesystem::path &path, const std::string &value) {
-    std::ofstream file(path);
-
-    file << value;
-    require(bool(file), "write failed: " + path.string());
-}
 } // namespace
 
 Json install_qnx_host_macos(const std::filesystem::path &root, bool offline, std::uint64_t reserve,
@@ -39,41 +28,15 @@ Json install_qnx_host_macos(const std::filesystem::path &root, bool offline, std
         return install_prebuilt_qnx_host(root, component, prebuilt, "macos", offline, reserve);
     }
 
-    const auto pin = sha256_bytes(component.dump());
-    const auto parent = root / ".local/toolchains",
-               target = parent / ("qnx-host-macos-11.1.2-" + pin.substr(0, 12)),
-               binary = target / "qemu-system-aarch64";
-    auto result = [&](bool cached) {
-        return Json{{"schema", 1},
-                    {"ready", true},
-                    {"cached", cached},
-                    {"executable", binary.string()},
-                    {"directory", target.string()},
-                    {"version", component.at("version")},
-                    {"guest_verified", false}};
-    };
+    const QnxHostSourceEngine host(root, component, "macos");
 
-    if (std::filesystem::exists(target)) {
-        require(std::filesystem::is_regular_file(std::filesystem::symlink_status(binary)) &&
-                        std::filesystem::hard_link_count(binary) == 1,
-                "ordinary installed engine required");
-        const auto receipt = read_private_json(target / "qnx-host.json");
-        require(receipt.at("component_sha256") == pin &&
-                        receipt.at("executable_sha256") == sha256_file(binary),
-                "installed engine differs from receipt");
-
-        return result(true);
+    if (host.installed()) {
+        return host.result(true);
     }
 
-    ensure_private_directory(parent);
-    const auto lock = owner_lock(parent / "qnx-host.lock");
-    require(lock->held(), "installation already owned");
-    const auto cache = root / ".local/toolchains/downloads/qnx-host";
+    const auto lock = host.lock();
     auto download = [&](const Json &spec) {
-        return download_pinned({spec.at("url").get<std::string>(),
-                                spec.at("sha256").get<std::string>(), 512ULL << 20},
-                               cache, offline, reserve)
-                .file;
+        return host.download(spec, offline, reserve);
     };
     // Resolve every pinned input before allocating an expanded build tree.
     const auto source = download(component.at("source")),
@@ -98,63 +61,25 @@ Json install_qnx_host_macos(const std::filesystem::path &root, bool offline, std
     require(std::filesystem::is_regular_file(ninja), "run native SDK deps before QNX preparation");
     require(std::filesystem::space(root).available >= reserve + (2ULL << 30),
             "insufficient build disk reserve");
-    const auto token = random_token();
-    const auto stage = root / ".local/build/tmp" / ("qnx-host-" + token);
-    ensure_private_directory(stage);
-    // Preserve bounded diagnostics on failure; expanded trees are always reclaimed.
-    QnxHostBuildStage cleanup{stage, root / ".local/build" / ("qnx-host-" + token)};
-    std::map<std::string, std::string> env{
-            {"PATH", ninja.parent_path().string() + ":/usr/bin:/bin:/usr/sbin:/sbin"},
-            {"TMPDIR", stage.string()},
-            {"CC", "/usr/bin/clang"},
-            {"CXX", "/usr/bin/clang++"},
-            {"MACOSX_DEPLOYMENT_TARGET", component.at("minimum_macos").get<std::string>()},
-            {"CFLAGS", ""},
-            {"CXXFLAGS", ""},
-            {"LDFLAGS", ""},
-            {"PKG_CONFIG_PATH", ""},
-            {"PYTHONPATH", (stage / "python").string()},
-            // QEMU decodetree emits field assignments in Python set iteration order.
-            {"PYTHONHASHSEED", "0"},
-            {"PIP_NO_INDEX", "1"}};
-    unsigned step = 0;
+    QnxHostSourceSteps steps(root, reserve, 120000, 128 * 1024);
+    const auto &stage = steps.stage();
+    auto &env = steps.env;
+    env = {{"PATH", ninja.parent_path().string() + ":/usr/bin:/bin:/usr/sbin:/sbin"},
+           {"TMPDIR", stage.string()},
+           {"CC", "/usr/bin/clang"},
+           {"CXX", "/usr/bin/clang++"},
+           {"MACOSX_DEPLOYMENT_TARGET", component.at("minimum_macos").get<std::string>()},
+           {"CFLAGS", ""},
+           {"CXXFLAGS", ""},
+           {"LDFLAGS", ""},
+           {"PKG_CONFIG_PATH", ""},
+           {"PYTHONPATH", (stage / "python").string()},
+           // QEMU decodetree emits field assignments in Python set iteration order.
+           {"PYTHONHASHSEED", "0"},
+           {"PIP_NO_INDEX", "1"}};
     auto run = [&](const std::filesystem::path &program, std::vector<std::string> args,
                    const std::filesystem::path &cwd, int timeout = 120000) {
-        ProcessSpec spec;
-        spec.executable = program;
-        spec.arguments = std::move(args);
-        spec.directory = cwd;
-        spec.environment = env;
-        spec.output = stage / (std::to_string(++step) + ".log");
-
-        if (timeout > 300000) {
-            auto child = ChildProcess::launch(spec);
-            const auto deadline = std::chrono::steady_clock::now() +
-                                  std::chrono::milliseconds(timeout);
-
-            while (child.alive()) {
-                require(std::chrono::steady_clock::now() < deadline, "build deadline exceeded");
-                require(std::filesystem::space(stage).available >= reserve,
-                        "build disk reserve reached");
-                require(!std::filesystem::exists(spec.output) ||
-                                std::filesystem::file_size(spec.output) < (16ULL << 20),
-                        "build log exceeds bound");
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            }
-
-            require(child.exit_code() == 0,
-                    "build failed; diagnostics: " + cleanup.logs().string());
-
-            return std::string{};
-        }
-
-        const auto response = execute(spec, timeout, 128 * 1024);
-        text(spec.output, response.output);
-        require(!response.timed_out && response.exit_code == 0,
-                "build step " + std::to_string(step) +
-                        " failed; diagnostics: " + cleanup.logs().string());
-
-        return response.output;
+        return steps.run(program, std::move(args), cwd, timeout);
     };
     run("/usr/bin/xcrun", {"--find", "clang"}, stage);
     run("/usr/bin/python3", {"-c", "import sys; assert sys.version_info >= (3,9)"}, stage);
@@ -190,9 +115,10 @@ Json install_qnx_host_macos(const std::filesystem::path &root, bool offline, std
         }
     }
 
-    text(deps / "lib/pkgconfig/glib-2.0.pc",
-         "prefix=" + deps.string() +
-                 "\nlibdir=${prefix}/lib\nincludedir=${prefix}/include\nName: GLib\nDescription: pinned static GLib\nVersion: 2.90.0\nLibs: -L${libdir} -lglib-2.0 -lintl -lpcre2-8 -liconv -framework CoreFoundation -framework Foundation\nCflags: -I${includedir}/glib-2.0 -I${libdir}/glib-2.0/include\n");
+    qnx_host_text(
+            deps / "lib/pkgconfig/glib-2.0.pc",
+            "prefix=" + deps.string() +
+                    "\nlibdir=${prefix}/lib\nincludedir=${prefix}/include\nName: GLib\nDescription: pinned static GLib\nVersion: 2.90.0\nLibs: -L${libdir} -lglib-2.0 -lintl -lpcre2-8 -liconv -framework CoreFoundation -framework Foundation\nCflags: -I${includedir}/glib-2.0 -I${libdir}/glib-2.0/include\n");
     env["PKG_CONFIG_LIBDIR"] = (deps / "lib/pkgconfig").string();
     run("/usr/bin/tar", {"-xf", pkgconf.string(), "-C", stage.string()}, stage);
     const auto pkgsource = stage / "pkgconf-3.0.7", pkgprefix = stage / "pkgconf-bin";
@@ -217,7 +143,8 @@ Json install_qnx_host_macos(const std::filesystem::path &root, bool offline, std
     // Meson consumes a relocatable dependency location rather than a developer's Homebrew path.
     const auto native = sources / "configs/meson/darwin.txt";
     require(!std::filesystem::exists(native), "unexpected upstream native configuration");
-    text(native, "[properties]\nvoyemu_fdt_static_dir = '" + (deps / "lib").string() + "'\n");
+    qnx_host_text(native,
+                  "[properties]\nvoyemu_fdt_static_dir = '" + (deps / "lib").string() + "'\n");
     run(sources / "configure",
         {"--target-list=aarch64-softmmu", "--without-default-features", "--enable-hvf",
          "--enable-tcg", "--enable-fdt=system",
@@ -264,16 +191,7 @@ Json install_qnx_host_macos(const std::filesystem::path &root, bool offline, std
     }
 
     std::filesystem::copy_file(sources / "COPYING.LIB", payload / "licenses/LGPL-2.1.txt");
-    write_private_json(payload / "qnx-host.json", {{"schema", 1},
-                                                   {"component_sha256", pin},
-                                                   {"executable_sha256", sha256_file(executable)},
-                                                   {"system_only_runtime", true},
-                                                   {"recipe", component},
-                                                   {"guest_verified", false}});
-    require(!std::filesystem::exists(target), "destination appeared during build");
-    std::filesystem::rename(payload, target);
-
-    return result(false);
+    return host.publish(payload, executable);
 #endif
 }
 } // namespace voyemu

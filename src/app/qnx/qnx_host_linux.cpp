@@ -1,27 +1,16 @@
 #include "check.hpp"
 #include "deps.hpp"
-#include "download.hpp"
 #include "error.hpp"
-#include "owner_lock.hpp"
 #include "process.hpp"
 #include "qnx_host.hpp"
-#include "qnx_host_build_diagnostics.hpp"
 #include "qnx_host_prebuilt.hpp"
-#include <chrono>
+#include "qnx_host_source.hpp"
 #include <cstring>
 #include <fstream>
 #include <set>
-#include <thread>
 namespace voyemu {
 namespace {
 constexpr Check require{"QNX_HOST"};
-
-void text(const std::filesystem::path &path, const std::string &value) {
-    std::ofstream file(path);
-
-    file << value;
-    require(bool(file), "write failed: " + path.string());
-}
 
 std::string quoted(const std::string &value) {
     std::string result = "'";
@@ -142,41 +131,15 @@ Json install_qnx_host_linux(const std::filesystem::path &root, bool offline, std
         return install_prebuilt_qnx_host(root, component, prebuilt, "linux", offline, reserve);
     }
 
-    const auto pin = sha256_bytes(component.dump());
-    const auto parent = root / ".local/toolchains",
-               target = parent / ("qnx-host-linux-11.1.2-" + pin.substr(0, 12)),
-               binary = target / "qemu-system-aarch64";
-    auto result = [&](bool cached) {
-        return Json{{"schema", 1},
-                    {"ready", true},
-                    {"cached", cached},
-                    {"executable", binary.string()},
-                    {"directory", target.string()},
-                    {"version", component.at("version")},
-                    {"guest_verified", false}};
-    };
+    const QnxHostSourceEngine host(root, component, "linux");
 
-    if (std::filesystem::exists(target)) {
-        require(std::filesystem::is_regular_file(std::filesystem::symlink_status(binary)) &&
-                        std::filesystem::hard_link_count(binary) == 1,
-                "ordinary installed engine required");
-        const auto receipt = read_private_json(target / "qnx-host.json");
-        require(receipt.at("component_sha256") == pin &&
-                        receipt.at("executable_sha256") == sha256_file(binary),
-                "installed engine differs from receipt");
-
-        return result(true);
+    if (host.installed()) {
+        return host.result(true);
     }
 
-    ensure_private_directory(parent);
-    const auto lock = owner_lock(parent / "qnx-host.lock");
-    require(lock->held(), "installation already owned");
-    const auto cache = root / ".local/toolchains/downloads/qnx-host";
+    const auto lock = host.lock();
     auto download = [&](const Json &spec) {
-        return download_pinned({spec.at("url").get<std::string>(),
-                                spec.at("sha256").get<std::string>(), 512ULL << 20},
-                               cache, offline, reserve)
-                .file;
+        return host.download(spec, offline, reserve);
     };
     // Resolve every pinned input before allocating an expanded build tree.
     const auto source = download(component.at("source")),
@@ -204,76 +167,38 @@ Json install_qnx_host_linux(const std::filesystem::path &root, bool offline, std
     require(std::filesystem::is_regular_file(ninja), "run native SDK deps before QNX preparation");
     require(std::filesystem::space(root).available >= reserve + (3ULL << 30),
             "insufficient build disk reserve");
-    const auto token = random_token();
-    const auto stage = root / ".local/build/tmp" / ("qnx-host-" + token);
-    ensure_private_directory(stage);
-    // Preserve bounded diagnostics on failure; expanded trees are always reclaimed.
-    QnxHostBuildStage cleanup{stage, root / ".local/build" / ("qnx-host-" + token)};
+    QnxHostSourceSteps steps(root, reserve, 300000, 1024 * 1024);
+    const auto &stage = steps.stage();
     const auto tools = stage / "tools", sysroot = stage / "root", prefix = sysroot / "usr",
                zigcache = stage / "zig-cache";
     ensure_private_directory(tools);
     ensure_private_directory(zigcache);
-    std::map<std::string, std::string> env{
-            {"PATH", tools.string() + ":" + ninja.parent_path().string() + ":/usr/bin:/bin"},
-            {"TMPDIR", stage.string()},
-            {"CC", (tools / "cc").string()},
-            {"CXX", (tools / "c++").string()},
-            {"AR", (tools / "ar").string()},
-            {"RANLIB", (tools / "ranlib").string()},
-            {"CFLAGS", "-O2"},
-            {"CXXFLAGS", "-O2"},
-            {"CPPFLAGS", ""},
-            {"LDFLAGS", ""},
-            {"PKG_CONFIG_PATH", ""},
-            {"PKG_CONFIG_LIBDIR", (prefix / "lib/pkgconfig").string()},
-            // Dependencies install under the fixed prefix /usr into the stage, so no stage path is
-            // compiled into them; pkgconf maps their paths back into the stage.
-            {"PKG_CONFIG_SYSROOT_DIR", sysroot.string()},
-            {"PYTHONPATH", (stage / "python").string()},
-            {"PYTHONHASHSEED", "0"},
-            {"PYTHONDONTWRITEBYTECODE", "1"},
-            {"PIP_NO_INDEX", "1"},
-            {"SOURCE_DATE_EPOCH", "0"},
-            {"ZIG_GLOBAL_CACHE_DIR", zigcache.string()},
-            {"ZIG_LOCAL_CACHE_DIR", zigcache.string()}};
-    unsigned step = 0;
+    auto &env = steps.env;
+    env = {{"PATH", tools.string() + ":" + ninja.parent_path().string() + ":/usr/bin:/bin"},
+           {"TMPDIR", stage.string()},
+           {"CC", (tools / "cc").string()},
+           {"CXX", (tools / "c++").string()},
+           {"AR", (tools / "ar").string()},
+           {"RANLIB", (tools / "ranlib").string()},
+           {"CFLAGS", "-O2"},
+           {"CXXFLAGS", "-O2"},
+           {"CPPFLAGS", ""},
+           {"LDFLAGS", ""},
+           {"PKG_CONFIG_PATH", ""},
+           {"PKG_CONFIG_LIBDIR", (prefix / "lib/pkgconfig").string()},
+           // Dependencies install under the fixed prefix /usr into the stage, so no stage path is
+           // compiled into them; pkgconf maps their paths back into the stage.
+           {"PKG_CONFIG_SYSROOT_DIR", sysroot.string()},
+           {"PYTHONPATH", (stage / "python").string()},
+           {"PYTHONHASHSEED", "0"},
+           {"PYTHONDONTWRITEBYTECODE", "1"},
+           {"PIP_NO_INDEX", "1"},
+           {"SOURCE_DATE_EPOCH", "0"},
+           {"ZIG_GLOBAL_CACHE_DIR", zigcache.string()},
+           {"ZIG_LOCAL_CACHE_DIR", zigcache.string()}};
     auto run = [&](const std::filesystem::path &program, std::vector<std::string> args,
                    const std::filesystem::path &cwd, int timeout = 300000) {
-        ProcessSpec spec;
-        spec.executable = program;
-        spec.arguments = std::move(args);
-        spec.directory = cwd;
-        spec.environment = env;
-        spec.output = stage / (std::to_string(++step) + ".log");
-
-        if (timeout > 300000) {
-            auto child = ChildProcess::launch(spec);
-            const auto deadline = std::chrono::steady_clock::now() +
-                                  std::chrono::milliseconds(timeout);
-
-            while (child.alive()) {
-                require(std::chrono::steady_clock::now() < deadline, "build deadline exceeded");
-                require(std::filesystem::space(stage).available >= reserve,
-                        "build disk reserve reached");
-                require(!std::filesystem::exists(spec.output) ||
-                                std::filesystem::file_size(spec.output) < (16ULL << 20),
-                        "build log exceeds bound");
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            }
-
-            require(child.exit_code() == 0,
-                    "build failed; diagnostics: " + cleanup.logs().string());
-
-            return std::string{};
-        }
-
-        const auto response = execute(spec, timeout, 1024 * 1024);
-        text(spec.output, response.output);
-        require(!response.timed_out && response.exit_code == 0,
-                "build step " + std::to_string(step) +
-                        " failed; diagnostics: " + cleanup.logs().string());
-
-        return response.output;
+        return steps.run(program, std::move(args), cwd, timeout);
     };
     // The shell runs one build step so that configure, make and the compiler wrappers see the
     // same environment.
@@ -294,14 +219,14 @@ Json install_qnx_host_linux(const std::filesystem::path &root, bool offline, std
 
     for (const auto &[name, command] : std::map<std::string, std::string>{
                  {"cc", "cc " + flags}, {"c++", "c++ " + flags}, {"ranlib", "ranlib"}}) {
-        text(tools / name,
-             "#!/bin/sh\nexec " + quoted(compiler.string()) + " " + command + " \"$@\"\n");
+        qnx_host_text(tools / name,
+                      "#!/bin/sh\nexec " + quoted(compiler.string()) + " " + command + " \"$@\"\n");
         executable(tools / name);
     }
 
     // Meson links internal libraries of GLib as thin archives, which the Zig linker cannot read.
-    text(tools / "ar", "#!/bin/sh\nmode=$(printf %s \"$1\" | tr -d T)\nshift\nexec " +
-                               quoted(compiler.string()) + " ar \"$mode\" \"$@\"\n");
+    qnx_host_text(tools / "ar", "#!/bin/sh\nmode=$(printf %s \"$1\" | tr -d T)\nshift\nexec " +
+                                        quoted(compiler.string()) + " ar \"$mode\" \"$@\"\n");
     executable(tools / "ar");
 
     ensure_private_directory(stage / "python");
@@ -347,9 +272,10 @@ Json install_qnx_host_linux(const std::filesystem::path &root, bool offline, std
     commands += "ar rcs " + quoted((prefix / "lib/libz.a").string()) + " *.o\ncp zlib.h zconf.h " +
                 quoted((prefix / "include").string()) + "\n";
     shell(commands, stage / ("zlib-" + version("zlib")));
-    text(prefix / "lib/pkgconfig/zlib.pc",
-         "prefix=/usr\nlibdir=${prefix}/lib\nincludedir=${prefix}/include\nName: zlib\nDescription: pinned zlib\nVersion: " +
-                 version("zlib") + "\nLibs: -L${libdir} -lz\nCflags: -I${includedir}\n");
+    qnx_host_text(
+            prefix / "lib/pkgconfig/zlib.pc",
+            "prefix=/usr\nlibdir=${prefix}/lib\nincludedir=${prefix}/include\nName: zlib\nDescription: pinned zlib\nVersion: " +
+                    version("zlib") + "\nLibs: -L${libdir} -lz\nCflags: -I${includedir}\n");
     commands.clear();
 
     for (const auto *name : {"fdt", "fdt_ro", "fdt_wip", "fdt_sw", "fdt_rw", "fdt_strerror",
@@ -459,16 +385,7 @@ Json install_qnx_host_linux(const std::filesystem::path &root, bool offline, std
         }
     }
 
-    write_private_json(payload / "qnx-host.json", {{"schema", 1},
-                                                   {"component_sha256", pin},
-                                                   {"executable_sha256", sha256_file(engine)},
-                                                   {"system_only_runtime", true},
-                                                   {"recipe", component},
-                                                   {"guest_verified", false}});
-    require(!std::filesystem::exists(target), "destination appeared during build");
-    std::filesystem::rename(payload, target);
-
-    return result(false);
+    return host.publish(payload, engine);
 #endif
 }
 } // namespace voyemu
