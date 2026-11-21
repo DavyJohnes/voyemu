@@ -881,7 +881,9 @@ int main(int argc, char **argv) {
                             {Json{{"operation", "guardSecondaryNavigationSuppressed"},
                                   {"args", Json::array()}},
                              Json{{"operation", "guardHiboardTopGesture"}, {"args", Json::array()}},
-                             Json{{"operation", "guardStartupVolume"}, {"args", Json::array()}}}) ||
+                             Json{{"operation", "guardStartupVolume"}, {"args", Json::array()}},
+                             Json{{"operation", "guardInterguestStartup"},
+                                  {"args", Json::array()}}}) ||
             qinggan11_metadata.at("api30-keymanager.json").at("calls") != keymanager_calls ||
             qinggan11_metadata.at("api30-systemui-routing.json").at("calls") !=
                     Json::array({Json{{"operation", "routeSystemUi"}, {"args", Json::array()}}}) ||
