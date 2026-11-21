@@ -170,7 +170,8 @@ int main(int argc, char **argv) {
                 // line separates the progress from the error. Without a QNX engine for this host
                 // the default build prepares only the multimedia.
                 const auto header =
-                        std::string("Preparing machine machines/") + profile + ": " +
+                        "Preparing machine " +
+                        (std::filesystem::path("machines") / profile).string() + ": " +
                         (android_only ? "multimedia only.\nUp to 20 GiB of free space is needed, "
                                       : "");
                 const auto failure = result.output.find("\n\nVoyemu:");
@@ -215,6 +216,7 @@ int main(int argc, char **argv) {
         // needs an existing machine.
         {
             const std::string profile = "free-11-chinese-20260731-7.3.1";
+            const auto machine = (std::filesystem::path("machines") / profile).string();
             ensure_private_directory(root / "machines" / profile);
             ProcessSpec spec;
             spec.executable = installed;
@@ -223,8 +225,8 @@ int main(int argc, char **argv) {
             const auto existing = execute(spec, 15000);
             require(!existing.timed_out && existing.exit_code == 4 &&
                             existing.output.starts_with(
-                                    "Voyemu: PROFILE_BUILD: machine machines/" + profile +
-                                    " already exists.\nStart it: voyemu start machines/" + profile +
+                                    "Voyemu: PROFILE_BUILD: machine " + machine +
+                                    " already exists.\nStart it: voyemu start " + machine +
                                     ", or delete its directory and run build again.\nLog: "),
                     "build of an existing machine did not name it: " + existing.output);
             std::filesystem::remove(root / "machines" / profile);
