@@ -46,6 +46,21 @@ static const std::string &qinggan09_profile() {
     return id;
 }
 
+// Opens path for writing as a new file owned by the current user. An elevated Windows process
+// creates files owned by Administrators, while the SDK descriptor and the supervisor log readers
+// require the current user as owner.
+static std::ofstream user_owned_file(const std::filesystem::path &path) {
+    std::filesystem::remove(path);
+#ifdef _WIN32
+    detail::PrivateStateSecurity security;
+    HANDLE owned = CreateFileW(path.c_str(), GENERIC_WRITE, 0, &security.attributes, CREATE_NEW,
+                               FILE_ATTRIBUTE_NORMAL, nullptr);
+    assert(owned != INVALID_HANDLE_VALUE && CloseHandle(owned));
+#endif
+
+    return std::ofstream(path);
+}
+
 void image_dimensions(const std::filesystem::path &path, std::size_t width, std::size_t height) {
 #ifdef _WIN32
     const auto initialized = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
@@ -3593,7 +3608,7 @@ int main(int argc, char **argv) try {
     create.erase("session");
     assert(api.call(create).at("error").at("code") == "PROFILE_NOT_PREPARED" && creates == 0);
     {
-        std::ofstream file(directory / "supervisor.log");
+        auto file = user_owned_file(directory / "supervisor.log");
         file << R"({"schemaVersion":1,"sequence":1,"level":"info","component":"fixture","message":"ready","fields":{"bearer":"must-not-leak"}})"
              << '\n'
              << "unstructured-secret-must-not-leak\n";
@@ -3653,18 +3668,8 @@ int main(int argc, char **argv) try {
     }
     {
         const auto descriptor = directory / "pid_123.ini";
-#ifdef _WIN32
-        // An elevated Windows process creates files owned by Administrators, and the SDK
-        // descriptor must be owned by the current user.
         {
-            detail::PrivateStateSecurity security;
-            HANDLE owned = CreateFileW(descriptor.c_str(), GENERIC_WRITE, 0, &security.attributes,
-                                       CREATE_NEW, FILE_ATTRIBUTE_NORMAL, nullptr);
-            assert(owned != INVALID_HANDLE_VALUE && CloseHandle(owned));
-        }
-#endif
-        {
-            std::ofstream file(descriptor);
+            auto file = user_owned_file(descriptor);
             file << "grpc.port=35554\nport.serial=5554\ngrpc.token=private-fixture-bearer\n";
         }
 #ifndef _WIN32
