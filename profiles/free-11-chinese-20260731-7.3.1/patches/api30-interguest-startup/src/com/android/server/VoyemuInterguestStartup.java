@@ -23,12 +23,8 @@ final class VoyemuInterguestStartup {
             return;
         }
 
-        try {
-            new Thread(new Attempt(manager), TAG).start();
-            scheduled = true;
-        } catch (RuntimeException failure) {
-            Log.w(TAG, "Unable to schedule Ethernet setup", failure);
-        }
+        new Thread(new Attempt(manager), TAG).start();
+        scheduled = true;
     }
 
     private static final class Attempt implements Runnable {
@@ -45,7 +41,10 @@ final class VoyemuInterguestStartup {
                     configure(manager);
 
                     return;
-                } catch (ReflectiveOperationException | RuntimeException failure) {
+                } catch (ReflectiveOperationException
+                        | IllegalStateException
+                        | IllegalArgumentException
+                        | ClassCastException failure) {
                     if (attempt == ATTEMPTS) {
                         Log.w(TAG, "Isolated Ethernet setup failed", failure);
 
