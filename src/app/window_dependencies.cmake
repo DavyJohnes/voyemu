@@ -71,6 +71,11 @@ function(voyemu_window_dependencies)
     # SDL's few C++ sources use no modules; C++20 scanning would require clang-scan-deps.
     set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
     add_subdirectory("${voyemu_window_sdl3_SOURCE_DIR}" "${voyemu_window_sdl3_BINARY_DIR}" EXCLUDE_FROM_ALL)
+    # The launcher links SDL statically and never replaces it at run time, so the dynamic API, whose
+    # jump table keeps every SDL function linked, is compiled out. SDL_dynapi.h refuses a direct
+    # SDL_DYNAMIC_API=0; SDL_THREAD_SAFETY_ANALYSIS turns it off and otherwise only adds Clang
+    # thread-safety attributes, which no warning flag checks here.
+    target_compile_definitions(SDL3-static PRIVATE SDL_THREAD_SAFETY_ANALYSIS)
     foreach(name IN LISTS window_options)
         if(saved_${name}_exists)
             set(${name} "${saved_${name}_value}" CACHE ${saved_${name}_type} "${saved_${name}_help}" FORCE)
