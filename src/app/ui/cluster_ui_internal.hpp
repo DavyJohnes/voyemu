@@ -29,6 +29,7 @@
 namespace voyemu::cluster::cluster_ui_detail {
 ImU32 control_ink(ImU32 color);
 ImU32 alpha_ink(ImU32 color, unsigned alpha);
+
 // Recolours the vertices added from `first` on by their height in a vertical gradient. Shapes are
 // drawn opaque white, so the anti-aliased fringe keeps its transparency.
 template <typename Color>
@@ -40,6 +41,7 @@ void shade_vertical(ImDrawList *draw, int first, float top, float height, Color 
                 ink, ((ink >> IM_COL32_A_SHIFT) * (vertex.col >> IM_COL32_A_SHIFT) + 127) / 255);
     }
 }
+
 bool event_name(std::string_view name);
 std::string lower(std::string value);
 float sample_ink_height(ImFont *font, float size, float density, const char *sample);

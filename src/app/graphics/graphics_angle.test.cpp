@@ -655,6 +655,7 @@ static void qinggan11_unprojected_fields(const std::filesystem::path &parent,
         unsigned values[581];
         std::memcpy(values, reply.payload.data(), sizeof values);
         assert(values[2 + 320] == (projection == 462 ? language : 0));
+
         // Signals outside the MCU layout, the AdasEcu ones included, reach the guest with their
         // initial values, and the projected speed passes.
         for (const unsigned position : {6U, 43U, 44U, 224U, 225U}) {

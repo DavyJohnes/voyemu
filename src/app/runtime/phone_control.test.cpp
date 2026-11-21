@@ -70,6 +70,7 @@ int main() try {
         unpinned["original"]["BluetoothPhone"].erase("sha256");
         assert(phone_adapter_for_profile(unpinned).empty());
     }
+
     {
         auto bad = prepared;
         bad["patches"]["BluetoothPhone"]["input"] = "original:Foreign";

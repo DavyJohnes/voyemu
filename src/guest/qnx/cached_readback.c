@@ -75,6 +75,7 @@ static int cache_prepare(ReadbackCache *cache, usize bytes) {
 static int cache_read(ReadbackCache *cache, int width, int height) {
     const usize bytes = (usize)width * height * 4;
     const int earlier = transport_error;
+
     transport_error = 0;
     const int ready = cache_prepare(cache, bytes);
     u64 args[] = {0, 0, (u64)width, (u64)height, 0x1908, 0x1401, cache->blob};

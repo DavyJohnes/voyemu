@@ -1058,6 +1058,7 @@ void Session::poll_oem_settings() {
 
 void Session::observe_oem_theme(ThemeState current) {
     auto change = oem_theme_command(android_spec_, theme_, current);
+
     theme_ = current;
 
     if (!change) {

@@ -650,6 +650,7 @@ static const char *transfer_string(unsigned op, u64 display, unsigned key) {
 /* An earlier failed command keeps its glGetError report but must not fail this query. */
 static const char *query_string(unsigned op, u64 display, unsigned key) {
     const int earlier = transport_error;
+
     transport_error = 0;
     const char *out = transfer_string(op, display, key);
     transport_error = earlier || transport_error;

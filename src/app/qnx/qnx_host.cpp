@@ -355,6 +355,7 @@ public:
         }
     }
 };
+
 void factory_file(const std::filesystem::path &file) {
     need(file.is_absolute() && std::filesystem::canonical(file) == file &&
                  std::filesystem::is_regular_file(std::filesystem::symlink_status(file)) &&
@@ -392,6 +393,7 @@ Json macos_factory_bindings(const std::filesystem::path &root, const Json &engin
                   {{"kind", factory_kind},
                    {"component_sha256", component},
                    {"engine_receipt_sha256", sha256_file(receipt)}}}};
+
     // The Windows section is inherited from the existing shared file; a macOS refresh never drops
     // it.
     if (!inherited_windows.is_null()) {
