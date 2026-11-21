@@ -1,5 +1,5 @@
 #include "model.hpp"
-#include "platform_file.hpp"
+#include "platform_file_internal.hpp"
 #include <limits>
 #include <stdexcept>
 #include <vector>
@@ -10,8 +10,12 @@
 
 #include "private_state_security.hpp"
 
-namespace voyemu::api {
+namespace voyemu::api::platform {
 namespace {
+HANDLE native(const File &file) {
+    return reinterpret_cast<HANDLE>(file.value);
+}
+
 struct Handle {
     HANDLE value = INVALID_HANDLE_VALUE;
 
@@ -57,94 +61,58 @@ bool ordinary(HANDLE file, BY_HANDLE_FILE_INFORMATION &info) {
            info.nNumberOfLinks == 1 && owned(file);
 }
 } // namespace
-struct FileLock::Impl {
-    Handle file;
 
-    bool open(const std::filesystem::path &path, bool create) {
-        // Share mode zero matches cli::OperationLock, including supervisor locks.
-        file.value = voyemu::detail::open_private_state_lock(
-                path, GENERIC_READ | GENERIC_WRITE | READ_CONTROL,
-                create ? OPEN_ALWAYS : OPEN_EXISTING,
-                FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OPEN_REPARSE_POINT);
-        BY_HANDLE_FILE_INFORMATION info{};
-
-        return file.value != INVALID_HANDLE_VALUE && ordinary(file.value, info);
-    }
-};
-
-FileLock::FileLock(const std::filesystem::path &path) : impl_(std::make_unique<Impl>()) {
-    ensure_private_directory(path.parent_path());
-
-    if (!impl_->open(path, true)) {
-        throw VoyemuError("TEST_BUSY", "another automation writer or capture is active");
+File::~File() {
+    if (native(*this) != INVALID_HANDLE_VALUE) {
+        CloseHandle(native(*this));
     }
 }
 
-FileLock::~FileLock() = default;
+bool lock(File &file, const std::filesystem::path &path, bool create) {
+    // Share mode zero matches cli::OperationLock, including supervisor locks.
+    const HANDLE handle = voyemu::detail::open_private_state_lock(
+            path, GENERIC_READ | GENERIC_WRITE | READ_CONTROL, create ? OPEN_ALWAYS : OPEN_EXISTING,
+            FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OPEN_REPARSE_POINT);
 
-bool file_lock_released(const std::filesystem::path &path) {
-    FileLock::Impl probe;
+    file.value = reinterpret_cast<os::FileHandle>(handle);
+    BY_HANDLE_FILE_INFORMATION info{};
 
-    return probe.open(path, false);
+    return handle != INVALID_HANDLE_VALUE && ordinary(handle, info);
 }
 
-struct LogFile::Impl {
-    Handle file;
-    std::string identity;
-    std::uint64_t size{};
+LogOpening open_log(File &file, const std::filesystem::path &path) {
+    LogOpening opening;
+    const HANDLE handle = CreateFileW(
+            path.c_str(), GENERIC_READ | READ_CONTROL,
+            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING,
+            FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OPEN_REPARSE_POINT, nullptr);
 
-    explicit Impl(const std::filesystem::path &path) {
-        file.value = CreateFileW(path.c_str(), GENERIC_READ | READ_CONTROL,
-                                 FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr,
-                                 OPEN_EXISTING,
-                                 FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OPEN_REPARSE_POINT, nullptr);
+    file.value = reinterpret_cast<os::FileHandle>(handle);
+    opening.opened = handle != INVALID_HANDLE_VALUE;
+    BY_HANDLE_FILE_INFORMATION info{};
 
-        if (file.value == INVALID_HANDLE_VALUE) {
-            throw VoyemuError("TEST_LOGS_UNAVAILABLE", "supervisor log unavailable");
-        }
-
-        BY_HANDLE_FILE_INFORMATION info{};
-
-        if (!ordinary(file.value, info)) {
-            throw VoyemuError("TEST_LOGS", "ordinary owned log required");
-        }
-
-        identity = std::to_string(info.dwVolumeSerialNumber) + ":" +
-                   std::to_string((std::uint64_t(info.nFileIndexHigh) << 32) | info.nFileIndexLow);
-        size = (std::uint64_t(info.nFileSizeHigh) << 32) | info.nFileSizeLow;
-    }
-};
-
-LogFile::LogFile(const std::filesystem::path &path) : impl_(std::make_unique<Impl>(path)) {}
-
-LogFile::~LogFile() = default;
-
-std::string LogFile::identity() const {
-    return impl_->identity;
-}
-
-std::uint64_t LogFile::size() const {
-    return impl_->size;
-}
-
-std::string LogFile::read(std::uint64_t offset) const {
-    std::string bytes(65536, '\0');
-
-    if (offset > std::uint64_t(std::numeric_limits<std::int64_t>::max())) {
-        throw VoyemuError("TEST_LOGS", "bounded log read failed");
+    if (opening.opened && ordinary(handle, info)) {
+        opening.ordinary = true;
+        opening.identity =
+                std::to_string(info.dwVolumeSerialNumber) + ":" +
+                std::to_string((std::uint64_t(info.nFileIndexHigh) << 32) | info.nFileIndexLow);
+        opening.size = (std::uint64_t(info.nFileSizeHigh) << 32) | info.nFileSizeLow;
     }
 
+    return opening;
+}
+
+long long read_at(const File &file, std::uint64_t offset, char *data, std::size_t size) {
     LARGE_INTEGER position{};
+
     position.QuadPart = static_cast<LONGLONG>(offset);
     DWORD count = 0;
 
-    if (!SetFilePointerEx(impl_->file.value, position, nullptr, FILE_BEGIN) ||
-        !ReadFile(impl_->file.value, bytes.data(), DWORD(bytes.size()), &count, nullptr)) {
-        throw VoyemuError("TEST_LOGS", "bounded log read failed");
+    if (!SetFilePointerEx(native(file), position, nullptr, FILE_BEGIN) ||
+        !ReadFile(native(file), data, DWORD(size), &count, nullptr)) {
+        return -1;
     }
 
-    bytes.resize(count);
-
-    return bytes;
+    return count;
 }
-} // namespace voyemu::api
+} // namespace voyemu::api::platform

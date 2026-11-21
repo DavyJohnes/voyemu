@@ -77,14 +77,14 @@ bool sync_stream(std::FILE *stream) {
     return _commit(_fileno(stream)) == 0;
 }
 
-std::optional<FileObject> owned_file_object(const std::filesystem::path &path, bool directory) {
+OwnedFileObject owned_file_object(const std::filesystem::path &path, bool directory) {
     const auto handle = CreateFileW(
             path.c_str(), FILE_READ_ATTRIBUTES,
             FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING,
             FILE_FLAG_OPEN_REPARSE_POINT | (directory ? FILE_FLAG_BACKUP_SEMANTICS : 0), nullptr);
 
     if (handle == INVALID_HANDLE_VALUE) {
-        return std::nullopt;
+        return {false, std::nullopt};
     }
 
     BY_HANDLE_FILE_INFORMATION info{};
@@ -96,11 +96,42 @@ std::optional<FileObject> owned_file_object(const std::filesystem::path &path, b
     CloseHandle(handle);
 
     if (!valid) {
+        return {true, std::nullopt};
+    }
+
+    return {true, FileObject{info.dwVolumeSerialNumber,
+                             (std::uint64_t(info.nFileIndexHigh) << 32) | info.nFileIndexLow}};
+}
+
+std::optional<std::string> read_private_file(const std::filesystem::path &path, std::size_t limit) {
+    const HANDLE file = CreateFileW(path.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr,
+                                    OPEN_EXISTING, FILE_FLAG_OPEN_REPARSE_POINT, nullptr);
+
+    if (file == INVALID_HANDLE_VALUE) {
         return std::nullopt;
     }
 
-    return FileObject{info.dwVolumeSerialNumber,
-                      (std::uint64_t(info.nFileIndexHigh) << 32) | info.nFileIndexLow};
+    struct Close {
+        HANDLE file;
+
+        ~Close() {
+            CloseHandle(file);
+        }
+    } close{file};
+    BY_HANDLE_FILE_INFORMATION info{};
+    std::string data(limit, '\0');
+    DWORD bytes = 0;
+
+    if (GetFileType(file) != FILE_TYPE_DISK || !GetFileInformationByHandle(file, &info) ||
+        info.nNumberOfLinks != 1 ||
+        (info.dwFileAttributes & (FILE_ATTRIBUTE_REPARSE_POINT | FILE_ATTRIBUTE_DIRECTORY)) ||
+        !ReadFile(file, data.data(), static_cast<DWORD>(data.size()), &bytes, nullptr)) {
+        return std::nullopt;
+    }
+
+    data.resize(bytes);
+
+    return data;
 }
 
 std::filesystem::path home_directory() {
@@ -109,14 +140,18 @@ std::filesystem::path home_directory() {
     return home ? std::filesystem::path(home) : std::filesystem::path();
 }
 
-bool create_junction(const std::filesystem::path &target, const std::filesystem::path &link) {
-    std::error_code error;
-
-    if (!std::filesystem::create_directory(link, error)) {
-        return false;
+JunctionResult create_junction(const std::filesystem::path &target,
+                               const std::filesystem::path &link) {
+    if (!std::filesystem::create_directory(link)) {
+        return JunctionResult::exists;
     }
 
     auto print = std::filesystem::path(target).make_preferred().wstring();
+
+    if (print.size() >= 2000) {
+        return JunctionResult::target_too_long;
+    }
+
     auto substitute = L"\\??\\" + print;
     struct Junction {
         DWORD tag;
@@ -128,29 +163,32 @@ bool create_junction(const std::filesystem::path &target, const std::filesystem:
     buffer.print_offset = WORD((substitute.size() + 1) * 2);
     buffer.print_length = WORD(print.size() * 2);
     buffer.length = WORD(8 + (substitute.size() + print.size() + 2) * 2);
-    bool ok = print.size() < 2000 && buffer.length < sizeof(buffer.paths);
-    HANDLE handle = INVALID_HANDLE_VALUE;
 
-    if (ok) {
-        std::copy(substitute.begin(), substitute.end(), buffer.paths);
-        std::copy(print.begin(), print.end(), buffer.paths + substitute.size() + 1);
-        handle = CreateFileW(link.c_str(), GENERIC_WRITE, 0, nullptr, OPEN_EXISTING,
-                             FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS, nullptr);
-        DWORD returned = 0;
-        ok = handle != INVALID_HANDLE_VALUE &&
-             DeviceIoControl(handle, FSCTL_SET_REPARSE_POINT, &buffer, buffer.length + 8, nullptr,
-                             0, &returned, nullptr);
+    if (buffer.length >= sizeof(buffer.paths)) {
+        return JunctionResult::target_too_long;
     }
+
+    std::copy(substitute.begin(), substitute.end(), buffer.paths);
+    std::copy(print.begin(), print.end(), buffer.paths + substitute.size() + 1);
+    const auto handle = CreateFileW(link.c_str(), GENERIC_WRITE, 0, nullptr, OPEN_EXISTING,
+                                    FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS,
+                                    nullptr);
+    DWORD returned = 0;
+    const bool ok = handle != INVALID_HANDLE_VALUE &&
+                    DeviceIoControl(handle, FSCTL_SET_REPARSE_POINT, &buffer, buffer.length + 8,
+                                    nullptr, 0, &returned, nullptr);
 
     if (handle != INVALID_HANDLE_VALUE) {
         CloseHandle(handle);
     }
 
     if (!ok) {
-        std::filesystem::remove(link, error);
+        std::filesystem::remove(link);
+
+        return JunctionResult::failed;
     }
 
-    return ok;
+    return JunctionResult::created;
 }
 
 ExclusiveFile::~ExclusiveFile() {

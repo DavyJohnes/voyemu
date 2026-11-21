@@ -85,13 +85,17 @@ private:
             throw VoyemuError("ANDROID_IDENTITY_PROBE", "replaced output slot");
         }
 
-        const auto object = os::owned_file_object(path, directory);
+        const auto owned = os::owned_file_object(path, directory);
 
-        if (!object) {
+        if (!owned.opened) {
+            throw VoyemuError("ANDROID_IDENTITY_PROBE", "output identity unavailable");
+        }
+
+        if (!owned.object) {
             throw VoyemuError("ANDROID_IDENTITY_PROBE", "ordinary owned output required");
         }
 
-        return {object->volume, object->index};
+        return {owned.object->volume, owned.object->index};
     }
 
     void retire_output() {

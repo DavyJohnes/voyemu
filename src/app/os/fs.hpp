@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <filesystem>
 #include <optional>
+#include <string>
 #include <vector>
 
 namespace voyemu::os {
@@ -97,17 +98,34 @@ std::FILE *open_exclusive_stream(const std::filesystem::path &path);
 bool truncate_stream(std::FILE *stream, std::uint64_t bytes);
 // Flushes the file behind stream, whose buffer the caller flushed, to the device; false on failure.
 bool sync_stream(std::FILE *stream);
-// Creates link as a directory junction to target, which needs no symlink privilege; false when the
-// host has no junctions or creation fails, leaving no link behind.
-bool create_junction(const std::filesystem::path &target, const std::filesystem::path &link);
+// The outcome of create_junction.
+enum class JunctionResult {
+    created,
+    // The host has no junctions.
+    unsupported,
+    // link already exists.
+    exists,
+    // target does not fit a reparse point; the empty link directory remains.
+    target_too_long,
+    // Setting the reparse point failed; no link remains.
+    failed
+};
+// Creates link as a directory junction to target, which needs no symlink privilege; throws
+// std::filesystem::filesystem_error when the link directory cannot be created.
+JunctionResult create_junction(const std::filesystem::path &target,
+                               const std::filesystem::path &link);
 // The volume and the file index that tell a file apart from every other on the host.
 struct FileObject {
     std::uint64_t volume = 0, index = 0;
 };
-// The FileObject of path when it is a directory or an ordinary file with one link, not a reparse
-// point, and on POSIX owned by the effective user (Windows callers check the owner on a handle);
-// none otherwise.
-std::optional<FileObject> owned_file_object(const std::filesystem::path &path, bool directory);
+// Whether path could be opened, and its FileObject when it is a directory or an ordinary file
+// with one link, not a reparse point, and on POSIX owned by the effective user (Windows callers
+// check the owner on a handle). POSIX inspects path without opening it, so opened stays true.
+struct OwnedFileObject {
+    bool opened = false;
+    std::optional<FileObject> object;
+};
+OwnedFileObject owned_file_object(const std::filesystem::path &path, bool directory);
 // Adds link as a second name for existing; fails when link exists.
 bool link_exclusive(const std::filesystem::path &existing, const std::filesystem::path &link);
 // Atomically replaces to with from, durably where the host supports it; false on failure.
@@ -121,6 +139,9 @@ bool reparse_point(const std::filesystem::path &path);
 // Whether path belongs to another user than the effective one; false on Windows, whose callers
 // check the owner on an open handle.
 bool foreign_owner(const std::filesystem::path &path);
+// The bytes of an ordinary file with one link at path, without following a final link, owned by the
+// effective user on POSIX, read with one call of at most limit bytes; none when any of that fails.
+std::optional<std::string> read_private_file(const std::filesystem::path &path, std::size_t limit);
 // The home directory of the user: USERPROFILE on Windows, HOME elsewhere; empty when unset.
 std::filesystem::path home_directory();
 // Whether the standard error stream of this process is an interactive terminal.

@@ -1,5 +1,6 @@
 #pragma once
 #include "error.hpp"
+#include "os/socket.hpp"
 #include "process.hpp"
 #include <algorithm>
 #include <array>
@@ -20,8 +21,7 @@ struct Disconnected : VoyemuError {
     Disconnected() : VoyemuError("ANDROID_CONSOLE_IO", "SDK console socket failed") {}
 };
 
-// A non-blocking loopback TCP socket of the SDK console; android_console_posix.cpp and
-// android_console_windows.cpp implement it.
+// A non-blocking loopback TCP socket of the SDK console.
 class Socket {
 public:
     Socket();
@@ -36,7 +36,8 @@ public:
 
 private:
     void ready(bool writing, Clock::time_point deadline);
-    std::intptr_t fd_ = -1;
+    os::SocketLibrary network_;
+    os::SocketHandle fd_ = os::no_socket;
 };
 
 // The SDK console authentication token of home, read from an ordinary single-link file.

@@ -1,0 +1,157 @@
+#include "os/socket.hpp"
+#include <cerrno>
+#include <fcntl.h>
+#include <poll.h>
+#include <unistd.h>
+
+namespace voyemu::os {
+SocketLibrary::SocketLibrary() = default;
+
+SocketLibrary::~SocketLibrary() = default;
+
+unsigned socket_error() {
+    return static_cast<unsigned>(errno);
+}
+
+bool socket_interrupted() {
+    return errno == EINTR;
+}
+
+bool socket_would_block() {
+    return errno == EAGAIN || errno == EWOULDBLOCK;
+}
+
+bool socket_connecting() {
+    return errno == EINPROGRESS;
+}
+
+SocketHandle open_stream_socket(int family) {
+    return ::socket(family, SOCK_STREAM, 0);
+}
+
+SocketHandle open_private_tcp_socket() {
+    const int fd = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    bool configured = fd >= 0 && fcntl(fd, F_SETFD, FD_CLOEXEC) == 0 &&
+                      fcntl(fd, F_SETFL, O_NONBLOCK) == 0;
+
+#ifdef SO_NOSIGPIPE
+    int enabled = 1;
+    configured = configured &&
+                 setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &enabled, sizeof(enabled)) == 0;
+#endif
+
+    if (!configured) {
+        if (fd >= 0) {
+            ::close(fd);
+        }
+
+        return no_socket;
+    }
+
+    return fd;
+}
+
+void close_socket(SocketHandle socket) {
+    ::close(static_cast<int>(socket));
+}
+
+bool bind_socket(SocketHandle socket, const sockaddr *address, SocketLength size) {
+    return ::bind(static_cast<int>(socket), address, size) == 0;
+}
+
+bool connect_socket(SocketHandle socket, const sockaddr *address, SocketLength size) {
+    return ::connect(static_cast<int>(socket), address, size) == 0;
+}
+
+bool socket_name(SocketHandle socket, sockaddr *address, SocketLength *size) {
+    return ::getsockname(static_cast<int>(socket), address, size) == 0;
+}
+
+int pending_socket_error(SocketHandle socket) {
+    int error = 0;
+    socklen_t size = sizeof(error);
+
+    return ::getsockopt(static_cast<int>(socket), SOL_SOCKET, SO_ERROR, &error, &size) ? -1 : error;
+}
+
+long long send_socket(SocketHandle socket, const char *data, std::size_t size) {
+#ifdef MSG_NOSIGNAL
+    constexpr int flags = MSG_NOSIGNAL;
+#else
+    constexpr int flags = 0;
+#endif
+
+    return ::send(static_cast<int>(socket), data, size, flags);
+}
+
+long long receive_socket(SocketHandle socket, char *data, std::size_t size) {
+    return ::recv(static_cast<int>(socket), data, size, 0);
+}
+
+bool listen_socket(SocketHandle socket, int backlog) {
+    return ::listen(static_cast<int>(socket), backlog) == 0;
+}
+
+bool reuse_address(SocketHandle socket) {
+    // Completed SDK connections in TIME_WAIT are reusable; REUSEPORT would hide a live listener.
+    int enabled = 1;
+
+    return ::setsockopt(static_cast<int>(socket), SOL_SOCKET, SO_REUSEADDR, &enabled,
+                        sizeof enabled) == 0;
+}
+
+bool exclusive_address(SocketHandle) {
+    return true;
+}
+
+int wait_socket(SocketHandle socket, bool writing, long long timeout_us) {
+    pollfd selected{static_cast<int>(socket), static_cast<short>(writing ? POLLOUT : POLLIN), 0};
+    const int result = ::poll(&selected, 1, static_cast<int>((timeout_us + 999) / 1000));
+
+    if (result > 0) {
+        return (selected.revents & selected.events) ? 1 : -2;
+    }
+
+    return result;
+}
+
+std::optional<SocketRefusal> loopback_listener(int family, const sockaddr *address,
+                                               SocketLength size, unsigned, TcpPortProbe *) {
+    // Reject live listeners before the SDK-reusable bind; wildcard REUSEADDR must not hide them.
+    const int probe = ::socket(family, SOCK_STREAM, 0);
+
+    if (probe < 0) {
+        return SocketRefusal{"probe_socket", socket_error()};
+    }
+
+    const SocketCloser probe_cleanup{probe};
+
+    if (::fcntl(probe, F_SETFL, O_NONBLOCK) != 0) {
+        return SocketRefusal{"probe_nonblocking", socket_error()};
+    }
+
+    int connected = ::connect(probe, address, size);
+    int error = connected == 0 ? 0 : errno;
+
+    if (connected < 0 && error == EINPROGRESS) {
+        pollfd item{probe, POLLOUT, 0};
+        int waited;
+
+        do {
+            waited = ::poll(&item, 1, 100);
+        } while (waited < 0 && errno == EINTR);
+
+        socklen_t length = sizeof error;
+
+        if (waited <= 0 || ::getsockopt(probe, SOL_SOCKET, SO_ERROR, &error, &length) != 0) {
+            error = ETIMEDOUT;
+        }
+    }
+
+    if (error != ECONNREFUSED) {
+        return SocketRefusal{"connect", static_cast<unsigned>(error)};
+    }
+
+    return std::nullopt;
+}
+} // namespace voyemu::os

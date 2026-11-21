@@ -76,6 +76,13 @@ private:
         }
     }
 
+    static void check_epoch(const std::string &profile, const MachineIdentity &machine_scope,
+                            const std::string &id, const std::string &ownership) {
+        require(valid_profile_name(profile) && token(id) && token(ownership) &&
+                        machine_scope.valid_for(profile),
+                "explicit owned epoch required");
+    }
+
     static std::filesystem::path path(const Json &record, const char *key) {
         require(record.at(key).is_string(), "path string required");
 

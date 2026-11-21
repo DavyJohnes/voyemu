@@ -60,9 +60,20 @@ void link_directory(const std::filesystem::path &target, const std::filesystem::
     }
 
     // Junctions need no Developer Mode/symlink privilege on native Windows.
-    if (!os::create_junction(target, link)) {
-        throw VoyemuError("ANDROID_RENDERER_LINK", "directory link unavailable");
+    switch (os::create_junction(target, link)) {
+    case os::JunctionResult::created:
+        return;
+    case os::JunctionResult::exists:
+        throw std::runtime_error("ANDROID_RENDERER_LINK: fresh junction required");
+    case os::JunctionResult::target_too_long:
+        throw std::runtime_error("ANDROID_RENDERER_LINK: junction target too long");
+    case os::JunctionResult::failed:
+        throw VoyemuError("ANDROID_RENDERER_LINK", "directory link/junction unavailable");
+    case os::JunctionResult::unsupported:
+        break;
     }
+
+    throw VoyemuError("ANDROID_RENDERER_LINK", "directory link unavailable");
 }
 } // namespace
 

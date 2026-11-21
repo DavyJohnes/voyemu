@@ -35,9 +35,15 @@ struct ProcessResult {
     std::string output;
     bool timed_out = false;
 };
+struct SanitizedProcessOutput;
 class ChildProcess {
 public:
+    // The per-host state of a child; os/child_process_posix.cpp and os/child_process_windows.cpp
+    // define it and its deletion.
     struct Impl;
+    struct ImplDelete {
+        void operator()(Impl *impl) const;
+    };
     ChildProcess();
     ~ChildProcess();
     ChildProcess(ChildProcess &&) noexcept;
@@ -60,7 +66,9 @@ public:
     void detach();
 
 private:
-    std::unique_ptr<Impl> impl_;
+    friend ChildProcess launch_child_process(const ProcessSpec &, std::intptr_t);
+    std::unique_ptr<Impl, ImplDelete> impl_;
+    std::unique_ptr<SanitizedProcessOutput> sanitized_;
 };
 // Runs spec to completion within timeout_ms, at most maximum_timeout_ms, capturing at most
 // output_limit bytes; execute and execute_artifact_preparation select the maximum.

@@ -29,9 +29,7 @@ StoppedAndroidLease::StoppedAndroidLease(const std::filesystem::path &root,
                                          const MachineIdentity &machine_scope,
                                          const std::string &id, const std::string &ownership)
     : root_(root), profile_(profile), id_(id), ownership_(ownership) {
-    require(valid_profile_name(profile) && token(id) && token(ownership) &&
-                    machine_scope.valid_for(profile),
-            "explicit owned epoch required");
+    check_epoch(profile, machine_scope, id, ownership);
     ordinary_path(root);
     const auto active_directory = native_current_active_directory(root, profile, machine_scope);
     launch_lock_ = std::make_unique<FileLock>(active_directory / (profile + ".launch.lock"));

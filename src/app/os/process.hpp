@@ -21,6 +21,21 @@ enum class FileUse {
     unknown
 };
 FileUse file_use(const std::filesystem::path &path);
+// A file or pipe of the host: a descriptor on POSIX, a HANDLE on Windows; no_file when absent.
+using FileHandle = std::intptr_t;
+inline constexpr FileHandle no_file = -1;
+void close_file(FileHandle file);
+// A new private output file at path for writing, refusing an existing name, a link and a second
+// hard link; throws PROCESS_LOG.
+FileHandle create_capture_output(const std::filesystem::path &path);
+// A pipe whose write end a child inherits and whose read end stays private and non-blocking; throws
+// PROCESS_PIPE.
+void create_capture_pipe(FileHandle &read, FileHandle &write);
+// Reads at most size bytes from a capture pipe: the byte count, 0 at end of file, -1 when nothing
+// arrived within a short wait, -2 on failure.
+long long read_capture(FileHandle read, char *data, std::size_t size);
+// Writes at most size bytes, retrying interruptions: the positive byte count, or -1 on failure.
+long long write_capture(FileHandle file, const char *data, std::size_t size);
 
 #ifdef _WIN32
 // Inheritable HANDLE positioned at the end of path, created when absent, for a child's standard

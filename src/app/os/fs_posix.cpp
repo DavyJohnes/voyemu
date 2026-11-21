@@ -50,15 +50,48 @@ bool sync_stream(std::FILE *stream) {
     return ::fsync(::fileno(stream)) == 0;
 }
 
-std::optional<FileObject> owned_file_object(const std::filesystem::path &path, bool directory) {
+OwnedFileObject owned_file_object(const std::filesystem::path &path, bool directory) {
     struct stat info{};
 
     if (::lstat(path.c_str(), &info) || info.st_uid != ::geteuid() ||
         (!directory && info.st_nlink != 1)) {
+        return {true, std::nullopt};
+    }
+
+    return {true, FileObject{std::uint64_t(info.st_dev), std::uint64_t(info.st_ino)}};
+}
+
+std::optional<std::string> read_private_file(const std::filesystem::path &path, std::size_t limit) {
+    const auto file = ::open(path.c_str(), O_RDONLY | O_CLOEXEC | O_NOFOLLOW | O_NONBLOCK);
+
+    if (file < 0) {
         return std::nullopt;
     }
 
-    return FileObject{std::uint64_t(info.st_dev), std::uint64_t(info.st_ino)};
+    struct Close {
+        int file;
+
+        ~Close() {
+            ::close(file);
+        }
+    } close{file};
+    struct stat info{};
+
+    if (fstat(file, &info) || !S_ISREG(info.st_mode) || info.st_nlink != 1 ||
+        info.st_uid != geteuid()) {
+        return std::nullopt;
+    }
+
+    std::string data(limit, '\0');
+    const auto bytes = ::read(file, data.data(), data.size());
+
+    if (bytes < 0) {
+        return std::nullopt;
+    }
+
+    data.resize(static_cast<std::size_t>(bytes));
+
+    return data;
 }
 
 std::filesystem::path home_directory() {
@@ -67,8 +100,8 @@ std::filesystem::path home_directory() {
     return home ? std::filesystem::path(home) : std::filesystem::path();
 }
 
-bool create_junction(const std::filesystem::path &, const std::filesystem::path &) {
-    return false;
+JunctionResult create_junction(const std::filesystem::path &, const std::filesystem::path &) {
+    return JunctionResult::unsupported;
 }
 
 ExclusiveFile::~ExclusiveFile() {

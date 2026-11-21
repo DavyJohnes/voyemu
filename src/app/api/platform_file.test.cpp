@@ -1,15 +1,24 @@
-#include "model.hpp"
 #include "platform_file.hpp"
+#include "model.hpp"
 #include "process.hpp"
 #include <cassert>
 #include <cstdlib>
-#include <exception>
-#include <fcntl.h>
 #include <fstream>
 #include <iostream>
 #include <limits>
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include "../core/private_state_security.hpp"
+#include <windows.h>
+#include <aclapi.h>
+#include <sddl.h>
+#else
+#include <exception>
+#include <fcntl.h>
 #include <sys/file.h>
 #include <unistd.h>
+#endif
 
 using namespace voyemu;
 using namespace voyemu::api;
@@ -35,18 +44,107 @@ template <class F> void rejects(std::string_view label, F action, std::string_vi
 }
 
 void metadata(const std::filesystem::path &path) {
+#ifdef _WIN32
+    HANDLE file = CreateFileW(path.c_str(), GENERIC_READ | READ_CONTROL,
+                              FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr,
+                              OPEN_EXISTING,
+                              FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS, nullptr);
+    std::cout << "METADATA " << path.string();
+
+    if (file == INVALID_HANDLE_VALUE) {
+        std::cout << " open_error=" << GetLastError() << std::endl;
+
+        return;
+    }
+
+    BY_HANDLE_FILE_INFORMATION info{};
+
+    if (GetFileInformationByHandle(file, &info)) {
+        std::cout << " attributes=" << info.dwFileAttributes << " links=" << info.nNumberOfLinks
+                  << " volume=" << info.dwVolumeSerialNumber << " index=" << info.nFileIndexHigh
+                  << ":" << info.nFileIndexLow;
+    }
+
+    PSID owner = nullptr;
+    PSECURITY_DESCRIPTOR descriptor = nullptr;
+    const auto status = GetSecurityInfo(file, SE_FILE_OBJECT, OWNER_SECURITY_INFORMATION, &owner,
+                                        nullptr, nullptr, nullptr, &descriptor);
+    LPWSTR sid = nullptr;
+
+    if (status == ERROR_SUCCESS && ConvertSidToStringSidW(owner, &sid)) {
+        std::wstring value(sid);
+        std::cout << " owner=" << std::string(value.begin(), value.end());
+        LocalFree(sid);
+    } else {
+        std::cout << " owner_error=" << status;
+    }
+
+    if (descriptor) {
+        LocalFree(descriptor);
+    }
+
+    CloseHandle(file);
+    std::cout << std::endl;
+#else
     (void)path;
+#endif
 }
 
 void write(const std::filesystem::path &path, const std::string &value) {
+#ifdef _WIN32
+    detail::PrivateStateSecurity security;
+    HANDLE file = CreateFileW(path.c_str(), GENERIC_WRITE, 0, &security.attributes, CREATE_NEW,
+                              FILE_ATTRIBUTE_NORMAL, nullptr);
+    assert(file != INVALID_HANDLE_VALUE);
+    DWORD written = 0;
+    assert(WriteFile(file, value.data(), static_cast<DWORD>(value.size()), &written, nullptr) &&
+           written == value.size());
+    assert(CloseHandle(file));
+#else
     std::ofstream file(path, std::ios::binary);
 
     file << value;
     assert(file.good());
+#endif
 }
 
 bool change_owner(const std::filesystem::path &path) {
+#ifdef _WIN32
+    BYTE sid[SECURITY_MAX_SID_SIZE]{};
+    DWORD size = sizeof(sid);
+    assert(CreateWellKnownSid(WinWorldSid, nullptr, sid, &size));
+    HANDLE file = CreateFileW(path.c_str(), WRITE_OWNER | READ_CONTROL,
+                              FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr,
+                              OPEN_EXISTING, FILE_FLAG_OPEN_REPARSE_POINT, nullptr);
+
+    if (file == INVALID_HANDLE_VALUE) {
+        return false;
+    }
+
+    const auto result = SetSecurityInfo(file, SE_FILE_OBJECT, OWNER_SECURITY_INFORMATION, sid,
+                                        nullptr, nullptr, nullptr);
+    PSID observed = nullptr;
+    PSECURITY_DESCRIPTOR descriptor = nullptr;
+    const auto readback = GetSecurityInfo(file, SE_FILE_OBJECT, OWNER_SECURITY_INFORMATION,
+                                          &observed, nullptr, nullptr, nullptr, &descriptor);
+    const bool changed = result == ERROR_SUCCESS && readback == ERROR_SUCCESS && observed &&
+                         EqualSid(observed, sid);
+
+    if (!changed) {
+        std::cout << "OWNER_FIXTURE setter_status=" << result << " readback_status=" << readback
+                  << " requested_sid_observed=false" << std::endl;
+    }
+
+    if (descriptor) {
+        LocalFree(descriptor);
+    }
+
+    CloseHandle(file);
+
+    return changed;
+#else
     return ::chown(path.c_str(), ::geteuid() + 1, static_cast<gid_t>(-1)) == 0;
+#endif
 }
 } // namespace
 
@@ -97,12 +195,21 @@ int main(int argc, char **argv) try {
     assert(child("--probe", lock_path) == 0);
     assert(child("--acquire", lock_path) == 0);
     // Match the existing CLI supervisor lock, not just another helper instance.
+#ifdef _WIN32
+    HANDLE supervisor = CreateFileW(lock_path.c_str(), GENERIC_READ | GENERIC_WRITE, 0, nullptr,
+                                    OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+    assert(supervisor != INVALID_HANDLE_VALUE);
+    assert(child("--probe", lock_path) == 7);
+    assert(child("--acquire", lock_path) == 7);
+    assert(CloseHandle(supervisor));
+#else
     const int supervisor = ::open(lock_path.c_str(), O_CREAT | O_RDWR | O_CLOEXEC | O_NOFOLLOW,
                                   0600);
     assert(supervisor >= 0 && ::flock(supervisor, LOCK_EX | LOCK_NB) == 0);
     assert(child("--probe", lock_path) == 7);
     assert(child("--acquire", lock_path) == 7);
     assert(::close(supervisor) == 0);
+#endif
     assert(child("--probe", lock_path) == 0);
     const auto log_path = root / "supervisor.jsonl";
     const std::string content = std::string(65536, 'a') + "tail\n";

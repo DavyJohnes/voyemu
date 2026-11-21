@@ -6,9 +6,7 @@ StoppedAndroidLease::StoppedAndroidLease(const std::filesystem::path &root,
                                          const MachineIdentity &machine_scope,
                                          const std::string &id, const std::string &ownership)
     : root_(root), profile_(profile), id_(id), ownership_(ownership) {
-    require(valid_profile_name(profile) && token(id) && token(ownership) &&
-                    machine_scope.valid_for(profile),
-            "explicit owned epoch required");
+    check_epoch(profile, machine_scope, id, ownership);
     throw VoyemuError("HOST_RECOVERY_UNSUPPORTED", "Windows host-only recovery required");
 }
 

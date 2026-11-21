@@ -1,5 +1,5 @@
 #include "../platform/wine_native_backend_windows.hpp"
-#include "admission.hpp"
+#include "admission_store.hpp"
 #include "error.hpp"
 #include "process.hpp"
 #include <cstdlib>
@@ -13,27 +13,8 @@
 #include <memory>
 #include <vector>
 
-namespace voyemu::api {
+namespace voyemu::api::admission {
 namespace {
-[[noreturn]] void fail() {
-    throw VoyemuError("ADMISSION_STATE", "private receipt unavailable");
-}
-
-constexpr std::size_t payload_limit = 128 * 1024;
-constexpr std::size_t record_limit = 8 * 1024 * 1024;
-
-std::string digest(const std::string &text) {
-    return sha256_bytes(text);
-}
-
-std::string key(const std::string &scope, const std::string &id) {
-    if (scope.empty() || id.empty() || scope.size() > 4096 || id.size() > 4096) {
-        throw VoyemuError("INVALID_REQUEST", "invalid admission key");
-    }
-
-    return digest(Json::array({scope, id}).dump());
-}
-
 struct Handle {
     HANDLE value = INVALID_HANDLE_VALUE;
 
@@ -398,17 +379,75 @@ struct Locked {
         }
     }
 };
+} // namespace
 
-void atomic_state(Locked &lock, const std::string &name, const Json &state) {
-    const auto text = state.dump();
+struct Reservation::Impl {
+    Locked lock;
+    std::filesystem::path store;
+    std::string name;
 
-    if (text.size() > record_limit) {
-        throw VoyemuError("ADMISSION_EXTENT", "receipt exceeds 8 MiB");
+    Impl(const std::filesystem::path &path, const std::string &reserved, bool create)
+        : lock(path, reserved, create), store(path), name(reserved) {}
+};
+
+void open_store_directory(const std::filesystem::path &store, bool create) {
+    Directory directory_handle(store, create);
+}
+
+bool reservation_exists(const std::filesystem::path &store, const std::string &name) {
+    Directory directory(store, false);
+    const auto path = store / (name + ".lock");
+    const auto attributes = GetFileAttributesW(path.c_str());
+
+    if (attributes == INVALID_FILE_ATTRIBUTES) {
+        if (GetLastError() == ERROR_FILE_NOT_FOUND) {
+            return false;
+        }
+
+        fail();
     }
 
+    return true;
+}
+
+Reservation::Reservation(const std::filesystem::path &store, const std::string &name, bool create)
+    : impl_(std::make_unique<Impl>(store, name, create)) {}
+
+Reservation::~Reservation() = default;
+
+bool Reservation::created() const {
+    return impl_->lock.created;
+}
+
+std::string Reservation::read_reservation() {
+    return read(impl_->lock.reservation.value);
+}
+
+void Reservation::write_reservation(const std::string &text) {
+    write(impl_->lock.reservation.value, text);
+}
+
+std::optional<std::string> Reservation::read_state() {
+    const auto filename = impl_->lock.dir.path / (impl_->name + ".json");
+    Handle terminal(CreateFileW(filename.c_str(), GENERIC_READ | READ_CONTROL, FILE_SHARE_READ,
+                                nullptr, OPEN_EXISTING,
+                                FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OPEN_REPARSE_POINT, nullptr));
+
+    if (terminal.value == INVALID_HANDLE_VALUE) {
+        if (GetLastError() == ERROR_FILE_NOT_FOUND) {
+            return std::nullopt;
+        }
+
+        fail();
+    }
+
+    return read(terminal.value);
+}
+
+void Reservation::write_state(const std::string &text) {
     PrivateSecurity security;
-    const auto pending = lock.dir.path / (name + ".pending"),
-               target = lock.dir.path / (name + ".json");
+    const auto pending = impl_->lock.dir.path / (impl_->name + ".pending"),
+               target = impl_->lock.dir.path / (impl_->name + ".json");
     {
         Handle file(CreateFileW(pending.c_str(), GENERIC_READ | GENERIC_WRITE | READ_CONTROL, 0,
                                 &security.attributes, CREATE_NEW,
@@ -429,135 +468,4 @@ void atomic_state(Locked &lock, const std::string &name, const Json &state) {
         fail();
     }
 }
-
-AdmissionResult existing(Locked &lock, const std::string &name,
-                         const std::optional<std::string> &expected) {
-    AdmissionResult result{false, name.substr(0, 32), "unknown", std::nullopt};
-    Json reservation;
-
-    try {
-        reservation = Json::parse(read(lock.reservation.value));
-    } catch (const Json::exception &) {
-        return result;
-    }
-
-    if (!reservation.is_object() || reservation.value("version", 0) != 1 ||
-        !reservation.contains("digest") || !reservation["digest"].is_string()) {
-        return result;
-    }
-
-    if (expected && reservation["digest"] != *expected) {
-        throw VoyemuError("REQUEST_CONFLICT", "request_id already used with a different payload");
-    }
-
-    result.status = "pending";
-    const auto filename = lock.dir.path / (name + ".json");
-    Handle terminal(CreateFileW(filename.c_str(), GENERIC_READ | READ_CONTROL, FILE_SHARE_READ,
-                                nullptr, OPEN_EXISTING,
-                                FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OPEN_REPARSE_POINT, nullptr));
-
-    if (terminal.value == INVALID_HANDLE_VALUE) {
-        if (GetLastError() == ERROR_FILE_NOT_FOUND) {
-            return result;
-        }
-
-        fail();
-    }
-
-    try {
-        auto state = Json::parse(read(terminal.value));
-
-        if (state.at("operation_id") != result.operation_id ||
-            state.at("digest") != reservation["digest"]) {
-            fail();
-        }
-
-        if (state.at("status") == "terminal") {
-            result.response = state.at("response");
-            result.status = "terminal";
-        } else if (state.at("status") != "pending") {
-            fail();
-        }
-    } catch (...) {
-        fail();
-    }
-
-    return result;
-}
-} // namespace
-
-AdmissionStore::AdmissionStore(std::filesystem::path directory)
-    : directory_(std::filesystem::absolute(directory).lexically_normal()) {
-    Directory directory_handle(directory_, true);
-}
-
-AdmissionResult AdmissionStore::begin(const std::string &scope, const std::string &request_id,
-                                      const Json &payload) {
-    auto name = key(scope, request_id);
-    auto canonical = payload.dump();
-
-    if (canonical.size() > payload_limit) {
-        throw VoyemuError("INVALID_REQUEST", "action payload too large");
-    }
-
-    auto hash = digest(canonical);
-    Locked lock(directory_, name, true);
-
-    if (!lock.created) {
-        return existing(lock, name, hash);
-    }
-
-    write(lock.reservation.value, Json{{"version", 1}, {"digest", hash}}.dump());
-    atomic_state(
-            lock, name,
-            Json{{"operation_id", name.substr(0, 32)}, {"digest", hash}, {"status", "pending"}});
-
-    return {true, name.substr(0, 32), "pending", std::nullopt};
-}
-
-std::optional<AdmissionResult> AdmissionStore::lookup(const std::string &scope,
-                                                      const std::string &request_id) {
-    const auto name = key(scope, request_id);
-    Directory directory(directory_, false);
-    const auto path = directory_ / (name + ".lock");
-    const auto attributes = GetFileAttributesW(path.c_str());
-
-    if (attributes == INVALID_FILE_ATTRIBUTES) {
-        if (GetLastError() == ERROR_FILE_NOT_FOUND) {
-            return std::nullopt;
-        }
-
-        fail();
-    }
-
-    Locked lock(directory_, name, false);
-
-    return existing(lock, name, std::nullopt);
-}
-
-void AdmissionStore::complete(const std::string &scope, const std::string &request_id,
-                              const std::string &operation_id, const Json &response) {
-    auto name = key(scope, request_id);
-    Locked lock(directory_, name, false);
-    auto result = existing(lock, name, std::nullopt);
-
-    if (result.operation_id != operation_id || result.status == "unknown") {
-        fail();
-    }
-
-    if (result.response) {
-        if (*result.response != response) {
-            fail();
-        }
-
-        return;
-    }
-
-    auto reservation = Json::parse(read(lock.reservation.value));
-    atomic_state(lock, name,
-                 Json{{"operation_id", operation_id},
-                      {"digest", reservation.at("digest")},
-                      {"status", "terminal"},
-                      {"response", response}});
-}
-} // namespace voyemu::api
+} // namespace voyemu::api::admission
