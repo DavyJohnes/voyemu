@@ -5,6 +5,8 @@
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
+#include <aclapi.h>
+#include <vector>
 
 #include <algorithm>
 
@@ -133,6 +135,94 @@ std::optional<std::string> read_private_file(const std::filesystem::path &path, 
     data.resize(bytes);
 
     return data;
+}
+
+OwnedFile read_owned_file(const std::filesystem::path &path, std::size_t limit) {
+    OwnedFile result;
+    const HANDLE file = CreateFileW(path.c_str(), GENERIC_READ | READ_CONTROL, FILE_SHARE_READ,
+                                    nullptr, OPEN_EXISTING,
+                                    FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OPEN_REPARSE_POINT, nullptr);
+
+    if (file == INVALID_HANDLE_VALUE) {
+        return result;
+    }
+
+    struct Close {
+        HANDLE file;
+
+        ~Close() {
+            CloseHandle(file);
+        }
+    } close{file};
+    BY_HANDLE_FILE_INFORMATION info{};
+
+    if (GetFileType(file) != FILE_TYPE_DISK || !GetFileInformationByHandle(file, &info) ||
+        (info.dwFileAttributes & (FILE_ATTRIBUTE_REPARSE_POINT | FILE_ATTRIBUTE_DIRECTORY)) ||
+        info.nNumberOfLinks != 1 || info.nFileSizeHigh || !info.nFileSizeLow ||
+        info.nFileSizeLow > limit) {
+        result.status = OwnedFile::Status::foreign;
+
+        return result;
+    }
+
+    HANDLE token = nullptr;
+
+    if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token)) {
+        result.status = OwnedFile::Status::unverifiable;
+
+        return result;
+    }
+
+    DWORD token_size = 0;
+    GetTokenInformation(token, TokenUser, nullptr, 0, &token_size);
+    std::vector<std::byte> user(token_size);
+    const bool loaded = token_size &&
+                        GetTokenInformation(token, TokenUser, user.data(), token_size, &token_size);
+    CloseHandle(token);
+
+    if (!loaded) {
+        result.status = OwnedFile::Status::unverifiable;
+
+        return result;
+    }
+
+    PSID owner = nullptr;
+    PSECURITY_DESCRIPTOR security = nullptr;
+    const auto status = GetSecurityInfo(file, SE_FILE_OBJECT, OWNER_SECURITY_INFORMATION, &owner,
+                                        nullptr, nullptr, nullptr, &security);
+    const bool owned = status == ERROR_SUCCESS && owner &&
+                       EqualSid(owner, reinterpret_cast<TOKEN_USER *>(user.data())->User.Sid);
+
+    if (security) {
+        LocalFree(security);
+    }
+
+    if (!owned) {
+        result.status = OwnedFile::Status::foreign;
+
+        return result;
+    }
+
+    result.bytes.resize(info.nFileSizeLow);
+    std::size_t offset = 0;
+
+    while (offset < result.bytes.size()) {
+        DWORD count = 0;
+
+        if (!ReadFile(file, result.bytes.data() + offset,
+                      static_cast<DWORD>(result.bytes.size() - offset), &count, nullptr) ||
+            !count) {
+            result.status = OwnedFile::Status::truncated;
+
+            return result;
+        }
+
+        offset += count;
+    }
+
+    result.status = OwnedFile::Status::read;
+
+    return result;
 }
 
 std::filesystem::path home_directory() {

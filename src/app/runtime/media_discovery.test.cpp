@@ -4,6 +4,7 @@
 #include <cassert>
 #include <exception>
 #include <iostream>
+#include <sys/stat.h>
 using namespace voyemu;
 
 static void warm_sdk_descriptor_binding() {

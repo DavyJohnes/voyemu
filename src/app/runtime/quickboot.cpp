@@ -4,10 +4,12 @@
 #include "android_system_binding.hpp"
 #include "check.hpp"
 #include "error.hpp"
+#include "os/platform.hpp"
 #include "passion_wheel.hpp"
 #include "process.hpp"
 #include "qinggan11_startup.hpp"
 #include "qnx_interguest_contract.hpp"
+#include "quickboot_stamp.hpp"
 #include <algorithm>
 #include <array>
 #include <cctype>
@@ -15,15 +17,6 @@
 #include <fstream>
 #include <limits>
 #include <sstream>
-#ifdef _WIN32
-#define NOMINMAX
-#include <windows.h>
-#else
-#include "os/stat_time.hpp"
-#include "os/volume.hpp"
-#include <sys/stat.h>
-#include <unistd.h>
-#endif
 
 namespace voyemu {
 namespace {
@@ -36,58 +29,7 @@ Json stamp(const std::filesystem::path &path, std::uintmax_t expected_links = 1)
         throw VoyemuError("QUICKBOOT_FILE", "owned regular file required");
     }
 
-#ifdef _WIN32
-    HANDLE file = CreateFileW(path.c_str(), GENERIC_READ,
-                              FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr,
-                              OPEN_EXISTING, FILE_FLAG_OPEN_REPARSE_POINT, nullptr);
-
-    if (file == INVALID_HANDLE_VALUE) {
-        throw VoyemuError("QUICKBOOT_FILE", "cannot open storage");
-    }
-
-    BY_HANDLE_FILE_INFORMATION info{};
-    FILE_BASIC_INFO basic{};
-    const bool valid =
-            GetFileInformationByHandle(file, &info) &&
-            GetFileInformationByHandleEx(file, FileBasicInfo, &basic, sizeof basic) &&
-            info.nNumberOfLinks == expected_links &&
-            !(info.dwFileAttributes & (FILE_ATTRIBUTE_REPARSE_POINT | FILE_ATTRIBUTE_DIRECTORY));
-    CloseHandle(file);
-
-    if (!valid) {
-        throw VoyemuError("QUICKBOOT_FILE", "storage identity rejected");
-    }
-
-    return {{"volume", info.dwVolumeSerialNumber},
-            {"index_high", info.nFileIndexHigh},
-            {"index_low", info.nFileIndexLow},
-            {"size_high", info.nFileSizeHigh},
-            {"size_low", info.nFileSizeLow},
-            {"mtime_high", info.ftLastWriteTime.dwHighDateTime},
-            {"mtime_low", info.ftLastWriteTime.dwLowDateTime},
-            {"change_time", basic.ChangeTime.QuadPart}};
-#else
-    struct stat info{};
-
-    if (::lstat(path.c_str(), &info) != 0 || !S_ISREG(info.st_mode) || info.st_uid != ::geteuid() ||
-        info.st_nlink != expected_links) {
-        throw VoyemuError("QUICKBOOT_FILE", "storage identity rejected");
-    }
-
-    const auto volume_uuid = os::stable_volume_id(path);
-
-    if (volume_uuid.empty()) {
-        throw VoyemuError("QUICKBOOT_FILE", "stable volume identity unavailable");
-    }
-
-    return {{"volume_uuid", volume_uuid},
-            {"inode", info.st_ino},
-            {"size", info.st_size},
-            {"mtime_seconds", os::modified_time(info).tv_sec},
-            {"mtime_ns", os::modified_time(info).tv_nsec},
-            {"ctime_seconds", os::changed_time(info).tv_sec},
-            {"ctime_ns", os::changed_time(info).tv_nsec}};
-#endif
+    return file_stamp(path, expected_links);
 }
 } // namespace
 
@@ -239,10 +181,10 @@ Json android_quickboot_key(const Json &specification) {
         key["audio_startup_protocol"] = 1;
     }
 
-#ifdef _WIN32
-    // Timer/accelerator state is part of the SDK snapshot migration format.
-    key["backend_arguments"] = android_sdk_machine_arguments(true);
-#endif
+    // Timer/accelerator state is part of the SDK snapshot migration format on Windows.
+    if (os::host_windows) {
+        key["backend_arguments"] = android_sdk_machine_arguments(true);
+    }
 
     return key;
 }
@@ -285,12 +227,11 @@ Json AndroidQuickBoot::disks() const {
 
     const auto system = android_system_binding(prepared);
     const auto avd_disk_stamp = [&](const std::filesystem::path &disk, const char *name) {
-#ifdef _WIN32
         const auto alias = runtime_ / name;
 
         // Windows normally publishes these SDK aliases as hard links. Accept
         // a second link only when both known paths identify the same file.
-        if (runtime_ != machine_ &&
+        if (os::host_windows && runtime_ != machine_ &&
             std::filesystem::is_regular_file(std::filesystem::symlink_status(alias)) &&
             std::filesystem::equivalent(disk, alias) && disk != alias) {
             const auto identity = stamp(disk, 2);
@@ -301,9 +242,6 @@ Json AndroidQuickBoot::disks() const {
 
             return identity;
         }
-#else
-        (void)name;
-#endif
 
         return stamp(disk);
     };
@@ -445,13 +383,13 @@ QuickBootRestore AndroidQuickBoot::inspect() const {
             return {false, {}, "boot_nonce_invalid"};
         }
 
-#ifdef __APPLE__
+        // Earlier macOS checkpoints named the volume by device number.
         for (const auto &item : saved.at("disks").items()) {
-            if (item.value().contains("device") && !item.value().contains("volume_uuid")) {
+            if (os::platform_name == "macOS" && item.value().contains("device") &&
+                !item.value().contains("volume_uuid")) {
                 return {false, {}, "storage_identity_format_changed"};
             }
         }
-#endif
 
         if (saved.at("disks") != disks()) {
             return {false, {}, "guest_storage_changed"};

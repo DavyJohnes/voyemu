@@ -70,7 +70,6 @@ src/app/qnx/qnx_native_runtime.test.cpp group 9 qnx: checkpoint, storage, update
 src/app/qnx/qnx_prepare.test.cpp group 9 qnx: checkpoint, storage, update and shutdown
 src/app/qnx/qnx_process_ram.test.cpp group 9 qnx: checkpoint, storage, update and shutdown
 src/app/qnx/qnx_qinggan11.test.cpp group 9 qnx: checkpoint, storage, update and shutdown
-src/app/qnx/qnx_ready_collector.hpp group 10 runtime: the session includes this POSIX ready collector on every host
 src/app/qnx/qnx_serial_lines.test.cpp group 9 qnx: checkpoint, storage, update and shutdown
 src/app/qnx/qnx_shutdown_monitor.test.cpp group 9 qnx: checkpoint, storage, update and shutdown
 src/app/qnx/qnx_update.test.cpp group 9 qnx: checkpoint, storage, update and shutdown
@@ -83,27 +82,18 @@ src/app/runtime/interguest_link.cpp group 10 runtime: interguest link, media, pr
 src/app/runtime/interguest_link_owner.test.cpp group 10 runtime: interguest link, media, providers and sessions
 src/app/runtime/interguest_network.cpp group 10 runtime: interguest link, media, providers and sessions
 src/app/runtime/interguest_network.test.cpp group 10 runtime: interguest link, media, providers and sessions
-src/app/runtime/media_discovery.hpp group 10 runtime: interguest link, media, providers and sessions
+src/app/runtime/media_discovery.hpp group 10 runtime: the Wine path translation of the Windows build
 src/app/runtime/media_discovery.test.cpp group 10 runtime: interguest link, media, providers and sessions
-src/app/runtime/media_rpc.cpp group 10 runtime: interguest link, media, providers and sessions
 src/app/runtime/media_rpc.test.cpp group 10 runtime: interguest link, media, providers and sessions
-src/app/runtime/provider_process.cpp group 10 runtime: interguest link, media, providers and sessions
 src/app/runtime/provider_process.test.cpp group 10 runtime: interguest link, media, providers and sessions
 src/app/runtime/provider_registry.cpp group 10 runtime: interguest link, media, providers and sessions
 src/app/runtime/provider_registry.test.cpp group 10 runtime: interguest link, media, providers and sessions
 src/app/runtime/provider_windows_files.hpp group 10 runtime: interguest link, media, providers and sessions
-src/app/runtime/qnx_frame_grpc.cpp group 10 runtime: interguest link, media, providers and sessions
-src/app/runtime/quickboot.cpp group 10 runtime: interguest link, media, providers and sessions
 src/app/runtime/quickboot.test.cpp group 10 runtime: interguest link, media, providers and sessions
 src/app/runtime/runtime_fixture.cpp group 10 runtime: interguest link, media, providers and sessions
 src/app/runtime/runtime_fixture_media.hpp group 10 runtime: interguest link, media, providers and sessions
 src/app/runtime/runtime_fixture_wire.hpp group 10 runtime: interguest link, media, providers and sessions
-src/app/runtime/session.hpp group 10 runtime: interguest link, media, providers and sessions
 src/app/runtime/session.test.cpp group 10 runtime: interguest link, media, providers and sessions
-src/app/runtime/session_android_services.cpp group 10 runtime: interguest link, media, providers and sessions
-src/app/runtime/session_cluster.cpp group 10 runtime: interguest link, media, providers and sessions
-src/app/runtime/session_frontend.cpp group 10 runtime: interguest link, media, providers and sessions
-src/app/runtime/session_posix.cpp group 10 runtime: interguest link, media, providers and sessions
 src/app/runtime/ui_observer_diagnostics.test.cpp group 10 runtime: interguest link, media, providers and sessions
 src/app/ui/cluster_ui.test.cpp group 7 graphics, platform and ui: frame transport and native windows
 src/guest/qnx/qnx-runtime.test.cpp group 9 qnx: checkpoint, storage, update and shutdown

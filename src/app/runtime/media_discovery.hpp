@@ -1,5 +1,7 @@
 #pragma once
 #include "error.hpp"
+#include "os/fs.hpp"
+#include "os/platform.hpp"
 #include <filesystem>
 #include <fstream>
 #include <map>
@@ -9,11 +11,6 @@
 #include <string>
 #ifdef _WIN32
 #include "../platform/wine_native_backend_windows.hpp"
-#else
-#include <cerrno>
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <unistd.h>
 #endif
 
 namespace voyemu {
@@ -28,14 +25,15 @@ sdk_registration_directory(const std::filesystem::path &os_root,
         throw VoyemuError("MEDIA_DISCOVERY", "absolute SDK registration root required");
     }
 
-#ifdef __APPLE__
-    return os_root.empty() ? root / "avd/running"
-                           : root / "Library/Caches/TemporaryItems/avd/running";
-#elif defined(_WIN32)
-    return os_root.empty() ? root / "avd/running" : root / "Temp/avd/running";
-#else
-    return root / "avd/running";
-#endif
+    if (os_root.empty()) {
+        return root / "avd/running";
+    }
+
+    if (os::platform_name == "macOS") {
+        return root / "Library/Caches/TemporaryItems/avd/running";
+    }
+
+    return os::host_windows ? root / "Temp/avd/running" : root / "avd/running";
 }
 
 enum class SdkAdvertisementWindow {
@@ -48,9 +46,7 @@ inline std::optional<std::filesystem::path>
 sdk_discovery(const std::filesystem::path &log, const std::filesystem::path &root, unsigned pid,
               bool diagnostic_native = false,
               SdkAdvertisementWindow window = SdkAdvertisementWindow::tail) {
-#ifndef _WIN32
-    (void)diagnostic_native;
-#endif
+    (void)diagnostic_native; // Only the Windows build translates Wine paths.
 
     if (!root.is_absolute() || pid < 2) {
         return std::nullopt;
@@ -150,58 +146,17 @@ import_sdk_descriptor(const std::filesystem::path &source, const std::filesystem
     }
 
     std::string bytes;
-#ifndef _WIN32
-    int input = ::open(source.c_str(), O_RDONLY | O_NOFOLLOW | O_CLOEXEC);
+    const auto file = os::read_owned_file(source, 32768);
 
-    if (input < 0) {
-        return std::nullopt;
-    }
-
-    struct Close {
-        int fd;
-
-        ~Close() {
-            ::close(fd);
-        }
-    } close{input};
-    struct stat info{};
-
-    if (::fstat(input, &info) || !S_ISREG(info.st_mode) || info.st_uid != ::geteuid() ||
-        info.st_nlink != 1 || info.st_size <= 0 || info.st_size > 32768) {
+    if (file.status == os::OwnedFile::Status::foreign) {
         throw VoyemuError("MEDIA_DESCRIPTOR", "invalid SDK input ownership/extent");
     }
 
-    bytes.resize(info.st_size);
-    std::size_t offset = 0;
-
-    while (offset < bytes.size()) {
-        const auto count = ::read(input, bytes.data() + offset, bytes.size() - offset);
-
-        if (count <= 0) {
-            return std::nullopt;
-        }
-
-        offset += count;
-    }
-#else
-    if (!std::filesystem::is_regular_file(std::filesystem::symlink_status(source)) ||
-        std::filesystem::hard_link_count(source) != 1) {
-        throw VoyemuError("MEDIA_DESCRIPTOR", "invalid SDK input");
-    }
-
-    const auto size = std::filesystem::file_size(source);
-
-    if (!size || size > 32768) {
-        throw VoyemuError("MEDIA_DESCRIPTOR", "invalid SDK extent");
-    }
-
-    std::ifstream input(source, std::ios::binary);
-    bytes.resize(size);
-
-    if (!input.read(bytes.data(), size)) {
+    if (file.status != os::OwnedFile::Status::read) {
         return std::nullopt;
     }
-#endif
+
+    bytes = file.bytes;
     std::map<std::string, std::string> fields;
     std::istringstream lines(bytes);
     std::string line;
@@ -234,102 +189,41 @@ import_sdk_descriptor(const std::filesystem::path &source, const std::filesystem
         *bearer = fields.at("grpc.token");
     }
 
-#ifndef _WIN32
-    const int output = ::open(target.c_str(), O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC,
-                              0600);
+    os::ExclusiveFile output(target);
 
-    if (output < 0) {
-        if (errno != EEXIST) {
+    if (!output.open()) {
+        if (!output.already_exists()) {
             throw VoyemuError("MEDIA_DESCRIPTOR", "private destination creation failed");
         }
 
-        const int existing = ::open(target.c_str(), O_RDONLY | O_NOFOLLOW | O_CLOEXEC);
+        const auto existing = os::read_owned_file(target, bytes.size());
 
-        if (existing < 0) {
+        if (existing.status == os::OwnedFile::Status::absent) {
             throw VoyemuError("MEDIA_DESCRIPTOR", "existing private destination rejected");
         }
 
-        Close existing_close{existing};
-        struct stat saved{};
+        if (existing.status == os::OwnedFile::Status::truncated) {
+            throw VoyemuError("MEDIA_DESCRIPTOR", "existing private destination unreadable");
+        }
 
-        if (::fstat(existing, &saved) || !S_ISREG(saved.st_mode) || saved.st_uid != ::geteuid() ||
-            saved.st_nlink != 1 || (saved.st_mode & 0077) != 0 ||
-            saved.st_size != static_cast<off_t>(bytes.size())) {
+        if (existing.status != os::OwnedFile::Status::read ||
+            existing.bytes.size() != bytes.size() || !os::private_to_user(target, false)) {
             throw VoyemuError("MEDIA_DESCRIPTOR",
                               "existing private destination ownership/extent differs");
         }
 
-        std::string previous(bytes.size(), char(0));
-        std::size_t read = 0;
-
-        while (read < previous.size()) {
-            const auto count = ::read(existing, previous.data() + read, previous.size() - read);
-
-            if (count <= 0) {
-                throw VoyemuError("MEDIA_DESCRIPTOR", "existing private destination unreadable");
-            }
-
-            read += count;
-        }
-
-        if (previous != bytes) {
+        if (existing.bytes != bytes) {
             throw VoyemuError("MEDIA_DESCRIPTOR", "existing private destination identity differs");
         }
 
         return target;
     }
 
-    bool ok = true;
-    std::size_t written = 0;
-
-    while (written < bytes.size()) {
-        const auto count = ::write(output, bytes.data() + written, bytes.size() - written);
-
-        if (count <= 0) {
-            ok = false;
-            break;
-        }
-
-        written += count;
-    }
-
-    if (::fsync(output)) {
-        ok = false;
-    }
-
-    if (::close(output)) {
-        ok = false;
-    }
-
-    if (!ok) {
-        ::unlink(target.c_str());
+    if (!output.write(bytes.data(), bytes.size()) || !output.sync() || !output.close()) {
+        std::error_code error;
+        std::filesystem::remove(target, error);
         throw VoyemuError("MEDIA_DESCRIPTOR", "private copy failed");
     }
-#else
-    if (std::filesystem::exists(target) || std::filesystem::is_symlink(target)) {
-        if (!std::filesystem::is_regular_file(std::filesystem::symlink_status(target)) ||
-            std::filesystem::hard_link_count(target) != 1 ||
-            std::filesystem::file_size(target) != bytes.size()) {
-            throw VoyemuError("MEDIA_DESCRIPTOR", "existing private destination rejected");
-        }
-
-        std::ifstream existing(target, std::ios::binary);
-        std::string previous(bytes.size(), char(0));
-
-        if (!existing.read(previous.data(), previous.size()) || previous != bytes) {
-            throw VoyemuError("MEDIA_DESCRIPTOR", "existing private destination identity differs");
-        }
-
-        return target;
-    }
-
-    std::ofstream output(target, std::ios::binary);
-    output.write(bytes.data(), bytes.size());
-
-    if (!output) {
-        throw VoyemuError("MEDIA_DESCRIPTOR", "private copy failed");
-    }
-#endif
 
     return target;
 }

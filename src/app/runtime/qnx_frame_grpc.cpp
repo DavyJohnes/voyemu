@@ -3,6 +3,7 @@
 #include "error.hpp"
 #include "frame_transport.hpp"
 #include "os/net.hpp"
+#include "os/socket.hpp"
 #include "qnx_frame_grpc_wire.hpp"
 #include <algorithm>
 #include <array>
@@ -17,19 +18,6 @@
 #include <thread>
 #include <utility>
 #include <vector>
-#ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#include <winsock2.h>
-#include <windows.h>
-#else
-#include <cerrno>
-#include <fcntl.h>
-#include <netinet/in.h>
-#include <poll.h>
-#include <sys/socket.h>
-#include <unistd.h>
-#endif
 
 namespace voyemu::frames {
 namespace {
@@ -43,97 +31,29 @@ constexpr std::string_view get_method =
 constexpr std::string_view stream_method =
         "/android.emulation.control.EmulatorController/streamScreenshot";
 
-#ifdef _WIN32
-using Descriptor = SOCKET;
-using AddressSize = int;
-constexpr Descriptor invalid_descriptor = INVALID_SOCKET;
-struct Network {
-    Network() {
-        WSADATA data{};
+using Descriptor = os::SocketHandle;
+constexpr Descriptor invalid_descriptor = os::no_socket;
 
-        if (::WSAStartup(MAKEWORD(2, 2), &data)) {
+struct Network {
+    os::SocketLibrary library;
+
+    Network() {
+        if (library.error()) {
             throw VoyemuError("QNX_FRAME_GRPC", "Winsock unavailable");
         }
     }
-
-    ~Network() {
-        ::WSACleanup();
-    }
 };
 
-void close_socket(Descriptor socket) {
-    ::closesocket(socket);
-}
-
 bool retry_io() {
-    const auto error = ::WSAGetLastError();
-
-    return error == WSAEWOULDBLOCK || error == WSAEINTR;
+    return os::socket_would_block() || os::socket_interrupted();
 }
-
-bool set_socket_flags(Descriptor socket) {
-    u_long nonblocking = 1;
-
-    return ::ioctlsocket(socket, FIONBIO, &nonblocking) == 0 &&
-           ::SetHandleInformation(reinterpret_cast<HANDLE>(socket), HANDLE_FLAG_INHERIT, 0);
-}
-
-bool exclusive_listener(Descriptor socket) {
-    const int one = 1;
-
-    return ::setsockopt(socket, SOL_SOCKET, SO_EXCLUSIVEADDRUSE,
-                        reinterpret_cast<const char *>(&one), sizeof(one)) == 0;
-}
-
-int wait_socket(Descriptor socket, bool writing, std::chrono::milliseconds timeout) {
-    fd_set read{}, write{};
-
-    FD_SET(socket, &read);
-
-    if (writing) {
-        FD_SET(socket, &write);
-    }
-
-    timeval budget{0, static_cast<long>(timeout.count() * 1000)};
-
-    return ::select(0, &read, writing ? &write : nullptr, nullptr, &budget);
-}
-#else
-using Descriptor = int;
-using AddressSize = socklen_t;
-constexpr Descriptor invalid_descriptor = -1;
-struct Network {};
-
-void close_socket(Descriptor socket) {
-    ::close(socket);
-}
-
-bool retry_io() {
-    return errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR;
-}
-
-bool set_socket_flags(Descriptor socket) {
-    return ::fcntl(socket, F_SETFL, O_NONBLOCK) == 0 && ::fcntl(socket, F_SETFD, FD_CLOEXEC) == 0 &&
-           os::suppress_sigpipe(socket);
-}
-
-bool exclusive_listener(Descriptor) {
-    return true;
-}
-
-int wait_socket(Descriptor socket, bool writing, std::chrono::milliseconds timeout) {
-    pollfd ready{socket, static_cast<short>(POLLIN | (writing ? POLLOUT : 0)), 0};
-
-    return ::poll(&ready, 1, static_cast<int>(timeout.count()));
-}
-#endif
 
 struct Socket {
     explicit Socket(Descriptor value) : value(value) {}
 
     ~Socket() {
         if (value != invalid_descriptor) {
-            close_socket(value);
+            os::close_socket(value);
         }
     }
 
@@ -254,8 +174,9 @@ public:
                 return;
             }
 
-            const auto ready = wait_socket(socket_, write_blocked_,
-                                           streaming ? frame_interval : io_interval);
+            const auto ready = os::poll_socket(
+                    socket_, write_blocked_,
+                    static_cast<int>((streaming ? frame_interval : io_interval).count()));
 
             if (ready < 0 && !retry_io()) {
                 return;
@@ -265,8 +186,8 @@ public:
                 continue;
             }
 
-            const auto count = ::recv(socket_, reinterpret_cast<char *>(input.data()),
-                                      static_cast<int>(input.size()), 0);
+            const auto count = os::receive_socket(socket_, reinterpret_cast<char *>(input.data()),
+                                                  input.size());
 
             if (count < 0 && retry_io()) {
                 continue;
@@ -284,8 +205,8 @@ private:
     static ssize_t send(nghttp2_session *, const std::uint8_t *data, std::size_t size, int,
                         void *context) noexcept {
         auto &connection = *static_cast<Connection *>(context);
-        const auto count = ::send(connection.socket_, reinterpret_cast<const char *>(data),
-                                  static_cast<int>(size), 0);
+        const auto count = os::send_socket(connection.socket_, reinterpret_cast<const char *>(data),
+                                           size);
 
         if (count > 0) {
             return count;
@@ -597,7 +518,7 @@ private:
 struct GrpcServer::Impl {
     Impl(const std::filesystem::path &frame, std::string token)
         : frame(frame), authorization("Bearer " + token),
-          listener(::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) {
+          listener(os::open_stream_socket(AF_INET)) {
         if (!hex_text(token, 32)) {
             throw VoyemuError("QNX_FRAME_GRPC", "invalid session credential");
         }
@@ -605,13 +526,15 @@ struct GrpcServer::Impl {
         sockaddr_in address{};
         address.sin_family = AF_INET;
         address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-        AddressSize address_size = sizeof(address);
+        os::SocketLength address_size = sizeof(address);
 
-        if (listener.value == invalid_descriptor || !set_socket_flags(listener.value) ||
-            !exclusive_listener(listener.value) ||
-            ::bind(listener.value, reinterpret_cast<const sockaddr *>(&address), address_size) ||
-            ::getsockname(listener.value, reinterpret_cast<sockaddr *>(&address), &address_size) ||
-            ::listen(listener.value, max_clients)) {
+        if (listener.value == invalid_descriptor || !os::make_private_socket(listener.value) ||
+            !os::exclusive_address(listener.value) ||
+            !os::bind_socket(listener.value, reinterpret_cast<const sockaddr *>(&address),
+                             address_size) ||
+            !os::socket_name(listener.value, reinterpret_cast<sockaddr *>(&address),
+                             &address_size) ||
+            !os::listen_socket(listener.value, max_clients)) {
             throw VoyemuError("QNX_FRAME_GRPC", "loopback listener unavailable");
         }
 
@@ -632,7 +555,8 @@ struct GrpcServer::Impl {
                 std::erase_if(clients, [](const auto &client) {
                     return client->done.load();
                 });
-                const auto ready = wait_socket(listener.value, false, io_interval);
+                const auto ready = os::poll_socket(listener.value, false,
+                                                   static_cast<int>(io_interval.count()));
 
                 if (ready < 0 && !retry_io()) {
                     break;
@@ -642,10 +566,10 @@ struct GrpcServer::Impl {
                     continue;
                 }
 
-                Socket peer(::accept(listener.value, nullptr, nullptr));
+                Socket peer(os::accept_socket(listener.value));
 
                 if (peer.value == invalid_descriptor || clients.size() >= max_clients ||
-                    !set_socket_flags(peer.value)) {
+                    !os::make_private_socket(peer.value)) {
                     continue;
                 }
 

@@ -6,12 +6,6 @@
 namespace voyemu {
 using namespace session_detail;
 namespace session_detail {
-#ifdef __APPLE__
-const std::array<const char *, 2> angle_libraries{"libEGL.dylib", "libGLESv2.dylib"};
-#else
-const std::array<const char *, 2> angle_libraries{"libEGL.so", "libGLESv2.so"};
-#endif
-
 std::filesystem::path session_sdk_registration_directory(const std::filesystem::path &directory,
                                                          bool) {
     const auto home = directory / "emulator-home";
@@ -892,4 +886,9 @@ int Session::android_provider_budget() const {
 void Session::retire_android_transaction_for_flush(bool) {}
 
 void Session::reset_android_identity_for_new_boot() {}
+
+ChildProcess launch_session_child(const ProcessSpec &spec, const std::filesystem::path &directory,
+                                  const std::string &session_id, std::uint64_t nonce) {
+    return launch_session_process(spec, directory, session_id, nonce);
+}
 } // namespace voyemu

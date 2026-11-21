@@ -684,18 +684,13 @@ void Session::attach_cluster(const Json &input, std::optional<unsigned> seconds,
             write_private_json(directory_ / "session-owner.json", owner);
         }
 
-#ifdef _WIN32
-        qnx_ = ChildProcess::launch(qemu);
-#else
-        qnx_ = launch_session_process(qemu, directory_, session_id_);
-#endif
+        qnx_ = launch_session_child(qemu, directory_, session_id_);
     } catch (...) {
         bool pending_launch = false;
-#ifndef _WIN32
+        // Only POSIX hosts record process identities with a write-ahead launch intent.
         const auto hosts = directory_ / "host-processes.json";
         pending_launch = std::filesystem::exists(hosts) &&
                          read_private_json(hosts, 65536).contains("pending_launch");
-#endif
 
         if (clone_identity.is_object() && !pending_launch) {
             try {
@@ -1187,11 +1182,7 @@ void Session::poll_qnx() {
         }
 
         configure_graphics_environment(spec, graphics);
-#ifdef _WIN32
-        graphics_.push_back(ChildProcess::launch(spec));
-#else
-        graphics_.push_back(launch_session_process(spec, directory_, session_id_, worker_nonce));
-#endif
+        graphics_.push_back(launch_session_child(spec, directory_, session_id_, worker_nonce));
         producers_.push_back(producer);
         graphics_owners_.push_back({worker_nonce, guest_pid, incarnation});
         publish_graphics_owners();
@@ -1225,11 +1216,7 @@ void Session::poll_qnx() {
             spec.arguments.push_back(ui_profile_title_);
         }
 
-#ifdef _WIN32
-        ui_ = ChildProcess::launch(spec);
-#else
-        ui_ = launch_session_process(spec, directory_, session_id_);
-#endif
+        ui_ = launch_session_child(spec, directory_, session_id_);
     }
 
     if (ui_.pid() && !ui_.alive()) {

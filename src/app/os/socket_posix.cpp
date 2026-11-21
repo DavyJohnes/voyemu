@@ -1,3 +1,4 @@
+#include "os/net.hpp"
 #include "os/socket.hpp"
 #include <cerrno>
 #include <fcntl.h>
@@ -53,6 +54,23 @@ SocketHandle open_private_tcp_socket() {
 
 void close_socket(SocketHandle socket) {
     ::close(static_cast<int>(socket));
+}
+
+bool make_private_socket(SocketHandle socket) {
+    const int fd = static_cast<int>(socket);
+
+    return ::fcntl(fd, F_SETFL, O_NONBLOCK) == 0 && ::fcntl(fd, F_SETFD, FD_CLOEXEC) == 0 &&
+           suppress_sigpipe(fd);
+}
+
+SocketHandle accept_socket(SocketHandle socket) {
+    return ::accept(static_cast<int>(socket), nullptr, nullptr);
+}
+
+int poll_socket(SocketHandle socket, bool writing, int timeout_ms) {
+    pollfd ready{static_cast<int>(socket), static_cast<short>(POLLIN | (writing ? POLLOUT : 0)), 0};
+
+    return ::poll(&ready, 1, timeout_ms);
 }
 
 bool bind_socket(SocketHandle socket, const sockaddr *address, SocketLength size) {

@@ -139,11 +139,7 @@ void Session::attach_frontend(const Json &input, bool cluster_panel, bool backgr
                  machine_start_ && !machine_program_.empty() &&
                          process.executable == machine_program_);
     record_android_processes(true);
-#ifdef _WIN32
-    frontend_ = ChildProcess::launch(process);
-#else
-    frontend_ = launch_session_process(process, directory_, session_id_);
-#endif
+    frontend_ = launch_session_child(process, directory_, session_id_);
     record_android_processes(false);
     deliveries_["frontend"] = {{"status", "started"},
                                {"pid", frontend_.pid()},

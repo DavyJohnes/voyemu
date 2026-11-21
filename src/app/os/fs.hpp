@@ -198,6 +198,22 @@ bool foreign_owner(const std::filesystem::path &path);
 // The bytes of an ordinary file with one link at path, without following a final link, owned by the
 // effective user on POSIX, read with one call of at most limit bytes; none when any of that fails.
 std::optional<std::string> read_private_file(const std::filesystem::path &path, std::size_t limit);
+// An ordinary single-link file of the current user, not a link, of 1 to limit bytes, read whole.
+struct OwnedFile {
+    enum class Status {
+        read,
+        // The file cannot be opened.
+        absent,
+        // The file is foreign, linked, of another type or of another size.
+        foreign,
+        // The owner cannot be read (Windows).
+        unverifiable,
+        // The file ended before its size.
+        truncated
+    } status = Status::absent;
+    std::string bytes;
+};
+OwnedFile read_owned_file(const std::filesystem::path &path, std::size_t limit);
 // The home directory of the user: USERPROFILE on Windows, HOME elsewhere; empty when unset.
 std::filesystem::path home_directory();
 // Whether the standard error stream of this process is an interactive terminal.

@@ -1,9 +1,12 @@
 #include "qnx_ready_collector.hpp"
 #include <cassert>
+#include <fcntl.h>
 #include <fstream>
 #include <iostream>
 #include <memory>
 #include <string>
+#include <sys/stat.h>
+#include <unistd.h>
 
 namespace {
 using voyemu::QnxReadyCollector;

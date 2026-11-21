@@ -1,25 +1,23 @@
 #pragma once
 #include "adas_ecu.hpp"
 #include "android_adb.hpp"
+#include "android_embedded_adb.hpp"
 #include "android_identity_probe.hpp"
 #include "android_port_lease.hpp"
 #include "body_ecu.hpp"
+#include "interguest_link.hpp"
 #include "media_discovery.hpp"
 #include "model.hpp"
 #include "power_ecu.hpp"
 #include "process.hpp"
 #include "qinggan09_canbus_startup.hpp"
-#include "qnx_serial_lines.hpp"
-#include "qnx_serial_ready.hpp"
-#include "source_registry.hpp"
-#include "windows_startup.hpp"
-#ifdef _WIN32
-#include "android_embedded_adb.hpp"
-#endif
-#include "interguest_link.hpp"
 #include "qnx_checkpoint.hpp"
 #include "qnx_ready_collector.hpp"
+#include "qnx_serial_lines.hpp"
+#include "qnx_serial_ready.hpp"
 #include "quickboot.hpp"
+#include "source_registry.hpp"
+#include "windows_startup.hpp"
 #include <atomic>
 #include <chrono>
 #include <deque>
@@ -48,18 +46,19 @@ int request_timeout_limit_ms(std::string_view op);
 Json request(const std::filesystem::path &endpoint, const Json &operation, int timeout_ms = 2000);
 std::string expand_session_path(std::string value, const std::filesystem::path &directory,
                                 const std::string &token);
-#ifndef _WIN32
 std::filesystem::path native_socket_root();
-#endif
 // Start identity of a launched SDK for the supervisor receipt; empty where the launch handle alone
 // identifies the SDK.
 Json android_launch_identity(std::int64_t pid);
-#ifndef _WIN32
 // Kernel start, executable and command identity of a launched session process.
 Json session_process_identity(std::int64_t pid);
 void record_session_process(const std::filesystem::path &directory, const std::string &session_id,
                             std::int64_t pid, std::uint64_t nonce = 0,
                             const std::string &launch_intent = {});
+// Launches a child of the session: POSIX records its identity under the write-ahead launch intent
+// of launch_session_process, Windows owns it through the job object of ChildProcess.
+ChildProcess launch_session_child(const ProcessSpec &spec, const std::filesystem::path &directory,
+                                  const std::string &session_id, std::uint64_t nonce = 0);
 // Write-ahead launch intent fences an interrupted spawn until its exact identity is registered.
 ChildProcess launch_session_process(const ProcessSpec &spec, const std::filesystem::path &directory,
                                     const std::string &session_id, std::uint64_t nonce = 0);
@@ -82,7 +81,6 @@ void record_session_endpoint(const std::filesystem::path &directory, const std::
 // Signals only exact recorded process identities, verifies RAM is unused and retires its socket.
 Json stop_orphaned_session(const std::filesystem::path &directory, const std::string &session_id,
                            const std::string &endpoint);
-#endif
 class ControlServer {
 public:
     using Handler = std::function<Json(const Json &)>;
@@ -303,10 +301,8 @@ public:
 private:
     friend struct SessionPersistenceFixture;
     friend struct PrivateLanguageAcceptanceFixture;
-#ifdef _WIN32
     friend struct SessionRequestIoFixture;
     friend struct SessionInterguestSnapshotFixture;
-#endif
     struct MachineStart {};
     Session(std::filesystem::path directory, std::string session_id, MachineStart);
     bool machine_start_ = false;
@@ -442,7 +438,6 @@ private:
     std::shared_ptr<AndroidEmbeddedAdb> android_adb_;
     std::unique_ptr<AndroidSdkAdbSink> android_adb_sink_;
     unsigned android_adb_console_port_ = 0;
-#ifdef _WIN32
     class RetainedAndroidAction {
     public:
         using Clock = std::chrono::steady_clock;
@@ -511,7 +506,6 @@ private:
                                                     std::int64_t expected_pid,
                                                     std::uint64_t expected_generation);
     void assert_windows_android_identity(std::chrono::steady_clock::time_point deadline = {});
-#endif
     // The request deadline and identity proof epochs of Android I/O; only the framed Windows
     // transaction reads them, the SDK ADB endpoints of macOS and Linux bound each call alone.
     // NOLINTNEXTLINE(bugprone-throwing-static-initialization): time_point{} is constexpr.
@@ -590,13 +584,9 @@ private:
     void configure_graphics_environment(ProcessSpec &spec, const Json &graphics);
     void stop_qnx_ready_collector();
     void remove_qmp_socket(Json &evidence);
-#ifndef _WIN32
     std::unique_ptr<QnxReadyCollector> qnx_ready_collector_;
-#endif
     std::unique_ptr<QnxShutdownMonitor> qnx_shutdown_monitor_;
-#ifdef _WIN32
     unsigned qnx_events_port_ = 0;
-#endif
     bool media_connection_written_ = false, frontend_releases_verified_ = true;
     SdkDescriptorCache sdk_descriptor_;
     std::vector<ChildProcess> graphics_;
@@ -660,12 +650,9 @@ private:
     bool discard_cluster_ = false;
     // Lifecycle stays serialized while tick lends the state lock during bounded external I/O.
     std::recursive_mutex lifecycle_mutex_;
-#ifdef _WIN32
+    // Request threads of the Windows pipe server each hold their own state lock.
     inline static thread_local std::unique_lock<std::recursive_mutex> *android_io_state_lock_ =
             nullptr;
-#else
-    std::unique_lock<std::recursive_mutex> *android_io_state_lock_ = nullptr;
-#endif
     mutable std::recursive_mutex mutex_;
 };
 } // namespace voyemu

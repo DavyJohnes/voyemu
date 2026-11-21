@@ -1,19 +1,17 @@
 #pragma once
 #include "error.hpp"
-#ifndef _WIN32
+#include "os/fs.hpp"
 #include <algorithm>
 #include <array>
 #include <chrono>
 #include <condition_variable>
 #include <cstdint>
-#include <fcntl.h>
 #include <filesystem>
+#include <memory>
 #include <mutex>
 #include <regex>
 #include <stdexcept>
-#include <sys/stat.h>
 #include <thread>
-#include <unistd.h>
 #include <vector>
 
 namespace voyemu {
@@ -34,35 +32,35 @@ public:
             throw VoyemuError("QNX_READY", "invalid bounded ring");
         }
 
-        fd_ = ::open(path_.c_str(), O_RDONLY | O_CLOEXEC | O_NOFOLLOW);
+        file_ = std::make_unique<os::PositionalFile>(path_, false);
 
-        if (fd_ < 0) {
+        if (!file_->open()) {
             throw VoyemuError("QNX_READY", "owned RAM reader open failed");
         }
 
-        if (::fstat(fd_, &identity_) || !ordinary(identity_) || !same_path()) {
-            ::close(fd_);
-            fd_ = -1;
+        const auto opened = file_->object();
+        const auto named = os::owned_file_object(path_, false);
+
+        if (!opened || !named.object || named.object->volume != opened->volume ||
+            named.object->index != opened->index) {
+            file_.reset();
             throw VoyemuError("QNX_READY", "ordinary owned RAM required");
         }
+
+        identity_ = *opened;
 
         try {
             thread_ = std::thread([this] {
                 run();
             });
         } catch (...) {
-            ::close(fd_);
-            fd_ = -1;
+            file_.reset();
             throw;
         }
     }
 
     ~QnxReadyCollector() {
         stop();
-
-        if (fd_ >= 0) {
-            ::close(fd_);
-        }
     }
 
     QnxReadyCollector(const QnxReadyCollector &) = delete;
@@ -106,20 +104,16 @@ public:
 private:
     static constexpr std::uint64_t base = 0x40000000;
 
-    static bool ordinary(const struct stat &value) {
-        return S_ISREG(value.st_mode) && value.st_uid == ::geteuid() && value.st_nlink == 1;
-    }
-
+    // The path still names the opened RAM, an ordinary single-link file of the current user.
     bool same_path() {
-        struct stat value{};
+        const auto named = os::owned_file_object(path_, false);
 
-        return !::lstat(path_.c_str(), &value) && ordinary(value) &&
-               value.st_dev == identity_.st_dev && value.st_ino == identity_.st_ino;
+        return named.object && named.object->volume == identity_.volume &&
+               named.object->index == identity_.index;
     }
 
     bool read(std::uint64_t address, void *output, std::size_t bytes) {
-        return ::pread(fd_, output, bytes, static_cast<off_t>(address - base)) ==
-               static_cast<ssize_t>(bytes);
+        return file_->read(address - base, static_cast<char *>(output), bytes);
     }
 
     void accept(std::uint64_t address, std::uint64_t pid = 0, std::uint64_t incarnation = 0) {
@@ -261,8 +255,8 @@ private:
     std::filesystem::path path_;
     std::uint64_t address_, mailbox_end_;
     std::size_t extent_;
-    int fd_ = -1;
-    struct stat identity_{};
+    std::unique_ptr<os::PositionalFile> file_;
+    os::FileObject identity_;
     std::mutex mutex_;
     std::condition_variable wake_;
     bool stopping_ = false;
@@ -271,4 +265,3 @@ private:
     std::thread thread_;
 };
 } // namespace voyemu
-#endif

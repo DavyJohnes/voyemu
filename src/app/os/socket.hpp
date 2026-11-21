@@ -62,6 +62,14 @@ SocketHandle open_stream_socket(int family);
 // reports a closed peer as an error, not a signal; no_socket on failure.
 SocketHandle open_private_tcp_socket();
 void close_socket(SocketHandle socket);
+// Makes a socket non-blocking and private to this process: no child inherits it and a closed
+// peer reports an error instead of a signal.
+bool make_private_socket(SocketHandle socket);
+// The next pending connection of a listening socket; no_socket when none is pending or on failure.
+SocketHandle accept_socket(SocketHandle socket);
+// Waits up to timeout_ms for socket to become readable, or writable when writing is set: positive
+// when ready, 0 on timeout, negative on failure.
+int poll_socket(SocketHandle socket, bool writing, int timeout_ms);
 // Closes socket when the scope ends.
 struct SocketCloser {
     SocketHandle socket = no_socket;

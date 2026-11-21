@@ -1,6 +1,8 @@
 #include "media_rpc.hpp"
 #include "logging.hpp"
 #include "model.hpp"
+#include "os/fs.hpp"
+#include "os/private_region.hpp"
 #include "private_state_security.hpp"
 #include "process.hpp"
 #include <charconv>
@@ -13,17 +15,6 @@
 #include <sstream>
 #include <stdexcept>
 #include <thread>
-#ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#include <windows.h>
-#include <aclapi.h>
-#else
-#include <fcntl.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#endif
 
 namespace voyemu::media {
 namespace {
@@ -204,116 +195,22 @@ void perform(const Connection &connection, std::string_view method,
 }
 
 std::string owned_ini(const std::filesystem::path &path) {
-#ifdef _WIN32
-    struct Handle {
-        HANDLE value = INVALID_HANDLE_VALUE;
+    const auto file = os::read_owned_file(path, 32768);
 
-        ~Handle() {
-            if (value != INVALID_HANDLE_VALUE) {
-                CloseHandle(value);
-            }
-        }
-    } descriptor;
-    descriptor.value = CreateFileW(path.c_str(), GENERIC_READ | READ_CONTROL, FILE_SHARE_READ,
-                                   nullptr, OPEN_EXISTING,
-                                   FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OPEN_REPARSE_POINT, nullptr);
-
-    if (descriptor.value == INVALID_HANDLE_VALUE) {
+    switch (file.status) {
+    case os::OwnedFile::Status::read:
+        return file.bytes;
+    case os::OwnedFile::Status::absent:
         throw VoyemuError("MEDIA_DISCOVERY", "SDK descriptor unavailable");
-    }
-
-    BY_HANDLE_FILE_INFORMATION info{};
-
-    if (GetFileType(descriptor.value) != FILE_TYPE_DISK ||
-        !GetFileInformationByHandle(descriptor.value, &info) ||
-        (info.dwFileAttributes & (FILE_ATTRIBUTE_REPARSE_POINT | FILE_ATTRIBUTE_DIRECTORY)) ||
-        info.nNumberOfLinks != 1 || info.nFileSizeHigh || !info.nFileSizeLow ||
-        info.nFileSizeLow > 32768) {
-        throw VoyemuError("MEDIA_DISCOVERY", "invalid SDK descriptor ownership");
-    }
-
-    Handle token;
-
-    if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token.value)) {
+    case os::OwnedFile::Status::unverifiable:
         throw VoyemuError("MEDIA_DISCOVERY", "SDK descriptor ownership unavailable");
+    case os::OwnedFile::Status::truncated:
+        throw VoyemuError("MEDIA_DISCOVERY", "truncated SDK descriptor");
+    case os::OwnedFile::Status::foreign:
+        break;
     }
 
-    DWORD token_size = 0;
-    GetTokenInformation(token.value, TokenUser, nullptr, 0, &token_size);
-    std::vector<std::byte> user(token_size);
-
-    if (!token_size ||
-        !GetTokenInformation(token.value, TokenUser, user.data(), token_size, &token_size)) {
-        throw VoyemuError("MEDIA_DISCOVERY", "SDK descriptor ownership unavailable");
-    }
-
-    PSID owner = nullptr;
-    PSECURITY_DESCRIPTOR security = nullptr;
-    const auto status = GetSecurityInfo(descriptor.value, SE_FILE_OBJECT,
-                                        OWNER_SECURITY_INFORMATION, &owner, nullptr, nullptr,
-                                        nullptr, &security);
-    const bool owned = status == ERROR_SUCCESS && owner &&
-                       EqualSid(owner, reinterpret_cast<TOKEN_USER *>(user.data())->User.Sid);
-
-    if (security) {
-        LocalFree(security);
-    }
-
-    if (!owned) {
-        throw VoyemuError("MEDIA_DISCOVERY", "invalid SDK descriptor ownership");
-    }
-
-    std::string value(info.nFileSizeLow, '\0');
-    std::size_t offset = 0;
-
-    while (offset < value.size()) {
-        DWORD count = 0;
-
-        if (!ReadFile(descriptor.value, value.data() + offset,
-                      static_cast<DWORD>(value.size() - offset), &count, nullptr) ||
-            !count) {
-            throw VoyemuError("MEDIA_DISCOVERY", "truncated SDK descriptor");
-        }
-
-        offset += count;
-    }
-
-    return value;
-#else
-    const int descriptor = ::open(path.c_str(), O_RDONLY | O_NOFOLLOW | O_CLOEXEC);
-
-    if (descriptor < 0) {
-        throw VoyemuError("MEDIA_DISCOVERY", "SDK descriptor unavailable");
-    }
-
-    struct Close {
-        int fd;
-
-        ~Close() {
-            ::close(fd);
-        }
-    } close{descriptor};
-    struct stat info{};
-
-    if (::fstat(descriptor, &info) != 0 || !S_ISREG(info.st_mode) || info.st_uid != ::geteuid() ||
-        info.st_nlink != 1 || info.st_size <= 0 || info.st_size > 32768) {
-        throw VoyemuError("MEDIA_DISCOVERY", "invalid SDK descriptor ownership");
-    }
-
-    std::string value(info.st_size, '\0');
-    std::size_t offset = 0;
-
-    while (offset < value.size()) {
-        auto count = ::read(descriptor, value.data() + offset, value.size() - offset);
-
-        if (count <= 0) {
-            throw VoyemuError("MEDIA_DISCOVERY", "truncated SDK descriptor");
-        }
-
-        offset += count;
-    }
-    return value;
-#endif
+    throw VoyemuError("MEDIA_DISCOVERY", "invalid SDK descriptor ownership");
 }
 } // namespace
 
@@ -362,58 +259,10 @@ Connection read_connection(const std::filesystem::path &path, std::string_view s
     return {port, values["grpc.token"], path.parent_path() / "media-frames"};
 }
 
-#ifdef _WIN32
-namespace {
-// Windows mirror of the POSIX region guard: the shared SDK frame file must be an
-// ordinary single-link, non-reparse file of exactly frame extent, owned by the user.
-bool owned_private_region(HANDLE file, std::size_t bytes) {
-    BY_HANDLE_FILE_INFORMATION info{};
-    LARGE_INTEGER size{};
-
-    if (GetFileType(file) != FILE_TYPE_DISK || !GetFileInformationByHandle(file, &info) ||
-        (info.dwFileAttributes & (FILE_ATTRIBUTE_REPARSE_POINT | FILE_ATTRIBUTE_DIRECTORY)) ||
-        info.nNumberOfLinks != 1 || !GetFileSizeEx(file, &size) ||
-        size.QuadPart != static_cast<LONGLONG>(bytes)) {
-        return false;
-    }
-
-    HANDLE token = nullptr;
-
-    if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token)) {
-        return false;
-    }
-
-    DWORD token_size = 0;
-    GetTokenInformation(token, TokenUser, nullptr, 0, &token_size);
-    std::vector<std::byte> user(token_size);
-    const bool loaded = token_size &&
-                        GetTokenInformation(token, TokenUser, user.data(), token_size, &token_size);
-    CloseHandle(token);
-
-    if (!loaded) {
-        return false;
-    }
-
-    PSID owner = nullptr;
-    PSECURITY_DESCRIPTOR security = nullptr;
-    const auto status = GetSecurityInfo(file, SE_FILE_OBJECT, OWNER_SECURITY_INFORMATION, &owner,
-                                        nullptr, nullptr, nullptr, &security);
-    const bool owned = status == ERROR_SUCCESS && owner &&
-                       EqualSid(owner, reinterpret_cast<TOKEN_USER *>(user.data())->User.Sid);
-
-    if (security) {
-        LocalFree(security);
-    }
-
-    return owned;
-}
-} // namespace
 struct MappedFrame::Impl {
     std::filesystem::path path;
     std::size_t bytes{};
-    HANDLE file = INVALID_HANDLE_VALUE, mapping = nullptr;
-    void *data = nullptr;
-    DWORD volume{}, file_index_high{}, file_index_low{};
+    os::PrivateRegion region;
 
     Impl(const std::filesystem::path &directory, std::size_t extent) : bytes(extent) {
         if (!directory.is_absolute()) {
@@ -426,108 +275,26 @@ struct MappedFrame::Impl {
 
         ensure_private_directory(directory);
         path = directory / ("frame-" + random_token() + ".rgba");
-        detail::PrivateStateSecurity security;
-        file = CreateFileW(path.c_str(), GENERIC_READ | GENERIC_WRITE | READ_CONTROL,
-                           FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-                           &security.attributes, CREATE_NEW,
-                           FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OPEN_REPARSE_POINT, nullptr);
+        using Creation = os::PrivateRegion::Creation;
 
-        if (file == INVALID_HANDLE_VALUE) {
+        switch (region.create(path, bytes)) {
+        case Creation::created:
+            return;
+        case Creation::create_failed:
             throw VoyemuError("MEDIA_MEMORY", "private region creation failed");
+        case Creation::extent_failed:
+            throw VoyemuError("MEDIA_MEMORY", "region extent failed");
+        case Creation::ownership_failed:
+            throw VoyemuError("MEDIA_MEMORY", "region ownership failed");
+        case Creation::mapping_failed:
+            break;
         }
 
-        try {
-            LARGE_INTEGER extent{};
-            extent.QuadPart = static_cast<LONGLONG>(bytes);
-
-            if (!SetFilePointerEx(file, extent, nullptr, FILE_BEGIN) || !SetEndOfFile(file)) {
-                throw VoyemuError("MEDIA_MEMORY", "region extent failed");
-            }
-
-            if (!owned_private_region(file, bytes)) {
-                throw VoyemuError("MEDIA_MEMORY", "region ownership failed");
-            }
-
-            BY_HANDLE_FILE_INFORMATION info{};
-
-            if (!GetFileInformationByHandle(file, &info)) {
-                throw VoyemuError("MEDIA_MEMORY", "region ownership failed");
-            }
-
-            volume = info.dwVolumeSerialNumber;
-            file_index_high = info.nFileIndexHigh;
-            file_index_low = info.nFileIndexLow;
-            mapping = CreateFileMappingW(file, nullptr, PAGE_READWRITE, 0, 0, nullptr);
-            data = mapping ? MapViewOfFile(mapping, FILE_MAP_READ | FILE_MAP_WRITE, 0, 0, bytes)
-                           : nullptr;
-
-            if (!data) {
-                throw VoyemuError("MEDIA_MEMORY", "mapping failed");
-            }
-        } catch (...) {
-            if (data) {
-                UnmapViewOfFile(data);
-            }
-
-            data = nullptr;
-
-            if (mapping) {
-                CloseHandle(mapping);
-            }
-
-            mapping = nullptr;
-
-            if (file != INVALID_HANDLE_VALUE) {
-                CloseHandle(file);
-            }
-
-            file = INVALID_HANDLE_VALUE;
-            DeleteFileW(path.c_str());
-            throw;
-        }
-    }
-
-    ~Impl() {
-        if (data) {
-            UnmapViewOfFile(data);
-        }
-
-        if (mapping) {
-            CloseHandle(mapping);
-        }
-
-        if (file != INVALID_HANDLE_VALUE) {
-            CloseHandle(file);
-        }
-
-        if (current_identity()) {
-            DeleteFileW(path.c_str());
-        }
-    }
-
-    bool current_identity() const {
-        HANDLE current = CreateFileW(path.c_str(), FILE_READ_ATTRIBUTES | READ_CONTROL,
-                                     FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-                                     nullptr, OPEN_EXISTING,
-                                     FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OPEN_REPARSE_POINT, nullptr);
-        struct Cleanup {
-            HANDLE value;
-
-            ~Cleanup() {
-                if (value != INVALID_HANDLE_VALUE) {
-                    CloseHandle(value);
-                }
-            }
-        } cleanup{current};
-        BY_HANDLE_FILE_INFORMATION info{};
-
-        return current != INVALID_HANDLE_VALUE && GetFileInformationByHandle(current, &info) &&
-               info.dwVolumeSerialNumber == volume && info.nFileIndexHigh == file_index_high &&
-               info.nFileIndexLow == file_index_low && owned_private_region(current, bytes);
+        throw VoyemuError("MEDIA_MEMORY", "mapping failed");
     }
 
     void validate() const {
-        if (!current_identity()) {
+        if (!region.current()) {
             throw VoyemuError("MEDIA_MEMORY", "mapped region identity changed");
         }
     }
@@ -540,114 +307,17 @@ MappedFrame::~MappedFrame() = default;
 
 std::string MappedFrame::handle() const {
     impl_->validate();
+    const auto name = impl_->path.generic_string();
 
-    return "file:///" + impl_->path.generic_string();
+    // A Windows drive path gains the slash that a POSIX absolute path already has.
+    return "file://" + (name.starts_with('/') ? name : "/" + name);
 }
 
 std::span<const std::uint8_t> MappedFrame::pixels() const {
     impl_->validate();
 
-    return {static_cast<const std::uint8_t *>(impl_->data), impl_->bytes};
+    return {static_cast<const std::uint8_t *>(impl_->region.data()), impl_->bytes};
 }
-#else
-struct MappedFrame::Impl {
-    std::filesystem::path path;
-    std::size_t bytes{};
-    int fd = -1;
-    void *data = MAP_FAILED;
-    dev_t device{};
-    ino_t inode{};
-
-    Impl(const std::filesystem::path &directory, std::size_t extent) : bytes(extent) {
-        if (!directory.is_absolute()) {
-            throw VoyemuError("MEDIA_MEMORY", "absolute owned directory required");
-        }
-
-        if (bytes == 0 || bytes > maximum_pixel_bytes) {
-            throw VoyemuError("MEDIA_MEMORY", "bounded screen frame required");
-        }
-
-        ensure_private_directory(directory);
-        path = directory / ("frame-" + random_token() + ".rgba");
-        fd = ::open(path.c_str(), O_CREAT | O_EXCL | O_RDWR | O_CLOEXEC | O_NOFOLLOW, 0600);
-
-        if (fd < 0) {
-            throw VoyemuError("MEDIA_MEMORY", "private region creation failed");
-        }
-
-        try {
-            if (::ftruncate(fd, static_cast<off_t>(bytes))) {
-                throw VoyemuError("MEDIA_MEMORY", "region extent failed");
-            }
-
-            struct stat st{};
-
-            if (::fstat(fd, &st) || st.st_uid != ::geteuid() || st.st_nlink != 1 ||
-                !S_ISREG(st.st_mode)) {
-                throw VoyemuError("MEDIA_MEMORY", "region ownership failed");
-            }
-
-            device = st.st_dev;
-            inode = st.st_ino;
-            data = ::mmap(nullptr, bytes, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-
-            if (data == MAP_FAILED) {
-                throw VoyemuError("MEDIA_MEMORY", "mapping failed");
-            }
-        } catch (...) {
-            ::close(fd);
-            fd = -1;
-            ::unlink(path.c_str());
-            throw;
-        }
-    }
-
-    ~Impl() {
-        if (data != MAP_FAILED) {
-            ::munmap(data, bytes);
-        }
-
-        if (fd >= 0) {
-            ::close(fd);
-        }
-
-        struct stat st{};
-
-        if (::lstat(path.c_str(), &st) == 0 && S_ISREG(st.st_mode) && st.st_uid == ::geteuid() &&
-            st.st_dev == device && st.st_ino == inode && st.st_nlink == 1) {
-            ::unlink(path.c_str());
-        }
-    }
-
-    void validate() const {
-        struct stat st{}, named{};
-
-        if (::fstat(fd, &st) || st.st_size != static_cast<off_t>(bytes) ||
-            st.st_uid != ::geteuid() || st.st_nlink != 1 || (st.st_mode & 0077) ||
-            ::lstat(path.c_str(), &named) || !S_ISREG(named.st_mode) || named.st_dev != device ||
-            named.st_ino != inode) {
-            throw VoyemuError("MEDIA_MEMORY", "mapped region identity changed");
-        }
-    }
-};
-
-MappedFrame::MappedFrame(const std::filesystem::path &directory, std::size_t bytes)
-    : impl_(std::make_unique<Impl>(directory, bytes)) {}
-
-MappedFrame::~MappedFrame() = default;
-
-std::string MappedFrame::handle() const {
-    impl_->validate();
-
-    return "file://" + impl_->path.string();
-}
-
-std::span<const std::uint8_t> MappedFrame::pixels() const {
-    impl_->validate();
-
-    return {static_cast<const std::uint8_t *>(impl_->data), impl_->bytes};
-}
-#endif
 
 ScreenshotStream::ScreenshotStream(Connection connection, GuestDisplay display, bool mapped)
     : connection_(std::move(connection)), display_(display),

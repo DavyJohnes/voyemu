@@ -7,8 +7,6 @@
 namespace voyemu {
 using namespace session_detail;
 namespace session_detail {
-const std::array<const char *, 2> angle_libraries{"libEGL.dll", "libGLESv2.dll"};
-
 // Voyemu creates every file it later claims with the token user as an explicit owner through
 // detail::PrivateStateSecurity, so the token default owner, Administrators under an elevated
 // token, never qualifies.
@@ -1064,4 +1062,13 @@ void Session::reset_android_identity_for_new_boot() {
 bool Session::android_host_canvas_ready(const std::function<void()> &) {
     return true;
 }
+
+ChildProcess launch_session_child(const ProcessSpec &spec, const std::filesystem::path &,
+                                  const std::string &, std::uint64_t) {
+    return ChildProcess::launch(spec);
+}
+
+// Windows keeps no launch identity record: the job object of ChildProcess owns the Android child.
+void advance_android_launch_generation(const std::filesystem::path &, const std::string &,
+                                       std::int64_t, std::uint64_t) {}
 } // namespace voyemu

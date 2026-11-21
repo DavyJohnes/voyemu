@@ -1,9 +1,14 @@
 #include "error.hpp"
+#include "os/platform.hpp"
 #include "session_internal.hpp"
 
 namespace voyemu {
 using namespace session_detail;
 namespace session_detail {
+const std::array<std::string, 2> angle_libraries{"libEGL" + std::string(os::shared_library_suffix),
+                                                 "libGLESv2" +
+                                                         std::string(os::shared_library_suffix)};
+
 int cluster_ui_timeout(const Json &operation) {
     if (!operation.contains("timeout_ms")) {
         return 250;

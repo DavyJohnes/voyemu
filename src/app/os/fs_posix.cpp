@@ -94,6 +94,51 @@ std::optional<std::string> read_private_file(const std::filesystem::path &path, 
     return data;
 }
 
+OwnedFile read_owned_file(const std::filesystem::path &path, std::size_t limit) {
+    OwnedFile result;
+    const int fd = ::open(path.c_str(), O_RDONLY | O_NOFOLLOW | O_CLOEXEC);
+
+    if (fd < 0) {
+        return result;
+    }
+
+    struct Close {
+        int fd;
+
+        ~Close() {
+            ::close(fd);
+        }
+    } close{fd};
+    struct stat info{};
+
+    if (::fstat(fd, &info) != 0 || !S_ISREG(info.st_mode) || info.st_uid != ::geteuid() ||
+        info.st_nlink != 1 || info.st_size <= 0 ||
+        static_cast<std::uint64_t>(info.st_size) > limit) {
+        result.status = OwnedFile::Status::foreign;
+
+        return result;
+    }
+
+    result.bytes.resize(static_cast<std::size_t>(info.st_size));
+    std::size_t offset = 0;
+
+    while (offset < result.bytes.size()) {
+        const auto count = ::read(fd, result.bytes.data() + offset, result.bytes.size() - offset);
+
+        if (count <= 0) {
+            result.status = OwnedFile::Status::truncated;
+
+            return result;
+        }
+
+        offset += static_cast<std::size_t>(count);
+    }
+
+    result.status = OwnedFile::Status::read;
+
+    return result;
+}
+
 std::filesystem::path home_directory() {
     const auto *home = std::getenv("HOME");
 

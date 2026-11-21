@@ -86,6 +86,33 @@ void close_socket(SocketHandle socket) {
     closesocket(native(socket));
 }
 
+bool make_private_socket(SocketHandle socket) {
+    u_long nonblocking = 1;
+
+    return ::ioctlsocket(native(socket), FIONBIO, &nonblocking) == 0 &&
+           ::SetHandleInformation(reinterpret_cast<HANDLE>(native(socket)), HANDLE_FLAG_INHERIT, 0);
+}
+
+SocketHandle accept_socket(SocketHandle socket) {
+    const SOCKET peer = ::accept(native(socket), nullptr, nullptr);
+
+    return peer == INVALID_SOCKET ? no_socket : static_cast<SocketHandle>(peer);
+}
+
+int poll_socket(SocketHandle socket, bool writing, int timeout_ms) {
+    fd_set read{}, write{};
+
+    FD_SET(native(socket), &read);
+
+    if (writing) {
+        FD_SET(native(socket), &write);
+    }
+
+    timeval budget{0, static_cast<long>(timeout_ms) * 1000};
+
+    return ::select(0, &read, writing ? &write : nullptr, nullptr, &budget);
+}
+
 bool bind_socket(SocketHandle socket, const sockaddr *address, SocketLength size) {
     return ::bind(native(socket), address, size) == 0;
 }
