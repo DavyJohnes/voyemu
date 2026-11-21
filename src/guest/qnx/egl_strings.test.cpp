@@ -241,6 +241,11 @@ int main() {
     qgfx_test_reset_error();
     fail_registration = false;
     assert(blobs.empty());
+    // An earlier rejected command stays reported but must not fail a later query.
+    qgfx_test_fail_transport();
+    p = glGetString(0x1f03);
+    assert(p && std::string(reinterpret_cast<const char *>(p)) == extensions && qgfx_test_error());
+    assert(glGetError() == 0x502 && glGetError() == 0 && blobs.empty());
     std::cout
-            << "guest string wrapper: complete4733, stable lifetime, bad NUL/count/partial failure/lost download/old host/registration guarded\n";
+            << "guest string wrapper: complete4733, stable lifetime, bad NUL/count/partial failure/lost download/old host/registration guarded, earlier error kept\n";
 }

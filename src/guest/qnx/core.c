@@ -594,7 +594,7 @@ SCALAR(eglDestroyContext, EGLBoolean, 10, (EGLDisplay d, EGLContext ctx), (u64)d
 EGLBoolean eglDestroySurface(EGLDisplay d, EGLSurface s);
 static char *strings[8];
 
-static const char *query_string(unsigned op, u64 display, unsigned key) {
+static const char *transfer_string(unsigned op, u64 display, unsigned key) {
     unsigned slot = key % 8;
     const char *out = 0;
 
@@ -645,6 +645,16 @@ static const char *query_string(unsigned op, u64 display, unsigned key) {
     drop_blob(blob);
 
     return transport_error ? 0 : out;
+}
+
+/* An earlier failed command keeps its glGetError report but must not fail this query. */
+static const char *query_string(unsigned op, u64 display, unsigned key) {
+    const int earlier = transport_error;
+    transport_error = 0;
+    const char *out = transfer_string(op, display, key);
+    transport_error = earlier || transport_error;
+
+    return out;
 }
 
 const char *eglQueryString(EGLDisplay d, EGLint key) {
