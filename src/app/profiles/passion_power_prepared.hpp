@@ -35,8 +35,8 @@ inline bool passion_power_requested(const Json &definition) {
 }
 
 inline Json passion_power_csv() {
-    return Json::parse(
-            R"CSV({"system/etc/screen-control/screen0_off_change.csv":"7e82e683f773e0e300fe7e1f2c097381f0f94ff784d9705d350523f870081881","system/etc/screen-control/screen0_off_keep.csv":"826ff8847dd688819344780bb67dea7cf6287622752ed02cd56d286ae28bf33f","system/etc/screen-control/screen0_on_change.csv":"dbfe5e0802173415484a1640ed3024a181843ad40d895320952db3a4d8a7bfff","system/etc/screen-control/screen0_on_keep.csv":"826ff8847dd688819344780bb67dea7cf6287622752ed02cd56d286ae28bf33f","system/etc/screen-control/screen1_off_change.csv":"3aee3f501728d48de7a4c2a189fec04b1c9ddfb7898cd0dcc636129faa908ac0","system/etc/screen-control/screen1_off_keep.csv":"826ff8847dd688819344780bb67dea7cf6287622752ed02cd56d286ae28bf33f","system/etc/screen-control/screen1_on_change.csv":"e2a2f3a83123cf347c7f0ec8cba58fa077e402b9a3317b36bec2225cbfb65f82","system/etc/screen-control/screen1_on_keep.csv":"826ff8847dd688819344780bb67dea7cf6287622752ed02cd56d286ae28bf33f"})CSV");
+    return Json::parse(std::string(
+            R"CSV({"system/etc/screen-control/screen0_off_change.csv":"7e82e683f773e0e300fe7e1f2c097381f0f94ff784d9705d350523f870081881","system/etc/screen-control/screen0_off_keep.csv":"826ff8847dd688819344780bb67dea7cf6287622752ed02cd56d286ae28bf33f","system/etc/screen-control/screen0_on_change.csv":"dbfe5e0802173415484a1640ed3024a181843ad40d895320952db3a4d8a7bfff","system/etc/screen-control/screen0_on_keep.csv":"826ff8847dd688819344780bb67dea7cf6287622752ed02cd56d286ae28bf33f","system/etc/screen-control/screen1_off_change.csv":"3aee3f501728d48de7a4c2a189fec04b1c9ddfb7898cd0dcc636129faa908ac0","system/etc/screen-control/screen1_off_keep.csv":"826ff8847dd688819344780bb67dea7cf6287622752ed02cd56d286ae28bf33f","system/etc/screen-control/screen1_on_change.csv":"e2a2f3a83123cf347c7f0ec8cba58fa077e402b9a3317b36bec2225cbfb65f82","system/etc/screen-control/screen1_on_keep.csv":"826ff8847dd688819344780bb67dea7cf6287622752ed02cd56d286ae28bf33f"})CSV"));
 }
 
 inline Json passion_power_targets() {

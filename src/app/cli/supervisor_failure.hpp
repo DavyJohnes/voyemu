@@ -13,7 +13,7 @@ inline std::string supervisor_failure_code(std::string_view tail) {
         const auto line = tail.substr(offset, end == std::string_view::npos ? tail.size() - offset
                                                                             : end - offset);
         offset = end == std::string_view::npos ? tail.size() : end + 1;
-        const auto value = Json::parse(line, nullptr, false);
+        const auto value = Json::parse(std::string(line), nullptr, false);
 
         if (value.is_discarded() || !value.is_object() || value.value("ok", true) ||
             !value.contains("error") || !value.at("error").is_string()) {

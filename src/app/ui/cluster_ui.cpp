@@ -301,8 +301,8 @@ WheelGeometry read_wheel_geometry(const std::filesystem::path &path) {
         throw VoyemuError("CLUSTER_UI", "Cannot read wheel hit regions");
     }
 
-    Json document;
-    source >> document;
+    const auto document = Json::parse(
+            std::string(std::istreambuf_iterator<char>(source), std::istreambuf_iterator<char>()));
     const bool profile_layout = document.contains("joined_offset_logical_points");
 
     if (document.at("schema") != 1 ||

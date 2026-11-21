@@ -6,9 +6,10 @@ namespace {
 #include "cli_messages.inc"
 
 const Json &catalog(Language language) {
-    static const std::array<Json, 3> catalogs{Json::parse(message_catalog(Language::english)),
-                                              Json::parse(message_catalog(Language::russian)),
-                                              Json::parse(message_catalog(Language::chinese))};
+    static const std::array<Json, 3> catalogs{
+            Json::parse(std::string(message_catalog(Language::english))),
+            Json::parse(std::string(message_catalog(Language::russian))),
+            Json::parse(std::string(message_catalog(Language::chinese)))};
 
     return catalogs.at(static_cast<std::size_t>(language));
 }

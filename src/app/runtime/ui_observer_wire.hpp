@@ -78,7 +78,7 @@ Json exchange_ui_observer(const Json &connection, Json message, std::string_view
                     throw VoyemuError("TREE_PROTOCOL", "multiple frames rejected");
                 }
 
-                auto result = Json::parse(response.begin(), response.begin() + end, nullptr, false);
+                auto result = Json::parse(response.substr(0, end), nullptr, false);
 
                 if (!result.is_object()) {
                     throw VoyemuError("TREE_PROTOCOL", "JSON object required");
