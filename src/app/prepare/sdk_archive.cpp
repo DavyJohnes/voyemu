@@ -97,7 +97,7 @@ Json extract_sdk_archive(const std::filesystem::path &file, const std::string &p
     unsigned omitted = 0;
     std::vector<ZipTreeEntry> selected;
     std::vector<std::filesystem::path> directories, executables;
-    // Link members become copies of their final target, as on the libarchive path.
+    // Link members become copies of their final target.
     std::map<std::string, std::string> links;
     std::map<std::string, std::uint64_t> regular;
     const auto targets = pinned_zip_link_targets(file, pin);

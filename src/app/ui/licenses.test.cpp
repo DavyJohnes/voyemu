@@ -41,10 +41,11 @@ int main() try {
     assert(license_site(entries[0], Language::english) == "https://voyemu.com");
     assert(license_site(entries[0], Language::chinese) == "https://voyemu.com");
 
+    // macOS links its system curl, which the catalogue does not list.
     if (voyemu::os::platform_name == "macOS") {
-        assert(entries.size() == 10);
-        assert(entries[6].component == "libarchive" && entries[7].component == "nghttp2" &&
-               entries[8].component == "Android Debug Bridge (AOSP)" && entries[9].component == "SDL3");
+        assert(entries.size() == 9);
+        assert(entries[6].component == "nghttp2" &&
+               entries[7].component == "Android Debug Bridge (AOSP)" && entries[8].component == "SDL3");
     } else {
         assert(entries.size() == 10);
         assert(entries[6].component == "curl" && entries[7].component == "nghttp2" &&
@@ -52,7 +53,7 @@ int main() try {
     }
 
     // SDL3 carries the notices of the third-party code it compiles into the static library.
-    const auto &sdl = entries[9].text;
+    const auto &sdl = entries.back().text;
 
     for (const auto *author : {"Sam Lantinga", "Adrien Descamps", "Sun Microsystems",
                                "Gareth McCaughan", "Andreas Schiffler", "Valve Corporation"}) {

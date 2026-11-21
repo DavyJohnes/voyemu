@@ -1,4 +1,5 @@
 #include "fetch.hpp"
+#include "archive_fixture.hpp"
 #include "deps.hpp"
 #include "fetch_internal.hpp"
 #include "fetch_segmented.hpp"
@@ -16,8 +17,6 @@
 #include <map>
 #include <sstream>
 #ifdef __APPLE__
-#include <archive.h>
-#include <archive_entry.h>
 #include <sys/stat.h>
 #endif
 using namespace voyemu;
@@ -112,40 +111,13 @@ static std::string filesystem_fixture() {
 static void archive_fixture(const std::filesystem::path &file,
                             const std::vector<std::pair<std::string, std::string>> &entries,
                             bool zip) {
-    auto *writer = archive_write_new();
-
-    check(writer, "fixture writer");
-    struct Cleanup {
-        archive *p;
-
-        ~Cleanup() {
-            archive_write_free(p);
-        }
-    } cleanup{writer};
-    check((zip ? archive_write_set_format_zip(writer)
-               : archive_write_set_format_pax_restricted(writer)) == ARCHIVE_OK,
-          "fixture format");
-
-    if (!zip) {
-        check(archive_write_add_filter_gzip(writer) == ARCHIVE_OK, "fixture gzip");
-    }
-
-    check(archive_write_open_filename(writer, file.c_str()) == ARCHIVE_OK, "fixture open");
+    std::vector<ArchiveFixtureEntry> members;
 
     for (const auto &[name, data] : entries) {
-        auto *entry = archive_entry_new();
-        archive_entry_set_pathname(entry, name.c_str());
-        archive_entry_set_filetype(entry, AE_IFREG);
-        archive_entry_set_perm(entry, 0644);
-        archive_entry_set_size(entry, data.size());
-        check(archive_write_header(writer, entry) == ARCHIVE_OK &&
-                      archive_write_data(writer, data.data(), data.size()) ==
-                              static_cast<la_ssize_t>(data.size()),
-              "fixture data");
-        archive_entry_free(entry);
+        members.push_back({name, data});
     }
 
-    check(archive_write_close(writer) == ARCHIVE_OK, "fixture close");
+    write_archive_fixture(file, members, zip);
 }
 
 static std::string contents(const std::filesystem::path &file) {

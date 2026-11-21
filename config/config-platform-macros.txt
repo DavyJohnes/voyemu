@@ -39,7 +39,6 @@ src/app/prepare/java_preparation.test.cpp group 8 prepare: archives, Java runtim
 src/app/prepare/java_runtime.test.cpp group 8 prepare: archives, Java runtime and e2fs helpers
 src/app/prepare/java_toolchain.cpp group 8 prepare: archives, Java runtime and e2fs helpers
 src/app/prepare/java_toolchain.test.cpp group 8 prepare: archives, Java runtime and e2fs helpers
-src/app/prepare/owner_update_archive.test.cpp group 8 prepare: archives, Java runtime and e2fs helpers
 src/app/prepare/update_image.test.cpp group 8 prepare: archives, Java runtime and e2fs helpers
 src/app/profiles/candidate_ui_observer_transport.hpp group 11 profiles: candidate transport and image clone
 src/app/profiles/image_clone.hpp group 11 profiles: candidate transport and image clone

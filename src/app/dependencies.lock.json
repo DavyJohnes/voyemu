@@ -159,35 +159,6 @@
           "sha256": "0a6165e6726f27c1abfc1b1bb0613b1a839f4285d5cd6108d62d63cc713645c7"
         }
       ]
-    },
-    {
-      "name": "libarchive_headers",
-      "version": "3.8.9",
-      "url": "https://www.libarchive.org/downloads/libarchive-3.8.9.tar.xz",
-      "archive_sha256": "888c934f9d95648ecb9163dc8e23ab80a476ecb81a8f1154704a227b5b676dde",
-      "license": "BSD-2-Clause",
-      "scope": "Headers only; runtime links macOS system libarchive, not Homebrew",
-      "provenance": "Unmodified headers and complete COPYING from the SHA-pinned upstream release archive",
-      "files": [
-        {
-          "file": "archive.h",
-          "bytes": 56071,
-          "sha256": "5dc85c3288bd0f293b9d99101627f1bfbc775a0d400640881bcbf056acca59f2",
-          "upstream_file": "libarchive/archive.h"
-        },
-        {
-          "file": "archive_entry.h",
-          "bytes": 35427,
-          "sha256": "ce6d82c6ed0132022136566195b6b2494a93c0e2db46d968d52624bd296bfcbf",
-          "upstream_file": "libarchive/archive_entry.h"
-        },
-        {
-          "file": "LICENSE.txt",
-          "bytes": 3089,
-          "sha256": "30e556b3959e3985d66efefec5eaac51d4995053caa1d3cffe6eb916f146f229",
-          "upstream_file": "COPYING"
-        }
-      ]
     }
   ]
 }

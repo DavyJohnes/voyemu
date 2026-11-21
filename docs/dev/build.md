@@ -47,7 +47,7 @@ The data that the launcher embeds, the profile catalog, the project files of `sr
 
 ## Source dependencies
 
-Third-party sources are downloaded at configure time into the build cache, never into the source tree. Dear ImGui, nlohmann/json, miniz, lzokay and the libarchive headers are pinned in `src/app/dependencies.lock.json`, SDL3 in `src/app/platform/component.json`. On Linux the same file pins under `window_linux` the X11, Wayland, xkbcommon and libdecor sources whose headers the X11 and Wayland drivers of SDL3 compile against, and expat for the `wayland-scanner` that the configuration builds from the Wayland sources; SDL3 loads the libraries of the system when the window opens, so the build takes nothing from the build host. CMake verifies every file against its pin before building; see [pins](pins.md).
+Third-party sources are downloaded at configure time into the build cache, never into the source tree. Dear ImGui, nlohmann/json, miniz and lzokay are pinned in `src/app/dependencies.lock.json`, SDL3 in `src/app/platform/component.json`. On Linux the same file pins under `window_linux` the X11, Wayland, xkbcommon and libdecor sources whose headers the X11 and Wayland drivers of SDL3 compile against, and expat for the `wayland-scanner` that the configuration builds from the Wayland sources; SDL3 loads the libraries of the system when the window opens, so the build takes nothing from the build host. CMake verifies every file against its pin before building; see [pins](pins.md).
 
 The build of Voyemu does not compile guest kernels. Development kernels are CI-built release assets that `fetch` downloads by their pins on every host; see [the kernels workflow](ci.md#the-kernels-workflow).
 
