@@ -673,6 +673,16 @@ int main(int argc, char **argv) {
             check(!qinggan11_pinned_original(bad), "unpinned QGAPI original accepted");
         }
 
+        // The wheel provider is a property of the profile, whatever its id.
+        const Json provider = {{"platform", "qinggan11"},
+                               {"wheel", {{"provider", "com.voyemu.input.wheel"}}}};
+        check(qinggan11_wheel_provider(provider) &&
+                      !qinggan11_wheel_provider(Json{{"platform", "qinggan11"}}) &&
+                      !qinggan11_wheel_provider(
+                              Json{{"platform", "qinggan09"}, {"wheel", provider.at("wheel")}}) &&
+                      !qinggan11_wheel_provider_profile("api30-fixture"),
+              "wheel provider follows profile.json");
+
         std::cout
                 << "qinggan11 segmented file/tree acquisition plan and 10 negative contracts passed\n";
 

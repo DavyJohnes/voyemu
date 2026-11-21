@@ -242,7 +242,7 @@ bool owned_wheel_lease_held(const std::filesystem::path &path) {
 
 bool matching_wheel_writer(const std::filesystem::path &root,
                            const std::filesystem::path &directory, const Json &request) {
-    if (profile(request) != qinggan11_731_profile_id) {
+    if (!qinggan11_wheel_provider_profile(profile(request))) {
         return false;
     }
 
@@ -271,7 +271,7 @@ bool matching_wheel_writer(const std::filesystem::path &root,
     const auto id = text(request.at("session"), "id"),
                ownership = text(request.at("session"), "ownership_id");
     const Json expected = {{"schema", 1},
-                           {"profile", qinggan11_731_profile_id},
+                           {"profile", profile(request)},
                            {"session_id", id},
                            {"ownership_sha256", sha256_bytes(ownership)},
                            {"operation_id", writer.at("operation_id")}};
@@ -289,7 +289,7 @@ bool matching_wheel_writer(const std::filesystem::path &root,
            pending.at("schema").is_number_integer() && pending.at("schema") == 1 &&
            pending.value("operation_id", Json(nullptr)) == writer.at("operation_id") &&
            pending.value("scope", std::string{}) == "session:" + id &&
-           pending.value("profile", std::string{}) == qinggan11_731_profile_id &&
+           pending.value("profile", std::string{}) == profile(request) &&
            pending.value("op", std::string{}) == "input.wheel.press" &&
            pending.value("status", std::string{}) == "pending";
 }
@@ -1501,7 +1501,8 @@ Json Api::call(const Json &supplied) {
                     lock = std::make_unique<Lock>(execution / "writer.lock");
                     std::filesystem::remove(execution / "wheel-writer.json");
 
-                    if (op == "input.wheel.press" && profile(request) == qinggan11_731_profile_id &&
+                    if (op == "input.wheel.press" &&
+                        qinggan11_wheel_provider_profile(profile(request)) &&
                         number(request, "hold_ms", 100, 1, 2000) > 200) {
                         (void)session_record(request, true);
                         const auto button = text(request, "button");
@@ -1511,7 +1512,7 @@ Json Api::call(const Json &supplied) {
                             write_private_json(
                                     execution / "wheel-writer.json",
                                     {{"schema", 1},
-                                     {"profile", qinggan11_731_profile_id},
+                                     {"profile", profile(request)},
                                      {"session_id", request.at("session").at("id")},
                                      {"ownership_sha256",
                                       sha256_bytes(text(request.at("session"), "ownership_id"))},

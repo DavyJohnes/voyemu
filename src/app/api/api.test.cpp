@@ -575,7 +575,8 @@ static void wheel_release_admission_tests(const std::filesystem::path &base) {
     const auto root = base / ("test-wheel-cancel-admission-" + random_token());
 
     ensure_private_directory(root);
-    const std::string name = qinggan11_731_profile_id, id = random_token(), owner = random_token();
+    const std::string name = "free-11-chinese-20260731-7.3.1", id = random_token(),
+                      owner = random_token();
     const auto directory = root / ".local/machines" / name / "sessions" / id;
     ensure_private_directory(directory);
     Session session(directory, id);
@@ -611,7 +612,7 @@ static void wheel_release_admission_tests(const std::filesystem::path &base) {
         if (op == "status") {
             auto reply = session.handle(command);
             reply["wheel_capability"] =
-                    qinggan11_partial_wheel_capability(qinggan11_731_profile_id);
+                    qinggan11_partial_wheel_capability("free-11-chinese-20260731-7.3.1");
 
             return reply;
         }
@@ -1722,9 +1723,9 @@ int main(int argc, char **argv) try {
                                        int timeout) -> Json {
             if (operation.at("op") == "status") {
                 auto reply = transport.control(endpoint, operation, timeout);
-                reply["wheel_capability"] =
-                        partial ? qinggan11_partial_wheel_capability(qinggan11_731_profile_id)
-                                : Json(nullptr);
+                reply["wheel_capability"] = partial ? qinggan11_partial_wheel_capability(
+                                                              "free-11-chinese-20260731-7.3.1")
+                                                    : Json(nullptr);
 
                 return reply;
             }

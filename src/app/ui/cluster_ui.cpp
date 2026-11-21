@@ -568,7 +568,7 @@ bool wheel_action_available(const ViewState &state, std::string_view id) {
     const auto &capability = state.wheel_capability;
 
     if (!capability.is_object() ||
-        capability.value("profile", std::string{}) != qinggan11_731_profile_id) {
+        capability.value("authority", std::string{}) != "com.voyemu.input.wheel") {
         return true;
     }
 
@@ -579,7 +579,7 @@ bool wheel_action_available(const ViewState &state, std::string_view id) {
 
         if ((reason != "provider_not_installed" && reason != "oem_delivery_unverified") ||
             capability != Json{{"schema", 1},
-                               {"profile", qinggan11_731_profile_id},
+                               {"profile", capability.value("profile", std::string{})},
                                {"status", "unsupported"},
                                {"supported", false},
                                {"reason", reason},

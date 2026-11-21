@@ -75,9 +75,12 @@ int main() try {
         assert(rejected);
     }
 
+    // The wheel provider of profile.json, not the profile id, selects these startup values.
     const Json free_source = {
             {"schema", 1},
-            {"id", voyemu::qinggan11_731_profile_id},
+            {"id", "api30-fixture"},
+            {"platform", "qinggan11"},
+            {"wheel", {{"provider", "com.voyemu.input.wheel"}}},
             {"status", "incomplete"},
             {"android", {{"package", "system-images;android-30;default;arm64-v8a"}}},
             {"configure",
@@ -93,7 +96,7 @@ int main() try {
         assert(voyemu::qinggan11_startup_values(ready) == ready.at("initial_state"));
     }
     const Json free_presentation = {
-            {"reference_profile", voyemu::qinggan11_731_profile_id},
+            {"reference_profile", "free-11-chinese-20260731-7.3.1"},
             {"api", 30},
             {"home",
              {{"package", "com.qinggan.app.launcher"},
@@ -121,7 +124,7 @@ int main() try {
                explicit_values.at("initial_state"));
     }
 
-    for (const auto *field : {"schema", "id", "status", "android", "configure"}) {
+    for (const auto *field : {"schema", "platform", "wheel", "status", "android", "configure"}) {
         auto invalid = free_source;
         invalid.erase(field);
         bool denied = false;
@@ -148,7 +151,8 @@ int main() try {
     }
 
     for (const auto &update :
-         Json::array({{{"id", "free-09-chinese-20260106-6.0.3"}},
+         Json::array({{{"platform", "qinggan09"}},
+                      {{"wheel", {{"provider", "other"}}}},
                       {{"status", "prepared"}},
                       {{"android", {{"package", "system-images;android-28;default;arm64-v8a"}}}},
                       {{"configure",

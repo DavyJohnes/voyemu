@@ -15,7 +15,8 @@ static void check(bool b) {
 int main() {
     try {
         const std::string pin(original_navi_sha), cert(original_navi_cert),
-                target(original_navi_target), profile(qinggan11_731_profile_id), dummy(64, 'a');
+                target(original_navi_target), profile("free-11-chinese-20260731-7.3.1"),
+                dummy(64, 'a');
         Json definition = {{"features", {{"original_navi", true}}},
                            {"original",
                             {{"Navi",
@@ -480,7 +481,7 @@ int main() {
         const auto actual = read_private_json(repository / "profiles" / profile / "profile.json",
                                               1 << 20);
         check(qinggan11_wheel_capability(actual) ==
-              qinggan11_partial_wheel_capability(qinggan11_731_profile_id));
+              qinggan11_partial_wheel_capability("free-11-chinese-20260731-7.3.1"));
         check(declared_patch_plan(actual).at("patches").size() == actual.at("patches").size());
 
         for (unsigned mode = 0; mode < 8; ++mode) {

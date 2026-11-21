@@ -21,6 +21,8 @@ The `title` field of `profile.json` names the profile in text for people, for ex
 
 The `features` field of `profile.json` turns on optional functions of the firmware. `original_navi` set to `true` installs the OEM navigation app of the firmware together with the recipes it needs; preparation selects them by this field, not by the profile name.
 
+The `wheel` field of `profile.json` names the steering-wheel artwork in `assets` and the Android key routes in `androidRoutes`; `provider` set to `com.voyemu.input.wheel` delivers the wheel to Android through that content provider of the profile instead of the routes.
+
 Shared parts live outside the profiles: `profiles/common/` holds common components, fonts, icons and steering-wheel artwork, and `profiles/common-qinggan-09/` and `profiles/common-qinggan-11/` hold the development kernel recipes of each Android generation.
 
 OEM inputs never enter the repository. The user imports them into `.local/profiles/<profile>/`, and the profile records only their names, sizes and SHA-256.

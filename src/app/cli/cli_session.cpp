@@ -344,7 +344,7 @@ void wait_stopped_epoch(const Arguments &args, const voyemu::Json &reply, bool f
 }
 
 voyemu::Json profile_startup_definition(const Arguments &args) {
-    if (args.profile == voyemu::qinggan11_731_profile_id ||
+    if (voyemu::qinggan11_wheel_provider_profile(args.profile) ||
         args.profile == voyemu::passion_profile_id ||
         voyemu::portable_runtime_available(args.root, args.profile, args.machine,
                                            args.machine_path)) {
@@ -356,7 +356,7 @@ voyemu::Json profile_startup_definition(const Arguments &args) {
 }
 
 voyemu::Json profile_startup_values(const Arguments &args, const voyemu::Json &definition) {
-    if (args.profile == voyemu::qinggan11_731_profile_id) {
+    if (voyemu::qinggan11_wheel_provider_profile(args.profile)) {
         return voyemu::qinggan11_startup_values(definition);
     }
 

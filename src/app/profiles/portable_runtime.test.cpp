@@ -5509,7 +5509,7 @@ int main(int argc, char **argv) {
                                 activation,
                                 Json{{"schema", 1},
                                      {"route", "wav"},
-                                     {"profile", qinggan11_731_profile_id},
+                                     {"profile", "free-11-chinese-20260731-7.3.1"},
                                      {"nonce", std::string(32, 'a')},
                                      {"directory",
                                       std::filesystem::canonical(activation_directory).string()}});
@@ -5601,7 +5601,7 @@ int main(int argc, char **argv) {
                                 activation,
                                 Json{{"schema", 1},
                                      {"route", "wav"},
-                                     {"profile", qinggan11_731_profile_id},
+                                     {"profile", "free-11-chinese-20260731-7.3.1"},
                                      {"nonce", std::string(32, 'a')},
                                      {"directory",
                                       std::filesystem::canonical(activation_directory).string()}});

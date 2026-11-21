@@ -360,7 +360,7 @@ Json publish_machine_android_system(const std::filesystem::path &root, std::stri
                                     const Json &disk_tool, const Json &owned_package,
                                     std::uint64_t reserve, const Json &source_evidence,
                                     const Json &camera_package, const Json &prepared_packages) {
-    need((profile == qinggan11_731_profile_id ||
+    need((embedded_profile_declares(profile, ProfilePlatform::qinggan11, ProfileBoard::sa8155) ||
           embedded_profile_declares(profile, ProfilePlatform::passion, ProfileBoard::sa8155)) &&
                  machine.valid_for(profile) && sha256_text(expected_manifest_sha) &&
                  sha256_text(source_sha),
@@ -481,7 +481,8 @@ Json publish_machine_android_system(const std::filesystem::path &root, std::stri
     bool camera_changed = false;
 
     if (!camera_package.is_null()) {
-        need(profile == qinggan11_731_profile_id, "Camera package requires exact Free A11 profile");
+        need(embedded_profile_declares(profile, ProfilePlatform::qinggan11, ProfileBoard::sa8155),
+             "Camera package requires a qinggan11 profile");
         android_camera_package_descriptor(camera_package, false);
         camera_source = camera_package.at("file").get<std::string>();
         camera_identity = checked_file(camera_source,
@@ -503,7 +504,8 @@ Json publish_machine_android_system(const std::filesystem::path &root, std::stri
     bool prepared_changed = false;
 
     if (!prepared_packages.is_null()) {
-        need(profile == qinggan11_731_profile_id && camera_package.is_null(),
+        need(embedded_profile_declares(profile, ProfilePlatform::qinggan11, ProfileBoard::sa8155) &&
+                     camera_package.is_null(),
              "exact Free A11 prepared list required");
         android_prepared_packages_descriptor(prepared_packages, false);
 

@@ -239,7 +239,7 @@ static void verify_qinggan11_phone_graph(const Json &definition) {
     check(definition.at("components").at("bluetooth") == "components/bluetooth",
           "actual canonical Phone component required");
     check(qinggan11_wheel_capability(definition) ==
-                  qinggan11_partial_wheel_capability(qinggan11_731_profile_id),
+                  qinggan11_partial_wheel_capability("free-11-chinese-20260731-7.3.1"),
           "actual canonical Phone graph preserves bounded wheel capability");
     auto legacy = definition;
     legacy["components"].erase("bluetooth");
@@ -258,7 +258,7 @@ static void verify_qinggan11_phone_graph(const Json &definition) {
                             {"target", "/system/framework/Ivt8BluetoothAdapter.jar"},
                             {"mode", "0644"}});
     check(qinggan11_wheel_capability(legacy) ==
-                  qinggan11_partial_wheel_capability(qinggan11_731_profile_id),
+                  qinggan11_partial_wheel_capability("free-11-chinese-20260731-7.3.1"),
           "historical graph with original OEM Bluetooth adapter retains exact wheel capability");
 
     for (unsigned mode = 0; mode < 26; ++mode) {
@@ -400,13 +400,13 @@ static void verify_qinggan11_phone_graph(const Json &definition) {
     auto integrity_only = definition;
     integrity_only["original"]["BluetoothPhone"]["sha256"] = std::string(64, 'a');
     check(qinggan11_wheel_capability(integrity_only) ==
-                  qinggan11_partial_wheel_capability(qinggan11_731_profile_id),
+                  qinggan11_partial_wheel_capability("free-11-chinese-20260731-7.3.1"),
           "Phone startup compatibility does not use APK hash gates");
 }
 
 static void verify_qinggan11_view_graph(const std::filesystem::path &profiles) {
     const std::string framework_artifact = "patched:original-navi-framework";
-    const auto directory = profiles / qinggan11_731_profile_id;
+    const auto directory = profiles / "free-11-chinese-20260731-7.3.1";
     std::ifstream input(directory / "profile.json");
     Json definition;
 
@@ -423,7 +423,7 @@ static void verify_qinggan11_view_graph(const std::filesystem::path &profiles) {
                        {"guestLibs", Json::array({"/system/framework/framework.jar"})}},
           "actual API30 view bridge component contract remains exact");
     check(qinggan11_wheel_capability(definition) ==
-                  qinggan11_partial_wheel_capability(qinggan11_731_profile_id),
+                  qinggan11_partial_wheel_capability("free-11-chinese-20260731-7.3.1"),
           "actual Free view bridge preserves exact wheel capability");
     auto legacy = definition;
     legacy["components"].erase("view-observation");
@@ -434,7 +434,7 @@ static void verify_qinggan11_view_graph(const std::filesystem::path &profiles) {
                                }),
                 nodes.end());
     check(qinggan11_wheel_capability(legacy) ==
-                  qinggan11_partial_wheel_capability(qinggan11_731_profile_id),
+                  qinggan11_partial_wheel_capability("free-11-chinese-20260731-7.3.1"),
           "legacy six-node Gallery graph remains supported");
 
     for (unsigned mode = 0; mode < 7; ++mode) {
@@ -1630,7 +1630,7 @@ int main(int argc, char **argv) {
                               R"json({"lib/arm64-v8a/libijkffmpeg.so":{"archive":"ijk.aar","entry":"jni/arm64-v8a/libijkffmpeg.so","sha256":"4a8f36dee25d0d84094a595aec9ac0d0322c78be74748f30501ea705b24d5019","bytes":5619008},"lib/arm64-v8a/libijkplayer.so":{"archive":"ijk.aar","entry":"jni/arm64-v8a/libijkplayer.so","sha256":"9e29ce5dbaf7b2b888c77027a337b6c6cd66f382b3650d827292b3eff0c1534c","bytes":418392},"lib/arm64-v8a/libijksdl.so":{"archive":"ijk.aar","entry":"jni/arm64-v8a/libijksdl.so","sha256":"94268f8db4e08712d7060ce84cf48d52dc35d4dccceccd7cbac964c0ae7dda83","bytes":481352},"lib/arm64-v8a/libavcodec.so":{"archive":"fmmr.aar","entry":"jni/arm64-v8a/libavcodec.so","sha256":"96e6d55842b6c6ec0d29e80cbbb577e2b1dedac5dad1e5694d38b16e7feeffc9","bytes":6513680},"lib/arm64-v8a/libavformat.so":{"archive":"fmmr.aar","entry":"jni/arm64-v8a/libavformat.so","sha256":"fac2cf935f5e7bf1d5658a24aa871f9300de2a832cbbc9ceb11b9f8f261bac9a","bytes":1187520},"lib/arm64-v8a/libavutil.so":{"archive":"fmmr.aar","entry":"jni/arm64-v8a/libavutil.so","sha256":"f1c054f13d895b534c18d9f27bc24af2e3d5d6204bc8f5c2621154a7af2fb44c","bytes":285016},"lib/arm64-v8a/libcrypto.so":{"archive":"fmmr.aar","entry":"jni/arm64-v8a/libcrypto.so","sha256":"51d754da3e6e78271875b9704093c7de6f94aa03696b007cc8c35dfdeea766ea","bytes":2363056},"lib/arm64-v8a/libffmpeg_mediametadataretriever_jni.so":{"archive":"fmmr.aar","entry":"jni/arm64-v8a/libffmpeg_mediametadataretriever_jni.so","sha256":"5d5cfe6e79672c1d41e6928b7f97f8fc8fd738cf8bae4fa9c684189511ed6b43","bytes":51536},"lib/arm64-v8a/libssl.so":{"archive":"fmmr.aar","entry":"jni/arm64-v8a/libssl.so","sha256":"81eadaf08032fa12c3bb20480493f88046c504f88b684bae2e53e201db3c0c0c","bytes":503408},"lib/arm64-v8a/libswscale.so":{"archive":"fmmr.aar","entry":"jni/arm64-v8a/libswscale.so","sha256":"af96bf88dd3c08019bc7420d85aca1e71224a1e86990df2268b145c589051fdf","bytes":264024}})json"),
               "Gallery adds exactly ten pinned official ARM64 ELF entries");
         check(qinggan11_wheel_capability(a11) == Json{{"schema", 1},
-                                                      {"profile", qinggan11_731_profile_id},
+                                                      {"profile", "free-11-chinese-20260731-7.3.1"},
                                                       {"status", "partial"},
                                                       {"supported", true},
                                                       {"authority", "com.voyemu.input.wheel"},
@@ -1655,7 +1655,7 @@ int main(int argc, char **argv) {
                         nodes.end());
             legacy["configure"]["start"].erase(legacy["configure"]["start"].begin());
             check(qinggan11_wheel_capability(legacy) ==
-                          qinggan11_partial_wheel_capability(qinggan11_731_profile_id),
+                          qinggan11_partial_wheel_capability("free-11-chinese-20260731-7.3.1"),
                   "historical portable Free without OEM power retains exact wheel routes");
 
             for (int mode = 0; mode < 8; ++mode) {
@@ -1841,7 +1841,7 @@ int main(int argc, char **argv) {
                                    }),
                     legacy["install"].end());
             check(qinggan11_wheel_capability(legacy) ==
-                          qinggan11_partial_wheel_capability(qinggan11_731_profile_id),
+                          qinggan11_partial_wheel_capability("free-11-chinese-20260731-7.3.1"),
                   "Legacy five-component Free wheel capability remains byte-identical");
         }
         {

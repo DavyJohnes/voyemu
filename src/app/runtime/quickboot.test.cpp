@@ -594,12 +594,14 @@ int main() try {
            sha256_file(machine / "userdata-qemu.img") == installed &&
            sha256_file(machine / "userdata-qemu.img.qcow2") == installed_overlay);
     auto free_spec = spec;
-    free_spec["wheel_capability"] = qinggan11_partial_wheel_capability(qinggan11_731_profile_id);
+    free_spec["wheel_capability"] =
+            qinggan11_partial_wheel_capability("free-11-chinese-20260731-7.3.1");
     auto ru_spec = spec;
-    ru_spec["wheel_capability"] = qinggan11_partial_wheel_capability(qinggan11_ru_profile);
+    ru_spec["wheel_capability"] =
+            qinggan11_partial_wheel_capability("free-11-russian-20260318-rc1");
+    // Preparation derives the capability from the wheel of a profile; only an invalid name fails.
     auto foreign_spec = spec;
-    foreign_spec["wheel_capability"] =
-            qinggan11_partial_wheel_capability("free-11-chinese-20250710-6.11.1");
+    foreign_spec["wheel_capability"] = qinggan11_partial_wheel_capability("Foreign Profile");
     assert(android_presave_required(free_spec) && android_presave_required(ru_spec) &&
            !android_presave_required(foreign_spec) && !android_presave_required(spec));
     const auto free_key = android_quickboot_key(free_spec);

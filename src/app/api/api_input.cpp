@@ -56,7 +56,7 @@ Json Api::dispatch_input(const std::string &op, const Json &request, Clock::time
                                   "wheel release unverified; owner lease remains active");
             }
 
-            if (profile(request) == qinggan11_731_profile_id &&
+            if (qinggan11_wheel_provider_profile(profile(request)) &&
                 (id == "volume_up" || id == "volume_down") && hold > 200 &&
                 std::string_view(failure.what()).starts_with("WHEEL_OWNER:")) {
                 throw VoyemuError(

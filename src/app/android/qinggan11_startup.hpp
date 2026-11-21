@@ -7,7 +7,20 @@
 #include <stdexcept>
 
 namespace voyemu {
-inline constexpr const char *qinggan11_731_profile_id = "free-11-chinese-20260731-7.3.1";
+// Whether a qinggan11 profile delivers its wheel through the com.voyemu.input.wheel provider, as
+// wheel.provider of profile.json declares.
+inline bool qinggan11_wheel_provider(const Json &definition) {
+    const auto wheel = definition.value("wheel", Json::object());
+
+    return definition.value("platform", Json()) == "qinggan11" && wheel.is_object() &&
+           wheel.value("provider", Json()) == "com.voyemu.input.wheel";
+}
+
+// The same for a bundled profile; false for a profile that is not bundled.
+inline bool qinggan11_wheel_provider_profile(std::string_view profile) {
+    return embedded_profile_declares(profile, ProfilePlatform::qinggan11, ProfileBoard::sa8155) &&
+           qinggan11_wheel_provider(embedded_profile(profile).at("definition"));
+}
 
 // A pinned OEM original of a profile: its file, size, SHA-256 and system image path are the
 // profile's own data.
@@ -30,9 +43,7 @@ inline bool qinggan11_pinned_original(const Json &original) {
 inline Json qinggan11_startup_values(const Json &definition) {
     const auto status = definition.value("status", std::string{});
 
-    if (definition.value("schema", 0) != 1 ||
-        (definition.value("id", std::string{}) != qinggan11_731_profile_id &&
-         definition.value("id", std::string{}) != "free-11-russian-20260318-rc1") ||
+    if (definition.value("schema", 0) != 1 || !qinggan11_wheel_provider(definition) ||
         (status != "incomplete" && status != "ready") ||
         definition.value("android", Json::object()).value("package", std::string{}) !=
                 "system-images;android-30;default;arm64-v8a" ||
@@ -51,12 +62,6 @@ inline Json qinggan11_startup_values(const Json &definition) {
     }
 
     return values;
-}
-
-inline constexpr std::string_view qinggan11_ru_profile = "free-11-russian-20260318-rc1";
-
-inline bool qinggan11_profile_id(std::string_view profile) {
-    return profile == qinggan11_731_profile_id || profile == qinggan11_ru_profile;
 }
 
 // A qinggan11 Android of API 30 with the OEM HOME; the platform is the one the embedded reference
@@ -93,11 +98,12 @@ inline Json qinggan11_partial_wheel_capability(std::string_view profile) {
             {"routes", qinggan11_wheel_adapter().at("routes")}};
 }
 
-// Any Free A11 family capability with its own profile field is accepted at runtime.
+// A partial capability of any valid profile name is accepted at runtime; preparation derives it
+// from the wheel of that profile.
 inline bool qinggan11_partial_wheel_capability_matches(const Json &capability) {
     if (!capability.is_object() || capability.value("status", std::string{}) != "partial" ||
         !capability.value("supported", false) ||
-        !qinggan11_profile_id(capability.value("profile", std::string{}))) {
+        !valid_profile_name(capability.value("profile", std::string{}))) {
         return false;
     }
 
@@ -458,7 +464,7 @@ inline bool qinggan11_wheel_unsupported(const Json &android) {
             android.at("wheel_capability").value("profile", std::string{});
 
     if (android.at("wheel_capability").value("status", std::string{}) == "partial") {
-        if (!qinggan11_profile_id(capability_profile) || !qinggan11_presentation(android) ||
+        if (!valid_profile_name(capability_profile) || !qinggan11_presentation(android) ||
             android.at("wheel_capability") !=
                     qinggan11_partial_wheel_capability(capability_profile) ||
             android.value("wheel_adapter", Json{}) != qinggan11_wheel_adapter() ||
@@ -484,7 +490,7 @@ inline bool qinggan11_wheel_unsupported(const Json &android) {
                            {"reason", reason},
                            {"authority", "com.voyemu.input.wheel"}};
 
-    if (!qinggan11_profile_id(capability_profile) || !qinggan11_presentation(android) ||
+    if (!valid_profile_name(capability_profile) || !qinggan11_presentation(android) ||
         android.at("wheel_capability") != expected || android.contains("wheel_adapter") ||
         android.value("vehicle_adapter", Json{}) !=
                 Json{{"authority", "com.voyemu.output.vehicle"}}) {

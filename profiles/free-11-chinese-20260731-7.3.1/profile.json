@@ -81,7 +81,8 @@
   },
   "wheel": {
     "assets": "profiles/common/wheels/free-2024",
-    "androidRoutes": "src/app/android-wheel-routes.json"
+    "androidRoutes": "src/app/android-wheel-routes.json",
+    "provider": "com.voyemu.input.wheel"
   },
   "displays": [
     {

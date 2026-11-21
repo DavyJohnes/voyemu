@@ -2972,7 +2972,7 @@ static void android_avd_config_guards() {
         unsupported["reference_profile"] = qinggan11_731_profile_id;
         unsupported["vehicle_adapter"] = {{"authority", "com.voyemu.output.vehicle"}};
         unsupported["wheel_capability"] = {{"schema", 1},
-                                           {"profile", qinggan11_731_profile_id},
+                                           {"profile", "free-11-chinese-20260731-7.3.1"},
                                            {"status", "unsupported"},
                                            {"supported", false},
                                            {"reason", "provider_not_installed"},
@@ -3016,7 +3016,8 @@ static void android_avd_config_guards() {
         prepared["vehicle_adapter"] = {{"authority", "com.voyemu.output.vehicle"}};
         prepared["reference_profile"] = qinggan11_731_profile_id;
         prepared["wheel_adapter"] = qinggan11_wheel_adapter();
-        prepared["wheel_capability"] = qinggan11_partial_wheel_capability(qinggan11_731_profile_id);
+        prepared["wheel_capability"] =
+                qinggan11_partial_wheel_capability("free-11-chinese-20260731-7.3.1");
         prepared["gpuMode"] = "invalid-before-child";
         bool before_child = false;
         try {
@@ -5904,7 +5905,9 @@ int main(int argc, char **argv) try {
     });
     const Json free_graph = {
             {"schema", 1},
-            {"id", qinggan11_731_profile_id},
+            {"id", "api30-fixture"},
+            {"platform", "qinggan11"},
+            {"wheel", {{"provider", "com.voyemu.input.wheel"}}},
             {"status", "incomplete"},
             {"android", {{"package", "system-images;android-30;default;arm64-v8a"}}},
             {"configure",

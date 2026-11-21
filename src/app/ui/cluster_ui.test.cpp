@@ -1024,7 +1024,7 @@ void qinggan11_adversarial_wheel_acceptance(const std::filesystem::path &assets,
 
         if (partial) {
             response["wheel_capability"] =
-                    qinggan11_partial_wheel_capability(qinggan11_731_profile_id);
+                    qinggan11_partial_wheel_capability("free-11-chinese-20260731-7.3.1");
 
             for (const auto &[id, route] : response.at("wheel_routes").items()) {
                 (void)route;
@@ -1255,7 +1255,7 @@ void qinggan11_adversarial_wheel_acceptance(const std::filesystem::path &assets,
                     window.refresh_state();
 
                     return window.client().state().wheel_capability ==
-                           qinggan11_partial_wheel_capability(qinggan11_731_profile_id);
+                           qinggan11_partial_wheel_capability("free-11-chinese-20260731-7.3.1");
                 },
                 "partial capability reaches the actual A11 native view");
         // Non-face neutral point inside the wheel photos that no enabled face contains (the
@@ -2408,7 +2408,7 @@ void wheel_hover_without_tooltips(const std::filesystem::path &assets) {
 
         if (partial) {
             response["wheel_capability"] =
-                    qinggan11_partial_wheel_capability(qinggan11_731_profile_id);
+                    qinggan11_partial_wheel_capability("free-11-chinese-20260731-7.3.1");
             const auto adapter = qinggan11_wheel_adapter();
 
             for (const auto &[id, code] : adapter.at("routes").items()) {
@@ -2845,7 +2845,7 @@ void wheel_hover_without_tooltips(const std::filesystem::path &assets) {
                     window.refresh_state();
 
                     return window.client().state().wheel_capability ==
-                           qinggan11_partial_wheel_capability(qinggan11_731_profile_id);
+                           qinggan11_partial_wheel_capability("free-11-chinese-20260731-7.3.1");
                 },
                 "partial capability reaches actual native view");
 
@@ -2908,7 +2908,7 @@ void wheel_hover_without_tooltips(const std::filesystem::path &assets) {
 
         auto historical = window.client().state();
         historical.wheel_capability = {{"schema", 1},
-                                       {"profile", qinggan11_731_profile_id},
+                                       {"profile", "free-11-chinese-20260731-7.3.1"},
                                        {"status", "unsupported"},
                                        {"supported", false},
                                        {"reason", "oem_delivery_unverified"},
@@ -2919,7 +2919,8 @@ void wheel_hover_without_tooltips(const std::filesystem::path &assets) {
         historical.wheel_capability["supported"] = true;
         check(!wheel_action_available(historical, "volume_up"),
               "malformed Free capability cannot visually grant support");
-        historical.wheel_capability = qinggan11_partial_wheel_capability(qinggan11_731_profile_id);
+        historical.wheel_capability =
+                qinggan11_partial_wheel_capability("free-11-chinese-20260731-7.3.1");
         historical.routes["volume_up"]["android"] = {{"key_code", 2}};
         check(wheel_action_available(historical, "volume_up"),
               "partial Free capability grants its exact Android route");
