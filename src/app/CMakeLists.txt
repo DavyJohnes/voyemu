@@ -818,7 +818,7 @@ if(BUILD_TESTING)
     add_executable(supervisor_stop_test cli/supervisor_stop.test.cpp)
     target_link_libraries(supervisor_stop_test PRIVATE voyemu_core)
     voyemu_add_test(supervisor_stop LABELS host TIMEOUT 60 COMMAND supervisor_stop_test)
-    add_executable(cli_flow_test runtime/cli_flow.test.cpp)
+    add_executable(cli_flow_test runtime/cli_flow.test.cpp runtime/cli_flow_${voyemu_host_backend}.test.cpp)
     target_link_libraries(cli_flow_test PRIVATE voyemu_core)
     voyemu_add_test(cli_arguments LABELS host TIMEOUT 15 RUN_SERIAL COMMAND cli_flow_test $<TARGET_FILE:voyemu> $<TARGET_FILE:runtime_fixture> --arguments-only)
     # The session flows start supervised machines whose Android audio, JSON automation and
