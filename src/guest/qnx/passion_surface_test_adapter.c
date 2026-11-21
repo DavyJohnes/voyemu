@@ -14,6 +14,7 @@
 #endif
 #include <assert.h>
 #include <stdlib.h>
+#include <string.h>
 static u64 expected_selector, remote_result;
 static unsigned calls, last_op, last_count;
 static u64 last_args[4];
@@ -38,13 +39,15 @@ u64 test_remote(Packet *p, u32 op, const u64 *args, unsigned count, const void *
     return remote_result;
 }
 
-long qgfx_test_write(int fd, const void *p, usize bytes) {
-    (void)fd;
-    (void)p;
-    (void)bytes;
-    assert(0);
+static char written[256];
+static usize written_bytes;
 
-    return -1;
+long qgfx_test_write(int fd, const void *p, usize bytes) {
+    assert(fd == 2 && written_bytes + bytes < sizeof(written));
+    memcpy(written + written_bytes, p, bytes);
+    written_bytes += bytes;
+
+    return (long)bytes;
 }
 
 int qgfx_test_usleep(unsigned delay) {
@@ -411,6 +414,8 @@ int qgfx_passion_surface_test(void) {
     assert(eglGetProcAddress("eglGetCurrentSurface") == (Proc)eglGetCurrentSurface);
     assert(eglGetProcAddress("eglGetDisplay") == (Proc)eglGetDisplay);
     assert(eglGetProcAddress("unknown-valid-name") == 0);
+    assert(!strcmp(written, "QG3 PROC unknown=unknown-valid-name level=DEBUG\n"));
+    const usize logged = written_bytes;
     EGLSurface (*current)(EGLint) =
             (EGLSurface (*)(EGLint))eglGetProcAddress("eglGetCurrentSurface");
     expected_selector = 0x3059;
@@ -442,6 +447,7 @@ int qgfx_passion_surface_test(void) {
     glUniform2fv(5, 1, pair + 2);
     assert(calls == 3 && last_op == 188 && last_count == 3 && (i64)last_args[0] == 5 &&
            last_args[1] == fbits(1.0f) && last_args[2] == fbits(2.0f));
+    assert(written_bytes == logged);
 
     return 0;
 }
