@@ -4,6 +4,9 @@
   "title": "Free 6.11.1",
   "platform": "qinggan11",
   "board": "8155",
+  "features": {
+    "measured_disk_reserve": true
+  },
   "referenceProfile": "free-09-chinese-20260106-6.0.3",
   "android": {
     "package": "system-images;android-30;default;arm64-v8a",
@@ -69,6 +72,7 @@
   },
   "emulator": {
     "port": 5572,
+    "candidatePort": 5572,
     "memory": 4096,
     "gpuMode": "host"
   },

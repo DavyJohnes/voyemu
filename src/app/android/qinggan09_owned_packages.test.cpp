@@ -3,6 +3,9 @@
 #include <iostream>
 using namespace voyemu;
 namespace {
+// A synthetic qinggan09 profile that built the packages.
+constexpr std::string_view test_profile = "test-qinggan09";
+
 void check(bool value, const char *reason) {
     if (!value) {
         throw std::runtime_error(reason);
@@ -32,12 +35,12 @@ struct Fixture {
 
         descriptor = {
                 {"schema", 1},
-                {"profile", std::string(qinggan09_owned_packages_profile)},
+                {"profile", std::string(test_profile)},
                 {"api", 28},
                 {"certificate_sha256", std::string(qinggan09_owned_packages_certificate_sha256)},
                 {"receipt_sha256", std::string(64, 'b')},
                 {"packages", packages}};
-        spec = {{"profile", std::string(qinggan09_owned_packages_profile)},
+        spec = {{"profile", std::string(test_profile)},
                 {"api", 28},
                 {"machine", machine.string()},
                 {"qinggan09_owned_packages", descriptor}};
@@ -65,7 +68,7 @@ int main() {
             }
 
             check(refused, "logical copy needs embedded adapter identity");
-            copy.spec["reference_profile"] = std::string(qinggan09_owned_packages_profile);
+            copy.spec["reference_profile"] = std::string(test_profile);
             check(qinggan09_owned_packages_files(copy.spec).size() == 2,
                   "independent logical copy retains A9 packages");
             copy.spec["reference_profile"] = "unsupported-family";
@@ -83,7 +86,7 @@ int main() {
             Fixture full;
             Json result = {{"schema", 1},
                            {"operation", "build-artifacts"},
-                           {"profile", std::string(qinggan09_owned_packages_profile)},
+                           {"profile", std::string(test_profile)},
                            {"artifacts_built", true},
                            {"guest_started", false},
                            {"machine_ready", false},
@@ -107,20 +110,20 @@ int main() {
                                             "-fixture/base.apk"}});
             }
 
-            const auto value = qinggan09_owned_packages_artifacts_candidate(result.dump(),
-                                                                            installed, certs);
+            const auto value = qinggan09_owned_packages_artifacts_candidate(
+                    result.dump(), installed, certs, test_profile);
             {
                 auto copied = result;
                 copied["profile"] = "independent-local-copy";
                 const auto cloned = qinggan09_owned_packages_artifacts_candidate(
                         copied.dump(), installed, certs, "independent-local-copy");
-                check(cloned.at("profile") == qinggan09_owned_packages_profile &&
+                check(cloned.at("profile") == "independent-local-copy" &&
                               cloned.at("receipt_sha256") == sha256_bytes(copied.dump()),
                       "logical artifact provenance and OEM descriptor identity remain distinct");
                 bool refused = false;
                 try {
                     (void)qinggan09_owned_packages_artifacts_candidate(copied.dump(), installed,
-                                                                       certs);
+                                                                       certs, test_profile);
                 } catch (...) {
                     refused = true;
                 }
@@ -147,7 +150,7 @@ int main() {
                                             {"target", std::string(qinggan09_canbus_system_apk)}});
                 const std::array<std::string, 3> triple_certs = {certs[0], certs[1], certs[0]};
                 const auto refreshed = qinggan09_owned_packages_artifacts_candidate(
-                        triple.dump(), triple_installed, triple_certs);
+                        triple.dump(), triple_installed, triple_certs, test_profile);
                 check(refreshed.at("schema") == 1 &&
                               refreshed.at("canbus").at("package").at("sha256") == sha &&
                               refreshed.at("canbus").at("expected_previous_sha256") == sha &&
@@ -159,7 +162,7 @@ int main() {
                 bool rejected_obsolete = false;
                 try {
                     qinggan09_owned_packages_artifacts_candidate(triple.dump(), obsolete,
-                                                                 triple_certs);
+                                                                 triple_certs, test_profile);
                 } catch (...) {
                     rejected_obsolete = true;
                 }
@@ -170,7 +173,7 @@ int main() {
                 bool denied = false;
                 try {
                     qinggan09_owned_packages_artifacts_candidate(triple.dump(), triple_installed,
-                                                                 cert_bad);
+                                                                 cert_bad, test_profile);
                 } catch (...) {
                     denied = true;
                 }
@@ -181,7 +184,7 @@ int main() {
                 denied = false;
                 try {
                     qinggan09_owned_packages_artifacts_candidate(triple.dump(), missing,
-                                                                 triple_certs);
+                                                                 triple_certs, test_profile);
                 } catch (...) {
                     denied = true;
                 }
@@ -192,7 +195,7 @@ int main() {
                 denied = false;
                 try {
                     qinggan09_owned_packages_artifacts_candidate(triple.dump(), foreign,
-                                                                 triple_certs);
+                                                                 triple_certs, test_profile);
                 } catch (...) {
                     denied = true;
                 }
@@ -203,7 +206,8 @@ int main() {
             const auto reject = [&](const Json &r, const Json &pm, const auto &c) {
                 bool denied = false;
                 try {
-                    (void)qinggan09_owned_packages_artifacts_candidate(r.dump(), pm, c);
+                    (void)qinggan09_owned_packages_artifacts_candidate(r.dump(), pm, c,
+                                                                       test_profile);
                 } catch (...) {
                     denied = true;
                 }
@@ -450,7 +454,7 @@ int main() {
 
             Json full = {{"schema", 1},
                          {"operation", "build-artifacts"},
-                         {"profile", std::string(qinggan09_owned_packages_profile)},
+                         {"profile", std::string(test_profile)},
                          {"revision", std::string(64, 'f')},
                          {"artifacts_built", true},
                          {"guest_started", false},
@@ -478,7 +482,7 @@ int main() {
             }
 
             const auto origin = qinggan09_owned_packages_artifacts_candidate(full.dump(), installed,
-                                                                             certs);
+                                                                             certs, test_profile);
             check(origin.at("schema") == 1 &&
                           origin.at("navigation_bus").at("expected_previous_sha256") ==
                                   nav.at("sha256"),

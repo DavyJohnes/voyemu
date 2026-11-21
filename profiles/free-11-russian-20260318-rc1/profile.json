@@ -4,6 +4,10 @@
   "title": "Free Sport+ 2026-03-18 RC1",
   "platform": "qinggan11",
   "board": "8155",
+  "features": {
+    "system_upgrade": true,
+    "ui_observer_required": true
+  },
   "status": "ready",
   "initial_state": {
     "aeb_sts": 1

@@ -1119,8 +1119,7 @@ void repair_a11_offline_labels(Candidate &c, const Json &profile, const Json &ar
         const auto descriptor = artifacts.at(artifact);
         const auto expected = descriptor.at("sha256").get<std::string>();
         check_file(descriptor.at("file").get<std::string>(), expected, 4ULL << 20);
-        android_candidate_offline_policy_pin(artifact, expected,
-                                             profile.at("id").get<std::string>());
+        android_candidate_offline_policy_pin(artifact, expected, profile);
         need(declarations == 1, "exact installed API30 offline policy required");
     }
 

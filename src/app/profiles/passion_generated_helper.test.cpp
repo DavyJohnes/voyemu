@@ -35,7 +35,9 @@ int main(int argc, char **argv) try {
     for (bool sound : {true, false}) {
         const std::string reference = sound ? "patched:CarSettings" : "patched:LY_Multimedia";
         Json definition = {
-                {"id", "passion-11-russian-20260403-2.1.4.80"},
+                {"id", "test-passion"},
+                {"platform", "passion"},
+                {"board", "8155"},
                 {"patches",
                  {{sound ? "CarSettings" : "LY_Multimedia",
                    {{"steps", Json::array({sound ? "passion-api30-settings-sound.json"
@@ -86,7 +88,7 @@ int main(int argc, char **argv) try {
             passion_generated_helper_graph(root, absent, artifacts);
         });
         auto foreign = definition;
-        foreign["id"] = "foreign";
+        foreign["platform"] = "qinggan11";
         rejects([&] {
             passion_generated_helper_graph(root, foreign, artifacts);
         });

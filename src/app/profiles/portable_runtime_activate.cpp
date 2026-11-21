@@ -136,8 +136,8 @@ Json activate_portable_runtime(const std::filesystem::path &root, std::string_vi
     const auto clean_pins = portable_clean_boot_pins(definition.at("android"));
 
     for (const auto &[name, sha] : clean_pins) {
-        const bool selected = profile == "free-11-chinese-20250710-6.11.1" &&
-                              !development_kernel.is_null() && name == "kernel-ranchu" &&
+        // A seed clean base carries the development kernel the profile declares.
+        const bool selected = !development_kernel.is_null() && name == "kernel-ranchu" &&
                               host.clean_base == seed / "android";
         checked_file(host.clean_base / name,
                      selected ? development_kernel.at("sha256").get<std::string>() : sha, 64 * mib);

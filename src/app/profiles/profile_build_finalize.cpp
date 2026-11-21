@@ -34,14 +34,14 @@ Json upgrade_profile_android_system(const std::filesystem::path &root, std::stri
     const auto pins = host_pins(sdk);
     const Json disk_tool = {{"path", tool.string()}, {"sha256", pins.at(tool.string())}};
     const auto candidate = read_private_json(android / "receipt.json", 1 << 20);
+    const auto definition = read_private_json(authoring_definition(root, profile), 1 << 20);
     auto package = candidate.value("owned_package", Json());
     auto camera = candidate.value("camera_package", Json());
     auto prepared = candidate.value("prepared_packages", Json());
     auto system_directory = android;
 
     if (!prepared.is_null()) {
-        need(profile == "free-11-chinese-20260731-7.3.1" &&
-                     candidate.at("kind") == "android-candidate",
+        need(qinggan11_package_delivery(definition) && candidate.at("kind") == "android-candidate",
              "prepared delivery requires exact cold Free A11 candidate");
         android_prepared_packages_descriptor(prepared, true);
 
@@ -51,8 +51,7 @@ Json upgrade_profile_android_system(const std::filesystem::path &root, std::stri
     }
 
     if (!camera.is_null()) {
-        need(profile == "free-11-chinese-20260731-7.3.1" &&
-                     candidate.at("kind") == "android-candidate",
+        need(qinggan11_package_delivery(definition) && candidate.at("kind") == "android-candidate",
              "Camera delivery requires exact cold Free A11 candidate");
         android_camera_package_descriptor(camera, true);
         camera["file"] = (android / camera.at("file").get<std::string>()).string();
@@ -90,7 +89,7 @@ Json upgrade_profile_android_system(const std::filesystem::path &root, std::stri
             root, profile, machine, expected, system_directory / "android/system.img",
             image.at("sha256").get<std::string>(), image.at("bytes").get<std::uint64_t>(),
             verify_media, disk_tool, package, 8ULL << 30,
-            profile == passion_profile_id
+            record_declares(definition, ProfilePlatform::passion, ProfileBoard::sa8155)
                     ? Json{{"profile_bytes",
                             read_private_json_bytes(android / "profile.json", 1 << 20)},
                            {"candidate_bytes",
@@ -143,8 +142,9 @@ static Json export_built_ui_observer(const std::filesystem::path &root, std::str
     const auto observer = cached_profile_ui_observer(root);
 
     if (observer.empty()) {
-        need(profile != "free-11-chinese-20260731-7.3.1",
-             "source-built Free A11 7.3.1 observer required before portable publication");
+        need(!profile_feature(read_private_json(authoring_definition(root, profile), 1 << 20),
+                              "ui_observer_required"),
+             "source-built UI observer required before portable publication");
 
         return Json::object();
     }
@@ -186,13 +186,13 @@ static void export_built_owned_package(const std::filesystem::path &root, std::s
                                        const std::filesystem::path &stage, Json &runtime,
                                        std::uint64_t reserve,
                                        const std::filesystem::path &destination) {
-    const auto family = runtime_profile_reference(
-            read_private_json(authoring_definition(root, profile), 1 << 20), profile);
+    const auto definition = read_private_json(authoring_definition(root, profile), 1 << 20);
+    const auto family = runtime_profile_reference(definition, profile);
 
     // Both callers publish complete fresh disks. Never migrate a differently signed Navi over
     // existing userdata.
     if (candidate.contains("original_navi_system")) {
-        need(profile == "free-11-chinese-20260731-7.3.1" && family == profile &&
+        need(original_navi_requested(definition) && family == profile &&
                      !std::filesystem::exists(destination) &&
                      !std::filesystem::is_symlink(destination),
              "original Navi requires an absent clean destination");
@@ -200,7 +200,7 @@ static void export_built_owned_package(const std::filesystem::path &root, std::s
                                                         hash(android / "receipt.json", 1 << 20));
     }
 
-    if (family == qinggan09_owned_packages_profile) {
+    if (embedded_profile_declares(family, ProfilePlatform::qinggan09, ProfileBoard::sa8155)) {
         need(candidate.contains("qinggan09_owned_packages"),
              "A9 source candidate requires actual owned APKs");
         const auto &descriptor = candidate.at("qinggan09_owned_packages");
@@ -224,20 +224,18 @@ static void export_built_owned_package(const std::filesystem::path &root, std::s
         return;
     }
 
-    if (qinggan11_navi_delivery_required(
-                read_private_json(authoring_definition(root, profile), 1 << 20), family)) {
+    if (qinggan11_navi_delivery_required(definition)) {
         need(candidate.contains("prepared_packages"),
              "current Free A11 Navi recipe requires cold prepared packages");
     }
 
-    if (qinggan11_camera_delivery_required(
-                read_private_json(authoring_definition(root, profile), 1 << 20), family)) {
+    if (qinggan11_camera_delivery_required(definition)) {
         need(candidate.contains("camera_package") || candidate.contains("prepared_packages"),
              "current Free A11 Camera recipe requires cold Camera package");
     }
 
     if (candidate.contains("prepared_packages")) {
-        need(family == "free-11-chinese-20260731-7.3.1" && !candidate.contains("camera_package"),
+        need(qinggan11_package_delivery(definition) && !candidate.contains("camera_package"),
              "exact Free A11 prepared export required");
         const auto &packages = candidate.at("prepared_packages");
         android_prepared_packages_descriptor(packages, true);
@@ -277,7 +275,7 @@ static void export_built_owned_package(const std::filesystem::path &root, std::s
     }
 
     if (candidate.contains("camera_package")) {
-        need(family == "free-11-chinese-20260731-7.3.1", "Camera export requires Free A11");
+        need(qinggan11_package_delivery(definition), "Camera export requires Free A11");
         const auto &camera = candidate.at("camera_package");
         android_camera_package_descriptor(camera, true);
         const auto source = android / camera.at("file").get<std::string>(),
@@ -295,7 +293,7 @@ static void export_built_owned_package(const std::filesystem::path &root, std::s
         return;
     }
 
-    need(family == "free-11-chinese-20260731-7.3.1", "owned provider export requires Free A11");
+    need(qinggan11_wheel_provider(definition), "owned provider export requires Free A11");
     const auto &package = candidate.at("owned_package");
     android_owned_package_descriptor(package, true);
     const auto source = android / package.at("file").get<std::string>(),
@@ -519,7 +517,8 @@ Json finalize_profile_build(const std::filesystem::path &root, std::string_view 
     const auto artifact_lease = candidate_artifact_reader(root, android);
 
     if (std::filesystem::exists(build_target(root, profile, machine)) &&
-        profile == "free-11-chinese-20260731-7.3.1") {
+        qinggan11_package_delivery(
+                read_private_json(authoring_definition(root, profile), 1 << 20))) {
         return upgrade_profile_combined(root, profile, machine, android, qnx_file, qnx_pin,
                                         reuse_qnx_source);
     }
@@ -643,7 +642,8 @@ Json finalize_android_profile_build(const std::filesystem::path &root, std::stri
     const auto artifact_lease = candidate_artifact_reader(root, android);
 
     if (std::filesystem::exists(build_target(root, profile, machine)) &&
-        (profile == "free-11-chinese-20260731-7.3.1" || profile == passion_profile_id)) {
+        profile_feature(read_private_json(authoring_definition(root, profile), 1 << 20),
+                        "system_upgrade")) {
         return upgrade_profile_android_system(root, profile, machine, android, receipt_pin);
     }
 
@@ -1183,7 +1183,8 @@ Json profile_built_frontend_bindings(const std::filesystem::path &root, std::str
                                      const std::filesystem::path &seed) {
     auto frontend = bundled_frontend_record(root);
     const auto definition = portable_profile_definition(root, profile, machine, seed);
-    const bool passion = profile == passion_profile_id;
+    const bool passion = record_declares(definition, ProfilePlatform::passion,
+                                         ProfileBoard::sa8155);
     const auto source = seed.empty() ? root / "machines" / machine.name : seed;
     const auto assets = source / "ui/wheel";
 
@@ -1398,11 +1399,12 @@ Json activate_built_profile(const std::filesystem::path &root, std::string_view 
         bindings = qnx_host_binding_view(root, read_bindings());
     }
 #endif
-    host.android_port = profile == passion_profile_id ? 5590u
-                                                      : bindings.value("android_port", 5574u);
+    const bool passion = record_declares(portable_profile_definition(root, profile, machine, seed),
+                                         ProfilePlatform::passion, ProfileBoard::sa8155);
+    host.android_port = passion ? 5590u : bindings.value("android_port", 5574u);
     host.qmp_port = bindings.value("qmp_port", 45995u);
 
-    if (bindings.contains("frontend") && profile != passion_profile_id) {
+    if (bindings.contains("frontend") && !passion) {
         auto frontend = bindings.at("frontend");
 #if defined(_WIN32) || defined(__APPLE__)
         if (refresh_host) {

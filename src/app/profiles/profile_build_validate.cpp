@@ -20,8 +20,8 @@ void validate_accepted_android_profile(const std::filesystem::path &android, con
          "authoring configuration differs from cold accepted profile");
 }
 
-bool qinggan11_camera_delivery_required(const Json &definition, std::string_view profile) {
-    if (profile != "free-11-chinese-20260731-7.3.1" && profile != "free-11-russian-20260318-rc1") {
+bool qinggan11_camera_delivery_required(const Json &definition) {
+    if (!qinggan11_package_delivery(definition)) {
         return false;
     }
 
@@ -33,8 +33,8 @@ bool qinggan11_camera_delivery_required(const Json &definition, std::string_view
            std::find(steps.begin(), steps.end(), Json("api30-camera-virtual.json")) != steps.end();
 }
 
-bool qinggan11_navi_delivery_required(const Json &definition, std::string_view profile) {
-    if (profile != "free-11-chinese-20260731-7.3.1") {
+bool qinggan11_navi_delivery_required(const Json &definition) {
+    if (!qinggan11_package_delivery(definition)) {
         return false;
     }
 
@@ -53,13 +53,12 @@ static Json validate_plain_android_system_candidate(const std::filesystem::path 
                                                     const std::string &receipt_pin,
                                                     bool require_package) {
     root_profile(root, profile);
-    need(profile == "free-11-chinese-20260731-7.3.1" || profile == passion_profile_id ||
-                 profile == "free-11-russian-20260318-rc1",
-         "system-only upgrade requires exact Free A11 7.3.1/Passion producer");
-    ordinary(android);
-    inside(root / ".local", android);
     const auto definition_file = authoring_definition(root, profile);
     const auto definition = read_private_json(definition_file, 1 << 20);
+    need(profile_feature(definition, "system_upgrade"),
+         "system-only upgrade requires a profile with the system_upgrade feature");
+    ordinary(android);
+    inside(root / ".local", android);
     api30_framework_boot::verify(definition);
     need(native_base_api(definition.at("android")) == 30, "API30 system recipe required");
     const auto receipt = android / "receipt.json";
@@ -197,26 +196,25 @@ static Json validate_plain_android_system_candidate(const std::filesystem::path 
                                 result.at("artifacts"), certificate);
     }
 
-    if (qinggan11_navi_delivery_required(definition, profile) && !original_navi) {
+    if (qinggan11_navi_delivery_required(definition) && !original_navi) {
         need(candidate.contains("prepared_packages"),
              "current Free A11 Navi recipe requires cold prepared packages");
     }
 
-    if (qinggan11_camera_delivery_required(definition, profile)) {
+    if (qinggan11_camera_delivery_required(definition)) {
         need(candidate.contains("camera_package") || candidate.contains("prepared_packages"),
              "current Free A11 Camera recipe requires cold Camera package");
     }
 
     if (candidate.contains("prepared_packages")) {
-        need((profile == "free-11-chinese-20260731-7.3.1" ||
-              profile == "free-11-russian-20260318-rc1") &&
-                     !candidate.contains("camera_package"),
+        need(qinggan11_package_delivery(definition) && !candidate.contains("camera_package"),
              "exact Free A11 prepared list required");
         const auto &packages = candidate.at("prepared_packages");
         android_prepared_packages_descriptor(packages, true);
 
-        const bool russian_list = profile == "free-11-russian-20260318-rc1";
-        need(!russian_list || packages.size() == 1, "Russian snapshot exports only Camera");
+        // A profile without a Navi patch exports only its Camera.
+        need(definition.at("patches").contains("Navi") || packages.size() == 1,
+             "a profile without a Navi patch exports only Camera");
 
         for (unsigned i = 0; i < packages.size(); ++i) {
             const auto &package = packages.at(i);
@@ -244,8 +242,7 @@ static Json validate_plain_android_system_candidate(const std::filesystem::path 
     }
 
     if (candidate.contains("camera_package")) {
-        need(profile == "free-11-chinese-20260731-7.3.1" ||
-                     profile == "free-11-russian-20260318-rc1",
+        need(qinggan11_package_delivery(definition),
              "Camera candidate requires exact Free A11 profile");
         const auto &package = candidate.at("camera_package");
         android_camera_package_descriptor(package, true);
@@ -325,7 +322,7 @@ static void validate_qinggan09_equipment_artifact(const std::filesystem::path &r
     const auto directory = root / "profiles" / std::string(profile);
     const auto definition = read_private_json(directory / "profile.json", 1 << 20);
 
-    need(runtime_profile_reference(definition, profile) == "free-09-chinese-20260106-6.0.3" &&
+    need(record_declares(definition, ProfilePlatform::qinggan09, ProfileBoard::sa8155) &&
                  definition.at("android").at("package") ==
                          "system-images;android-28;default;arm64-v8a",
          "equipment simulation requires API28 A9 reference family");
@@ -788,8 +785,8 @@ static Json validate_android_package_upgrade(const std::filesystem::path &root,
                                              const std::filesystem::path &capsule,
                                              const std::string &receipt_pin) {
     root_profile(root, profile);
-    need(profile == "free-11-chinese-20260731-7.3.1" || profile == "free-11-russian-20260318-rc1",
-         "owned package lineage requires exact Free A11");
+    need(qinggan11_wheel_provider(read_private_json(authoring_definition(root, profile), 1 << 20)),
+         "owned package lineage requires the qinggan11 wheel provider");
     ordinary(capsule);
     inside(root / ".local", capsule);
     need(hash(capsule / "receipt.json", 1 << 20) == receipt_pin,
@@ -883,7 +880,9 @@ Json validate_profile_android_system_candidate(const std::filesystem::path &root
     }
 
     return validate_plain_android_system_candidate(
-            root, profile, android, receipt_pin, profile != "passion-11-russian-20260403-2.1.4.80");
+            root, profile, android, receipt_pin,
+            !record_declares(read_private_json(authoring_definition(root, profile), 1 << 20),
+                             ProfilePlatform::passion, ProfileBoard::sa8155));
 }
 
 namespace profile_build_detail {
@@ -902,8 +901,7 @@ Json source_system_media_artifact(const std::filesystem::path &root, std::string
     const auto media_steps = source_definition.value("patches", Json::object())
                                      .value("QGMedia", Json::object())
                                      .value("steps", Json::array());
-    const bool has_media_recipe = (profile == "free-11-chinese-20260731-7.3.1" ||
-                                   profile == "free-11-russian-20260318-rc1") &&
+    const bool has_media_recipe = qinggan11_package_delivery(source_definition) &&
                                   std::find(media_steps.begin(), media_steps.end(),
                                             Json("api30-usb-player.json")) != media_steps.end();
 
@@ -994,8 +992,8 @@ Json source_camera_artifact(const std::filesystem::path &root, std::string_view 
         return Json();
     }
 
-    need((profile == "free-11-chinese-20260731-7.3.1" ||
-          profile == "free-11-russian-20260318-rc1") &&
+    need(qinggan11_package_delivery(
+                 read_private_json(authoring_definition(root, profile), 1 << 20)) &&
                  candidate.at("kind") == "android-candidate",
          "Camera artifact requires exact cold Free A11 candidate");
     auto origin = artifact_receipt;
@@ -1044,11 +1042,14 @@ Json source_navi_artifact(const std::filesystem::path &root, std::string_view pr
                           const std::string &artifact_receipt_pin) {
     const auto candidate = read_private_json(android / "receipt.json", 1 << 20);
 
-    if (!candidate.contains("prepared_packages")) {
+    const auto definition = read_private_json(authoring_definition(root, profile), 1 << 20);
+
+    // Only a profile with a Navi patch prepares a Navi package.
+    if (!candidate.contains("prepared_packages") || !definition.at("patches").contains("Navi")) {
         return Json();
     }
 
-    need(profile == "free-11-chinese-20260731-7.3.1" && candidate.at("kind") == "android-candidate",
+    need(qinggan11_package_delivery(definition) && candidate.at("kind") == "android-candidate",
          "Navi artifact requires exact cold Free A11 candidate");
     auto origin = artifact_receipt;
     auto origin_pin = artifact_receipt_pin;

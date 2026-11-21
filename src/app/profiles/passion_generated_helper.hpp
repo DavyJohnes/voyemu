@@ -10,7 +10,7 @@ namespace voyemu {
 inline constexpr Check passion_generated_need{"PASSION_GENERATED_HELPER"};
 
 inline bool passion_generated_requested(const Json &definition, const std::string &reference) {
-    if (definition.value("id", std::string{}) != "passion-11-russian-20260403-2.1.4.80" ||
+    if (definition.value("platform", Json()) != "passion" ||
         (reference != "patched:CarSettings" && reference != "patched:LY_Multimedia")) {
         return false;
     }

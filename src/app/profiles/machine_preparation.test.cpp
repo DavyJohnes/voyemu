@@ -416,7 +416,9 @@ void verify_candidate_peak_formula() {
           (2ULL << 30) + (1ULL << 30) + (512ULL << 20));
     // Passion media profile with a 1GiB payload: scratch 1792MiB plus 3GiB export+growth.
     Json passion_media = {
-            {"id", "passion-11-russian-20260403-2.1.4.80"},
+            {"id", "test-passion"},
+            {"platform", "passion"},
+            {"board", "8155"},
             {"status", "incomplete"},
             {"android",
              {{"package", "system-images;android-30;default;arm64-v8a"},
@@ -463,7 +465,9 @@ void verify_offline_policy_pins() {
     android_candidate_offline_policy_pin("patched:can-early-policy-a9", policy);
     android_candidate_offline_policy_pin("patched:can-early-file-contexts-a9", contexts);
     android_candidate_offline_policy_pin("patched:can-early-policy-api30", api30_policy,
-                                         "free-11-chinese-20260731-7.3.1");
+                                         Json{{"platform", "qinggan11"},
+                                              {"board", "8155"},
+                                              {"features", {{"original_navi", true}}}});
     android_candidate_offline_policy_pin("patched:can-early-file-contexts-api30", api30_contexts);
     android_candidate_offline_policy_pin("patched:can-early-property-contexts-api30",
                                          api30_properties);
@@ -653,7 +657,9 @@ void verify_candidate_storage() {
                   .reserve_bytes == 20ULL << 30);
 
     const Json nxp = {
-            {"id", "free-09-chinese-20221230-nxp-rc45"},
+            {"id", "test-nxp"},
+            {"platform", "qinggan09"},
+            {"board", "nxp"},
             {"android",
              {{"package", "system-images;android-28;default;arm64-v8a"},
               {"url",
@@ -681,7 +687,9 @@ void verify_candidate_storage() {
 
     check(wrong_refused);
     Json passion = {
-            {"id", "passion-11-russian-20260403-2.1.4.80"},
+            {"id", "test-passion"},
+            {"platform", "passion"},
+            {"board", "8155"},
             {"android",
              {{"package", "system-images;android-30;default;arm64-v8a"},
               {"url",
@@ -695,7 +703,8 @@ void verify_candidate_storage() {
 
     const auto passion_budget = android_candidate_build_budget(passion, 3ULL << 30, 1ULL << 30);
     auto qinggan11 = passion;
-    qinggan11["id"] = "free-11-chinese-20260731-7.3.1";
+    qinggan11["id"] = "test-qinggan11";
+    qinggan11["platform"] = "qinggan11";
     const auto qinggan11_budget = android_candidate_build_budget(qinggan11, 3ULL << 30, 1ULL << 30);
     check(qinggan11_budget.reserve_bytes == 8ULL << 30 &&
           qinggan11_budget.peak_extra_bytes ==
@@ -793,10 +802,11 @@ void verify_candidate_storage() {
               20ULL << 30);
     }
 
+    // The measured budget follows the data of the profile, not its id.
     auto foreign611 = qinggan11_611;
-    foreign611["id"] = "free-11-chinese-20250710-6.11.1-other";
-    check(android_candidate_reserve_bytes(foreign611, "free-11-chinese-20250710-6.11.1-other") ==
-          20ULL << 30);
+    foreign611["id"] = "test-qinggan11";
+    foreign611["platform"] = "qinggan11";
+    check(android_candidate_reserve_bytes(foreign611, "test-qinggan11") == 8ULL << 30);
     const auto directory =
             std::filesystem::absolute(".local/build/tmp/candidate-storage-test-" + random_token());
     ensure_private_directory(directory);
@@ -2025,7 +2035,11 @@ static void owned_package_export_fixture() {
     const auto apk = root / "normally-built.apk";
     std::ofstream(apk) << "cold verified owned APK";
     const auto sha = sha256_file(apk);
-    const Json profile = {{"id", "free-11-chinese-20260731-7.3.1"},
+    const Json profile = {{"id", "test-qinggan11"},
+                          {"platform", "qinggan11"},
+                          {"board", "8155"},
+                          {"features", {{"system_upgrade", true}}},
+                          {"wheel", {{"provider", "com.voyemu.input.wheel"}}},
                           {"install", Json::array({{{"artifact", "component:wheel-input"},
                                                     {"type", "apk"}}})}},
                artifacts = {{"component:wheel-input",
@@ -2096,7 +2110,7 @@ static void owned_package_export_fixture() {
           sha256_file(root / "candidate" / result.at("file").get<std::string>()) == sha &&
           std::filesystem::hard_link_count(apk) == 1);
     auto other = profile;
-    other["id"] = "other-profile";
+    other["platform"] = "passion";
     check(export_android_candidate_owned_package(other, Json::object(), Json::array(),
                                                  root / "untouched")
                   .empty() &&
@@ -2651,7 +2665,7 @@ int main(int argc, char **argv) {
 
             check(older_labels_rejected);
             auto foreign = original_profile;
-            foreign["id"] = "foreign-profile";
+            foreign["platform"] = "passion";
             check(!android_candidate_api30_root_layout(foreign));
             const auto russian_profile = read_private_json(
                     source_root / "profiles/free-11-russian-20260318-rc1/profile.json");
@@ -3012,7 +3026,9 @@ int main(int argc, char **argv) {
         check(android_candidate_vehicle_observer_policy(Json{{"id", qinggan09_profile()}}) ==
               Json({{"supported", true}}));
         Json passion = {
-                {"id", "passion-11-russian-20260403-2.1.4.80"},
+                {"id", "test-passion"},
+                {"platform", "passion"},
+                {"board", "8155"},
                 {"status", "incomplete"},
                 {"android",
                  {{"package", "system-images;android-30;default;arm64-v8a"},
@@ -3033,7 +3049,7 @@ int main(int argc, char **argv) {
         ready_media["status"] = "ready";
         check(android_candidate_overlay_scratch_bytes(ready_media, 1ULL << 30) == 1792ULL << 20);
         auto other_media = passion_media;
-        other_media["id"] = "free-11-chinese-20260731-7.3.1";
+        other_media["platform"] = "qinggan09";
         check(android_candidate_overlay_scratch_bytes(other_media, 1ULL << 30) == 0);
 
         for (unsigned mode = 0; mode < 5; ++mode) {
@@ -3130,7 +3146,8 @@ int main(int argc, char **argv) {
         check(!android_candidate_secondary_display_ready(Json{{"id", qinggan09_profile()}},
                                                          passion_display, passion_window));
         auto qinggan11_731 = passion;
-        qinggan11_731["id"] = "free-11-chinese-20260731-7.3.1";
+        qinggan11_731["id"] = "test-qinggan11";
+        qinggan11_731["platform"] = "qinggan11";
         qinggan11_731["original"] = {
                 {"Launcher",
                  {{"sha256", "b3287150827e7fa51072bcbcba257539101cda8433c5f9d3a95f4ca905abd567"}}}};
@@ -3152,7 +3169,7 @@ int main(int argc, char **argv) {
         check(android_candidate_secondary_display_ready(qinggan11_731, free_display, free_window) ==
               19);
         auto qinggan11_611 = qinggan11_731;
-        qinggan11_611["id"] = "free-11-chinese-20250710-6.11.1";
+        qinggan11_611["id"] = "test-qinggan11-older";
         qinggan11_611["original"]["Launcher"]["sha256"] =
                 "48665cf9d6bb50b49b3aa0b1aa73bdb0ac5d9d7071240c46c7f13d07d4114d7e";
         check(android_candidate_secondary_provider(qinggan11_611, free_display) == 19 &&
@@ -3180,8 +3197,7 @@ int main(int argc, char **argv) {
             auto bad = qinggan11_611;
 
             if (mode == 0) {
-                bad["original"]["Launcher"]["sha256"] =
-                        qinggan11_731["original"]["Launcher"]["sha256"];
+                bad["original"]["Launcher"]["sha256"] = std::string(64, '0');
             }
 
             if (mode == 1) {
@@ -3390,7 +3406,7 @@ int main(int argc, char **argv) {
                 auto bad = capture_nxp;
 
                 if (variant == 0) {
-                    bad["id"] = "unknown-api28";
+                    bad["board"] = "8155";
                 }
 
                 if (variant == 1) {
@@ -3420,7 +3436,8 @@ int main(int argc, char **argv) {
         check(android_candidate_capture_arguments(capture_profile, true, 5580) ==
               std::vector<std::string>{"-grpc", "35580", "-grpc-use-token"});
         auto capture_free = capture_profile;
-        capture_free["id"] = "free-11-chinese-20260731-7.3.1";
+        capture_free["id"] = "test-qinggan11";
+        capture_free["platform"] = "qinggan11";
         check(android_candidate_capture_arguments(capture_free, true, 5580) ==
               std::vector<std::string>{"-grpc", "35580", "-grpc-use-token"});
         {
@@ -3435,7 +3452,7 @@ int main(int argc, char **argv) {
             unsigned port = 5580;
 
             if (variant == 0) {
-                bad["id"] = qinggan09_profile();
+                bad["platform"] = "qinggan09";
             }
 
             if (variant == 1) {
@@ -4249,7 +4266,9 @@ int main(int argc, char **argv) {
                                                "--dex-file=contains--image=embedded"})
                       .starts_with("system-server-"));
         Json art_profile = {
-                {"id", "passion-11-russian-20260403-2.1.4.80"},
+                {"id", "test-passion"},
+                {"platform", "passion"},
+                {"board", "8155"},
                 {"android", {{"package", "system-images;android-30;default;arm64-v8a"}}},
                 {"original", {{"LY_Car", Json::object()}, {"LY_Launcher", Json::object()}}}};
         art_profile["patches"]["LY_Launcher"]["steps"] = Json::array(
@@ -4262,7 +4281,8 @@ int main(int argc, char **argv) {
         check(android_candidate_art_verify_packages(art_old) ==
               std::vector<std::string>({"com.voyah.car"}));
         auto art_foreign = art_profile;
-        art_foreign["id"] = "free-11-chinese-20260731-7.3.1";
+        art_foreign["id"] = "test-qinggan11";
+        art_foreign["platform"] = "qinggan11";
         check(android_candidate_art_verify_packages(art_foreign).empty());
         auto art_api28 = art_profile;
         art_api28["android"]["package"] = "system-images;android-28;default;arm64-v8a";

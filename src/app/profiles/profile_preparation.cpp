@@ -335,7 +335,7 @@ Json profile_patch_metadata(const std::filesystem::path &root, std::string_view 
 }
 
 std::uint64_t native_profile_android_input_reserve(const Json &profile) {
-    if (profile.value("id", std::string{}) != "free-09-chinese-20221230-nxp-rc45") {
+    if (!record_declares(profile, ProfilePlatform::qinggan09, ProfileBoard::nxp)) {
         return 20ULL << 30;
     }
 
@@ -353,7 +353,8 @@ std::uint64_t native_profile_executable_reserve(const Json &profile, std::string
         return android_candidate_reserve_bytes(profile, name);
     }
 
-    if (name != "free-11-chinese-20250710-6.11.1" || profile.value("id", std::string{}) != name) {
+    if (!profile_feature(profile, "measured_disk_reserve") ||
+        profile.value("id", std::string{}) != name) {
         return 20ULL << 30;
     }
 

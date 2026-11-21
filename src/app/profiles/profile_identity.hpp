@@ -64,6 +64,18 @@ inline ProfileScope profile_scope(const Json &definition) {
     return {profile_platform(definition), profile_board(definition)};
 }
 
+// Whether profile.json sets the named boolean of its features object: system_upgrade, an existing
+// machine takes a rebuilt Android system in place with its delivered packages;
+// ui_observer_required, a multimedia machine always carries the UI observer;
+// measured_disk_reserve, preparation and the candidate reserve the disk budget measured on the
+// pinned system image.
+inline bool profile_feature(const Json &definition, std::string_view name) {
+    const auto features = definition.is_object() ? definition.value("features", Json::object())
+                                                 : Json::object();
+
+    return features.is_object() && features.value(std::string(name), Json(false)) == true;
+}
+
 // The name of the profile in human text, such as "Free 7.3.1".
 inline std::string profile_title(const Json &definition) {
     if (!definition.is_object() || !definition.contains("title") ||

@@ -7,8 +7,6 @@
 #include "toolchain_manifest.hpp"
 
 namespace voyemu {
-inline constexpr std::string_view qinggan09_phone_package_profile =
-        "free-09-chinese-20260106-6.0.3";
 inline constexpr std::string_view qinggan09_phone_package_name = "com.qinggan.bluetoothphone";
 inline constexpr std::string_view qinggan09_phone_package_certificate =
         "c8a2e9bccf597c2fb6dc66bee293fc13f2fc47ec77bc6b2b0d52c11f51192ab8";
@@ -36,14 +34,16 @@ inline bool qinggan09_phone_package_integer(const Json &object, const char *key,
     return object.contains(key) && object.at(key).is_number_integer() && object.at(key) == value;
 }
 
+// The descriptor names the profile whose candidate built the package; the machine that carries it
+// checks the platform and board of that profile.
 inline void qinggan09_phone_package_descriptor(const Json &value, bool portable) {
     const bool initial = !value.contains("predecessor_receipt_sha256");
 
     qinggan09_phone_package_need(
             value.is_object() && value.size() == (initial ? 7 : 8) &&
             qinggan09_phone_package_integer(value, "schema", 1) &&
-            qinggan09_phone_package_integer(value, "api", 28) &&
-            value.at("profile") == qinggan09_phone_package_profile &&
+            qinggan09_phone_package_integer(value, "api", 28) && value.at("profile").is_string() &&
+            valid_profile_name(value.at("profile").get<std::string>()) &&
             value.at("certificate_sha256") == qinggan09_phone_package_certificate &&
             (initial ? value.at("expected_previous_sha256") == qinggan09_phone_package_previous
                      : qinggan09_phone_package_hash(value.at("expected_previous_sha256"))) &&
@@ -56,8 +56,9 @@ inline void qinggan09_phone_package_descriptor(const Json &value, bool portable)
 inline std::filesystem::path qinggan09_phone_package_file(const Json &spec) {
     qinggan09_phone_package_need(
             qinggan09_phone_package_integer(spec, "api", 28) &&
+            spec.contains("qinggan09_phone_package") &&
             spec.value("reference_profile", spec.value("profile", std::string{})) ==
-                    qinggan09_phone_package_profile);
+                    spec.at("qinggan09_phone_package").value("profile", std::string{}));
     const auto &descriptor = spec.at("qinggan09_phone_package");
     qinggan09_phone_package_descriptor(descriptor, false);
     Json local = spec;

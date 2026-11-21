@@ -10,7 +10,7 @@ Json profile_source_graphics_bindings(const std::filesystem::path &root, const J
 // Public boot dependencies for an imported prepared guest; no owner originals required.
 Json prepare_portable_base(const std::filesystem::path &root, std::string_view profile,
                            bool offline = false, std::uint64_t reserve = 20ULL << 30);
-// Read-only genuine Free A11 7.3.1 QNX closure reuse; original acceptance remains immutable.
+// Read-only genuine accepted QNX closure reuse; original acceptance remains immutable.
 Json validate_accepted_qnx_reuse(const std::filesystem::path &root, std::string_view profile,
                                  const std::filesystem::path &receipt, const std::string &sha256,
                                  const std::filesystem::path &payload_source = {});
@@ -70,8 +70,8 @@ Json finalize_android_profile_build(const std::filesystem::path &root, std::stri
                                     const MachineIdentity &machine,
                                     const std::filesystem::path &android_candidate,
                                     const std::string &candidate_receipt_sha256);
-// Exact Free A11 7.3.1 stopped source candidate validation; exports only its system image
-// descriptor.
+// Exact stopped source candidate validation of a system_upgrade profile; exports only its system
+// image descriptor.
 Json validate_profile_android_system_candidate(const std::filesystem::path &root,
                                                std::string_view profile,
                                                const std::filesystem::path &candidate,

@@ -1102,7 +1102,7 @@ void wake_displays(Candidate &c, const Json &profile) {
                                          &c.adb_binding, &c.adb_server);
     c.identity();
 
-    if (profile.value("id", std::string{}) == "passion-11-russian-20260403-2.1.4.80") {
+    if (record_declares(profile, ProfilePlatform::passion, ProfileBoard::sa8155)) {
         c.wait(
                 [&] {
                     return android_candidate_secondary_provider(

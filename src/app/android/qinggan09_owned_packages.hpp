@@ -6,8 +6,6 @@
 #include "toolchain_manifest.hpp"
 #include <array>
 namespace voyemu {
-inline constexpr std::string_view qinggan09_owned_packages_profile =
-        "free-09-chinese-20260106-6.0.3";
 inline constexpr std::string_view qinggan09_owned_packages_certificate_sha256 =
         "c8a2e9bccf597c2fb6dc66bee293fc13f2fc47ec77bc6b2b0d52c11f51192ab8";
 inline constexpr std::array<std::string_view, 2> qinggan09_owned_package_names = {
@@ -37,13 +35,15 @@ inline bool qinggan09_owned_packages_integer(const Json &object, const char *key
     return object.contains(key) && object.at(key).is_number_integer() && object.at(key) == expected;
 }
 
+// The descriptor names the profile whose candidate built the packages; the machine that carries
+// it checks the platform and board of that profile.
 inline void qinggan09_owned_packages_descriptor(const Json &value, bool portable) {
     qinggan09_owned_packages_need(
             value.is_object() && qinggan09_owned_packages_integer(value, "schema", 1) &&
             value.size() == 6 + (value.contains("canbus") ? 1U : 0U) +
                                     (value.contains("navigation_bus") ? 1U : 0U) &&
             (value.contains("canbus") || !value.contains("navigation_bus")) &&
-            value.value("profile", std::string{}) == qinggan09_owned_packages_profile &&
+            valid_profile_name(value.value("profile", std::string{})) &&
             qinggan09_owned_packages_integer(value, "api", 28));
     qinggan09_owned_packages_need(value.value("certificate_sha256", std::string{}) ==
                                           qinggan09_owned_packages_certificate_sha256 &&
@@ -84,10 +84,10 @@ inline void qinggan09_owned_packages_descriptor(const Json &value, bool portable
 // Descriptor of FULL build-artifacts origin; signature acceptance comes from actual guest
 // PackageManager installation.
 template <std::size_t Count>
-inline Json qinggan09_owned_packages_artifacts_candidate(
-        const std::string &bytes, const Json &installed,
-        const std::array<std::string, Count> &certificates,
-        std::string_view logical_profile = qinggan09_owned_packages_profile) {
+inline Json
+qinggan09_owned_packages_artifacts_candidate(const std::string &bytes, const Json &installed,
+                                             const std::array<std::string, Count> &certificates,
+                                             std::string_view logical_profile) {
     static_assert(Count == 2 || Count == 3 || Count == 4);
     qinggan09_owned_packages_need(bytes.size() <= 16ULL << 20 && installed.is_array());
     const auto result = Json::parse(bytes);
@@ -139,7 +139,7 @@ inline Json qinggan09_owned_packages_artifacts_candidate(
     }
 
     Json value = {{"schema", 1},
-                  {"profile", std::string(qinggan09_owned_packages_profile)},
+                  {"profile", std::string(logical_profile)},
                   {"api", 28},
                   {"certificate_sha256", std::string(qinggan09_owned_packages_certificate_sha256)},
                   {"receipt_sha256", sha256_bytes(bytes)},
@@ -218,9 +218,10 @@ inline void qinggan09_owned_packages_set_payload(Json &value, std::size_t index,
 inline std::vector<std::filesystem::path>
 qinggan09_owned_packages_files(const Json &specification) {
     qinggan09_owned_packages_need(
+            specification.contains("qinggan09_owned_packages") &&
             specification.value("reference_profile",
                                 specification.value("profile", std::string{})) ==
-                    qinggan09_owned_packages_profile &&
+                    specification.at("qinggan09_owned_packages").value("profile", std::string{}) &&
             qinggan09_owned_packages_integer(specification, "api", 28));
     const auto &value = specification.at("qinggan09_owned_packages");
     qinggan09_owned_packages_descriptor(value, false);

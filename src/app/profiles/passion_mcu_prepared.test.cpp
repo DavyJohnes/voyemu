@@ -22,7 +22,9 @@ int main() try {
     throw std::runtime_error("assertions required");
 #endif
     Json definition = {
-            {"id", "passion-11-russian-20260403-2.1.4.80"},
+            {"id", "test-passion"},
+            {"platform", "passion"},
+            {"board", "8155"},
             {"android", {{"sha256", std::string(64, 'b')}}},
             {"patches",
              {{"MonzaCarService",
@@ -144,7 +146,7 @@ int main() try {
     }
 
     auto foreign = definition;
-    foreign["id"] = "foreign";
+    foreign["platform"] = "qinggan11";
     rejects([&] {
         passion_mcu_helper_graph(root, foreign, artifacts);
     });

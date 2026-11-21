@@ -19,7 +19,9 @@ template <class F> void rejects(F f) {
 
 int main() try {
     Json definition = {
-            {"id", "passion-11-russian-20260403-2.1.4.80"},
+            {"id", "test-passion"},
+            {"platform", "passion"},
+            {"board", "8155"},
             {"android",
              {{"package", "system-images;android-30;default;arm64-v8a"},
               {"sha256", std::string(64, 'b')}}},

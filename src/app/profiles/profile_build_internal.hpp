@@ -29,6 +29,7 @@
 #include "profile_runtime.hpp"
 #include "progress.hpp"
 #include "qinggan09_owned_packages.hpp"
+#include "qinggan11_startup.hpp"
 #include "qnx_acceptance.hpp"
 #include "qnx_host.hpp"
 #include "qnx_prepare.hpp"
@@ -99,8 +100,8 @@ std::unique_ptr<os::FileLock> candidate_artifact_reader(const std::filesystem::p
 Json validate_accepted_qnx_closure(const std::filesystem::path &root, std::string_view profile,
                                    const std::filesystem::path &file, const std::string &expected,
                                    const std::filesystem::path &payload_source, bool persistent);
-bool qinggan11_camera_delivery_required(const Json &definition, std::string_view profile);
-bool qinggan11_navi_delivery_required(const Json &definition, std::string_view profile);
+bool qinggan11_camera_delivery_required(const Json &definition);
+bool qinggan11_navi_delivery_required(const Json &definition);
 Json upgrade_pinned_json(const std::filesystem::path &root, const Json &descriptor,
                          std::uint64_t bound);
 // QGMedia is installed in the immutable system image. This validates its source

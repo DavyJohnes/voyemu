@@ -485,7 +485,8 @@ void observer_build_snapshot_checks(const std::filesystem::path &stage) {
             const std::string machine = named ? "source-build" : "";
             const auto selected_machine = machine_identity(profile, machine);
             const auto seed = root / "machines" / (named ? machine : profile);
-            const bool a9 = std::string_view(profile) == qinggan09_owned_packages_profile;
+            const bool a9 = embedded_profile_declares(profile, ProfilePlatform::qinggan09,
+                                                      ProfileBoard::sa8155);
             const Json android = {
                     {"package", a9 ? "system-images;android-28;default;arm64-v8a"
                                    : "system-images;android-30;default;arm64-v8a"},

@@ -33,15 +33,15 @@ inline void verify(const Json &profile) {
 
     const auto entries = profile.value("install", Json::array());
 
-    if ((profile.value("id", std::string{}) != "free-11-chinese-20260731-7.3.1" &&
-         profile.value("id", std::string{}) != "passion-11-russian-20260403-2.1.4.80") ||
+    if ((profile.value("platform", Json()) != "qinggan11" &&
+         profile.value("platform", Json()) != "passion") ||
         profile.at("android").value("package", std::string{}) !=
                 "system-images;android-30;default;arm64-v8a" ||
         profile.value("components", Json::object()).value("view-observation", std::string{}) !=
                 "components/view-observation" ||
         std::count(entries.begin(), entries.end(), install) != 1) {
         throw VoyemuError("ANDROID_CANDIDATE",
-                          "exact Free A11 7.3.1/Passion API30 framework boot extension required");
+                          "exact qinggan11/Passion API30 framework boot extension required");
     }
 }
 

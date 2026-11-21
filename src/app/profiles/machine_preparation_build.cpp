@@ -1,5 +1,6 @@
 #include "machine_preparation_internal.hpp"
 #include "profile_catalog.hpp"
+#include "qinggan11_startup.hpp"
 
 // Builds an Android candidate machine from its base image, packages and install plan.
 namespace voyemu {
@@ -408,14 +409,17 @@ std::uint64_t android_candidate_reserve_bytes(const Json &profile,
                  profile.at("id") == requested_profile,
          "requested profile identity differs");
 
-    if (profile.value("id", std::string{}) == "free-11-chinese-20250710-6.11.1") {
+    // A profile with the measured_disk_reserve feature has its budget only for the image package,
+    // labels and OEM system image it was measured on, and only as its own reference.
+    if (profile_feature(profile, "measured_disk_reserve")) {
         const auto android = profile.value("android", Json::object()),
                    acquisition = profile.value("acquisition", Json::object());
         const auto images = acquisition.value("images", Json::object()),
                    system = images.value("system", Json::object());
         const bool exact =
                 runtime_profile_reference(profile, requested_profile) ==
-                        "free-11-chinese-20250710-6.11.1" &&
+                        profile.value("id", std::string(requested_profile)) &&
+                record_declares(profile, ProfilePlatform::qinggan11, ProfileBoard::sa8155) &&
                 android.value("package", std::string{}) ==
                         "system-images;android-30;default;arm64-v8a" &&
                 android.value("offline_selinux_labels", std::string{}) ==
@@ -438,16 +442,17 @@ std::uint64_t android_candidate_reserve_bytes(const Json &profile,
         return 8ULL << 30;
     }
 
-    const auto id = runtime_profile_reference(profile, requested_profile);
+    // The NXP, qinggan11 and Passion candidates have a measured disk budget.
+    const bool nxp = record_declares(profile, ProfilePlatform::qinggan09, ProfileBoard::nxp);
 
-    if (id != "free-09-chinese-20221230-nxp-rc45" && id != "passion-11-russian-20260403-2.1.4.80" &&
-        id != "free-11-chinese-20260731-7.3.1" && id != "free-11-russian-20260318-rc1") {
+    if (!nxp && !record_declares(profile, ProfilePlatform::qinggan11, ProfileBoard::sa8155) &&
+        !record_declares(profile, ProfilePlatform::passion, ProfileBoard::sa8155)) {
         return 20ULL << 30;
     }
 
     const auto &android = profile.at("android");
 
-    if (id == "free-09-chinese-20221230-nxp-rc45") {
+    if (nxp) {
         need(native_base_api(android) == 28,
              "exact NXP API28 base required for measured disk budget");
     } else {
@@ -463,11 +468,10 @@ AndroidCandidateBudget android_candidate_build_budget(const Json &profile, std::
                                                       std::string_view requested_profile) {
     const auto reserve = android_candidate_reserve_bytes(profile, requested_profile);
 
-    return {reserve,
-            (reserve == 8ULL << 30 || requested_profile == "free-11-chinese-20250710-6.11.1")
-                    ? android_candidate_peak_extra_bytes(profile, base_bytes, payload_bytes,
-                                                         requested_profile)
-                    : 12ULL << 30};
+    return {reserve, (reserve == 8ULL << 30 || profile_feature(profile, "measured_disk_reserve"))
+                             ? android_candidate_peak_extra_bytes(profile, base_bytes,
+                                                                  payload_bytes, requested_profile)
+                             : 12ULL << 30};
 }
 
 void prepare_android_candidate_base(const std::filesystem::path &source, const Json &files,
@@ -544,8 +548,7 @@ Json export_android_candidate_owned_package(const Json &profile, const Json &art
                                             const Json &installed,
                                             const std::filesystem::path &destination,
                                             std::uint64_t reserve) {
-    if (runtime_profile_reference(profile) != "free-11-chinese-20260731-7.3.1" &&
-        runtime_profile_reference(profile) != "free-11-russian-20260318-rc1") {
+    if (!qinggan11_wheel_provider(profile)) {
         return Json::object();
     }
 
@@ -591,8 +594,7 @@ Json export_android_candidate_camera_package(const Json &profile, const Json &ar
                                              const Json &installed,
                                              const std::filesystem::path &destination,
                                              std::uint64_t reserve) {
-    if (runtime_profile_reference(profile) != "free-11-chinese-20260731-7.3.1" &&
-        runtime_profile_reference(profile) != "free-11-russian-20260318-rc1") {
+    if (!qinggan11_package_delivery(profile)) {
         return Json::object();
     }
 
@@ -633,17 +635,15 @@ static Json export_android_candidate_prepared_packages(const Json &profile, cons
                                                        const Json &installed,
                                                        const std::filesystem::path &destination,
                                                        std::uint64_t reserve) {
-    if (runtime_profile_reference(profile) != "free-11-chinese-20260731-7.3.1" &&
-        runtime_profile_reference(profile) != "free-11-russian-20260318-rc1") {
+    if (!qinggan11_package_delivery(profile)) {
         return Json::array();
     }
 
     auto camera = export_android_candidate_camera_package(profile, artifacts, installed,
                                                           destination, reserve);
-    const bool russian = runtime_profile_reference(profile) == "free-11-russian-20260318-rc1";
 
-    if (russian) {
-        // The Russian snapshot has no Dueros Navi; only the Camera is exported.
+    if (!profile.at("patches").contains("Navi")) {
+        // A profile without a Navi patch exports only its Camera.
         auto packages = Json::array({camera});
         android_prepared_packages_descriptor(packages, true);
 
@@ -693,8 +693,8 @@ static Json export_android_candidate_qinggan09_packages(const std::filesystem::p
     const auto definition = read_private_json(root / "profiles" / request.profile / "profile.json",
                                               4ULL << 20);
 
-    if (runtime_profile_reference(definition, request.profile) !=
-        qinggan09_owned_packages_profile) {
+    if (!embedded_profile_declares(runtime_profile_reference(definition, request.profile),
+                                   ProfilePlatform::qinggan09, ProfileBoard::sa8155)) {
         return Json::object();
     }
 

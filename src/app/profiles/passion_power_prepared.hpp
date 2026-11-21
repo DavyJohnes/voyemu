@@ -16,7 +16,7 @@ inline bool power_pin(const std::string &pin) {
 }
 
 inline bool passion_power_requested(const Json &definition) {
-    if (definition.value("id", std::string{}) != "passion-11-russian-20260403-2.1.4.80") {
+    if (definition.value("platform", Json()) != "passion") {
         return false;
     }
 

@@ -28,6 +28,24 @@ const std::string &art_diagnostic_script() {
 
     return script;
 }
+
+bool passion_profile(const Json &profile) {
+    return record_declares(profile, ProfilePlatform::passion, ProfileBoard::sa8155);
+}
+
+bool qinggan11_profile(const Json &profile) {
+    return record_declares(profile, ProfilePlatform::qinggan11, ProfileBoard::sa8155);
+}
+
+// The reviewed qinggan11 source Launchers whose second launcher activity owns the secondary
+// display.
+bool qinggan11_reviewed_launcher(const Json &profile) {
+    const auto &pin = profile.at("original").at("Launcher").at("sha256");
+
+    return pin == "48665cf9d6bb50b49b3aa0b1aa73bdb0ac5d9d7071240c46c7f13d07d4114d7e" ||
+           pin == "94007beb0eed82807d3f20429435f2bbd585d9d52e6125b2a40779fc8cd2683c" ||
+           pin == "b3287150827e7fa51072bcbcba257539101cda8433c5f9d3a95f4ca905abd567";
+}
 } // namespace
 
 Json android_candidate_ui_request(int timeout_ms) {
@@ -241,8 +259,7 @@ android_candidate_sdk_environment(const std::filesystem::path &sdk, bool windows
 }
 
 std::vector<std::string> android_candidate_art_verify_packages(const Json &profile) {
-    if (profile.value("id", std::string{}) != "passion-11-russian-20260403-2.1.4.80" ||
-        !profile.contains("android") ||
+    if (!passion_profile(profile) || !profile.contains("android") ||
         profile.at("android").value("package", std::string{}) !=
                 "system-images;android-30;default;arm64-v8a" ||
         !profile.contains("original") || !profile.at("original").contains("LY_Car")) {
@@ -410,7 +427,7 @@ Json android_candidate_binder_probe(const Json &required, const ProcessResult &p
 }
 
 Json android_candidate_vehicle_observer_policy(const Json &profile) {
-    if (profile.value("id", std::string{}) == "free-09-chinese-20221230-nxp-rc45") {
+    if (record_declares(profile, ProfilePlatform::qinggan09, ProfileBoard::nxp)) {
         need(android_candidate_api(profile) == 28,
              "NXP vehicle observation requires an API28 source profile");
 
@@ -420,7 +437,7 @@ Json android_candidate_vehicle_observer_policy(const Json &profile) {
                 {"reason", "NXP profile has no source-backed vehicle observer"}};
     }
 
-    if (profile.value("id", std::string{}) != "passion-11-russian-20260403-2.1.4.80") {
+    if (!passion_profile(profile)) {
         return {{"supported", true}};
     }
 
@@ -442,8 +459,7 @@ void validate_android_candidate_checks(const Json &profile, const Json &checks) 
         fail("bounded nonempty cold check array required");
     }
 
-    const bool passion = profile.value("id", std::string{}) ==
-                         "passion-11-russian-20260403-2.1.4.80";
+    const bool passion = passion_profile(profile);
     const auto unsupported = passion ? android_candidate_vehicle_observer_policy(profile) : Json();
     unsigned declarations = 0;
 
@@ -492,25 +508,17 @@ void validate_android_candidate_checks(const Json &profile, const Json &checks) 
 
 std::optional<unsigned> android_candidate_secondary_provider(const Json &profile,
                                                              const std::string &displays) {
-    const auto id = profile.value("id", std::string{});
-    const bool passion = id == "passion-11-russian-20260403-2.1.4.80",
-               qinggan11_731 = id == "free-11-chinese-20260731-7.3.1" ||
-                               id == "free-11-russian-20260318-rc1",
-               qinggan11_611 = id == "free-11-chinese-20250710-6.11.1";
+    const bool passion = passion_profile(profile);
 
-    need(passion || qinggan11_731 || qinggan11_611,
+    need(passion || qinggan11_profile(profile),
          "API30 source-owned secondary provider scope required");
     need(android_candidate_api(profile) == 30,
          "API30 display readiness requires a supported source profile");
-    const auto russian = id == "free-11-russian-20260318-rc1";
-    const auto launcher = passion ? "LY_Launcher" : "Launcher",
-               pin = passion ? "4032f14c0fc49fd52514737309d2af67c9d4ff9340dd534874f46cbe2e748c00"
-                     : qinggan11_611
-                             ? "48665cf9d6bb50b49b3aa0b1aa73bdb0ac5d9d7071240c46c7f13d07d4114d7e"
-                     : russian ? "94007beb0eed82807d3f20429435f2bbd585d9d52e6125b2a40779fc8cd2683c"
-                               : "b3287150827e7fa51072bcbcba257539101cda8433c5f9d3a95f4ca905abd567";
     const auto android = android_screens(profile.at("displays"));
-    need(android.size() >= 2 && profile.at("original").at(launcher).at("sha256") == pin,
+    need(android.size() >= 2 &&
+                 (passion ? profile.at("original").at("LY_Launcher").at("sha256") ==
+                                    "4032f14c0fc49fd52514737309d2af67c9d4ff9340dd534874f46cbe2e748c00"
+                          : qinggan11_reviewed_launcher(profile)),
          "two-display source Launcher contract required");
     const auto width = android.at(1).width, height = android.at(1).height;
     need(width >= 64 && width <= 8192 && height >= 64 && height <= 8192,
@@ -557,13 +565,9 @@ std::optional<unsigned> android_candidate_secondary_provider(const Json &profile
 std::optional<unsigned> android_candidate_secondary_display_ready(const Json &profile,
                                                                   const std::string &displays,
                                                                   const std::string &windows) {
-    const auto id = profile.value("id", std::string{});
-    const bool passion = id == "passion-11-russian-20260403-2.1.4.80",
-               qinggan11_731 = id == "free-11-chinese-20260731-7.3.1" ||
-                               id == "free-11-russian-20260318-rc1",
-               qinggan11_611 = id == "free-11-chinese-20250710-6.11.1";
+    const bool passion = passion_profile(profile);
 
-    if (!passion && !qinggan11_731 && !qinggan11_611) {
+    if (!passion && !qinggan11_profile(profile)) {
         return secondary_display_ready(displays, windows);
     }
 
@@ -589,20 +593,14 @@ std::vector<std::string> android_candidate_capture_arguments(const Json &profile
         return {};
     }
 
-    const auto id = profile.value("id", std::string{});
-    const bool nxp = id == "free-09-chinese-20221230-nxp-rc45" &&
-                     android_candidate_api(profile) == 28;
-    need(nxp || ((id == "passion-11-russian-20260403-2.1.4.80" ||
-                  id == "free-11-chinese-20260731-7.3.1" ||
-                  id == "free-11-chinese-20250710-6.11.1" ||
-                  id == "free-11-russian-20260318-rc1") &&
-                 android_candidate_api(profile) == 30),
+    const bool nxp = record_declares(profile, ProfilePlatform::qinggan09, ProfileBoard::nxp) &&
+                     android_candidate_api(profile) == 28,
+               qinggan11 = qinggan11_profile(profile);
+    need(nxp || ((passion_profile(profile) || qinggan11) && android_candidate_api(profile) == 30),
          "frame capture requires an exact supported source profile");
 
-    if (id == "free-11-chinese-20250710-6.11.1") {
-        need(profile.at("original").at("Launcher").at("sha256") ==
-                     "48665cf9d6bb50b49b3aa0b1aa73bdb0ac5d9d7071240c46c7f13d07d4114d7e",
-             "exact 6.11 capture inputs required");
+    if (qinggan11 && profile.at("original").contains("Launcher")) {
+        need(qinggan11_reviewed_launcher(profile), "exact qinggan11 capture inputs required");
     }
 
     need(port >= 5554 && port <= 5682 && port % 2 == 0, "bounded candidate capture port required");
@@ -675,10 +673,7 @@ void android_candidate_promote_labelled_system(const std::filesystem::path &mach
 }
 
 bool android_candidate_api30_root_layout(const Json &profile) {
-    const auto id = profile.value("id", std::string{});
-    const bool older = id == "free-11-chinese-20250710-6.11.1";
-
-    if (!older && id != "free-11-chinese-20260731-7.3.1" && id != "free-11-russian-20260318-rc1") {
+    if (!qinggan11_profile(profile)) {
         return false;
     }
 
@@ -686,12 +681,9 @@ bool android_candidate_api30_root_layout(const Json &profile) {
                  profile.at("android").value("offline_selinux_labels", std::string{}) ==
                          "qinggan11-can-early-v1",
          "exact API30 root layout profile required");
-
-    if (older) {
-        need(profile.at("android").value("package", std::string{}) ==
-                     "system-images;android-30;default;arm64-v8a",
-             "exact 6.11 API30 SDK required");
-    }
+    need(profile.at("android").value("package", std::string{}) ==
+                 "system-images;android-30;default;arm64-v8a",
+         "exact qinggan11 API30 SDK required");
 
     return true;
 }
@@ -703,21 +695,15 @@ std::uint64_t android_candidate_overlay_scratch_bytes(const Json &profile, std::
         original_navi_preflight(profile, android_candidate_api(profile));
     }
 
-    const bool older = profile.value("id", std::string{}) == "free-11-chinese-20250710-6.11.1";
+    const bool qinggan11 = qinggan11_profile(profile);
 
-    if (older) {
-        need(android_candidate_api30_root_layout(profile), "exact 6.11 scratch profile required");
-    }
-
-    const bool russian = profile.value("id", std::string{}) == "free-11-russian-20260318-rc1";
-
-    if (russian) {
+    if (qinggan11) {
         need(android_candidate_api30_root_layout(profile),
-             "exact RU API30 root layout profile required");
+             "exact qinggan11 scratch profile required");
     }
 
-    if (!original_navi && !older && !russian) {
-        if (profile.value("id", std::string{}) != "passion-11-russian-20260403-2.1.4.80") {
+    if (!original_navi && !qinggan11) {
+        if (!passion_profile(profile)) {
             return 0;
         }
 
@@ -1222,7 +1208,7 @@ void android_candidate_home_reboot_checkpoints(unsigned api, bool has_home,
 }
 
 void android_candidate_offline_policy_pin(const std::string &artifact, const std::string &expected,
-                                          std::string_view profile) {
+                                          const Json &profile) {
     if (artifact == "patched:can-early-policy-a9") {
         need(expected == "2879712e7a6a12f262ab346fbe61b7f5b992e652e10d93edf8eb44a6c7b84a77",
              "offline policy output pin differs");
@@ -1230,9 +1216,9 @@ void android_candidate_offline_policy_pin(const std::string &artifact, const std
         need(expected == "8bd8062c3b8108bdc34573f78d403691e747298a986a3464ace94721b02ad1d7",
              "offline contexts output pin differs");
     } else if (artifact == "patched:can-early-policy-api30") {
-        const bool original_navi = profile == "free-11-chinese-20260731-7.3.1";
-        const bool shared = profile == "free-11-chinese-20250710-6.11.1" ||
-                            profile == "free-11-russian-20260318-rc1";
+        const bool qinggan11 = qinggan11_profile(profile),
+                   original_navi = qinggan11 && original_navi_requested(profile),
+                   shared = qinggan11 && !original_navi;
         need((original_navi &&
               expected == "e8f3b8cb54b3ec09280cf5c630f495b3202f1c9994e796c5a1cf707a5dcd6cf6") ||
                      (shared &&

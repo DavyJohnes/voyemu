@@ -1162,6 +1162,9 @@ static void media_origin_checks(const std::filesystem::path &root) {
     write_private_json(
             definition,
             {{"schema", 1},
+             {"platform", "qinggan11"},
+             {"board", "8155"},
+             {"features", {{"system_upgrade", true}}},
              {"patches", {{"QGMedia", {{"steps", Json::array({"api30-usb-player.json"})}}}}}});
     put(apk, "cold source QGMedia APK");
     const auto sha = sha256_file(apk);
@@ -2061,6 +2064,10 @@ static void api30_publication_checks(const std::filesystem::path &stage, bool ol
     Json profile = {
             {"schema", 1},
             {"id", id},
+            {"platform", "qinggan11"},
+            {"board", "8155"},
+            {"features", older ? Json{{"measured_disk_reserve", true}}
+                               : Json{{"system_upgrade", true}, {"ui_observer_required", true}}},
             {"status", "incomplete"},
             {"android",
              {{"package", "system-images;android-30;default;arm64-v8a"},
@@ -2906,6 +2913,9 @@ static void system_upgrade_candidate_checks(const std::filesystem::path &stage) 
                definition_file = root / "profiles" / profile / "profile.json";
     Json definition = {
             {"id", profile},
+            {"platform", "qinggan11"},
+            {"board", "8155"},
+            {"features", {{"system_upgrade", true}}},
             {"android",
              {{"package", "system-images;android-30;default;arm64-v8a"},
               {"revision", "1"},
@@ -3066,6 +3076,7 @@ static void system_upgrade_candidate_checks(const std::filesystem::path &stage) 
         const std::string passion = "passion-11-russian-20260403-2.1.4.80";
         auto source = definition;
         source["id"] = passion;
+        source["platform"] = "passion";
         source["status"] = "incomplete";
         const auto profile_file = root / "profiles" / passion / "profile.json";
         write_private_json(profile_file, source);
@@ -3673,11 +3684,8 @@ int main(int argc, char **argv) {
         if (argc == 6 && std::string_view(argv[1]) == "--refresh-observer-source") {
             const std::string profile = argv[3];
 
-            if ((profile != qinggan09_owned_packages_profile &&
-                 profile != "free-11-chinese-20250710-6.11.1") ||
-                std::string_view(argv[4]) != profile) {
-                throw std::runtime_error(
-                        "OBSERVER_SOURCE: exact canonical A9 or Free A11 6.11.1 arguments required");
+            if (std::string_view(argv[4]) != profile) {
+                throw std::runtime_error("OBSERVER_SOURCE: exact canonical arguments required");
             }
 
             const auto root = std::filesystem::canonical(argv[2]),

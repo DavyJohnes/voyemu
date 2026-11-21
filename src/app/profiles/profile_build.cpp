@@ -888,8 +888,8 @@ Json build_profile(const std::filesystem::path &root, std::string_view profile,
     root_profile(root, profile);
 
     if (std::filesystem::exists(build_target(root, profile, machine)) &&
-        (profile == "free-11-chinese-20260731-7.3.1" || profile == "free-11-russian-20260318-rc1" ||
-         profile == passion_profile_id) &&
+        profile_feature(read_private_json(authoring_definition(root, profile), 1 << 20),
+                        "system_upgrade") &&
         !cluster) {
         need(multimedia, "system upgrade requires Android subsystem");
         const auto candidate = build_profile_android(root, profile, machine, offline, jdk,
@@ -951,7 +951,9 @@ Json build_profile(const std::filesystem::path &root, std::string_view profile,
     root_profile(root, profile);
     const auto target = build_target(root, profile, machine);
 
-    if ((std::filesystem::exists(target) && profile != "free-11-chinese-20260731-7.3.1") ||
+    if ((std::filesystem::exists(target) &&
+         !qinggan11_package_delivery(
+                 read_private_json(authoring_definition(root, profile), 1 << 20))) ||
         std::filesystem::is_symlink(target)) {
         throw cli::LocalizedError("PROFILE_BUILD", "error.machine_exists",
                                   {{"machine", progress::path_text(target)}});
@@ -1080,8 +1082,9 @@ Json build_profile_android(const std::filesystem::path &root, std::string_view p
     const auto target = build_target(root, profile, machine);
 
     if (std::filesystem::is_symlink(target) ||
-        (std::filesystem::exists(target) && profile != "free-11-chinese-20260731-7.3.1" &&
-         profile != passion_profile_id && profile != "free-11-russian-20260318-rc1")) {
+        (std::filesystem::exists(target) &&
+         !profile_feature(read_private_json(authoring_definition(root, profile), 1 << 20),
+                          "system_upgrade"))) {
         throw cli::LocalizedError("PROFILE_BUILD", "error.machine_exists",
                                   {{"machine", progress::path_text(target)}});
     }
@@ -1147,8 +1150,12 @@ Json build_profile_android(const std::filesystem::path &root, std::string_view p
     request.cancelled = std::move(cancelled);
     request.port = 0;
 
-    if (profile == "free-11-chinese-20250710-6.11.1") {
-        constexpr unsigned port = 5572;
+    const auto definition = read_private_json(authoring_definition(root, profile), 1 << 20);
+
+    // A profile may pin the port of its source candidate in emulator.candidatePort.
+    if (const auto fixed = definition.value("emulator", Json::object()).value("candidatePort", 0U);
+        fixed != 0) {
+        const auto port = fixed;
 
         if (tcp_port_free(port) && tcp_port_free(port + 1) && tcp_port_free(port + 20000) &&
             tcp_port_free(port + 30000)) {
@@ -1164,14 +1171,13 @@ Json build_profile_android(const std::filesystem::path &root, std::string_view p
     }
 
     need(request.port != 0, "no free owned SDK port triple available");
-    const auto definition = read_private_json(authoring_definition(root, profile), 1 << 20);
 
     if (native_base_api(definition.at("android")) == 30) {
         request.overall_timeout_ms = 600000;
         request.capture_frames = true;
     }
 
-    if (runtime_profile_reference(definition, profile) == "free-09-chinese-20221230-nxp-rc45") {
+    if (record_declares(definition, ProfilePlatform::qinggan09, ProfileBoard::nxp)) {
         request.capture_frames = true;
     }
 
@@ -1184,11 +1190,10 @@ Json build_profile_android(const std::filesystem::path &root, std::string_view p
     auto receipt = [&] {
         const auto family = runtime_profile_reference(definition, profile);
 
-        if (!embedded_profile_declares(family, ProfilePlatform::qinggan09, ProfileBoard::sa8155) &&
-            family != "free-09-chinese-20221230-nxp-rc45" && family != passion_profile_id &&
-            family != "free-11-chinese-20260731-7.3.1" &&
-            family != "free-11-russian-20260318-rc1" &&
-            family != "free-11-chinese-20250710-6.11.1") {
+        // A bundled profile builds its measured candidate; a local copy builds the generic one.
+        const auto bundled = embedded_profile_names();
+
+        if (std::ranges::find(bundled, family) == bundled.end()) {
             return build_android_candidate(root, request, candidate);
         }
 

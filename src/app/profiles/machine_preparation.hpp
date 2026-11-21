@@ -90,8 +90,9 @@ std::string android_candidate_write_failure(const std::string &target, const std
                                             const std::string &shell_identity,
                                             const std::string &parent);
 // Require the same real ext4 root mount before and after the A9 read-only transition.
+// The API30 early policy pin follows the platform and the original_navi feature of profile.
 void android_candidate_offline_policy_pin(const std::string &artifact, const std::string &expected,
-                                          std::string_view profile = {});
+                                          const Json &profile = Json::object());
 void android_candidate_first_oem_boot(
         const Json &profile,
         const std::function<std::string(const std::vector<std::string> &)> &shell,

@@ -3,6 +3,9 @@
 #include <iostream>
 using namespace voyemu;
 namespace {
+// A synthetic qinggan09 profile that built the packages.
+constexpr std::string_view test_profile = "test-qinggan09";
+
 void check(bool yes, const char *message) {
     if (!yes) {
         throw std::runtime_error(message);
@@ -25,7 +28,7 @@ struct Fixture {
         std::ofstream(data) << "existing OEM contacts, applications and preferences";
         descriptor = {{"schema", 1},
                       {"api", 28},
-                      {"profile", std::string(qinggan09_phone_package_profile)},
+                      {"profile", std::string(test_profile)},
                       {"certificate_sha256", std::string(qinggan09_phone_package_certificate)},
                       {"expected_previous_sha256", std::string(qinggan09_phone_package_previous)},
                       {"receipt_sha256", std::string(64, 'b')},
@@ -35,7 +38,7 @@ struct Fixture {
                         {"sha256", sha},
                         {"bytes", bytes.size()}}}};
         spec = {{"api", 28},
-                {"profile", std::string(qinggan09_phone_package_profile)},
+                {"profile", std::string(test_profile)},
                 {"machine", machine.string()},
                 {"qinggan09_phone_package", descriptor}};
     }
@@ -62,7 +65,7 @@ int main() {
             }
 
             check(refused, "logical copy needs phone adapter identity");
-            copy["reference_profile"] = std::string(qinggan09_phone_package_profile);
+            copy["reference_profile"] = std::string(test_profile);
             check(qinggan09_phone_package_file(copy) == f.file,
                   "independent logical copy retains phone package");
             copy["reference_profile"] = "unsupported-family";

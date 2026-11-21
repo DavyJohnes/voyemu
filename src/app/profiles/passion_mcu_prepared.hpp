@@ -7,7 +7,7 @@
 #include <algorithm>
 namespace voyemu {
 inline bool passion_mcu_requested(const Json &definition) {
-    if (definition.value("id", std::string{}) != "passion-11-russian-20260403-2.1.4.80") {
+    if (definition.value("platform", Json()) != "passion") {
         return false;
     }
 

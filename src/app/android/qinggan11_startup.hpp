@@ -16,6 +16,13 @@ inline bool qinggan11_wheel_provider(const Json &definition) {
            wheel.value("provider", Json()) == "com.voyemu.input.wheel";
 }
 
+// A qinggan11 profile with the system_upgrade feature delivers its Camera and Navi as packages of
+// the machine and rebuilds them with its Android system.
+inline bool qinggan11_package_delivery(const Json &definition) {
+    return definition.value("platform", Json()) == "qinggan11" &&
+           profile_feature(definition, "system_upgrade");
+}
+
 // The same for a bundled profile; false for a profile that is not bundled.
 inline bool qinggan11_wheel_provider_profile(std::string_view profile) {
     return embedded_profile_declares(profile, ProfilePlatform::qinggan11, ProfileBoard::sa8155) &&
