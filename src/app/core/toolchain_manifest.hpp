@@ -4,7 +4,7 @@
 #include <string>
 #include <string_view>
 namespace voyemu {
-// src/app/toolchain.json, embedded at build time; the only source of host tool and SDK pins.
+// The embedded project file src/app/toolchain.json; the only source of host tool and SDK pins.
 const Json &embedded_toolchain_manifest();
 // The SHA-256 of file, relative to the SDK root, pinned in sdk.runtimeFilePins for host, such as
 // "darwin/arm64" or "win32/x64".

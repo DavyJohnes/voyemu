@@ -1,12 +1,10 @@
 #include "toolchain_manifest.hpp"
 #include "error.hpp"
 #include "os/platform.hpp"
-#include <iterator>
+#include "project_files.hpp"
 #include <stdexcept>
 namespace voyemu {
 namespace {
-#include "toolchain_catalog.inc"
-
 // The sdk.runtimeFilePins entry of host with key, or null.
 const Json *runtime_file_entry(std::string_view host, const char *key, const std::string &file) {
     const auto slash = host.find('/');
@@ -29,7 +27,7 @@ const Json *runtime_file_entry(std::string_view host, const char *key, const std
 } // namespace
 
 const Json &embedded_toolchain_manifest() {
-    static const Json result = Json::parse(std::begin(toolchain_json), std::end(toolchain_json));
+    static const Json result = embedded_project_file_json("src/app/toolchain.json", 1 << 20);
 
     return result;
 }
