@@ -42,6 +42,7 @@ set(voyemu_errorprone_oem_units
     profiles/free-11-chinese-20250710-6.11.1/patches/api30-usb-player
     profiles/free-11-chinese-20260731-7.3.1/components/oem-power
     profiles/free-11-chinese-20260731-7.3.1/patches/api30-usb-player
+    profiles/free-11-russian-20260318-rc1/components/oem-power
     profiles/passion-11-russian-20260403-2.1.4.80/patches/passion-api30-mcu-property
 )
 # Host test units at the host level against JVM Android doubles, the pinned Android platform and
