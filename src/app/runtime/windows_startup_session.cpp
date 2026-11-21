@@ -2043,13 +2043,20 @@ void Session::advance_windows_android_transaction() {
                 // The model-backed APK declares CanBusService and keeps RegistrationService as its
                 // base class, so the component follows the installed helper exactly as it does on
                 // the native path.
-                auto result = poll_windows_android_action(
-                        {"shell",
-                         startup_shell({"am", "startservice", "-n",
-                                        qinggan09_canbus_service_component(android_spec_), "-a",
-                                        "com.voyemu.canbus.APPLY_PERSISTENT_VEHICLE_STATE", "--es",
-                                        "state_json", transaction.submitted_state.dump()})},
-                        true, attempt);
+                std::vector<std::string> submission{
+                        "am",
+                        "startservice",
+                        "-n",
+                        qinggan09_canbus_service_component(android_spec_),
+                        "-a",
+                        "com.voyemu.canbus.APPLY_PERSISTENT_VEHICLE_STATE",
+                        "--es",
+                        "state_json",
+                        transaction.submitted_state.dump()};
+                const auto power = android_power_extra();
+                submission.insert(submission.end(), power.begin(), power.end());
+                auto result = poll_windows_android_action({"shell", startup_shell(submission)},
+                                                          true, attempt);
 
                 if (!result) {
                     return;

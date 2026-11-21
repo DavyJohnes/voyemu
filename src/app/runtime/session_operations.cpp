@@ -257,6 +257,31 @@ Json Session::handle(const Json &operation) {
                     true, received + std::chrono::milliseconds(cluster_ui_timeout(operation)));
         } else if (op == "phone_control") {
             reply = phone_control(operation);
+        } else if (op == "patch" && operation.at("values").is_object() &&
+                   operation.at("values").contains("power")) {
+            if ((passion_presentation(android_spec_) && !passion_mcu_available(android_spec_)) ||
+                nxp_presentation(android_spec_)) {
+                throw VoyemuError("TEST_UNSUPPORTED",
+                                  "selected presentation vehicle state delivery is unavailable");
+            }
+
+            // One field selects the power state; PowerEcu sets ign and ready_lamp from it.
+            const auto &values = operation.at("values");
+            const auto target = PowerEcu::parse(values.at("power"));
+
+            if (values.size() != 1 || !target) {
+                throw VoyemuError("VEHICLE_POWER", "power alone with off, acc, on or ready");
+            }
+
+            auto outcome = power_.request(model_.state(), *target);
+
+            if (outcome.receipt.at("outcome") == "applied") {
+                startup_ignition_.observe_patch(
+                        Json{{"ign", *target >= PowerEcu::State::on ? 1 : 0}});
+            }
+
+            apply_power_outcome(std::move(outcome));
+            reply = snapshot();
         } else if (op == "patch") {
             if ((passion_presentation(android_spec_) && !passion_mcu_available(android_spec_)) ||
                 nxp_presentation(android_spec_)) {
@@ -276,6 +301,7 @@ Json Session::handle(const Json &operation) {
             auto before = model_.state().at("sequence");
             startup_ignition_.observe_patch(values);
             model_.patch(values);
+            power_.observe(model_.state());
             write_private_json(directory_ / "vehicle-state.json", model_.state());
             schedule_android_state(before.get<std::uint32_t>());
 

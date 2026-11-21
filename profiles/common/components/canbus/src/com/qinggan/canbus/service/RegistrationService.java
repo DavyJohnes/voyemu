@@ -155,6 +155,13 @@ public class RegistrationService extends Service {
                     applied
                             ? "complete vehicle input queued or already current"
                             : "complete vehicle input rejected");
+
+            // The host power state requests the ACC of the CAN model like the screen lifecycle.
+            int acc = intent.getIntExtra("acc", -1);
+
+            if (sBinder != null && (acc == 0 || acc == 2)) {
+                sBinder.setAccStatus(acc);
+            }
         }
 
         if (intent != null && "com.voyemu.canbus.APPLY_VEHICLE_STATE".equals(intent.getAction())) {

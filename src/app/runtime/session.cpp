@@ -82,6 +82,10 @@ Session::Session(std::filesystem::path directory, std::string session_id,
 
     endpoint_ = session_control_endpoint(directory_, session_id_);
     deliveries_ = {{"android", {{"status", "not_started"}}}, {"qnx", {{"status", "not_started"}}}};
+    power_.observe(model_.state());
+    deliveries_["power_ecu"] = {{"consumer", "voyemu.power-ecu"},
+                                {"policy_id", "voyemu-own-power-v1"},
+                                {"state", PowerEcu::name(power_.state())}};
     next_android_ = next_oem_settings_ = next_qnx_ = std::chrono::steady_clock::now();
     write_private_json(directory_ / "vehicle-state.json", model_.state());
     auto creator = os::current_process();
@@ -227,26 +231,54 @@ void Session::apply_adas_outcome(AdasOutcome outcome) {
     deliveries_["adas_ecu"] = std::move(outcome.receipt);
 }
 
+// The startup sequence is a transition of the power state: ON or READY waits at ACC.
 void Session::apply_startup_ignition(const std::optional<StartupIgnition::Change> &change) {
     if (!change) {
         return;
     }
 
-    auto before = model_.state().at("sequence");
-    model_.patch(change->values);
-    write_private_json(directory_ / "vehicle-state.json", model_.state());
-    schedule_android_state(before.get<std::uint32_t>());
-
-    if (cluster_requested_) {
-        deliveries_["qnx"]["vehicle"] = qnx_vehicle_pending();
-    }
-
-    const Json receipt{{"ign", change->values.at("ign")},
+    apply_power_outcome(
+            power_.startup(model_.state(), change->values.at("ign") == 1, change->reason));
+    const Json receipt{{"ign", model_.state().at("raw_oem").at("ign")},
                        {"reason", change->reason},
                        {"pending", startup_ignition_.pending()},
                        {"revision", model_.state().at("sequence")}};
     deliveries_["startup_ignition"] = receipt;
     logging::write(logging::Level::info, "vehicle", "startup.ignition", receipt);
+}
+
+void Session::apply_power_outcome(PowerEcu::Outcome outcome) {
+    auto before = model_.state().at("sequence");
+
+    if (!outcome.patch.empty()) {
+        model_.patch(outcome.patch);
+        write_private_json(directory_ / "vehicle-state.json", model_.state());
+
+        if (cluster_requested_) {
+            deliveries_["qnx"]["vehicle"] = qnx_vehicle_pending();
+        }
+    }
+
+    // The multimedia ACC rides on the next state delivery, OFF<->ACC changes no field.
+    const auto acc = [&](const char *key) {
+        return PowerEcu::android_acc(*PowerEcu::parse(outcome.receipt.at(key)));
+    };
+
+    if (outcome.patch.empty() && acc("previous") != acc("state")) {
+        model_.advance_revision(before.get<std::uint32_t>());
+        write_private_json(directory_ / "vehicle-state.json", model_.state());
+    }
+
+    schedule_android_state(before.get<std::uint32_t>());
+
+    outcome.receipt["before_revision"] = before;
+    outcome.receipt["after_revision"] = model_.state().at("sequence");
+    deliveries_["power_ecu"] = std::move(outcome.receipt);
+    logging::write(logging::Level::info, "vehicle", "power.state", deliveries_["power_ecu"]);
+}
+
+std::vector<std::string> Session::android_power_extra() const {
+    return {"--ei", "acc", std::to_string(PowerEcu::android_acc(power_.state()))};
 }
 
 bool Session::close_passion_display_power() {

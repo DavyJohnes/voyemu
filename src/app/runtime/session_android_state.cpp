@@ -289,6 +289,8 @@ void Session::deliver_android_state() {
                                   "-a",        "com.voyemu.canbus.APPLY_PERSISTENT_VEHICLE_STATE",
                                   "--es",      "state_json",
                                   state.dump()};
+    const auto power = android_power_extra();
+    args.insert(args.end(), power.begin(), power.end());
     std::string command;
 
     for (const auto &arg : args) {

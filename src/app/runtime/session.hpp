@@ -6,6 +6,7 @@
 #include "body_ecu.hpp"
 #include "media_discovery.hpp"
 #include "model.hpp"
+#include "power_ecu.hpp"
 #include "process.hpp"
 #include "qinggan09_canbus_startup.hpp"
 #include "qnx_serial_lines.hpp"
@@ -328,6 +329,9 @@ private:
     std::mutex test_stop_mutex_;
     void apply_adas_outcome(AdasOutcome outcome);
     void apply_startup_ignition(const std::optional<StartupIgnition::Change> &change);
+    void apply_power_outcome(PowerEcu::Outcome outcome);
+    // The am startservice extra that carries the multimedia ACC of the power state.
+    std::vector<std::string> android_power_extra() const;
     void assert_android_identity();
     void stop_android(std::unique_lock<std::recursive_mutex> &state, bool save_checkpoint = true);
     Json reboot_android(const std::string &mode);
@@ -398,6 +402,7 @@ private:
     EventQueue events_;
     AdasEcu adas_;
     StartupIgnition startup_ignition_;
+    PowerEcu power_;
     // A cluster reset keeps the vehicle ignition on, so the next attach plays no startup sequence.
     bool cluster_reset_ = false;
     BodyEcu body_;
