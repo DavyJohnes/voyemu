@@ -42,27 +42,27 @@
             "initialNativeState": {},
             "files": {
                 "front.so": {
-                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-29bc231c/sa8155-qinggan09-front.so",
+                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-c372fb8d/sa8155-qinggan09-front.so",
                     "sha256": "bfb4fc29dfa45b9e8ce24356afd42a84618cc1261b075f941cbcfcc075c11a6e"
                 },
                 "observer.so": {
-                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-29bc231c/sa8155-qinggan09-observer.so",
+                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-c372fb8d/sa8155-qinggan09-observer.so",
                     "sha256": "3ba316bf2b5ffd7292ca5a2e8eaaa16a428fa1fcc8a71e751c0a7ad74e937cc5"
                 },
                 "virtual_wfd.so": {
-                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-29bc231c/sa8155-qinggan09-virtual_wfd.so",
+                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-c372fb8d/sa8155-qinggan09-virtual_wfd.so",
                     "sha256": "5aeaf419acbe25f44a5bf393ecbe9b00c24e3d6d444bb92fe1006dd1fc83eed3"
                 },
                 "readstub.bin": {
-                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-29bc231c/sa8155-qinggan09-readstub.bin",
+                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-c372fb8d/sa8155-qinggan09-readstub.bin",
                     "sha256": "9df19b08fdf35b39cd2e8f30cd4d678baa05946829130174a7c6d33de1069ff7"
                 },
                 "qnx-ipl-virt.bin": {
-                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-29bc231c/sa8155-qinggan09-qnx-ipl-virt.bin",
+                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-c372fb8d/sa8155-qinggan09-qnx-ipl-virt.bin",
                     "sha256": "923213787f5d049536bc7abf0fc3e57d9cf06acef7da6c26275266545224ad11"
                 },
                 "qnx-ifs2-restore.bin": {
-                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-29bc231c/sa8155-qinggan09-qnx-ifs2-restore.bin",
+                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-c372fb8d/sa8155-qinggan09-qnx-ifs2-restore.bin",
                     "sha256": "340d484fa81e7219b4905154df22255ed539567e8d730ce977ad9d40a8a3643a"
                 }
             }
@@ -73,31 +73,31 @@
             },
             "files": {
                 "front.so": {
-                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-29bc231c/sa8155-qinggan11-731-front.so",
-                    "sha256": "0da423be40d3568242c8e395531a316afcf41f0c69a7b9d23932c6a7144274ae"
+                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-c372fb8d/sa8155-qinggan11-731-front.so",
+                    "sha256": "ce52c94ad4a2544ea90fc5555ecfedb0988c68b22bd472eb8c47cb49bc776901"
                 },
                 "observer.so": {
-                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-29bc231c/sa8155-qinggan11-731-observer.so",
+                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-c372fb8d/sa8155-qinggan11-731-observer.so",
                     "sha256": "3ba316bf2b5ffd7292ca5a2e8eaaa16a428fa1fcc8a71e751c0a7ad74e937cc5"
                 },
                 "virtual_wfd.so": {
-                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-29bc231c/sa8155-qinggan11-731-virtual_wfd.so",
+                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-c372fb8d/sa8155-qinggan11-731-virtual_wfd.so",
                     "sha256": "5aeaf419acbe25f44a5bf393ecbe9b00c24e3d6d444bb92fe1006dd1fc83eed3"
                 },
                 "readstub.bin": {
-                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-29bc231c/sa8155-qinggan11-731-readstub.bin",
+                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-c372fb8d/sa8155-qinggan11-731-readstub.bin",
                     "sha256": "9df19b08fdf35b39cd2e8f30cd4d678baa05946829130174a7c6d33de1069ff7"
                 },
                 "qnx-ipl-virt.bin": {
-                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-29bc231c/sa8155-qinggan11-731-qnx-ipl-virt.bin",
+                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-c372fb8d/sa8155-qinggan11-731-qnx-ipl-virt.bin",
                     "sha256": "dd529f8904c688c3acd1c20ac41189b3040038eb4ab16632beea8d813db494a4"
                 },
                 "qnx-ifs2-restore.bin": {
-                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-29bc231c/sa8155-qinggan11-731-qnx-ifs2-restore.bin",
+                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-c372fb8d/sa8155-qinggan11-731-qnx-ifs2-restore.bin",
                     "sha256": "40f1e305df9ab2642351b1cdd192d85c1e02d759d18482d27a85ef5c86d77f02"
                 },
                 "qnx-pl011-console.bin": {
-                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-29bc231c/sa8155-qinggan11-731-qnx-pl011-console.bin",
+                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-c372fb8d/sa8155-qinggan11-731-qnx-pl011-console.bin",
                     "sha256": "24afb56593764d8ba78de9c21a7faef4fcba39aeef6905009d6af777b2c6652e"
                 }
             }
@@ -108,31 +108,31 @@
             },
             "files": {
                 "front.so": {
-                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-29bc231c/sa8155-qinggan11-611-front.so",
-                    "sha256": "abcdd837ba3fc1035adcc7209eb4ea21e2b777439e4bdf2052b087f3c71edfab"
+                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-c372fb8d/sa8155-qinggan11-611-front.so",
+                    "sha256": "07bdf4541ff5527a16344cd4b8f71990d78cc6585fd0e29531af83fc0919fd81"
                 },
                 "observer.so": {
-                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-29bc231c/sa8155-qinggan11-611-observer.so",
+                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-c372fb8d/sa8155-qinggan11-611-observer.so",
                     "sha256": "3ba316bf2b5ffd7292ca5a2e8eaaa16a428fa1fcc8a71e751c0a7ad74e937cc5"
                 },
                 "virtual_wfd.so": {
-                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-29bc231c/sa8155-qinggan11-611-virtual_wfd.so",
+                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-c372fb8d/sa8155-qinggan11-611-virtual_wfd.so",
                     "sha256": "5aeaf419acbe25f44a5bf393ecbe9b00c24e3d6d444bb92fe1006dd1fc83eed3"
                 },
                 "readstub.bin": {
-                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-29bc231c/sa8155-qinggan11-611-readstub.bin",
+                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-c372fb8d/sa8155-qinggan11-611-readstub.bin",
                     "sha256": "9df19b08fdf35b39cd2e8f30cd4d678baa05946829130174a7c6d33de1069ff7"
                 },
                 "qnx-ipl-virt.bin": {
-                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-29bc231c/sa8155-qinggan11-611-qnx-ipl-virt.bin",
+                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-c372fb8d/sa8155-qinggan11-611-qnx-ipl-virt.bin",
                     "sha256": "dd529f8904c688c3acd1c20ac41189b3040038eb4ab16632beea8d813db494a4"
                 },
                 "qnx-ifs2-restore.bin": {
-                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-29bc231c/sa8155-qinggan11-611-qnx-ifs2-restore.bin",
+                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-c372fb8d/sa8155-qinggan11-611-qnx-ifs2-restore.bin",
                     "sha256": "40f1e305df9ab2642351b1cdd192d85c1e02d759d18482d27a85ef5c86d77f02"
                 },
                 "qnx-pl011-console.bin": {
-                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-29bc231c/sa8155-qinggan11-611-qnx-pl011-console.bin",
+                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-c372fb8d/sa8155-qinggan11-611-qnx-pl011-console.bin",
                     "sha256": "24afb56593764d8ba78de9c21a7faef4fcba39aeef6905009d6af777b2c6652e"
                 }
             }
@@ -141,39 +141,39 @@
             "initialNativeState": {},
             "files": {
                 "front.so": {
-                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-29bc231c/sa8155-passion-21480-front.so",
+                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-c372fb8d/sa8155-passion-21480-front.so",
                     "sha256": "6b356520acaa93d36f43f3b1d6defe8ab670a7e9e0804700a236ecef39ac5428"
                 },
                 "bounded.so": {
-                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-29bc231c/sa8155-passion-21480-bounded.so",
+                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-c372fb8d/sa8155-passion-21480-bounded.so",
                     "sha256": "706837f8148f4d66bc247fa12a9108d0e7b4de559468ce5139fd2c2b035289bb"
                 },
                 "ram64.so": {
-                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-29bc231c/sa8155-passion-21480-ram64.so",
+                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-c372fb8d/sa8155-passion-21480-ram64.so",
                     "sha256": "a46d53fbe1ea7988ba371c29346f8731105c55ffc68b90e260ed32f0b9b26a7b"
                 },
                 "virtual_wfd.so": {
-                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-29bc231c/sa8155-passion-21480-virtual_wfd.so",
+                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-c372fb8d/sa8155-passion-21480-virtual_wfd.so",
                     "sha256": "5aeaf419acbe25f44a5bf393ecbe9b00c24e3d6d444bb92fe1006dd1fc83eed3"
                 },
                 "readstub.bin": {
-                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-29bc231c/sa8155-passion-21480-readstub.bin",
+                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-c372fb8d/sa8155-passion-21480-readstub.bin",
                     "sha256": "f42193e05bce0086d1fa4ef8f7baacf1b01a60f8ca4afe6348e342661edd68cf"
                 },
                 "qnx-ipl-virt.bin": {
-                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-29bc231c/sa8155-passion-21480-qnx-ipl-virt.bin",
+                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-c372fb8d/sa8155-passion-21480-qnx-ipl-virt.bin",
                     "sha256": "2c556d75351c0bffd35038bf3b1cff019a165e967988839a63351bf55e0c76e7"
                 },
                 "qnx-ifs2-restore.bin": {
-                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-29bc231c/sa8155-passion-21480-qnx-ifs2-restore.bin",
+                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-c372fb8d/sa8155-passion-21480-qnx-ifs2-restore.bin",
                     "sha256": "40f1e305df9ab2642351b1cdd192d85c1e02d759d18482d27a85ef5c86d77f02"
                 },
                 "qnx-pl011-console.bin": {
-                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-29bc231c/sa8155-passion-21480-qnx-pl011-console.bin",
+                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-c372fb8d/sa8155-passion-21480-qnx-pl011-console.bin",
                     "sha256": "24afb56593764d8ba78de9c21a7faef4fcba39aeef6905009d6af777b2c6652e"
                 },
                 "qnx-passion-ifs2-copy.bin": {
-                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-29bc231c/sa8155-passion-21480-qnx-passion-ifs2-copy.bin",
+                    "url": "https://github.com/voyemu/voyemu-deps/releases/download/qnx-guest-c372fb8d/sa8155-passion-21480-qnx-passion-ifs2-copy.bin",
                     "sha256": "c5fc787c631eb2a03376c4b759f22b7343f4de07700c114cb968d0bf1d61cc81"
                 }
             }
