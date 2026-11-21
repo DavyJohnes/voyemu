@@ -5838,9 +5838,9 @@ int main(int argc, char **argv) {
                    launch_config = launch_machine / "config-template.ini";
         const Json launch_pins =
                 Json::array({{{"path", launch_config.string()}, {"sha256", std::string(64, 'a')}}});
-        const auto assembled = portable_android_launch(root, launch_host, launch_machine,
-                                                       launch_base, launch_config, "voyemu-fixture",
-                                                       launch_pins);
+        const auto assembled = portable_android_launch(
+                root, launch_host, launch_machine, launch_base, launch_config, "voyemu-fixture",
+                launch_pins, Json{{"title", "Synthetic Free 1.0"}});
         check(assembled.at("machine") == launch_machine.string() &&
                       assembled.at("base") == launch_base.string() &&
                       assembled.at("config_template") == launch_config.string() &&
@@ -5860,7 +5860,10 @@ int main(int argc, char **argv) {
         const auto definition = root / "profiles" / profile / "profile.json";
         write_private_json(
                 definition,
-                {{"android",
+                {{"title", "Synthetic Free 1.0"},
+                 {"platform", "qinggan09"},
+                 {"board", "8155"},
+                 {"android",
                   {{"package", "system-images;android-28;default;arm64-v8a"},
                    {"revision", "1"},
                    {"url",
