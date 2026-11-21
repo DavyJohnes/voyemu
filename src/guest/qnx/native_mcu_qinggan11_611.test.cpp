@@ -507,6 +507,37 @@ int main(int argc, char **argv) {
                 {"charge_connect_warn", 1796, 2, 3},
         });
 
+        deliver_cases({
+                {"vcu_consumpRatio50km", 403, 8, 171},
+                {"trip_ax", 759, 24, 11184811},
+                {"tripax_avg_pwr", 783, 11, 683},
+                {"tripax_avg_spd", 794, 8, 171},
+                {"tripax_avg_fuelconsump", 802, 8, 171},
+                {"tripax_time_min", 810, 13, 2731},
+                {"trip_fuel", 823, 24, 11184811},
+                {"tripfuel_avg_pwr", 847, 11, 683},
+                {"tripfuel_avg_spd", 858, 8, 171},
+                {"tripfuel_avg_fuelconsump", 866, 8, 171},
+                {"tripfuel_time_min", 874, 13, 2731},
+                {"trip_interval_ready", 887, 24, 11184811},
+                {"current_trip_avg_pwr", 911, 11, 683},
+                {"current_trip_avg_spd", 922, 8, 171},
+                {"current_trip_avg_fuelconsump", 930, 8, 171},
+                {"current_trip_time_min", 938, 13, 2731},
+                {"trip_interval_charge", 951, 24, 11184811},
+                {"last_charge_avg_pwr", 975, 11, 683},
+                {"last_charge_avg_fuelconsump", 986, 8, 171},
+                {"last_charge_avg_spd", 994, 8, 171},
+                {"last_charge_time_min", 1002, 13, 2731},
+                {"vcu_consumpRatioInstant", 1015, 11, 683},
+                {"vcu_consumpRatioInstant_last1km", 1026, 11, 683},
+                {"instant_value_unit", 1037, 2, 3},
+                {"instant_value_trip", 1055, 10, 683},
+                {"odoRev", 1479, 24, 11184847},
+                {"trip_ax_rev", 1756, 20, 699051},
+                {"trip_current_rev", 1776, 20, 699051},
+        });
+
         // AdasEcu acc and cancel, the power-off request, the lane departure lamp and the language
         // write fields that this layout does not project. The guest rejects the logical revision as
         // a whole, and the host state for the guest carries their initial values and the new speed.

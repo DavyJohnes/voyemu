@@ -4,7 +4,7 @@
   "map_sha256": "255335b86bb5fd782d23086018dcfc3874d088364ad5f15b264cfb12020d800e",
   "packet_bytes": 650,
   "wire_fields": 736,
-  "projected_fields": 288,
+  "projected_fields": 316,
   "source_parser_sha256": "a830d876d9091190096025f4f4eb81294078b3002d955283b3a9dec296414f05",
   "source_engine_sha256": "faeb580b46c5c92d7ecd5b707be15b85874c838471f5cb9ca010b9a90e9ae195",
   "fields": [
@@ -2450,7 +2450,17 @@
       "position": 166,
       "name": "vcu_consumpRatio50km",
       "normalized_width": 8,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 166,
+        "start_bit": 403,
+        "width": 8,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x30bc",
+        "output_bit": 365,
+        "output_width": 8
+      }
     },
     {
       "position": 167,
@@ -3276,139 +3286,369 @@
       "position": 252,
       "name": "trip_ax",
       "normalized_width": 24,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 252,
+        "start_bit": 759,
+        "width": 24,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2b94",
+        "output_bit": 672,
+        "output_width": 24
+      }
     },
     {
       "position": 253,
       "name": "tripax_avg_pwr",
       "normalized_width": 11,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 253,
+        "start_bit": 783,
+        "width": 11,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2b84",
+        "output_bit": 704,
+        "output_width": 11
+      }
     },
     {
       "position": 254,
       "name": "tripax_avg_spd",
       "normalized_width": 8,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 254,
+        "start_bit": 794,
+        "width": 8,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2b74",
+        "output_bit": 715,
+        "output_width": 8
+      }
     },
     {
       "position": 255,
       "name": "tripax_avg_fuelconsump",
       "normalized_width": 8,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 255,
+        "start_bit": 802,
+        "width": 8,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2b64",
+        "output_bit": 723,
+        "output_width": 8
+      }
     },
     {
       "position": 256,
       "name": "tripax_time_min",
       "normalized_width": 13,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 256,
+        "start_bit": 810,
+        "width": 13,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2b54",
+        "output_bit": 736,
+        "output_width": 13
+      }
     },
     {
       "position": 257,
       "name": "trip_fuel",
       "normalized_width": 24,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 257,
+        "start_bit": 823,
+        "width": 24,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2b44",
+        "output_bit": 768,
+        "output_width": 24
+      }
     },
     {
       "position": 258,
       "name": "tripfuel_avg_pwr",
       "normalized_width": 11,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 258,
+        "start_bit": 847,
+        "width": 11,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2b34",
+        "output_bit": 800,
+        "output_width": 11
+      }
     },
     {
       "position": 259,
       "name": "tripfuel_avg_spd",
       "normalized_width": 8,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 259,
+        "start_bit": 858,
+        "width": 8,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2b24",
+        "output_bit": 811,
+        "output_width": 8
+      }
     },
     {
       "position": 260,
       "name": "tripfuel_avg_fuelconsump",
       "normalized_width": 8,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 260,
+        "start_bit": 866,
+        "width": 8,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2b14",
+        "output_bit": 819,
+        "output_width": 8
+      }
     },
     {
       "position": 261,
       "name": "tripfuel_time_min",
       "normalized_width": 13,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 261,
+        "start_bit": 874,
+        "width": 13,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2b04",
+        "output_bit": 832,
+        "output_width": 13
+      }
     },
     {
       "position": 262,
       "name": "trip_interval_ready",
       "normalized_width": 24,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 262,
+        "start_bit": 887,
+        "width": 24,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2af4",
+        "output_bit": 864,
+        "output_width": 24
+      }
     },
     {
       "position": 263,
       "name": "current_trip_avg_pwr",
       "normalized_width": 11,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 263,
+        "start_bit": 911,
+        "width": 11,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2ae4",
+        "output_bit": 896,
+        "output_width": 11
+      }
     },
     {
       "position": 264,
       "name": "current_trip_avg_spd",
       "normalized_width": 8,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 264,
+        "start_bit": 922,
+        "width": 8,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2ad4",
+        "output_bit": 907,
+        "output_width": 8
+      }
     },
     {
       "position": 265,
       "name": "current_trip_avg_fuelconsump",
       "normalized_width": 8,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 265,
+        "start_bit": 930,
+        "width": 8,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2ac4",
+        "output_bit": 915,
+        "output_width": 8
+      }
     },
     {
       "position": 266,
       "name": "current_trip_time_min",
       "normalized_width": 13,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 266,
+        "start_bit": 938,
+        "width": 13,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2ab4",
+        "output_bit": 928,
+        "output_width": 13
+      }
     },
     {
       "position": 267,
       "name": "trip_interval_charge",
       "normalized_width": 24,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 267,
+        "start_bit": 951,
+        "width": 24,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2aa4",
+        "output_bit": 960,
+        "output_width": 24
+      }
     },
     {
       "position": 268,
       "name": "last_charge_avg_pwr",
       "normalized_width": 11,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 268,
+        "start_bit": 975,
+        "width": 11,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2a94",
+        "output_bit": 992,
+        "output_width": 11
+      }
     },
     {
       "position": 269,
       "name": "last_charge_avg_fuelconsump",
       "normalized_width": 8,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 269,
+        "start_bit": 986,
+        "width": 8,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2a84",
+        "output_bit": 1003,
+        "output_width": 8
+      }
     },
     {
       "position": 270,
       "name": "last_charge_avg_spd",
       "normalized_width": 8,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 270,
+        "start_bit": 994,
+        "width": 8,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2a74",
+        "output_bit": 1011,
+        "output_width": 8
+      }
     },
     {
       "position": 271,
       "name": "last_charge_time_min",
       "normalized_width": 13,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 271,
+        "start_bit": 1002,
+        "width": 13,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2a64",
+        "output_bit": 1024,
+        "output_width": 13
+      }
     },
     {
       "position": 272,
       "name": "vcu_consumpRatioInstant",
       "normalized_width": 11,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 272,
+        "start_bit": 1015,
+        "width": 11,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2a54",
+        "output_bit": 1037,
+        "output_width": 11
+      }
     },
     {
       "position": 273,
       "name": "vcu_consumpRatioInstant_last1km",
       "normalized_width": 11,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 273,
+        "start_bit": 1026,
+        "width": 11,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2a44",
+        "output_bit": 1056,
+        "output_width": 11
+      }
     },
     {
       "position": 274,
       "name": "instant_value_unit",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 274,
+        "start_bit": 1037,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2a34",
+        "output_bit": 1067,
+        "output_width": 2
+      }
     },
     {
       "position": 275,
@@ -3446,7 +3686,17 @@
       "position": 277,
       "name": "instant_value_trip",
       "normalized_width": 10,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 277,
+        "start_bit": 1055,
+        "width": 10,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2a04",
+        "output_bit": 1088,
+        "output_width": 10
+      }
     },
     {
       "position": 278,
@@ -4924,7 +5174,17 @@
       "position": 376,
       "name": "odoRev",
       "normalized_width": 24,
-      "unsupported_initial": 100
+      "unsupported_initial": 100,
+      "wire": {
+        "index": 378,
+        "start_bit": 1479,
+        "width": 24,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x24d4",
+        "output_bit": 1443,
+        "output_width": 24
+      }
     },
     {
       "position": 377,
@@ -5504,13 +5764,33 @@
       "position": 437,
       "name": "trip_ax_rev",
       "normalized_width": 20,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 477,
+        "start_bit": 1756,
+        "width": 20,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2284",
+        "output_bit": 1600,
+        "output_width": 20
+      }
     },
     {
       "position": 438,
       "name": "trip_current_rev",
       "normalized_width": 20,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 478,
+        "start_bit": 1776,
+        "width": 20,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2274",
+        "output_bit": 1632,
+        "output_width": 20
+      }
     },
     {
       "position": 439,
