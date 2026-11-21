@@ -399,6 +399,28 @@ int main(int argc, char **argv) {
                 {"reboot_request", 1838, 2, 3},
         });
 
+        deliver_cases({
+                {"epb_fault", 11, 2, 3},
+                {"brake_oil_low", 18, 1, 1},
+                {"abs_fault", 19, 1, 1},
+                {"ebd_fault", 20, 1, 1},
+                {"epb_parking", 21, 2, 3},
+                {"autohold_lamp", 23, 3, 3},
+                {"assist_sys_fault", 26, 2, 3},
+                {"esc_lamp", 28, 2, 3},
+                {"esc_off", 30, 1, 1},
+                {"eps_fault", 31, 2, 3},
+                {"hdc_lamp", 33, 2, 3},
+                {"esc_hhcActive", 167, 1, 1},
+                {"break_warning", 183, 1, 1},
+                {"epb_text", 319, 4, 11},
+                {"esc_hhcAvailable", 323, 1, 0},
+                {"avh_available", 324, 1, 1},
+                {"avh_stdby", 325, 2, 3},
+                {"esc_vehicleSpeed", 1307, 13, 2731},
+                {"vcu_brakePedalPressed", 1444, 1, 1},
+        });
+
         // AdasEcu acc and cancel, the power-off request, the lane departure lamp and the language
         // write fields that this layout does not project. The guest rejects the logical revision as
         // a whole, and the host state for the guest carries their initial values and the new speed.
