@@ -1354,8 +1354,9 @@ int main(int argc, char **argv) {
             auto bad = a11;
             auto &donor = bad["original"]["QGAPI"];
 
+            // The bytes, pin and path come from the profile; only an unpinned entry fails.
             if (mode == 0) {
-                donor["bytes"] = 1968299u;
+                donor["bytes"] = 1968299.0;
             }
 
             if (mode == 1) {
@@ -1363,11 +1364,11 @@ int main(int argc, char **argv) {
             }
 
             if (mode == 2) {
-                donor.erase("source");
+                donor.erase("acquisition");
             }
 
             if (mode == 3) {
-                donor["unreviewed"] = true;
+                donor["sha256"] = "unpinned";
             }
 
             bool denied = false;
@@ -1377,8 +1378,7 @@ int main(int argc, char **argv) {
                 denied = true;
             }
 
-            check(denied,
-                  "original Navi QGAPI retains exact acquired donor bytes, source and metadata");
+            check(denied, "original Navi QGAPI requires a profile-pinned system original");
         }
 
         for (const auto *artifact :
