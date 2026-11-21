@@ -62,8 +62,11 @@ int main(int argc, char **argv) {
             std::filesystem::path path;
 
             ~Cleanup() {
-                if (!path.empty()) {
-                    (void)remove_root(path);
+                try {
+                    if (!path.empty()) {
+                        (void)remove_root(path);
+                    }
+                } catch (...) { /* Ignored: the test result does not depend on cleanup. */
                 }
             }
         } cleanup{root};
