@@ -630,18 +630,31 @@
                 "sha256": "0830252db77884957a1a4b87b05a1e2d9b5f658b8367f82999a941884cbe0238"
             },
             "wine": {
-                "version": "11.0.0.0~noble-1",
-                "directory": ".local/toolchains/wine-11.0",
+                "version": "9.0~repack-4build3",
+                "directory": ".local/toolchains/downloads/wine-ci",
                 "packages": [
                     {
-                        "url": "https://dl.winehq.org/wine-builds/ubuntu/pool/main/w/wine/wine-stable-amd64_11.0.0.0~noble-1_amd64.deb",
-                        "sha256": "6cb835e2171b5572b17f1c06729735c2c7e40178239d7fa6c29ef14bd9b40d16"
+                        "name": "wine",
+                        "url": "https://archive.ubuntu.com/ubuntu/pool/universe/w/wine/wine_9.0~repack-4build3_all.deb",
+                        "sha256": "5606f0f5677ac0fb882e3fdc8ce03a60232cdf2930e912ed3e42db2b9e0d5f7f"
                     },
                     {
-                        "url": "https://dl.winehq.org/wine-builds/ubuntu/pool/main/w/wine/wine-stable_11.0.0.0~noble-1_amd64.deb",
-                        "sha256": "04e7b4b995262c734019099d93277d8f219f7d180ebb65b5ccb3df7f97be1078"
+                        "name": "wine64",
+                        "url": "https://archive.ubuntu.com/ubuntu/pool/universe/w/wine/wine64_9.0~repack-4build3_amd64.deb",
+                        "sha256": "7f4f912b21917f28c281c99e3244ee801be2e20f0a23cd9f6d37acc97f5041ff"
+                    },
+                    {
+                        "name": "libwine",
+                        "url": "https://archive.ubuntu.com/ubuntu/pool/universe/w/wine/libwine_9.0~repack-4build3_amd64.deb",
+                        "sha256": "eb421a3660bfdc090d70ce16b06aadfde1c2bce2593292023e520988f45d009e"
                     }
                 ]
+            },
+            "ksh": {
+                "version": "1.0.8-1",
+                "directory": ".local/toolchains/ksh93u+m-1.0.8-1",
+                "url": "https://archive.ubuntu.com/ubuntu/pool/universe/k/ksh93u+m/ksh93u+m_1.0.8-1_amd64.deb",
+                "sha256": "5795a5e3b8f9ef7bf69c06bb0413ef19aabeaf98cf6e8c58975b86057ec1af2e"
             },
             "jdk": {
                 "version": "25.0.5+8",

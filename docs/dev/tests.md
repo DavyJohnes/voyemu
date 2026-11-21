@@ -6,7 +6,7 @@ All tests run through CTest from a build tree configured with `BUILD_TESTING=ON`
 ctest --test-dir .local/build/native --output-on-failure --parallel 1
 ```
 
-The Windows startup fence test needs KornShell on POSIX hosts. It uses `/bin/ksh` by default; set `VOYEMU_TEST_KSH` to an existing KornShell executable to use a user installation. An invalid explicit path fails the test; a missing default shell skips its fence execution. Linux CI extracts the pinned Ubuntu KornShell package into `.local/toolchains` and sets this variable for CTest.
+The Windows startup fence test needs KornShell on POSIX hosts. It uses `/bin/ksh` by default; set `VOYEMU_TEST_KSH` to an existing KornShell executable to use a user installation. An invalid explicit path fails the test; a missing default shell skips its fence execution. Linux CI extracts the Ubuntu KornShell package pinned under `optionalTools.linuxBuild.ksh` in `src/app/toolchain.json` into `.local/toolchains` and sets this variable for CTest.
 
 ## C and C++ tests
 

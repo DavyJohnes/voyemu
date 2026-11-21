@@ -86,10 +86,11 @@ jobs:
             # Tests labeled deps need toolchains installed by deps and tests labeled oem need imported OEM inputs.
             - name: Install pinned KornShell for startup fence tests
               run: |
-                  prefix="$PWD/.local/toolchains/ksh93u+m-1.0.8-1"
+                  pins=src/app/toolchain.json
+                  prefix="$PWD/$(jq -er .optionalTools.linuxBuild.ksh.directory "$pins")"
                   mkdir -p "$prefix"
-                  curl --fail --location --retry 3 https://archive.ubuntu.com/ubuntu/pool/universe/k/ksh93u+m/ksh93u+m_1.0.8-1_amd64.deb --output "$prefix/ksh.deb"
-                  echo "5795a5e3b8f9ef7bf69c06bb0413ef19aabeaf98cf6e8c58975b86057ec1af2e  $prefix/ksh.deb" | sha256sum --check
+                  curl --fail --location --retry 3 "$(jq -er .optionalTools.linuxBuild.ksh.url "$pins")" --output "$prefix/ksh.deb"
+                  echo "$(jq -er .optionalTools.linuxBuild.ksh.sha256 "$pins")  $prefix/ksh.deb" | sha256sum --check
                   dpkg-deb --extract "$prefix/ksh.deb" "$prefix"
                   echo "VOYEMU_TEST_KSH=$prefix/bin/ksh93" >> "$GITHUB_ENV"
             - run: ctest --test-dir .local/build/linux --label-exclude 'oem|deps' --output-on-failure --parallel 2
