@@ -9,6 +9,8 @@ class Voyemu < Formula
   license "MIT"
 
   on_macos do
+    # The QNX engine is built for macOS 15, the minimum of qnx-host.json.
+    depends_on macos: :sequoia
     on_arm do
       url "https://github.com/@REPOSITORY@/releases/download/v@VERSION@/voyemu-@VERSION@-macos-arm64.tar.xz"
       sha256 "@MACOS_ARM64_SHA256@"
