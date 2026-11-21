@@ -186,12 +186,16 @@ int deps_command(const Arguments &args, const Emit &emit) {
 }
 
 int build_command(const Arguments &args, const Emit &emit) {
-    // Without an installable QNX engine the default build prepares the machine without the
-    // cluster; an explicit --cluster=on stops at the engine.
-    const auto unavailable = args.cluster_explicit || !args.multimedia
+    // A profile without profile-qnx.json has no cluster, and without an installable QNX engine the
+    // default build prepares the machine without the cluster; an explicit --cluster=on stops at the
+    // engine.
+    const bool declared_cluster =
+            std::filesystem::exists(args.root / "profiles" / args.profile / "profile-qnx.json");
+    const auto unavailable = args.cluster_explicit || !args.multimedia || !declared_cluster
                                      ? std::string{}
                                      : voyemu::qnx_host_unavailable(args.root);
-    const bool cluster = args.cluster && unavailable.empty();
+    const bool cluster = args.cluster && (args.cluster_explicit || declared_cluster) &&
+                         unavailable.empty();
     const auto started = std::chrono::steady_clock::now();
 
     // An unknown profile fails as in fetch, before any line of the build.

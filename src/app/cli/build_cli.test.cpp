@@ -184,13 +184,11 @@ int main(int argc, char **argv) {
                 require(!result.timed_out && result.exit_code != 0,
                         "fixture without retained inputs unexpectedly built or timed out");
                 // The header names the machine, its subsystems and the space it needs; an empty
-                // line separates the progress from the error. Without a QNX engine for this host
-                // the default build prepares only the multimedia.
-                const auto header =
-                        "Preparing machine " +
-                        (std::filesystem::path("machines") / profile).string() + ": " +
-                        (android_only ? "multimedia only.\nUp to 20 GiB of free space is needed, "
-                                      : "");
+                // line separates the progress from the error. The fixture copies no
+                // profile-qnx.json, so the default build prepares only the multimedia.
+                const auto header = "Preparing machine " +
+                                    (std::filesystem::path("machines") / profile).string() +
+                                    ": multimedia only.\nUp to 20 GiB of free space is needed, ";
                 const auto failure = result.output.find("\n\nVoyemu:");
                 require(result.output.starts_with(header) && failure != std::string::npos &&
                                 result.output.find("CLI_ARGUMENT:") == std::string::npos &&
@@ -199,6 +197,10 @@ int main(int argc, char **argv) {
                 const auto error = result.output.substr(failure + 2);
 
                 // Observer preparation first needs the Java runtime, which offline is not cached.
+                require(error.starts_with("Voyemu: DOWNLOAD_OFFLINE: "),
+                        "multimedia-only build did not reach observer preparation: " +
+                                result.output);
+
                 if (android_only) {
                     require(error.starts_with("Voyemu: DOWNLOAD_OFFLINE: ") &&
                                     error.find(
