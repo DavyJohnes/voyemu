@@ -474,20 +474,15 @@ std::optional<Json> qinggan11_theme_change(std::optional<ThemeState> previous, T
 
 // qg.canbus transaction 57 reads one IPK property by its ordinal and value id; qg.cluster.service
 // transaction 7 reads the cluster skin.
-static const std::vector<std::string> canbus_theme_mode_query{
-        "shell", "service", "call", "qg.canbus", "57", "i32", "1", "i32", "599", "i32", "818"};
-static const std::vector<std::string> canbus_theme_skin_query{
-        "shell", "service", "call", "qg.canbus", "57", "i32", "1", "i32", "978", "i32", "1195"};
-static const std::vector<std::string> cluster_theme_skin_query{
-        "shell", "service", "call", "qg.cluster.service", "7", "i32", "1", "i32",
-        "27",    "i32",     "28"};
-
 std::vector<std::vector<std::string>> oem_theme_queries(const Json &android) {
     if (qinggan11_presentation(android)) {
-        return {cluster_theme_skin_query};
+        return {{"shell", "service", "call", "qg.cluster.service", "7", "i32", "1", "i32", "27",
+                 "i32", "28"}};
     }
 
-    return {canbus_theme_mode_query, canbus_theme_skin_query};
+    return {{"shell", "service", "call", "qg.canbus", "57", "i32", "1", "i32", "599", "i32", "818"},
+            {"shell", "service", "call", "qg.canbus", "57", "i32", "1", "i32", "978", "i32",
+             "1195"}};
 }
 
 std::optional<ThemeState> oem_theme_state(const Json &android,
