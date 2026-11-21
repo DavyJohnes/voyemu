@@ -3523,7 +3523,11 @@
         "index": 221,
         "start_bit": 683,
         "width": 8,
-        "order": 1
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2d84",
+        "output_bit": 576,
+        "output_width": 8
       }
     },
     {
@@ -7318,7 +7322,11 @@
         "index": 460,
         "start_bit": 1708,
         "width": 16,
-        "order": 1
+        "order": 1,
+        "named_consumer": "_mcumiscitems_struct",
+        "case_address": "0x5bec",
+        "output_bit": 128,
+        "output_width": 16
       }
     },
     {

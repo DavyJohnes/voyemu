@@ -1071,7 +1071,7 @@ int main(int argc, char **argv) {
         });
 
         // AdasEcu acc and cancel write acc_mode, mpc_icaSts and time_gap_set, which reach their OEM
-        // ADAS items; the qinggan11 catalogue has no mrr_vSetDis. A settings byte, which the
+        // ADAS items, and the set speed ADCU_VsetDis in km/h. A settings byte, which the
         // settings feedback owns, makes the guest reject the logical revision as a whole, and the
         // host state for the guest carries its initial value beside the new speed and ADAS states.
         {
@@ -1094,7 +1094,7 @@ int main(int argc, char **argv) {
             state = voyemu::apply_patch(state, {{"speed", 60}});
             const auto &raw = state.at("raw_oem");
             assert(raw.at("acc_mode") == 0 && raw.at("mpc_icaSts") == 1 &&
-                   !raw.contains("mrr_vSetDis") && raw.at("time_gap_set") == 1);
+                   raw.at("ADCU_VsetDis") == 80 && raw.at("time_gap_set") == 1);
             auto deliver = [&](const Json &values) {
                 for (unsigned i = 0; i < QINGGAN11_FIELDS; i++) {
                     normal[i] = values.at(catalog[i].name).get<unsigned>();

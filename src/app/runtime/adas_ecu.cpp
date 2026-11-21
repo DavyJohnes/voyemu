@@ -9,8 +9,7 @@ constexpr std::array<std::string_view, 6> buttons{"ica",       "acc",         "d
                                                   "cruise_up", "cruise_down", "cancel"};
 constexpr unsigned minimum_speed = 30, maximum_speed = 130;
 
-// A field the catalogue of the platform lacks, such as mrr_vSetDis on qinggan11, reads 0 and is
-// never written.
+// A field the catalogue of the platform lacks reads 0 and is never written.
 unsigned raw(const Json &state, const char *key) {
     const auto &values = state.at("raw_oem");
 
@@ -57,6 +56,31 @@ std::string readiness(const Json &state, bool ica) {
 void changed(Json &patch, const Json &state, const char *name, unsigned value) {
     if (state.at("raw_oem").contains(name) && raw(state, name) != value) {
         patch[name] = value;
+    }
+}
+
+// The set speed in 0.5 km/h, the encoding of qinggan09 mrr_vSetDis. qinggan11 sends ADCU_VsetDis in
+// whole km/h with 255 as invalid: the OEM 7.3.1 dataprocesser_interface_ACC_speed shows 255 and a
+// CAN timeout as no speed and clamps every other value to 20..150 km/h.
+constexpr unsigned qinggan11_target_invalid = 255;
+
+unsigned target_of(const Json &state) {
+    const auto &values = state.at("raw_oem");
+
+    if (values.contains("mrr_vSetDis")) {
+        return raw(state, "mrr_vSetDis");
+    }
+
+    const auto kmh = raw(state, "ADCU_VsetDis");
+
+    return kmh == qinggan11_target_invalid ? 0 : kmh * 2;
+}
+
+void set_target(Json &patch, const Json &state, unsigned encoded) {
+    if (state.at("raw_oem").contains("mrr_vSetDis")) {
+        changed(patch, state, "mrr_vSetDis", encoded);
+    } else {
+        changed(patch, state, "ADCU_VsetDis", encoded / 2);
     }
 }
 
@@ -172,8 +196,7 @@ AdasOutcome AdasEcu::input(const Json &state, std::uint32_t sequence, std::strin
         return result;
     }
 
-    auto acc = raw(state, "acc_mode"), ica = raw(state, "mpc_icaSts"),
-         target = raw(state, "mrr_vSetDis");
+    auto acc = raw(state, "acc_mode"), ica = raw(state, "mpc_icaSts"), target = target_of(state);
 
     if (id == "cancel") {
         changed(result.patch, state, "acc_mode", 0);
@@ -215,7 +238,7 @@ AdasOutcome AdasEcu::input(const Json &state, std::uint32_t sequence, std::strin
         changed(result.patch, state, "mpc_icaSts", requested_ica ? (active ? 3 : 2) : 1);
 
         if (active) {
-            changed(result.patch, state, "mrr_vSetDis", raw(state, "speed") * 2);
+            set_target(result.patch, state, raw(state, "speed") * 2);
         }
 
         if (raw(state, "time_gap_set") == 0) {
@@ -257,8 +280,7 @@ AdasOutcome AdasEcu::input(const Json &state, std::uint32_t sequence, std::strin
             return result;
         }
 
-        changed(result.patch, state, "mrr_vSetDis",
-                id == "cruise_up" ? target + step : target - step);
+        set_target(result.patch, state, id == "cruise_up" ? target + step : target - step);
     } else if (id == "cruise_up") {
         if (!valid_target(target)) {
             finish(result, state, "no-change", "no-remembered-target");

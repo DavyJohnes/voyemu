@@ -118,6 +118,40 @@ int main() try {
     assert(!ecu.input(state, sequence, "voice", "down", "ui-a", now).handled);
     assert(AdasEcu::policy()["input_kind"] == "simulated-ecu" &&
            AdasEcu::policy()["hold_repeat"] == false);
+    // qinggan11 carries the set speed in ADCU_VsetDis in whole km/h; 255 is no speed.
+    {
+        AdasEcu platform;
+        Json q11 = apply_patch(initial_state(VehicleCatalog::qinggan11),
+                               {{"gear", 3}, {"gear_valid", 1}, {"speed", 80}});
+        std::uint32_t step = 0;
+        auto press = [&](std::string id, std::chrono::milliseconds duration = 100ms) {
+            assert(platform.input(q11, ++step, id, "down", "ui-q", now).handled);
+            auto up = platform.input(q11, ++step, id, "up", "ui-q", now + duration);
+            now += duration + 10ms;
+
+            if (!up.patch.empty()) {
+                q11 = apply_patch(q11, up.patch);
+            }
+
+            return up;
+        };
+        press("acc");
+        assert(q11["raw_oem"]["acc_mode"] == 3 && q11["raw_oem"]["ADCU_VsetDis"] == 80);
+        press("cruise_up");
+        assert(q11["raw_oem"]["ADCU_VsetDis"] == 81);
+        press("cruise_down");
+        assert(q11["raw_oem"]["ADCU_VsetDis"] == 80);
+        press("cruise_up", 1000ms);
+        assert(q11["raw_oem"]["ADCU_VsetDis"] == 85);
+        press("cancel");
+        assert(q11["raw_oem"]["acc_mode"] == 0 && q11["raw_oem"]["ADCU_VsetDis"] == 85);
+        auto resume = press("cruise_up");
+        assert(resume.receipt["reason"] == "resume" && q11["raw_oem"]["acc_mode"] == 3);
+        press("cancel");
+        q11 = apply_patch(q11, {{"ADCU_VsetDis", 255}});
+        auto none = press("cruise_up");
+        assert(none.receipt["reason"] == "no-remembered-target" && none.patch.empty());
+    }
     std::cout
             << "ADAS physical phases, telemetry encoding, readiness, replay/owner/cancel, limits and recovery passed\n";
 } catch (const std::exception &error) {
