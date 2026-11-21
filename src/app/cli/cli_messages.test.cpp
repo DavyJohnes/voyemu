@@ -283,6 +283,7 @@ void errors() {
                           "повторите команду.\nЛог: " +
                           log.string() + "\n",
           "a filesystem error names its operation, path and reason");
+    // A Windows system message ends with a period and a line break that the sentence drops.
     std::error_code missing;
     std::filesystem::rename(machine / "absent-source", machine / "absent-target", missing);
     try {
@@ -292,7 +293,8 @@ void errors() {
         check(human_cli_error(error, Language::english) ==
                       "Voyemu: FILESYSTEM: a file operation failed: rename " +
                               (machine / "absent-source").string() + ", " +
-                              (machine / "absent-target").string() + ": " + missing.message() +
+                              (machine / "absent-target").string() + ": " +
+                              failure_reason(missing.message()) +
                               ".\nCheck the path, its permissions and the free space on its "
                               "volume, then repeat the command.\n",
               "a thrown filesystem error names its operation and both paths");
