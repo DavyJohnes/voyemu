@@ -25,24 +25,8 @@ void merge_chinese(ui::Resource id) {
     }
 }
 
-ImFont *load_face(const std::filesystem::path &path, const char *name, std::uintmax_t bytes,
-                  const char *sha) {
-    if (!std::filesystem::is_regular_file(path) || std::filesystem::file_size(path) != bytes ||
-        sha256_file(path) != sha) {
-        throw VoyemuError("UI_FONT",
-                          std::string("Native ") + name + " resource does not match its exact pin");
-    }
-
-    const auto utf8 = path.u8string();
-    ImFontConfig config;
-    std::snprintf(config.Name, sizeof(config.Name), "%s", name);
-    auto *font = ImGui::GetIO().Fonts->AddFontFromFileTTF(
-            reinterpret_cast<const char *>(utf8.c_str()), 13, &config);
-
-    if (!font) {
-        throw VoyemuError("UI_FONT", "Cannot load the pinned native UI font");
-    }
-
+// The Latin, Russian and symbol glyphs that the window shows.
+ImFont *check_coverage(ImFont *font) {
     for (ImWchar c = 0x20; c <= 0x7e; ++c) {
         if (!font->IsGlyphInFont(c)) {
             throw VoyemuError("UI_FONT", "Native UI font is missing a Latin UI glyph");
@@ -63,16 +47,34 @@ ImFont *load_face(const std::filesystem::path &path, const char *name, std::uint
 
     return font;
 }
+
+ImFont *load_face(const std::filesystem::path &path, const char *name, std::uintmax_t bytes,
+                  const char *sha) {
+    if (!std::filesystem::is_regular_file(path) || std::filesystem::file_size(path) != bytes ||
+        sha256_file(path) != sha) {
+        throw VoyemuError("UI_FONT",
+                          std::string("Native ") + name + " resource does not match its exact pin");
+    }
+
+    const auto utf8 = path.u8string();
+    ImFontConfig config;
+    std::snprintf(config.Name, sizeof(config.Name), "%s", name);
+    auto *font = ImGui::GetIO().Fonts->AddFontFromFileTTF(
+            reinterpret_cast<const char *>(utf8.c_str()), 13, &config);
+
+    if (!font) {
+        throw VoyemuError("UI_FONT", "Cannot load the pinned native UI font");
+    }
+
+    return check_coverage(font);
+}
 } // namespace
 
 void load_embedded_ui_font() {
-    auto load = [](ui::Resource id, const char *name, const char *pin) {
+    // The faces are subsets of the pinned Inter fonts made at configure; see
+    // src/app/CMakeLists.txt.
+    auto load = [](ui::Resource id, const char *name) {
         const auto bytes = ui::resource(id);
-
-        if (sha256_bytes({reinterpret_cast<const char *>(bytes.data()), bytes.size()}) != pin) {
-            throw VoyemuError("UI_FONT", "embedded bytes differ from source pin");
-        }
-
         ImFontConfig config;
         config.FontDataOwnedByAtlas = false;
         std::snprintf(config.Name, sizeof(config.Name), "%s", name);
@@ -84,16 +86,14 @@ void load_embedded_ui_font() {
             throw VoyemuError("UI_FONT", "embedded font unavailable");
         }
 
-        return face;
+        return check_coverage(face);
     };
-    auto *regular = load(ui::Resource::RegularFont, "Inter Regular", ui_font_sha256);
+    auto *regular = load(ui::Resource::RegularFont, "Inter Regular");
 
     merge_chinese(ui::Resource::ChineseFont);
-    load(ui::Resource::MediumFont, "Inter Medium",
-         "97ad806f526e41546d46365bb3a393145f75b7b1568913db74549ad8b8dba872");
+    load(ui::Resource::MediumFont, "Inter Medium");
     merge_chinese(ui::Resource::ChineseMediumFont);
-    load(ui::Resource::BoldFont, "Inter Bold",
-         "288316099b1e0a47a4716d159098005eef7c0066921f34e3200393dbdb01947f");
+    load(ui::Resource::BoldFont, "Inter Bold");
     merge_chinese(ui::Resource::ChineseBoldFont);
     ImGui::GetIO().FontDefault = regular;
 }

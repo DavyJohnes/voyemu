@@ -4,6 +4,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -17,7 +18,12 @@ import java.util.TreeSet;
  * that weight class, and drops hinting, layout and variation tables, so the same inputs always give
  * the same bytes.
  *
- * <p>Usage: java FontSubset.java FONT WEIGHT OUTPUT TEXT...
+ * <p>With --static it writes the subset of a static glyf font that covers Latin-1, the Russian
+ * alphabet, typographic punctuation and every other non-CJK character of the text files. It keeps
+ * the outlines as they are, with the components of composite glyphs, and drops the same tables.
+ *
+ * <p>Usage: java FontSubset.java FONT WEIGHT OUTPUT TEXT... or java FontSubset.java --static FONT
+ * OUTPUT TEXT...
  */
 public final class FontSubset {
     private FontSubset() {}
@@ -26,6 +32,20 @@ public final class FontSubset {
         return (c >= 0x3000 && c <= 0x303f)
                 || (c >= 0x4e00 && c <= 0x9fff)
                 || (c >= 0xff00 && c <= 0xffef);
+    }
+
+    /** Characters every static subset covers besides those of the text files. */
+    static boolean base(int c) {
+        return (c >= 0x20 && c <= 0x7e)
+                || (c >= 0xa0 && c <= 0xff && c != 0xad)
+                || c == 0x401
+                || (c >= 0x410 && c <= 0x44f)
+                || c == 0x451
+                || (c >= 0x2013 && c <= 0x2014)
+                || (c >= 0x2018 && c <= 0x2019)
+                || (c >= 0x201c && c <= 0x201e)
+                || c == 0x2022
+                || c == 0x2026;
     }
 
     static Map<String, ByteBuffer> tables(byte[] font) {
@@ -675,6 +695,125 @@ public final class FontSubset {
         return font(out);
     }
 
+    /** Glyph index and its position in glyf of each component of a composite glyph. */
+    static List<int[]> components(ByteBuffer glyf, int start, int end) {
+        List<int[]> result = new ArrayList<>();
+
+        if (end <= start || glyf.getShort(start) >= 0) {
+            return result;
+        }
+
+        int at = start + 10, flags;
+
+        do {
+            flags = glyf.getShort(at) & 0xffff;
+            result.add(new int[] {glyf.getShort(at + 2) & 0xffff, at + 2});
+            at += 4 + ((flags & 0x1) != 0 ? 4 : 2);
+            at += (flags & 0x8) != 0 ? 2 : (flags & 0x40) != 0 ? 4 : (flags & 0x80) != 0 ? 8 : 0;
+        } while ((flags & 0x20) != 0);
+
+        return result;
+    }
+
+    static byte[] subsetStatic(byte[] font, TreeSet<Integer> characters) {
+        Map<String, ByteBuffer> source = tables(font);
+        ByteBuffer head = source.get("head"), loca = source.get("loca"), glyf = source.get("glyf");
+
+        if (source.containsKey("fvar")) {
+            throw new IllegalStateException("FONT_SUBSET: static font required");
+        }
+
+        boolean wide = head.getShort(50) != 0;
+        TreeMap<Integer, Integer> mapped = new TreeMap<>();
+        TreeSet<Integer> glyphs = new TreeSet<>(List.of(0));
+
+        for (int c : characters) {
+            int g = glyph(source.get("cmap"), c);
+
+            if (g == 0) {
+                throw new IllegalStateException(
+                        "FONT_SUBSET: font has no glyph for U+" + Integer.toHexString(c));
+            }
+
+            mapped.put(c, g);
+            glyphs.add(g);
+        }
+
+        ArrayDeque<Integer> pending = new ArrayDeque<>(glyphs);
+
+        while (!pending.isEmpty()) {
+            int g = pending.pop();
+
+            for (int[] component :
+                    components(glyf, offset(loca, wide, g), offset(loca, wide, g + 1))) {
+                if (glyphs.add(component[0])) {
+                    pending.push(component[0]);
+                }
+            }
+        }
+
+        List<Integer> order = new ArrayList<>(glyphs);
+        Map<Integer, Integer> renumbered = new TreeMap<>();
+
+        for (int i = 0; i < order.size(); ++i) {
+            renumbered.put(order.get(i), i);
+        }
+
+        ByteArrayOutputStream outlines = new ByteArrayOutputStream();
+        ByteBuffer newLoca = ByteBuffer.allocate(4 * (order.size() + 1));
+        ByteBuffer hmtx = source.get("hmtx");
+        int metrics = source.get("hhea").getShort(34) & 0xffff;
+        ByteBuffer newHmtx = ByteBuffer.allocate(4 * order.size());
+
+        for (int g : order) {
+            int start = offset(loca, wide, g), end = offset(loca, wide, g + 1);
+            byte[] outline = new byte[end - start];
+            glyf.duplicate().position(start).get(outline);
+
+            for (int[] component : components(glyf, start, end)) {
+                ByteBuffer.wrap(outline)
+                        .putShort(component[1] - start, (short) (int) renumbered.get(component[0]));
+            }
+
+            newLoca.putInt(outlines.size());
+            outlines.writeBytes(outline);
+
+            while (outlines.size() % 4 != 0) {
+                outlines.write(0);
+            }
+
+            newHmtx.putShort(hmtx.getShort(4 * Math.min(g, metrics - 1)))
+                    .putShort(
+                            g < metrics
+                                    ? hmtx.getShort(4 * g + 2)
+                                    : hmtx.getShort(4 * metrics + 2 * (g - metrics)));
+        }
+
+        newLoca.putInt(outlines.size());
+        TreeMap<String, byte[]> out = new TreeMap<>();
+        byte[] newHead = bytes(head);
+        ByteBuffer.wrap(newHead).putInt(8, 0).putShort(50, (short) 1);
+        out.put("head", newHead);
+        byte[] hhea = bytes(source.get("hhea"));
+        ByteBuffer.wrap(hhea).putShort(34, (short) order.size());
+        out.put("hhea", hhea);
+        byte[] maxp = bytes(source.get("maxp"));
+        ByteBuffer.wrap(maxp).putShort(4, (short) order.size());
+        out.put("maxp", maxp);
+        out.put("hmtx", newHmtx.array());
+        out.put("loca", newLoca.array());
+        out.put("glyf", outlines.toByteArray());
+        out.put("cmap", cmap(mapped, renumbered));
+        byte[] post = new byte[32];
+        source.get("post").duplicate().get(post);
+        ByteBuffer.wrap(post).putInt(0, 0x00030000);
+        out.put("post", post);
+        out.put("OS/2", bytes(source.get("OS/2")));
+        out.put("name", bytes(source.get("name")));
+
+        return font(out);
+    }
+
     /** A format 4 cmap with one segment per character. */
     static byte[] cmap(TreeMap<Integer, Integer> mapped, Map<Integer, Integer> renumbered) {
         int segments = mapped.size() + 1, length = 16 + 8 * segments;
@@ -749,8 +888,33 @@ public final class FontSubset {
     }
 
     public static void main(String[] args) throws IOException {
+        if (args.length >= 3 && args[0].equals("--static")) {
+            TreeSet<Integer> characters = new TreeSet<>();
+
+            for (int c = 0x20; c <= 0xffff; ++c) {
+                if (base(c)) {
+                    characters.add(c);
+                }
+            }
+
+            for (int i = 3; i < args.length; ++i) {
+                Files.readString(Path.of(args[i]), StandardCharsets.UTF_8)
+                        .codePoints()
+                        .filter(c -> c >= 0x20 && !cjk(c))
+                        .forEach(characters::add);
+            }
+
+            byte[] font = subsetStatic(Files.readAllBytes(Path.of(args[1])), characters);
+            Files.write(Path.of(args[2]), font);
+            System.out.println(
+                    "FontSubset: " + characters.size() + " characters, " + font.length + " bytes");
+
+            return;
+        }
+
         if (args.length < 4) {
-            throw new IllegalArgumentException("FONT WEIGHT OUTPUT TEXT...");
+            throw new IllegalArgumentException(
+                    "FONT WEIGHT OUTPUT TEXT... or --static FONT OUTPUT TEXT...");
         }
 
         TreeSet<Integer> characters = new TreeSet<>();
