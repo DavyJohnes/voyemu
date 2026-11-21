@@ -148,14 +148,15 @@ std::string terminal_outcome(const Json &response) {
     return "unknown";
 }
 
-Json error(const std::exception &exception) {
+Json error(const std::exception &exception, bool contacted) {
     std::string message = exception.what(), code(failure_code(exception));
 
-    // A JSON exception reads the request or response shape here, which the client corrects; the
-    // other kinds keep their code and cause, as on the console.
+    // Before any supervisor exchange a JSON exception reads the request shape, which the client
+    // corrects; afterwards it reads a response. The other kinds keep their code and cause, as on
+    // the console.
     if (code == "JSON") {
-        code = "TEST_ARGUMENT";
-        message = "Invalid JSON request or response shape";
+        code = contacted ? "IPC_PROTOCOL" : "TEST_ARGUMENT";
+        message = contacted ? "Invalid JSON response shape" : "Invalid JSON request shape";
     } else if (code.empty()) {
         code = "INTERNAL_ERROR";
     }
@@ -1297,9 +1298,10 @@ Json Api::control(const Json &request, const Json &operation, bool mutation, int
 
     const auto name = operation.value("op", std::string{});
     const bool power = name == "test_media_power", restart = name.starts_with("machine_restart");
+    const auto endpoint = record.at("endpoint").get<std::string>();
     try {
-        auto response = transports_.control(record.at("endpoint").get<std::string>(), op,
-                                            timeout_ms);
+        contacted_ = true;
+        auto response = transports_.control(endpoint, op, timeout_ms);
 
         if (response.value("session_id", std::string{}) !=
             record.at("session_id").get<std::string>()) {
@@ -1366,6 +1368,7 @@ Json Api::call(const Json &supplied) {
     std::unique_ptr<AdmissionStore> admission;
     std::string scope, request_id;
     bool admitted = false, public_ui = false;
+    contacted_ = false;
     try {
         if (!supplied.is_object() || !supplied.contains("schema") ||
             !supplied.at("schema").is_number_integer() || supplied.at("schema") != 1) {
@@ -1522,7 +1525,7 @@ Json Api::call(const Json &supplied) {
             response["ok"] = false;
         }
 
-        response["error"] = error(exception);
+        response["error"] = operation_error(exception);
         logging::write(logging::Level::error, "test-api", "operation.failed",
                        {{"operation_id", response.at("operation_id")},
                         {"code", response.at("error").at("code")}});
@@ -1565,6 +1568,10 @@ Json Api::call(const Json &supplied) {
     }
 
     return response;
+}
+
+Json Api::operation_error(const std::exception &exception) const {
+    return error(exception, contacted_);
 }
 
 Json Api::dispatch(const Json &request, Clock::time_point deadline) {

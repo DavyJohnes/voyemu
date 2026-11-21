@@ -25,18 +25,23 @@ int main() try {
     const auto system_failure = error(refused);
     assert(system_failure.at("code") == "SYSTEM" &&
            system_failure.at("message") == refused.what() && not_started(system_failure));
-    // A JSON exception reads the request shape, which the client corrects.
-    Json json_failure;
+    // Before any supervisor exchange a JSON exception reads the request shape, which the client
+    // corrects; afterwards it reads a malformed response.
+    Json request_failure, response_failure;
 
     try {
         static_cast<void>(Json::parse("{"));
     } catch (const Json::exception &json) {
-        json_failure = error(json);
+        request_failure = error(json);
+        response_failure = error(json, true);
     }
 
-    assert(json_failure.at("code") == "TEST_ARGUMENT" &&
-           json_failure.at("message") == "Invalid JSON request or response shape" &&
-           not_started(json_failure));
+    assert(request_failure.at("code") == "TEST_ARGUMENT" &&
+           request_failure.at("message") == "Invalid JSON request shape" &&
+           not_started(request_failure));
+    assert(response_failure.at("code") == "IPC_PROTOCOL" &&
+           response_failure.at("message") == "Invalid JSON response shape" &&
+           not_started(response_failure));
 
     const auto unknown = error(std::logic_error("vector index out of range"));
     assert(unknown.at("code") == "INTERNAL_ERROR" &&

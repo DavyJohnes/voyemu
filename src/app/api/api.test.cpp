@@ -4058,6 +4058,21 @@ int main(int argc, char **argv) try {
         const auto large_calls = calls;
         assert(large_api.call(large_patch) == large_response && calls == large_calls);
     }
+    {
+        // A malformed supervisor response is a protocol failure, not a client argument.
+        api::Transports failing = transport;
+        failing.control = [&](const auto &endpoint, const Json &op, int timeout) -> Json {
+            if (op.at("op") != "status") {
+                return transport.control(endpoint, op, timeout);
+            }
+
+            return Json{{"ok", true}, {"session_id", 7}};
+        };
+        api::Api failing_api(root, "unused-cli", failing);
+        const auto failed = failing_api.call(request("vehicle.get")).at("error");
+        assert(failed.at("code") == "IPC_PROTOCOL" && failed.at("outcome") == "not_started" &&
+               failed.at("retryable") == false);
+    }
     run["request_id"] = random_token();
     run["artifact_dir"] = (root / ".local/build/tmp/pass-run").string();
     run["cases"] =

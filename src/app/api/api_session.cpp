@@ -157,6 +157,7 @@ Json Api::dispatch_session(const std::string &op, const Json &request, Clock::ti
             created["ownership_id"] = random_token();
         }
 
+        contacted_ = true;
         const auto result = transports_.create(created);
 
         if (machine.selected &&
@@ -763,6 +764,7 @@ Json Api::run(const Json &request) {
             }
 
             try {
+                contacted_ = false;
                 auto result = dispatch(step);
                 const bool timeout = result.is_object() && (result.value("timed_out", false) ||
                                                             !result.value("accepted", true));
@@ -776,7 +778,7 @@ Json Api::run(const Json &request) {
                     break;
                 }
             } catch (const std::exception &exception) {
-                auto failure = error(exception);
+                auto failure = operation_error(exception);
                 report["cases"][index].update(
                         {{"status",
                           failure.at("code") == "TEST_UNSUPPORTED" ? "unavailable" : "failed"},
@@ -791,11 +793,12 @@ Json Api::run(const Json &request) {
         failed = true;
 
         if (report.at("preflight").at("status") == "not-run") {
-            report["preflight"] = {{"status", "failed"}, {"error", error(exception)}};
+            report["preflight"] = {{"status", "failed"}, {"error", operation_error(exception)}};
         } else if (index < report.at("cases").size()) {
-            report["cases"][index].update({{"status", "failed"}, {"error", error(exception)}});
+            report["cases"][index].update(
+                    {{"status", "failed"}, {"error", operation_error(exception)}});
         } else {
-            report["error"] = error(exception);
+            report["error"] = operation_error(exception);
         }
     }
 
@@ -859,6 +862,7 @@ Json Api::run(const Json &request) {
         try {
             auto stop = context;
             stop["op"] = "session.stop";
+            contacted_ = false;
             auto stopped = dispatch(stop);
             const bool clean = stopped.value("accepted", true);
             report["cleanup"] = {{"status", clean ? "passed" : "failed"}, {"result", stopped}};
@@ -868,7 +872,7 @@ Json Api::run(const Json &request) {
             }
         } catch (const std::exception &exception) {
             failed = true;
-            report["cleanup"] = {{"status", "failed"}, {"error", error(exception)}};
+            report["cleanup"] = {{"status", "failed"}, {"error", operation_error(exception)}};
         }
     } else {
         report["cleanup"] = {

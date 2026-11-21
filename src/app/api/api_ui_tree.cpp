@@ -977,11 +977,11 @@ Json Api::session_ui(const Json &request, Clock::time_point deadline) {
 
         return slot;
     };
-    const auto read = [](auto observation) {
+    const auto read = [this](auto observation) {
         try {
             return observation();
         } catch (const std::exception &failure) {
-            auto detail = error(failure);
+            auto detail = operation_error(failure);
             const auto &code = detail.at("code");
 
             if (code == "TEST_SESSION" || code == "TEST_OWNERSHIP" || code == "PROFILE_NAME") {
