@@ -17,6 +17,9 @@ foreach(lang C CXX OBJC OBJCXX)
     set(CMAKE_${lang}_FLAGS_RELEASE "-Os -DNDEBUG")
 endforeach()
 add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX,OBJC,OBJCXX>:-ffunction-sections;-fdata-sections>")
+# No C++ source, own or pinned third-party, uses dynamic_cast or typeid: a catch handler tells the
+# kind of an exception, and thrown and caught types keep their type information without RTTI.
+add_compile_options("$<$<COMPILE_LANGUAGE:CXX,OBJCXX>:-fno-rtti>")
 # The C sources are the pinned SDL3, curl, nghttp2 and miniz, and no exception unwinds through them:
 # the callbacks they call are noexcept or catch. On Linux and macOS they carry no unwind tables;
 # Windows x64 requires them.
