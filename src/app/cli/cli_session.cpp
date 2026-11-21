@@ -1,50 +1,9 @@
 #include "cli_commands.hpp"
+#include "cli_session_host.hpp"
+#include "os/platform.hpp"
 
 namespace voyemu::cli {
-namespace {
-class OperationLock {
-public:
-    explicit OperationLock(const std::filesystem::path &path) {
-        voyemu::ensure_private_directory(path.parent_path());
-#ifdef _WIN32
-        file_ = voyemu::detail::open_private_state_lock(path, GENERIC_READ | GENERIC_WRITE,
-                                                        OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL);
-
-        if (file_ == INVALID_HANDLE_VALUE) {
-            throw voyemu::cli::LocalizedError("SESSION_LOCK", "error.profile_busy");
-        }
-#else
-        fd_ = ::open(path.c_str(), O_CREAT | O_RDWR | O_CLOEXEC | O_NOFOLLOW, 0600);
-
-        if (fd_ < 0 || ::flock(fd_, LOCK_EX | LOCK_NB) != 0) {
-            if (fd_ >= 0) {
-                ::close(fd_);
-            }
-
-            throw voyemu::cli::LocalizedError("SESSION_LOCK", "error.profile_busy");
-        }
-#endif
-    }
-
-    ~OperationLock() {
-#ifdef _WIN32
-        if (file_ != INVALID_HANDLE_VALUE) {
-            CloseHandle(file_);
-        }
-#else
-        if (fd_ >= 0) {
-            ::close(fd_);
-        }
-#endif
-    }
-
-private:
-#ifdef _WIN32
-    HANDLE file_ = INVALID_HANDLE_VALUE;
-#else
-    int fd_ = -1;
-#endif
-};
+namespace {} // namespace
 
 voyemu::Json active_record(const Arguments &args) {
     return voyemu::read_private_json(
@@ -53,81 +12,7 @@ voyemu::Json active_record(const Arguments &args) {
             4096);
 }
 
-#ifndef _WIN32
-void verify_refresh_owner(const Arguments &args) {
-    auto token = [](const std::string &value) {
-        return hex_text(value, 32);
-    };
-
-    if (!args.exclusive || !token(args.refresh_session) || !token(args.ownership_id)) {
-        throw VoyemuError("HOST_REFRESH_OWNER", "explicit stopped session lease required");
-    }
-
-    const auto active = active_record(args);
-
-    if (active.at("session_id") != args.refresh_session) {
-        throw VoyemuError("HOST_REFRESH_OWNER", "active epoch differs");
-    }
-
-    const auto directory = voyemu::native_session_directory(args.root, args.profile, args.machine,
-                                                            args.refresh_session);
-    const auto owner = voyemu::read_private_json(directory / "automation-owner.json");
-    const auto terminal = voyemu::read_private_json(directory / "runtime.json");
-
-    if (owner.at("session_id") != args.refresh_session || owner.at("profile") != args.profile ||
-        owner.at("ownership_id") != args.ownership_id ||
-        terminal.at("session_id") != args.refresh_session || !terminal.value("stopped", false) ||
-        terminal.at("endpoint") != active.at("endpoint") ||
-        std::filesystem::exists(active.at("endpoint").get<std::string>())) {
-        throw VoyemuError("HOST_REFRESH_OWNER", "stopped owned epoch required");
-    }
-
-    const auto shutdown = terminal.at("deliveries").at("android").at("shutdown");
-
-    if (!shutdown.value("wrapper_terminal", false) || !shutdown.value("ports_released", false)) {
-        throw VoyemuError("HOST_REFRESH_STOP", "verified Android shutdown required");
-    }
-
-    const auto launch = voyemu::read_private_json(
-            voyemu::profile_launch_directory(args.root, args.profile, args.machine) /
-            "android-launch.json");
-    const auto port = launch.at("port").get<unsigned>(),
-               grpc = launch.at("sdk_control").at("grpc_port").get<unsigned>();
-    std::vector<int> sockets;
-    struct Cleanup {
-        std::vector<int> &sockets;
-
-        ~Cleanup() {
-            for (auto fd : sockets) {
-                ::close(fd);
-            }
-        }
-    } cleanup{sockets};
-
-    for (auto value : {port, port + 1, grpc}) {
-        if (value < 1024 || value > 65535) {
-            throw VoyemuError("HOST_REFRESH_STOP", "invalid listener port");
-        }
-
-        const auto fd = ::socket(AF_INET, SOCK_STREAM, 0);
-
-        if (fd < 0) {
-            throw VoyemuError("HOST_REFRESH_STOP", "listener probe failed");
-        }
-
-        sockets.push_back(fd);
-        sockaddr_in address{};
-        address.sin_family = AF_INET;
-        address.sin_port = htons(value);
-        address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-
-        if (::bind(fd, reinterpret_cast<sockaddr *>(&address), sizeof(address)) != 0) {
-            throw VoyemuError("HOST_REFRESH_STOP", "Android listener remains");
-        }
-    }
-}
-#endif
-
+namespace {
 voyemu::Json active_request(const Arguments &args, const voyemu::Json &op) {
     if (op.at("op") == "status" && !args.machine_path.empty()) {
         const auto active = voyemu::native_current_active_directory(args.root, args.profile,
@@ -274,17 +159,7 @@ void wait_stopped_epoch(const Arguments &args, const voyemu::Json &reply, bool f
         bool gone = foreign_host;
 
         if (!foreign_host) {
-#ifdef _WIN32
-            try {
-                auto result = voyemu::request(endpoint, {{"op", "status"}, {"session_id", id}},
-                                              100);
-                gone = result.value("session_id", std::string{}) != id;
-            } catch (const std::exception &) {
-                gone = true;
-            }
-#else
-            gone = !std::filesystem::exists(endpoint) && !std::filesystem::is_symlink(endpoint);
-#endif
+            gone = session_endpoint_gone(endpoint, id);
         }
 
         if (terminal.value("stopped", false)) {
@@ -317,20 +192,8 @@ void wait_stopped_epoch(const Arguments &args, const voyemu::Json &reply, bool f
                     return;
                 }
 
-#ifndef _WIN32
-                if (!gone && !foreign_host) {
-                    (void)voyemu::stop_orphaned_session(directory, id, endpoint.string());
-                    gone = true;
-                }
-#endif
-
-                if (gone) {
-#ifndef _WIN32
-                    if (!foreign_host) {
-                        voyemu::await_session_resources(directory, deadline);
-                    }
-#endif
-
+                if (foreign_host ? gone
+                                 : finish_stopped_epoch(directory, id, endpoint, gone, deadline)) {
                     return;
                 }
             }
@@ -454,9 +317,7 @@ int supervise(Arguments args, const std::filesystem::path &current_program) {
             [&] {
                 session.tick_inputs();
             });
-#ifndef _WIN32
     voyemu::record_session_endpoint(args.session, args.token, session.endpoint());
-#endif
     auto prepared = voyemu::profile_launch_directory(args.root, args.profile, args.machine);
     const auto activation_file = prepared / "activation.json";
     const auto activation = args.machine.selected ||
@@ -498,14 +359,16 @@ int supervise(Arguments args, const std::filesystem::path &current_program) {
 
     if (args.multimedia) {
         android_spec = voyemu::read_private_json(prepared / "android-launch.json");
+
         // Diagnostic WAV follows the same trust boundary as -allow-host-audio: the canonical
         // machine/profile launch specification decides. No ambient environment opt-in exists.
-#ifdef __APPLE__
-        android_spec["env"]["VOYEMU_HOST_WINDOW_RECORD"] =
-                (args.session / "media-window.json").string();
-        android_spec["env"]["VOYEMU_HOST_PIXEL_SIZE"] = "3840x720";
-        android_spec["env"]["VOYEMU_HOST_LAYOUT_ROLE"] = "multimedia";
-#endif
+        // The macOS Emulator draws into the host window of the supervisor.
+        if (voyemu::os::platform_name == "macOS") {
+            android_spec["env"]["VOYEMU_HOST_WINDOW_RECORD"] =
+                    (args.session / "media-window.json").string();
+            android_spec["env"]["VOYEMU_HOST_PIXEL_SIZE"] = "3840x720";
+            android_spec["env"]["VOYEMU_HOST_LAYOUT_ROLE"] = "multimedia";
+        }
 
         if (args.background) {
             android_spec["headless"] = true;
@@ -533,13 +396,9 @@ int supervise(Arguments args, const std::filesystem::path &current_program) {
     }
 
     if (unified) {
-#ifdef _WIN32
+        // The Windows frontend always runs as its own background window.
         session.attach_frontend(android_spec.at("frontend"), args.cluster || cluster_prepared,
-                                true);
-#else
-        session.attach_frontend(android_spec.at("frontend"), args.cluster || cluster_prepared,
-                                args.background);
-#endif
+                                voyemu::os::host_windows || args.background);
     }
 
     voyemu::logging::write(voyemu::logging::Level::info, "supervisor", "android.started",
@@ -547,13 +406,12 @@ int supervise(Arguments args, const std::filesystem::path &current_program) {
 
     if (args.cluster) {
         session.attach_cluster(voyemu::read_private_json(cluster_launch), args.seconds);
-        auto executable = voyemu::host_payload_directory(args.root) / "voyemu-cluster";
-#ifdef _WIN32
-        executable += ".exe";
-#elif defined(__APPLE__)
-        executable = voyemu::host_payload_directory(args.root) /
-                     "voyemu-cluster.app/Contents/MacOS/voyemu-cluster";
-#endif
+        const auto executable =
+                voyemu::os::platform_name == "macOS"
+                        ? voyemu::host_payload_directory(args.root) /
+                                  "voyemu-cluster.app/Contents/MacOS/voyemu-cluster"
+                        : voyemu::host_payload_directory(args.root) /
+                                  ("voyemu-cluster" + std::string(voyemu::os::executable_suffix));
 
         if (!unified && !args.background) {
             const auto seed = args.machine_path.empty() ? args.root / "machines" / args.machine.name
@@ -644,65 +502,7 @@ std::optional<int> restart_command(Arguments &args, const Emit &emit) {
     return std::nullopt;
 }
 
-#ifndef _WIN32
-// The launch and supervisor locks of a machine are free only while no start or supervisor of it
-// runs; the receipts of its active session then decide what a stop has left to do.
-std::optional<Json> stop_without_supervisor(const Arguments &args) {
-    const auto active = voyemu::native_current_active_directory(args.root, args.profile,
-                                                                args.machine);
-
-    if (!voyemu::ordinary_native_launch_file(active / (args.profile + ".json"))) {
-        return std::nullopt;
-    }
-
-    std::optional<OperationLock> launch, supervisor;
-    try {
-        launch.emplace(active / (args.profile + ".launch.lock"));
-        supervisor.emplace(active / (args.profile + ".supervisor.lock"));
-    } catch (const std::exception &) {
-        return std::nullopt; // A running start or supervisor answers on its endpoint.
-    }
-
-    const auto record = active_record(args);
-    const auto id = record.at("session_id").get<std::string>();
-
-    if (!hex_text(id, 32)) {
-        throw VoyemuError("SESSION_IDENTITY", "invalid active epoch");
-    }
-
-    const auto directory = voyemu::native_session_directory(args.root, args.profile, args.machine,
-                                                            id);
-
-    if (record.value("directory", std::string{}) != directory.string()) {
-        throw VoyemuError("SESSION_IDENTITY", "active session directory differs");
-    }
-
-    auto terminal = voyemu::stop_orphaned_session(directory, id,
-                                                  record.at("endpoint").get<std::string>());
-    terminal["ok"] = true;
-
-    return terminal;
-}
-#endif
-
 int session_command(const Arguments &args, const Emit &emit) {
-#ifdef _WIN32
-    if (args.command == "stop" && !args.ownership_id.empty()) {
-        const auto active = active_record(args);
-
-        if (voyemu::api::StoppedAndroidLease::endpoint_absent(
-                    active.at("endpoint").get<std::string>())) {
-            voyemu::api::StoppedAndroidLease lease(args.root, args.profile, args.machine,
-                                                   active.at("session_id").get<std::string>(),
-                                                   args.ownership_id);
-            auto terminal = lease.publish_terminal();
-            terminal["ok"] = true;
-            emit(terminal);
-
-            return 0;
-        }
-    }
-#else
     if (args.command == "stop") {
         if (const auto terminal = stop_without_supervisor(args)) {
             emit(*terminal);
@@ -710,7 +510,7 @@ int session_command(const Arguments &args, const Emit &emit) {
             return 0;
         }
     }
-#endif
+
     Json operation{{"op", args.command}};
 
     if (args.command == "patch") {
@@ -874,47 +674,20 @@ int start_command(Arguments &args, const Emit &emit) {
         throw voyemu::cli::LocalizedError("PROFILE_NOT_PREPARED", "error.unprepared_qnx");
     }
 
-#ifdef _WIN32
     if (args.refresh_host) {
-        if (!args.exclusive || voyemu::os::executable_path() != args.root / "voyemu.exe") {
-            throw VoyemuError("HOST_REFRESH_OWNER",
-                              "explicit exclusive current root program required");
-        }
-
-        voyemu::api::StoppedAndroidLease lease(args.root, args.profile, args.machine,
-                                               args.refresh_session, args.ownership_id);
-
-        if (!lease.original_runtime().value("stopped", false)) {
-            lease.publish_terminal();
-        }
+        RefreshFence fence(args);
 
         if (!voyemu::portable_runtime_available(args.root, args.profile, args.machine,
                                                 args.machine_path)) {
             throw VoyemuError("HOST_REFRESH_SOURCE", "portable factory required");
         }
 
-        lease.verify();
+        fence.before_activation();
         voyemu::activate_built_profile(args.root, args.profile, args.machine, require_cluster, true,
                                        args.machine_path);
-        lease.verify_host_absence();
+        fence.after_activation();
     }
-#endif
-#ifndef _WIN32
-    if (args.refresh_host) {
-        OperationLock supervisor(
-                voyemu::native_current_active_directory(args.root, args.profile, args.machine) /
-                (args.profile + ".supervisor.lock"));
-        verify_refresh_owner(args);
 
-        if (!voyemu::portable_runtime_available(args.root, args.profile, args.machine,
-                                                args.machine_path)) {
-            throw VoyemuError("HOST_REFRESH_SOURCE", "portable factory required");
-        }
-
-        voyemu::activate_built_profile(args.root, args.profile, args.machine, require_cluster, true,
-                                       args.machine_path);
-    }
-#endif
     // Validate the selected source before spawning a supervisor or guest.
     (void)startup_vehicle_state(args);
 

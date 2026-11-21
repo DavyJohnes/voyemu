@@ -1071,4 +1071,8 @@ ChildProcess launch_session_child(const ProcessSpec &spec, const std::filesystem
 // Windows keeps no launch identity record: the job object of ChildProcess owns the Android child.
 void advance_android_launch_generation(const std::filesystem::path &, const std::string &,
                                        std::int64_t, std::uint64_t) {}
+
+// The named pipe of a Windows session derives from its id, so no endpoint record is kept.
+void record_session_endpoint(const std::filesystem::path &, const std::string &,
+                             const std::filesystem::path &) {}
 } // namespace voyemu

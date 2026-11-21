@@ -2,6 +2,8 @@
 #include "error.hpp"
 #include "interguest_network.hpp"
 #include "os/fs.hpp"
+#include "os/held_file.hpp"
+#include "os/platform.hpp"
 #include "qnx_run_budget.hpp"
 #include "someip_gateway.hpp"
 #include <algorithm>
@@ -12,22 +14,13 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <memory>
 #include <mutex>
+#include <optional>
 #include <stdexcept>
 #include <string_view>
 #include <thread>
 #include <vector>
-#ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#include <windows.h>
-#include <aclapi.h>
-#else
-#include <fcntl.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#endif
 namespace voyemu {
 namespace {
 constexpr std::uint64_t base = 0x40000000ULL;
@@ -84,286 +77,30 @@ struct InterguestLink::Impl {
     std::uint64_t serial_cursor = 0;
     std::string serial_line;
     bool serial_discard = false;
-#ifndef _WIN32
-    void *mapping = MAP_FAILED;
-    std::size_t mapping_size = 0;
-    int fd = -1, serial_fd = -1;
-    dev_t device = 0;
-    ino_t inode = 0;
-    struct stat serial_identity{};
+    std::unique_ptr<os::HeldFile> ram_file, serial_file;
 
     bool serial_bound() const {
-        return serial_fd >= 0;
+        return serial_file && serial_file->bound();
     }
 
     std::int64_t read_serial(char *data, std::size_t size) {
-        return pread(serial_fd, data, size, static_cast<off_t>(serial_cursor));
+        return serial_file->read_at(serial_cursor, data, size);
     }
 
     void close_serial() {
-        if (serial_fd >= 0) {
-            close(serial_fd);
-        }
-
-        serial_fd = -1;
+        serial_file.reset();
     }
 
     bool same_serial() {
-        struct stat held{}, path{};
+        const auto size = serial_bound() ? serial_file->current_size() : std::nullopt;
 
-        return serial_fd >= 0 && fstat(serial_fd, &held) == 0 &&
-               lstat(serial.c_str(), &path) == 0 && S_ISREG(path.st_mode) &&
-               path.st_uid == getuid() && path.st_nlink == 1 && !(path.st_mode & 0022) &&
-               held.st_dev == serial_identity.st_dev && held.st_ino == serial_identity.st_ino &&
-               path.st_dev == held.st_dev && path.st_ino == held.st_ino && held.st_size >= 0 &&
-               std::uint64_t(held.st_size) >= serial_cursor &&
-               std::uint64_t(held.st_size) <= (16ULL << 20);
+        return size && *size >= serial_cursor && *size <= (16ULL << 20);
     }
 
     bool same_file() {
-        struct stat a{}, b{};
+        const auto size = bound() ? ram_file->current_size() : std::nullopt;
 
-        return fd >= 0 && fstat(fd, &a) == 0 && lstat(ram.c_str(), &b) == 0 && S_ISREG(b.st_mode) &&
-               a.st_dev == device && a.st_ino == inode && b.st_dev == device && b.st_ino == inode &&
-               a.st_nlink == 1 && a.st_uid == getuid() && !(a.st_mode & 0022) &&
-               a.st_size == static_cast<off_t>(ram_size);
-    }
-
-    void release(bool signal) {
-        release_serial();
-
-        if (page) {
-            if (signal && same_file() && load(page->magic) == 0x54454e51 &&
-                load(page->version) == 1) {
-                store(page->stop, 1);
-            }
-
-            munmap(mapping, mapping_size);
-            mapping = MAP_FAILED;
-            page = nullptr;
-        }
-
-        if (fd >= 0) {
-            close(fd);
-            fd = -1;
-        }
-
-        ram.clear();
-        guest = {};
-        state.ready = false;
-        state.utc_expected = state.utc_actual = 0;
-        state.utc_status = 0;
-        state.utc_complete = false;
-        txseq = rxseq = 0;
-    }
-
-    bool bound() const {
-        return fd >= 0;
-    }
-
-    bool read_at(void *data, std::size_t size, std::uint64_t offset) {
-        return pread(fd, data, size, static_cast<off_t>(offset)) == static_cast<ssize_t>(size);
-    }
-
-    void unmap_page() {
-        munmap(mapping, mapping_size);
-        mapping = MAP_FAILED;
-        page = nullptr;
-    }
-
-    void map_page(std::uint64_t offset) {
-        const auto granule = static_cast<std::uint64_t>(sysconf(_SC_PAGESIZE));
-        const auto aligned = offset - offset % granule;
-        mapping_size = static_cast<std::size_t>(offset - aligned + 4096);
-        void *mapped = mmap(nullptr, mapping_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd,
-                            static_cast<off_t>(aligned));
-
-        if (mapped == MAP_FAILED) {
-            throw VoyemuError("INTERGUEST_RAM", "page mapping failed");
-        }
-
-        mapping = mapped;
-        page = reinterpret_cast<Page *>(static_cast<unsigned char *>(mapped) + (offset - aligned));
-    }
-#else
-    HANDLE fd = INVALID_HANDLE_VALUE, mapping_file = nullptr, serial_file = INVALID_HANDLE_VALUE;
-    void *mapping = nullptr;
-    std::size_t mapping_size = 0;
-    BY_HANDLE_FILE_INFORMATION identity{}, serial_identity{};
-
-    static bool owned(HANDLE file) {
-        HANDLE token = nullptr;
-
-        if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token)) {
-            return false;
-        }
-
-        DWORD size = 0;
-        GetTokenInformation(token, TokenUser, nullptr, 0, &size);
-        std::vector<unsigned char> user(size);
-        const bool valid = size && GetTokenInformation(token, TokenUser, user.data(), size, &size);
-        CloseHandle(token);
-
-        if (!valid) {
-            return false;
-        }
-
-        PSID owner = nullptr;
-        PSECURITY_DESCRIPTOR descriptor = nullptr;
-        const auto result = GetSecurityInfo(file, SE_FILE_OBJECT, OWNER_SECURITY_INFORMATION,
-                                            &owner, nullptr, nullptr, nullptr, &descriptor);
-        const bool same = result == ERROR_SUCCESS && owner &&
-                          EqualSid(owner, reinterpret_cast<TOKEN_USER *>(user.data())->User.Sid);
-
-        if (descriptor) {
-            LocalFree(descriptor);
-        }
-
-        return same;
-    }
-
-    static std::uint64_t extent(const BY_HANDLE_FILE_INFORMATION &info) {
-        return (std::uint64_t(info.nFileSizeHigh) << 32) | info.nFileSizeLow;
-    }
-
-    // One owned link to a plain disk file, never a reparse point.
-    static bool ordinary(HANDLE file, BY_HANDLE_FILE_INFORMATION &info) {
-        return file != INVALID_HANDLE_VALUE && GetFileType(file) == FILE_TYPE_DISK &&
-               GetFileInformationByHandle(file, &info) &&
-               !(info.dwFileAttributes &
-                 (FILE_ATTRIBUTE_REPARSE_POINT | FILE_ATTRIBUTE_DIRECTORY)) &&
-               info.nNumberOfLinks == 1 && owned(file);
-    }
-
-    static bool regular(HANDLE file, BY_HANDLE_FILE_INFORMATION &info, std::uint64_t size) {
-        return ordinary(file, info) && extent(info) == size;
-    }
-
-    static bool same(const BY_HANDLE_FILE_INFORMATION &a, const BY_HANDLE_FILE_INFORMATION &b) {
-        return a.dwVolumeSerialNumber == b.dwVolumeSerialNumber &&
-               a.nFileIndexHigh == b.nFileIndexHigh && a.nFileIndexLow == b.nFileIndexLow;
-    }
-
-    bool bound() const {
-        return fd != INVALID_HANDLE_VALUE;
-    }
-
-    bool same_file() {
-        BY_HANDLE_FILE_INFORMATION held{}, path{};
-
-        if (!regular(fd, held, ram_size) || !same(held, identity)) {
-            return false;
-        }
-
-        HANDLE current = CreateFileW(ram.c_str(), FILE_READ_ATTRIBUTES | READ_CONTROL,
-                                     FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING,
-                                     FILE_FLAG_OPEN_REPARSE_POINT, nullptr);
-        const bool valid = regular(current, path, ram_size) && same(path, identity);
-
-        if (current != INVALID_HANDLE_VALUE) {
-            CloseHandle(current);
-        }
-
-        return valid;
-    }
-
-    bool read_at(void *data, std::size_t size, std::uint64_t offset) {
-        LARGE_INTEGER at{};
-        at.QuadPart = static_cast<LONGLONG>(offset);
-        DWORD count = 0;
-
-        return offset <= ram_size - size && SetFilePointerEx(fd, at, nullptr, FILE_BEGIN) &&
-               ReadFile(fd, data, static_cast<DWORD>(size), &count, nullptr) && count == size;
-    }
-
-    bool serial_bound() const {
-        return serial_file != INVALID_HANDLE_VALUE;
-    }
-
-    std::int64_t read_serial(char *data, std::size_t size) {
-        LARGE_INTEGER at{};
-        at.QuadPart = static_cast<LONGLONG>(serial_cursor);
-        DWORD count = 0;
-
-        if (!SetFilePointerEx(serial_file, at, nullptr, FILE_BEGIN) ||
-            !ReadFile(serial_file, data, static_cast<DWORD>(size), &count, nullptr)) {
-            return -1;
-        }
-
-        return count;
-    }
-
-    void close_serial() {
-        if (serial_file != INVALID_HANDLE_VALUE) {
-            CloseHandle(serial_file);
-        }
-
-        serial_file = INVALID_HANDLE_VALUE;
-    }
-
-    bool same_serial() {
-        BY_HANDLE_FILE_INFORMATION held{}, path{};
-
-        if (!ordinary(serial_file, held) || !same(held, serial_identity) ||
-            extent(held) < serial_cursor || extent(held) > (16ULL << 20)) {
-            return false;
-        }
-
-        HANDLE current = CreateFileW(serial.c_str(), FILE_READ_ATTRIBUTES | READ_CONTROL,
-                                     FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING,
-                                     FILE_FLAG_OPEN_REPARSE_POINT, nullptr);
-        const bool valid = ordinary(current, path) && same(path, serial_identity);
-
-        if (current != INVALID_HANDLE_VALUE) {
-            CloseHandle(current);
-        }
-
-        return valid;
-    }
-
-    void unmap_page() {
-        if (mapping) {
-            UnmapViewOfFile(mapping);
-        }
-
-        mapping = nullptr;
-        page = nullptr;
-
-        if (mapping_file) {
-            CloseHandle(mapping_file);
-        }
-
-        mapping_file = nullptr;
-    }
-
-    void map_page(std::uint64_t offset) {
-        SYSTEM_INFO system{};
-        GetSystemInfo(&system);
-        const auto granule = std::uint64_t(system.dwAllocationGranularity);
-
-        if (!granule || granule > 65536) {
-            throw VoyemuError("INTERGUEST_RAM", "unsupported mapping granularity");
-        }
-
-        const auto aligned = offset - offset % granule;
-        mapping_size = static_cast<std::size_t>(offset - aligned + 4096);
-        mapping_file = CreateFileMappingW(fd, nullptr, PAGE_READWRITE, 0, 0, nullptr);
-
-        if (!mapping_file) {
-            throw VoyemuError("INTERGUEST_RAM", "mapping handle failed");
-        }
-
-        mapping = MapViewOfFile(mapping_file, FILE_MAP_READ | FILE_MAP_WRITE,
-                                static_cast<DWORD>(aligned >> 32), static_cast<DWORD>(aligned),
-                                mapping_size);
-
-        if (!mapping) {
-            CloseHandle(mapping_file);
-            mapping_file = nullptr;
-            throw VoyemuError("INTERGUEST_RAM", "bounded page mapping failed");
-        }
-
-        page = reinterpret_cast<Page *>(static_cast<unsigned char *>(mapping) + (offset - aligned));
+        return size && *size == ram_size;
     }
 
     void release(bool signal) {
@@ -375,12 +112,7 @@ struct InterguestLink::Impl {
         }
 
         unmap_page();
-
-        if (fd != INVALID_HANDLE_VALUE) {
-            CloseHandle(fd);
-        }
-
-        fd = INVALID_HANDLE_VALUE;
+        ram_file.reset();
         ram.clear();
         guest = {};
         state.ready = false;
@@ -389,7 +121,42 @@ struct InterguestLink::Impl {
         state.utc_complete = false;
         txseq = rxseq = 0;
     }
-#endif
+
+    bool bound() const {
+        return ram_file && ram_file->bound();
+    }
+
+    bool read_at(void *data, std::size_t size, std::uint64_t offset) {
+        return offset <= ram_size - size &&
+               ram_file->read_at(offset, data, size) == static_cast<long long>(size);
+    }
+
+    void unmap_page() {
+        if (ram_file) {
+            ram_file->unmap();
+        }
+
+        page = nullptr;
+    }
+
+    void map_page(std::uint64_t offset) {
+        using Mapping = os::HeldFile::Mapping;
+
+        switch (ram_file->map(offset, 4096)) {
+        case Mapping::mapped:
+            page = static_cast<Page *>(ram_file->view());
+
+            return;
+        case Mapping::granularity:
+            throw VoyemuError("INTERGUEST_RAM", "unsupported mapping granularity");
+        case Mapping::handle_failed:
+            throw VoyemuError("INTERGUEST_RAM", "mapping handle failed");
+        case Mapping::view_failed:
+            break;
+        }
+
+        throw VoyemuError("INTERGUEST_RAM", "page mapping failed");
+    }
 
     void release_serial() {
         close_serial();
@@ -597,15 +364,9 @@ struct InterguestLink::Impl {
 
                     try {
                         if (!network.status().connected) {
-#ifdef _WIN32
                             if (network_client ? network.connect(1) : network.accept(1)) {
                                 ++state.reconnects;
                             }
-#else
-                            if (network.accept(1)) {
-                                ++state.reconnects;
-                            }
-#endif
                         }
 
                         if (page) {
@@ -783,24 +544,16 @@ unsigned InterguestLink::start(const std::filesystem::path &session, const std::
         throw VoyemuError("INTERGUEST_OWNER", "owned session token required");
     }
 
-#ifndef _WIN32
-    struct stat session_info{};
-
-    if (lstat(session.c_str(), &session_info) || session_info.st_uid != getuid() ||
-        (session_info.st_mode & 0022)) {
+    if (!os::sealed_to_user(session)) {
         throw VoyemuError("INTERGUEST_OWNER", "unsafe session directory");
     }
-#endif
+
     impl_->session = std::filesystem::canonical(session);
     impl_->state = {};
-#ifdef _WIN32
-    impl_->network_client = !native_diagnostic;
+    // Windows connects to the listener of the engine unless a native diagnostic engine connects.
+    impl_->network_client = os::host_windows && !native_diagnostic;
     impl_->state.port = impl_->network_client ? impl_->network.start_client()
                                               : impl_->network.start();
-#else
-    (void)native_diagnostic;
-    impl_->state.port = impl_->network.start();
-#endif
     impl_->stopping = false;
     try {
         impl_->worker = std::thread([this] {
@@ -847,104 +600,41 @@ void InterguestLink::bind_ram(const std::filesystem::path &ram, std::uint64_t ri
         throw VoyemuError("INTERGUEST_OWNER", "RAM outside session");
     }
 
-#ifndef _WIN32
-    const int fd = open(path.c_str(), O_RDWR | O_CLOEXEC | O_NOFOLLOW);
-    struct stat info{};
-
-    if (fd < 0) {
-        throw VoyemuError("INTERGUEST_RAM", "cannot open owned RAM");
-    }
-
-    if (fstat(fd, &info) || !S_ISREG(info.st_mode) || info.st_uid != getuid() ||
-        info.st_nlink != 1 || (info.st_mode & 0022) ||
-        info.st_size != static_cast<off_t>(ram_size)) {
-        close(fd);
-        throw VoyemuError("INTERGUEST_OWNER", "invalid RAM identity");
-    }
-
-    int serial_fd = -1;
-    struct stat serial_info{};
-
-    if (!serial.empty()) {
-        if (path.filename() != "qnx-ram.bin" || serial != impl_->session / "qnx-serial.log") {
-            close(fd);
-            throw VoyemuError("INTERGUEST_UART", "exact session UART path required");
-        }
-
-        serial_fd = open(serial.c_str(), O_RDONLY | O_CLOEXEC | O_NOFOLLOW);
-
-        if (serial_fd < 0 || fstat(serial_fd, &serial_info) || !S_ISREG(serial_info.st_mode) ||
-            serial_info.st_uid != getuid() || serial_info.st_nlink != 1 ||
-            (serial_info.st_mode & 0022) || serial_info.st_size < 0 ||
-            std::uint64_t(serial_info.st_size) > (16ULL << 20)) {
-            if (serial_fd >= 0) {
-                close(serial_fd);
-            }
-
-            close(fd);
-            throw VoyemuError("INTERGUEST_UART", "invalid owned UART");
-        }
-    }
-
-    impl_->release(false);
-    impl_->ram_size = ram_size;
-    impl_->mailbox_end = mailbox_end;
-    impl_->fd = fd;
-    impl_->device = info.st_dev;
-    impl_->inode = info.st_ino;
-    impl_->ram = path;
-    impl_->ring = ring;
-    impl_->serial_fd = serial_fd;
-    impl_->serial = serial;
-    impl_->serial_identity = serial_info;
-    ++impl_->state.generation;
-#else
-    if (path != ram || path.filename() != "qnx-ram.bin") {
+    // Windows takes the RAM only at its exact canonical session path.
+    if (os::host_windows && (path != ram || path.filename() != "qnx-ram.bin")) {
         throw VoyemuError("INTERGUEST_OWNER", "exact canonical RAM path required");
     }
 
     for (const auto &at : os::ancestors(path)) {
-        const auto attributes = GetFileAttributesW(at.c_str());
-
-        if (attributes == INVALID_FILE_ATTRIBUTES || (attributes & FILE_ATTRIBUTE_REPARSE_POINT)) {
+        if (os::reparse_point(at)) {
             throw VoyemuError("INTERGUEST_OWNER", "reparse RAM path rejected");
         }
     }
 
-    const HANDLE file = CreateFileW(path.c_str(), GENERIC_READ | GENERIC_WRITE | READ_CONTROL,
-                                    FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING,
-                                    FILE_FLAG_OPEN_REPARSE_POINT, nullptr);
-    BY_HANDLE_FILE_INFORMATION identity{};
+    auto file = std::make_unique<os::HeldFile>();
+    const auto opening = file->open(path, true);
 
-    if (!Impl::regular(file, identity, ram_size)) {
-        if (file != INVALID_HANDLE_VALUE) {
-            CloseHandle(file);
-        }
+    if (opening == os::HeldFile::Opening::open_failed) {
+        throw VoyemuError("INTERGUEST_RAM", "cannot open owned RAM");
+    }
 
+    if (opening != os::HeldFile::Opening::opened || file->current_size() != ram_size) {
         throw VoyemuError("INTERGUEST_OWNER", "invalid RAM identity");
     }
 
-    HANDLE serial_file = INVALID_HANDLE_VALUE;
-    BY_HANDLE_FILE_INFORMATION serial_identity{};
+    std::unique_ptr<os::HeldFile> serial_file;
 
     if (!serial.empty()) {
-        if (serial != impl_->session / "qnx-serial.log") {
-            CloseHandle(file);
+        if (path.filename() != "qnx-ram.bin" || serial != impl_->session / "qnx-serial.log") {
             throw VoyemuError("INTERGUEST_UART", "exact session UART path required");
         }
 
-        // The owned QEMU keeps the file open for writing, so the read handle shares writes.
-        serial_file = CreateFileW(serial.c_str(), GENERIC_READ | READ_CONTROL,
-                                  FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING,
-                                  FILE_FLAG_OPEN_REPARSE_POINT, nullptr);
+        serial_file = std::make_unique<os::HeldFile>();
+        const auto size = serial_file->open(serial, false) == os::HeldFile::Opening::opened
+                                  ? serial_file->current_size()
+                                  : std::nullopt;
 
-        if (!Impl::ordinary(serial_file, serial_identity) ||
-            Impl::extent(serial_identity) > (16ULL << 20)) {
-            if (serial_file != INVALID_HANDLE_VALUE) {
-                CloseHandle(serial_file);
-            }
-
-            CloseHandle(file);
+        if (!size || *size > (16ULL << 20)) {
             throw VoyemuError("INTERGUEST_UART", "invalid owned UART");
         }
     }
@@ -952,15 +642,12 @@ void InterguestLink::bind_ram(const std::filesystem::path &ram, std::uint64_t ri
     impl_->release(false);
     impl_->ram_size = ram_size;
     impl_->mailbox_end = mailbox_end;
-    impl_->fd = file;
-    impl_->identity = identity;
+    impl_->ram_file = std::move(file);
     impl_->ram = path;
     impl_->ring = ring;
-    impl_->serial_file = serial_file;
+    impl_->serial_file = std::move(serial_file);
     impl_->serial = serial;
-    impl_->serial_identity = serial_identity;
     ++impl_->state.generation;
-#endif
 }
 
 void InterguestLink::flush(int timeout_ms) {

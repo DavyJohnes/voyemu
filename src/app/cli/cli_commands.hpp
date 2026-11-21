@@ -1,28 +1,11 @@
 #pragma once
-#include "check.hpp"
-#include "cli_arguments.hpp"
-#include "error.hpp"
-#include "model.hpp"
-#include "nxp_presentation.hpp"
-#include "os/fs.hpp"
-#include "os/locale.hpp"
-#include "os/process.hpp"
-#include "passion_presentation.hpp"
-#include "process.hpp"
-#include "program_modes.hpp"
-#include "progress.hpp"
-#include "qinggan11_startup.hpp"
-#include "session_recovery.hpp"
-#include <atomic>
-#include <functional>
-#include <optional>
-#ifdef _WIN32
-#include "wine_native_backend_windows.hpp"
-#endif
 #include "android_java.hpp"
 #include "android_launch_adb.hpp"
 #include "api.hpp"
+#include "check.hpp"
+#include "cli_arguments.hpp"
 #include "deps.hpp"
+#include "error.hpp"
 #include "fetch.hpp"
 #include "help.hpp"
 #include "host_payload.hpp"
@@ -32,38 +15,43 @@
 #include "launch_audit.hpp"
 #include "logging.hpp"
 #include "machine_path.hpp"
+#include "model.hpp"
+#include "nxp_presentation.hpp"
+#include "os/fs.hpp"
+#include "os/locale.hpp"
+#include "os/process.hpp"
+#include "passion_presentation.hpp"
 #include "portable_resources.hpp"
 #include "portable_runtime.hpp"
 #include "private_state_security.hpp"
+#include "process.hpp"
 #include "profile_build.hpp"
 #include "profile_catalog.hpp"
 #include "profile_runtime.hpp"
+#include "program_modes.hpp"
+#include "progress.hpp"
+#include "qinggan11_startup.hpp"
 #include "qnx_host.hpp"
 #include "qnx_interguest_contract.hpp"
 #include "qnx_process_ram.hpp"
 #include "session.hpp"
+#include "session_recovery.hpp"
 #include "start_host_pins.hpp"
 #include "start_machine_identity.hpp"
 #include "supervisor_failure.hpp"
 #include "supervisor_stop.hpp"
 #include <algorithm>
+#include <atomic>
 #include <charconv>
 #include <csignal>
 #include <cstdlib>
 #include <fstream>
+#include <functional>
 #include <iostream>
 #include <map>
+#include <optional>
 #include <set>
 #include <thread>
-#ifdef _WIN32
-#include <windows.h>
-#else
-#include <fcntl.h>
-#include <netinet/in.h>
-#include <sys/file.h>
-#include <sys/socket.h>
-#include <unistd.h>
-#endif
 
 namespace voyemu::cli {
 // Set by SIGINT and SIGTERM; long commands and the supervisor loop stop at their next check.
