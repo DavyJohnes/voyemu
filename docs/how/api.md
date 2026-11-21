@@ -145,7 +145,7 @@ The `session.restart` timeout bounds the client's wait and the checks between th
 
 ## Profiles and vehicle
 
-`profile.list` and `profile.get` report whether a profile is prepared; that does not confirm that it starts. `vehicle.fields`, `vehicle.get` and `vehicle.set` work on the host input model rather than reading CAN through guest getters. `vehicle.set` requires `expected_revision` and `values`; the session checks coupled fields atomically. The revision is a JSON number.
+`profile.list` and `profile.get` report whether a profile is prepared; that does not confirm that it starts. `vehicle.fields`, `vehicle.get` and `vehicle.set` work on the host input model rather than reading CAN through guest getters. With `session`, `vehicle.fields` names in `delivery` of each field the guests of the running machine that receive it, see [delivery to the guests](vehicle.md#delivery-to-the-guests). `vehicle.set` requires `expected_revision` and `values`; the session checks coupled fields atomically and sets the fields coupled to the written ones. The revision is a JSON number.
 
 ## Input
 

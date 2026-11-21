@@ -8,6 +8,8 @@ The model is a fixed catalog of 579 fields in the layout of the OEM MCU protocol
 
 `vehicle.fields` returns the catalog with each field's range, unit and write mode. Values are raw OEM values except `speed` in km/h, `speed10x` in tenths of km/h and `soc` in percent. A change is atomic: it fits each value into its OEM width, keeps coupled fields consistent, limits `soc` to 100 and accepts whole km/h. Steering-wheel fields, those starting with `swm_`, change only through wheel input.
 
+A change of one field also sets its coupled fields unless the same change names them itself: `speed` sets `speed10x`, and a whole `speed10x` sets `speed`; `actual_power` and `allowed_power` set `actual_power10x` and `allowed_power10x` to ten times their value; `remain_mileage_e` sets `vcu_remainingMileageReal` and `vcu_remainingMileageCLTCWLTC`; `remain_mileage_f` sets `remain_mileage_f_nedc` and `remain_mileage_f_wltc`; a tyre pressure or temperature makes the reading of its corner valid in `bcm_tpms*Sts` and `can_v1_5_bcm_tpms*Sts`. The window, `patch` and `vehicle.set` get the same result.
+
 ```sh
 ./voyemu patch machines/free-09-chinese-20260106-6.0.3 --values '{"speed":80,"ambient_temp":120}'
 ```
@@ -21,6 +23,8 @@ On the Free 6.0.3, 6.11.1 and 7.3.1 profiles a cold boot of the cluster with the
 ## Delivery to the guests
 
 The cluster receives the model through the adapter of the OEM MCU protocol, see [guests and the interguest link](guests.md). Each profile's adapter supports its own set of MCU fields; a field it does not support reaches the cluster with its initial value, while the model keeps the written value. The multimedia receives vehicle state through the simulated CAN bus of its guest.
+
+With a `session`, `vehicle.fields` adds `delivery` to each field: the list of guests of the running machine that receive it, `cluster`, `multimedia` or both. The cluster receives the fields of the MCU adapter of its profile: all of them on Free 6.0.3, the fields of the adapter layout on Free 6.11.1 and 7.3.1, the speed and the charge on Passion. The multimedia receives the fields that its CanBus component reads: speed, charge, gear, outside temperature, odometer, fuel, ranges, doors, hood, tailgate, lights and tyre pressure. On Passion the multimedia receives only the charge, and on Free NXP RC45 no field. An empty list means that the field stays in the model and no guest shows it. `session.status` reports the same in `field_delivery`. The window grays out the controls of such fields as a profile limit.
 
 `session.status` shows the delivery of the current model revision to the cluster in `deliveries.qnx.vehicle`: `queued` until the QNX process that owns the OEM MCU input confirms it, then `guest_acknowledged` with the revision in `source_sequence`. Only a receipt of the current revision from the current receiver counts: its channel address (`producer_address`), guest process, incarnation (`producer_incarnation`) and cluster generation must match. When the receiver exits, the status is `unavailable` with `reason: receiver_retired`, the exited `receiver` and `last_acknowledged`, the last confirmed revision or `null`; a new receiver returns the status to `queued` until its own receipt. Running cluster frames (`graphics_running`) do not mean that the MCU path is ready.
 
