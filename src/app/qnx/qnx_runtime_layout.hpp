@@ -104,10 +104,6 @@ inline QnxRuntimeLayout qnx_runtime_layout(std::string_view profile, const Json 
     const auto &spec = qnx_adapter(adapter);
     const bool free = spec.platform == QnxGuestPlatform::qinggan11;
 
-    if (profile == "free-11-russian-20260318-rc1" && !free) {
-        throw VoyemuError("QNX_LAYOUT", "profile and adapter differ");
-    }
-
     if (free && spec.mcu_previous_projected_fields &&
         metadata.value("mcu_projection", Json()) ==
                 qnx_mcu_projection(spec.adapter, spec.mcu_previous_projected_fields)) {

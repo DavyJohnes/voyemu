@@ -951,8 +951,7 @@ Json build_profile(const std::filesystem::path &root, std::string_view profile,
     root_profile(root, profile);
     const auto target = build_target(root, profile, machine);
 
-    if ((std::filesystem::exists(target) && profile != "free-11-chinese-20260731-7.3.1" &&
-         profile != "free-11-russian-20260318-rc1") ||
+    if ((std::filesystem::exists(target) && profile != "free-11-chinese-20260731-7.3.1") ||
         std::filesystem::is_symlink(target)) {
         throw cli::LocalizedError("PROFILE_BUILD", "error.machine_exists",
                                   {{"machine", progress::path_text(target)}});
