@@ -2,10 +2,12 @@
 #include "check.hpp"
 #include "download.hpp"
 #include "error.hpp"
+#include "host_payload.hpp"
 #include "owner_lock.hpp"
 #include "process.hpp"
 #include "qnx_host.hpp"
 #include "qnx_host_build_diagnostics.hpp"
+#include "qnx_host_internal.hpp"
 #include "qnx_host_prebuilt.hpp"
 #include "qnx_host_windows_cache.hpp"
 #include <algorithm>
@@ -731,5 +733,69 @@ Json install_qnx_host_engine(const std::filesystem::path &root, bool offline, st
     }
 
     return install_cached_windows_qnx_host(root, file_backend, reserve);
+}
+
+Json qnx_host_binding_view(const std::filesystem::path &, const Json &shared) {
+    if (shared.is_object() && shared.contains("windows")) {
+        return shared.at("windows");
+    }
+
+    return shared;
+}
+
+std::string qnx_host_unavailable(const std::filesystem::path &root) {
+    // An engine of the source recipe that a developer or CI run left in the cache stays usable;
+    // deps never runs that recipe on Windows.
+    const auto &file_backend = qnx_host_catalog().at("windows_file_backend");
+    const auto cache = root / ".local/toolchains/downloads/qnx-host/windows-file-backend-11.1.2";
+    const auto installed_engine =
+            root / ".local/toolchains" /
+            ("qnx-host-windows-11.1.2-" + qnx_host_cache_key(sha256_bytes(file_backend.dump())));
+
+    return qnx_host_asset_missing(qnx_host_prebuilt_pin(qnx_host_catalog(), "windows_file_backend"),
+                                  std::filesystem::exists(cache) ||
+                                          std::filesystem::exists(installed_engine));
+}
+
+Json ensure_qnx_host_bindings(const std::filesystem::path &root, bool offline) {
+    const auto file = qnx_host_bindings_path(root);
+
+    if (std::filesystem::exists(file)) {
+        const auto section = qnx_host_binding_view(root, read_qnx_host_binding_file(file).document);
+        require(section.is_object() && qnx_host_managed_windows_bindings(section),
+                "Windows host binding section missing from the shared binding file");
+
+        return section;
+    }
+
+    const auto engine = install_qnx_host(root, offline);
+    const auto qemu = std::filesystem::path(engine.at("executable").get<std::string>());
+    const auto graphics = host_program(root),
+               angle = root / ".local/toolchains/native-sdk/emulator/lib64/gles_angle";
+    Json pins = Json::array();
+
+    for (const auto &tool : {qemu, graphics, angle / "libEGL.dll", angle / "libGLESv2.dll"}) {
+        require(std::filesystem::is_regular_file(std::filesystem::symlink_status(tool)) &&
+                        std::filesystem::hard_link_count(tool) == 1,
+                "build host worker and run deps before source build");
+        pins.push_back({{"path", tool.string()}, {"sha256", sha256_file(tool)}});
+    }
+
+    Json bindings{{"schema", 1},
+                  {"qnx_qemu", qemu.string()},
+                  {"graphics", graphics.string()},
+                  {"angle", angle.string()},
+                  {"pins", pins}};
+
+    if (engine.contains("qnx_file_backend")) {
+        bindings["qnx_file_backend"] = engine.at("qnx_file_backend");
+    }
+
+    require(qnx_host_managed_windows_bindings(bindings), "prepared Windows host binding differs");
+    ensure_private_directory(file.parent_path());
+    require(!std::filesystem::exists(file), "bindings appeared during preparation");
+    write_private_json(file, Json{{"schema", 1}, {"windows", bindings}});
+
+    return bindings;
 }
 } // namespace voyemu
