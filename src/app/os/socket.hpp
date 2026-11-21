@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <optional>
+#include <string_view>
 #ifdef _WIN32
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -58,6 +59,8 @@ bool socket_would_block();
 bool socket_connecting();
 // A stream socket of family; no_socket on failure.
 SocketHandle open_stream_socket(int family);
+// Binds and listens on a Unix-domain path on POSIX. Returns no_socket on failure or on Windows.
+SocketHandle open_unix_listener(std::string_view path, int backlog);
 // A non-blocking loopback TCP socket that the children of this process do not inherit and that
 // reports a closed peer as an error, not a signal; no_socket on failure.
 SocketHandle open_private_tcp_socket();

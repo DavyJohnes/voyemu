@@ -1,7 +1,12 @@
 #include "error.hpp"
 #include "model.hpp"
+#include "os/platform.hpp"
+#include "os/process.hpp"
+#include "os/socket.hpp"
 #include "process.hpp"
 #include "qnx_process_ram.hpp"
+#include "runtime_fixture_media.hpp"
+#include "runtime_fixture_wire.hpp"
 #include "windows_startup.hpp"
 #include <cerrno>
 #include <csignal>
@@ -14,20 +19,6 @@
 #include <optional>
 #include <sstream>
 #include <thread>
-#ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#include <windows.h>
-#else
-#include <fcntl.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <sys/un.h>
-#include <unistd.h>
-#endif
-#include "runtime_fixture_media.hpp"
-#include "runtime_fixture_wire.hpp"
 namespace {
 volatile std::sig_atomic_t stopped = 0;
 
@@ -1321,8 +1312,8 @@ int fixture_main(int argc, char **argv) {
             }
         }
 
-#ifndef _WIN32
-        if (!engine && !direct) {
+        // POSIX hands the engine to a detached leaf; the job object of a Windows engine owns it.
+        if (!voyemu::os::host_windows && !engine && !direct) {
             voyemu::ProcessSpec leaf;
             leaf.executable = std::filesystem::canonical(argv[0]);
             leaf.arguments = {"--owned-engine",
@@ -1349,40 +1340,26 @@ int fixture_main(int argc, char **argv) {
 
             return 0;
         }
-#endif
-#ifdef _WIN32
-        WSADATA data{};
 
-        if (WSAStartup(MAKEWORD(2, 2), &data) != 0) {
+        const voyemu::os::SocketLibrary sockets;
+
+        if (sockets.error()) {
             throw voyemu::VoyemuError("FIXTURE", "fixture Winsock unavailable");
         }
 
-        using Socket = SOCKET;
-        constexpr Socket invalid_socket = INVALID_SOCKET;
-#else
-        using Socket = int;
-        constexpr Socket invalid_socket = -1;
-#endif
         auto listen = [&](unsigned number) {
-            Socket socket = ::socket(AF_INET, SOCK_STREAM, 0);
+            const auto socket = voyemu::os::open_stream_socket(AF_INET);
 
-            if (socket == invalid_socket) {
+            if (socket == voyemu::os::no_socket) {
                 throw voyemu::VoyemuError("FIXTURE", "fixture listener unavailable");
             }
 
-#ifndef _WIN32
-            int reusable = 1;
-
-            if (setsockopt(socket, SOL_SOCKET, SO_REUSEADDR, &reusable, sizeof reusable)) {
+            if (!voyemu::os::reuse_address(socket)) {
                 throw voyemu::VoyemuError("FIXTURE", "fixture reusable listener failed");
             }
-#endif
+
             const auto failed = [&](const char *stage) {
-#ifdef _WIN32
-                const auto error = WSAGetLastError();
-#else
-                const auto error = errno;
-#endif
+                const auto error = voyemu::os::socket_error();
                 throw voyemu::VoyemuError("FIXTURE",
                                           "fixture listener " + std::string(stage) +
                                                   " failed: port=" + std::to_string(number) +
@@ -1393,11 +1370,12 @@ int fixture_main(int argc, char **argv) {
             address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
             address.sin_port = htons(static_cast<std::uint16_t>(number));
 
-            if (::bind(socket, reinterpret_cast<sockaddr *>(&address), sizeof address) != 0) {
+            if (!voyemu::os::bind_socket(socket, reinterpret_cast<sockaddr *>(&address),
+                                         sizeof address)) {
                 failed("bind");
             }
 
-            if (::listen(socket, 32) != 0) {
+            if (!voyemu::os::listen_socket(socket, 32)) {
                 failed("listen");
             }
 
@@ -1414,28 +1392,16 @@ int fixture_main(int argc, char **argv) {
             qmp_listener.emplace(listen(static_cast<unsigned>(std::stoul(qmp.substr(14)))));
         }
 
-#ifndef _WIN32
-        if (qmp.starts_with("unix:")) {
+        if (!voyemu::os::host_windows && qmp.starts_with("unix:")) {
             const auto path = qmp.substr(5, qmp.find(',') - 5);
-            sockaddr_un address{};
-            address.sun_family = AF_UNIX;
+            qmp_listener.emplace(voyemu::os::open_unix_listener(path, 4));
 
-            if (path.size() >= sizeof address.sun_path) {
-                throw voyemu::VoyemuError("FIXTURE", "fixture QMP path too long");
-            }
-
-            std::memcpy(address.sun_path, path.c_str(), path.size() + 1);
-            qmp_listener.emplace(::socket(AF_UNIX, SOCK_STREAM, 0));
-
-            if (qmp_listener->fd < 0 ||
-                ::bind(qmp_listener->fd, reinterpret_cast<sockaddr *>(&address), sizeof address) ||
-                ::listen(qmp_listener->fd, 4)) {
+            if (qmp_listener->fd == fixture_wire::invalid) {
                 throw voyemu::VoyemuError("FIXTURE", "fixture QMP listener failed");
             }
 
             fixture_wire::nonblocking(qmp_listener->fd);
         }
-#endif
 
         if (!qmp.empty() && !qmp_listener) {
             throw voyemu::VoyemuError("FIXTURE", "fixture QMP endpoint unsupported");
@@ -1535,28 +1501,18 @@ int fixture_main(int argc, char **argv) {
             }
         }
 
-#ifdef _WIN32
-        auto pid = std::int64_t(GetCurrentProcessId());
-#else
-        auto pid = std::int64_t(::getpid());
-#endif
+        auto pid = voyemu::os::current_process();
         voyemu::write_private_json(root / "identity.json", {{"avd", avd},
                                                             {"token", token},
                                                             {"pid", pid},
                                                             {"port", port},
                                                             {"alive", true},
                                                             {"machine", machine.string()}});
-#ifdef _WIN32
         std::unique_ptr<FixtureSdkMedia> sdk_media;
 
         if (std::filesystem::exists(root / "slow-startup-guest.json")) {
-            if (grpc < 1024 || grpc > 65535) {
-                throw voyemu::VoyemuError("FIXTURE", "fixture SDK control port missing");
-            }
-
-            sdk_media = std::make_unique<FixtureSdkMedia>(root, grpc, port, pid);
+            sdk_media = start_fixture_sdk_media(root, grpc, port, pid);
         }
-#endif
 
         if (const char *media = std::getenv("VOYEMU_HOST_WINDOW_RECORD");
             media && std::filesystem::exists(root / "canvas-fixture")) {
@@ -1708,7 +1664,7 @@ int fixture_main(int argc, char **argv) {
 
                 if (!adb_clients) {
                     for (unsigned i = 0; i < 64; ++i) {
-                        fixture_wire::Socket probe(::accept(adb_listener.fd, nullptr, nullptr));
+                        fixture_wire::Socket probe(voyemu::os::accept_socket(adb_listener.fd));
 
                         if (probe.fd == fixture_wire::invalid) {
                             break;
@@ -1750,10 +1706,7 @@ int fixture_main(int argc, char **argv) {
             }
         }
 
-#ifdef _WIN32
         sdk_media.reset();
-        WSACleanup();
-#endif
 
         return 0;
     } catch (const std::exception &error) {

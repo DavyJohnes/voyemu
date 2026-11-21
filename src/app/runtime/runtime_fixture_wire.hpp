@@ -1,6 +1,6 @@
 #pragma once
 #include "error.hpp"
-#include "os/net.hpp"
+#include "os/socket.hpp"
 #include <algorithm>
 #include <chrono>
 #include <cstdint>
@@ -14,13 +14,8 @@
 #include <vector>
 
 namespace fixture_wire {
-#ifdef _WIN32
-using Handle = SOCKET;
-constexpr Handle invalid = INVALID_SOCKET;
-#else
-using Handle = int;
-constexpr Handle invalid = -1;
-#endif
+using Handle = voyemu::os::SocketHandle;
+constexpr Handle invalid = voyemu::os::no_socket;
 using Clock = std::chrono::steady_clock;
 using namespace std::chrono_literals;
 
@@ -39,11 +34,7 @@ struct Socket {
             return;
         }
 
-#ifdef _WIN32
-        closesocket(fd);
-#else
-        ::close(fd);
-#endif
+        voyemu::os::close_socket(fd);
         fd = invalid;
     }
 
@@ -51,21 +42,13 @@ struct Socket {
 };
 
 void nonblocking(Handle fd) {
-#ifdef _WIN32
-    u_long mode = 1;
-
-    if (ioctlsocket(fd, FIONBIO, &mode)) {
-        throw voyemu::VoyemuError("FIXTURE", "fixture nonblocking socket failed");
-    }
-#else
-    if (fcntl(fd, F_SETFL, O_NONBLOCK) || fcntl(fd, F_SETFD, FD_CLOEXEC)) {
+    if (!voyemu::os::set_nonblocking_socket(fd)) {
         throw voyemu::VoyemuError("FIXTURE", "fixture nonblocking socket failed");
     }
 
-    if (!voyemu::os::suppress_sigpipe(fd)) {
+    if (!voyemu::os::suppress_socket_signal(fd)) {
         throw voyemu::VoyemuError("FIXTURE", "fixture no-SIGPIPE failed");
     }
-#endif
 }
 
 class Peer {
@@ -111,19 +94,9 @@ private:
                 throw Closed{};
             }
 
-            fd_set selected;
-            FD_ZERO(&selected);
-            FD_SET(fd_, &selected);
-            timeval wait{0, 50000};
-#ifdef _WIN32
-            const auto ready = select(0, writing ? nullptr : &selected,
-                                      writing ? &selected : nullptr, nullptr, &wait);
-#else
-            const auto ready = select(fd_ + 1, writing ? nullptr : &selected,
-                                      writing ? &selected : nullptr, nullptr, &wait);
-#endif
+            const auto ready = voyemu::os::wait_socket(fd_, writing, 50000);
 
-            if (ready < 0) {
+            if (ready == -1) {
                 throw Closed{};
             }
 
@@ -131,8 +104,8 @@ private:
                 continue;
             }
 
-            const int count = static_cast<int>(size);
-            const auto used = writing ? ::send(fd_, data, count, 0) : ::recv(fd_, data, count, 0);
+            const auto used = writing ? voyemu::os::send_socket(fd_, data, size)
+                                      : voyemu::os::receive_socket(fd_, data, size);
 
             if (used <= 0) {
                 throw Closed{};
@@ -161,7 +134,7 @@ public:
         });
 
         for (unsigned i = 0; i < 64; ++i) {
-            const auto fd = ::accept(listener, nullptr, nullptr);
+            const auto fd = voyemu::os::accept_socket(listener);
 
             if (fd == invalid) {
                 break;

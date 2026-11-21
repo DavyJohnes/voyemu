@@ -4,6 +4,7 @@
 #include <cerrno>
 #include <fcntl.h>
 #include <poll.h>
+#include <sys/un.h>
 #include <unistd.h>
 
 namespace voyemu::os {
@@ -29,6 +30,30 @@ bool socket_connecting() {
 
 SocketHandle open_stream_socket(int family) {
     return ::socket(family, SOCK_STREAM, 0);
+}
+
+SocketHandle open_unix_listener(std::string_view path, int backlog) {
+    sockaddr_un address{};
+    address.sun_family = AF_UNIX;
+
+    if (path.empty() || path.size() >= sizeof(address.sun_path)) {
+        return no_socket;
+    }
+
+    path.copy(address.sun_path, path.size());
+    const auto socket = open_stream_socket(AF_UNIX);
+
+    if (socket == no_socket) {
+        return no_socket;
+    }
+
+    if (!bind_socket(socket, reinterpret_cast<const sockaddr *>(&address), sizeof(address)) ||
+        !listen_socket(socket, backlog)) {
+        close_socket(socket);
+        return no_socket;
+    }
+
+    return socket;
 }
 
 SocketHandle open_private_tcp_socket() {

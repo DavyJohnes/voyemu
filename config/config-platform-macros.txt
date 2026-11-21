@@ -83,9 +83,6 @@ src/app/runtime/media_rpc.test.cpp group 10 runtime: interguest link, media, pro
 src/app/runtime/provider_process.test.cpp group 10 runtime: interguest link, media, providers and sessions
 src/app/runtime/provider_registry.test.cpp group 10 runtime: interguest link, media, providers and sessions
 src/app/runtime/quickboot.test.cpp group 10 runtime: interguest link, media, providers and sessions
-src/app/runtime/runtime_fixture.cpp group 10 runtime: interguest link, media, providers and sessions
-src/app/runtime/runtime_fixture_media.hpp group 10 runtime: interguest link, media, providers and sessions
-src/app/runtime/runtime_fixture_wire.hpp group 10 runtime: interguest link, media, providers and sessions
 src/app/runtime/session.test.cpp group 10 runtime: interguest link, media, providers and sessions
 src/app/runtime/ui_observer_diagnostics.test.cpp group 10 runtime: interguest link, media, providers and sessions
 src/app/ui/cluster_ui.test.cpp group 7 graphics, platform and ui: frame transport and native windows
