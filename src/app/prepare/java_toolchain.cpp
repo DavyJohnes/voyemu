@@ -8,6 +8,7 @@
 #include "java_toolchain_identity.hpp"
 #include "ordinary_path.hpp"
 #include "os/fs.hpp"
+#include "os/platform.hpp"
 #include "owner_lock.hpp"
 #include "process.hpp"
 #include "project_files.hpp"
@@ -105,11 +106,7 @@ std::map<std::string, std::string> environment(const std::filesystem::path &temp
             {"TEMP", temporary.string()}};
 }
 
-#ifdef _WIN32
-constexpr char executable_suffix[] = ".exe";
-#else
-constexpr char executable_suffix[] = "";
-#endif
+using os::executable_suffix;
 
 struct Jdk {
     std::filesystem::path home, java, javac;
@@ -119,7 +116,7 @@ struct Jdk {
 Jdk installed_jdk(const std::filesystem::path &root, const std::filesystem::path &requested) {
     need(requested.is_absolute(), "configured JDK must be absolute");
     const auto configured = std::filesystem::canonical(requested);
-    const auto java = configured / "bin" / (std::string("java") + executable_suffix);
+    const auto java = configured / "bin" / ("java" + std::string(executable_suffix));
 
     ordinary(java);
     need(std::filesystem::is_regular_file(java), "configured Java executable missing");
@@ -150,8 +147,8 @@ Jdk installed_jdk(const std::filesystem::path &root, const std::filesystem::path
     need(feature >= 25, "JDK25 or newer required");
     Jdk selected;
     selected.home = actual;
-    selected.java = actual / "bin" / (std::string("java") + executable_suffix);
-    selected.javac = actual / "bin" / (std::string("javac") + executable_suffix);
+    selected.java = actual / "bin" / ("java" + std::string(executable_suffix));
+    selected.javac = actual / "bin" / ("javac" + std::string(executable_suffix));
     selected.java_sha256 = java_toolchain_input_sha256(selected.java);
     selected.javac_sha256 = java_toolchain_input_sha256(selected.javac);
     selected.release_sha256 = java_toolchain_input_sha256(actual / "release", 1 << 20);
@@ -691,7 +688,7 @@ std::filesystem::path java_helper_recipe_jdk(const std::filesystem::path &root,
     const auto home = java_developer_jdk(root);
 
     if (!std::filesystem::is_regular_file(home / "bin" /
-                                          (std::string("javac") + executable_suffix))) {
+                                          ("javac" + std::string(executable_suffix)))) {
         throw VoyemuError("JAVA_HELPER_ASSET_MISSING",
                           "the java-helper asset of these sources cannot be downloaded and the "
                           "pinned JDK of the developer tools that builds it is not installed: " +

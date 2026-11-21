@@ -1,7 +1,6 @@
 # Files outside src/app/os/ that still test a platform macro, checked by
 # src/dev/checks/CheckPlatformMacros.java: "path reason", one line each. Remove a line when its file
 # moves its platform code to an os/ backend; each reason names the group of its area.
-src/app/adb/adb_host.test.cpp group 4 adb and api: sockets, files and admission
 src/app/adb/adb_loopback.test.cpp group 4 adb and api: sockets, files and admission
 src/app/api/api.test.cpp group 4 adb and api: sockets, files and admission
 src/app/cli/fetch.cpp later: data-out and profile-sweep branches pending
@@ -10,7 +9,6 @@ src/app/cli/fetch_segmented.cpp later: data-out and profile-sweep branches pendi
 src/app/cli/fetch_segmented.test.cpp later: data-out and profile-sweep branches pending
 src/app/core/model.cpp later: CAN branch pending
 src/app/core/model.test.cpp later: CAN branch pending
-src/app/prepare/java_toolchain.cpp group 8 prepare: archives, Java runtime and e2fs helpers
 src/app/profiles/image_clone.hpp later: macOS clonefile used only by the data-out and profile-sweep files
 src/app/profiles/machine_preparation.test.cpp later: data-out and profile-sweep branches pending
 src/app/profiles/machine_preparation_internal.hpp later: data-out and profile-sweep branches pending

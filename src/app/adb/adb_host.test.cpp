@@ -66,7 +66,6 @@ bool adb_host_test_control_overflow(AdbHost *h, uint64_t id) {
     return s->enqueue(s, Block(1)) < 0;
 }
 
-#ifndef _WIN32
 bool adb_host_test_bound_stream_socket(AdbHost *h, uint64_t id) {
     auto op = find_operation(h, id);
 
@@ -88,4 +87,3 @@ size_t adb_host_test_queued_stream_input(AdbHost *h, uint64_t id) {
 
     return socket ? socket->packet_queue.size() : 0;
 }
-#endif
