@@ -75,7 +75,34 @@ int main() try {
     const auto coded = error(std::make_exception_ptr(std::system_error(
             std::make_error_code(std::errc::timed_out), "CAN_TIMEOUT_UNKNOWN: read")));
     assert(coded.at("code") == "CAN_TIMEOUT_UNKNOWN" && coded.at("outcome") == "unknown" &&
-           coded.at("retryable") == true);
+           coded.at("retryable") == true && !coded.contains("details"));
+    // An input fence failure and a launched selection of another machine carry their details.
+    const Json stale = {{"reason", "revision"}};
+
+    try {
+        throw api::InputFenceError("TEST_INPUT_STALE", "target changed", stale);
+    } catch (const std::exception &) {
+        const auto fence = error(std::current_exception(), true, true);
+        assert(fence.at("code") == "TEST_INPUT_STALE" &&
+               fence.at("message") == "TEST_INPUT_STALE: target changed" &&
+               fence.at("details") == stale);
+    }
+
+    const std::string session(32, 'a');
+    const Json launched = {{"session_id", session}}, created = {{"ownership_id", "owner"}};
+
+    try {
+        throw api::detail::MachineIdentityError(launched, created);
+    } catch (const std::exception &) {
+        const auto identity = error(std::current_exception());
+        const Json owned = {{"session", {{"id", session}, {"ownership_id", "owner"}}}};
+        assert(identity.at("code") == "MACHINE_IDENTITY_UNKNOWN" &&
+               identity.at("outcome") == "unknown" && identity.at("details") == owned);
+    }
+
+    assert(!error(std::make_exception_ptr(
+                          api::detail::MachineIdentityError(Json::object(), Json::object())))
+                    .contains("details"));
 } catch (const std::exception &failure) {
     std::cerr << failure.what() << '\n';
 
