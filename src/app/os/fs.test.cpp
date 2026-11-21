@@ -4,6 +4,13 @@
 #include <fstream>
 #include <initializer_list>
 #include <string>
+#ifndef _WIN32
+#include <atomic>
+#include <fcntl.h>
+#include <sys/file.h>
+#include <thread>
+#include <unistd.h>
+#endif
 
 namespace {
 int failures = 0;
@@ -74,6 +81,85 @@ void locks() {
           "unopenable path must throw LOCK_FILE naming it");
     std::filesystem::remove(file);
 }
+
+#ifndef _WIN32
+// Writers of a directory take its lock in turn: a holder that releases and takes it again waits
+// behind a writer that arrived meanwhile, and a writer waits in the kernel for another holder until
+// its deadline.
+void directory_locks() {
+    using std::chrono::milliseconds;
+    using voyemu::os::DirectoryLock;
+    const auto check = [](bool actual, const char *what) {
+        if (!actual) {
+            std::fprintf(stderr, "DirectoryLock: %s\n", what);
+            ++failures;
+        }
+    };
+    const auto after = [](int ms) {
+        return std::chrono::steady_clock::now() + milliseconds(ms);
+    };
+    const auto directory =
+            std::filesystem::temp_directory_path() /
+            ("voyemu-fs-directory-lock-" +
+             std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+    std::filesystem::create_directory(directory);
+    check(DirectoryLock(directory / "absent", after(100)).status() ==
+                  DirectoryLock::Status::unavailable,
+          "an absent directory must be unavailable");
+    std::atomic<bool> stop = false, holding = false;
+    std::atomic<unsigned> takes = 0;
+    std::thread rival([&] {
+        while (!stop) {
+            const DirectoryLock lock(directory, after(5000));
+
+            if (lock.status() == DirectoryLock::Status::held) {
+                ++takes;
+                holding = true;
+                std::this_thread::sleep_for(milliseconds(5));
+            }
+        }
+    });
+
+    while (!holding) {
+        std::this_thread::sleep_for(milliseconds(1));
+    }
+
+    const unsigned before = takes;
+    {
+        const DirectoryLock waiter(directory, after(2000));
+        check(waiter.status() == DirectoryLock::Status::held && takes - before <= 1,
+              "a writer that takes the lock again must not overtake a waiter");
+        stop = true;
+    }
+    rival.join();
+    const int other = ::open(directory.c_str(), O_RDONLY | O_DIRECTORY | O_CLOEXEC);
+    check(other >= 0 && ::flock(other, LOCK_EX) == 0, "another holder must lock the directory");
+    check(DirectoryLock(directory, after(100)).status() == DirectoryLock::Status::timeout,
+          "a writer must give up at its deadline");
+    std::thread release([&] {
+        std::this_thread::sleep_for(milliseconds(100));
+        ::close(other);
+    });
+    check(DirectoryLock(directory, after(5000)).status() == DirectoryLock::Status::held,
+          "a writer must wait for the other holder");
+    release.join();
+    // The wait that gave up releases the lock it may take after its deadline.
+    const int probe = ::open(directory.c_str(), O_RDONLY | O_DIRECTORY | O_CLOEXEC);
+    bool free = false;
+
+    for (int attempt = 0; attempt < 100 && !free; ++attempt) {
+        free = ::flock(probe, LOCK_EX | LOCK_NB) == 0;
+
+        if (!free) {
+            std::this_thread::sleep_for(milliseconds(10));
+        }
+    }
+
+    check(free, "a wait that gave up must not keep the lock");
+    ::close(probe);
+    std::filesystem::remove(directory);
+}
+#endif
 
 void exclusive_files() {
     const auto directory =
@@ -159,6 +245,9 @@ void resized_files() {
 int main() {
     try {
         locks();
+#ifndef _WIN32
+        directory_locks();
+#endif
         exclusive_files();
         resized_files();
     } catch (const std::exception &error) {

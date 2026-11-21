@@ -1,11 +1,17 @@
 #include "cli_messages.hpp"
 #include "fs.hpp"
 #include <cerrno>
+#include <condition_variable>
+#include <deque>
 #include <fcntl.h>
+#include <map>
+#include <memory>
+#include <mutex>
 #include <stdio.h>
 #include <sys/file.h>
 #include <sys/stat.h>
 #include <system_error>
+#include <thread>
 #include <unistd.h>
 
 // The file primitives that macOS and Linux share; fs_linux.cpp and fs_macos.cpp hold the renames.
@@ -93,6 +99,160 @@ FileLock::~FileLock() {
 
 bool FileLock::held() const {
     return handle_ >= 0;
+}
+
+namespace {
+// The arrival order of the threads of this process waiting for each locked directory.
+struct DirectoryQueues {
+    std::mutex mutex;
+    std::condition_variable changed;
+    std::map<std::pair<std::uint64_t, std::uint64_t>, std::deque<std::uint64_t>> waiting;
+    std::uint64_t next = 0;
+};
+
+DirectoryQueues &directory_queues() {
+    static DirectoryQueues queues;
+
+    return queues;
+}
+
+// A blocking flock on a duplicate of the directory handle, which a helper thread waits in so the
+// caller can give up at its deadline; an abandoned attempt releases the lock as soon as it gets it.
+struct KernelWait {
+    std::mutex mutex;
+    std::condition_variable changed;
+    bool done = false;
+    int error = 0;
+};
+} // namespace
+
+DirectoryLock::DirectoryLock(const std::filesystem::path &directory,
+                             std::chrono::steady_clock::time_point deadline)
+    : handle_(::open(directory.c_str(), O_RDONLY | O_DIRECTORY | O_CLOEXEC)) {
+    struct stat info{};
+
+    if (handle_ < 0 || ::fstat(handle_, &info) != 0) {
+        status_ = Status::unavailable;
+        leave_queue();
+
+        return;
+    }
+
+    device_ = static_cast<std::uint64_t>(info.st_dev);
+    inode_ = static_cast<std::uint64_t>(info.st_ino);
+    auto &queues = directory_queues();
+    {
+        std::unique_lock lock(queues.mutex);
+        ticket_ = ++queues.next;
+        auto &line = queues.waiting[{device_, inode_}];
+        line.push_back(ticket_);
+
+        if (!queues.changed.wait_until(lock, deadline, [&] {
+                return line.front() == ticket_;
+            })) {
+            lock.unlock();
+            status_ = Status::timeout;
+            leave_queue();
+
+            return;
+        }
+    }
+
+    if (::flock(handle_, LOCK_EX | LOCK_NB) == 0) {
+        status_ = Status::held;
+
+        return;
+    }
+
+    const int waiting = errno == EWOULDBLOCK ? ::fcntl(handle_, F_DUPFD_CLOEXEC, 0) : -1;
+
+    if (waiting < 0) {
+        status_ = Status::failed;
+        leave_queue();
+
+        return;
+    }
+
+    std::shared_ptr<KernelWait> wait;
+    std::thread helper;
+
+    try {
+        wait = std::make_shared<KernelWait>();
+        helper = std::thread([wait, waiting] {
+            int result = 0;
+
+            while ((result = ::flock(waiting, LOCK_EX)) != 0 && errno == EINTR) {}
+
+            const int error = result == 0 ? 0 : errno;
+            // The caller keeps its own handle of the same open description; a caller that gave up
+            // closed it, so closing this last handle releases the lock it may have just taken.
+            ::close(waiting);
+            std::lock_guard lock(wait->mutex);
+            wait->done = true;
+            wait->error = error;
+            wait->changed.notify_all();
+        });
+    } catch (const std::exception &) {
+        ::close(waiting);
+        status_ = Status::failed;
+        leave_queue();
+
+        return;
+    }
+
+    helper.detach();
+    std::unique_lock lock(wait->mutex);
+
+    if (!wait->changed.wait_until(lock, deadline, [&] {
+            return wait->done;
+        })) {
+        lock.unlock();
+        status_ = Status::timeout;
+        leave_queue();
+
+        return;
+    }
+
+    status_ = wait->error == 0 ? Status::held : Status::failed;
+
+    if (status_ != Status::held) {
+        lock.unlock();
+        leave_queue();
+    }
+}
+
+DirectoryLock::~DirectoryLock() {
+    if (status_ == Status::held) {
+        leave_queue();
+    }
+}
+
+DirectoryLock::Status DirectoryLock::status() const {
+    return status_;
+}
+
+void DirectoryLock::leave_queue() {
+    if (handle_ >= 0) {
+        ::close(handle_);
+        handle_ = -1;
+    }
+
+    if (!ticket_) {
+        return;
+    }
+
+    auto &queues = directory_queues();
+    {
+        std::lock_guard lock(queues.mutex);
+        const auto line = queues.waiting.find({device_, inode_});
+        std::erase(line->second, ticket_);
+
+        if (line->second.empty()) {
+            queues.waiting.erase(line);
+        }
+    }
+    ticket_ = 0;
+    queues.changed.notify_all();
 }
 
 bool link_exclusive(const std::filesystem::path &existing, const std::filesystem::path &link) {

@@ -1,4 +1,5 @@
 #pragma once
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
@@ -56,6 +57,37 @@ public:
 private:
     std::intptr_t handle_;
 };
+#ifndef _WIN32
+// Exclusive lock of a directory that the writers of its files take in turn until deadline: the
+// threads of this process queue in arrival order and processes wait blocked in the kernel, so a
+// writer that releases and takes the lock again does not starve a waiter. The OS releases the lock
+// when its holder exits. Windows writers coordinate through a named mutex per file instead.
+class DirectoryLock {
+public:
+    enum class Status {
+        held,
+        timeout,
+        // The directory cannot be opened.
+        unavailable,
+        // The directory cannot be locked.
+        failed
+    };
+
+    DirectoryLock(const std::filesystem::path &directory,
+                  std::chrono::steady_clock::time_point deadline);
+    ~DirectoryLock();
+    DirectoryLock(const DirectoryLock &) = delete;
+    DirectoryLock &operator=(const DirectoryLock &) = delete;
+    Status status() const;
+
+private:
+    void leave_queue();
+
+    int handle_ = -1;
+    Status status_ = Status::failed;
+    std::uint64_t device_ = 0, inode_ = 0, ticket_ = 0;
+};
+#endif
 // Adds link as a second name for existing; fails when link exists.
 bool link_exclusive(const std::filesystem::path &existing, const std::filesystem::path &link);
 // Atomically replaces to with from, durably where the host supports it; false on failure.

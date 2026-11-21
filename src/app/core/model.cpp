@@ -16,7 +16,6 @@
 #include <aclapi.h>
 #else
 #include <fcntl.h>
-#include <sys/file.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #endif
@@ -1344,32 +1343,19 @@ static void write_private_json_text(const std::filesystem::path &path, const std
     // publishing it. The lock adds no file, and readers need none: rename keeps an open file.
     const auto parent = path.parent_path().empty() ? std::filesystem::path(".")
                                                    : path.parent_path();
-    struct DirectoryLock {
-        int fd;
+    const os::DirectoryLock directory(parent,
+                                      std::chrono::steady_clock::now() + std::chrono::seconds(5));
 
-        ~DirectoryLock() {
-            if (fd >= 0) {
-                ::close(fd);
-            }
-        }
-    } directory{::open(parent.c_str(), O_RDONLY | O_DIRECTORY | O_CLOEXEC)};
-
-    if (directory.fd < 0) {
+    if (directory.status() == os::DirectoryLock::Status::unavailable) {
         throw VoyemuError("STATE_LOCK", "state directory unavailable");
     }
 
-    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    if (directory.status() == os::DirectoryLock::Status::failed) {
+        throw VoyemuError("STATE_LOCK", "coordination failed");
+    }
 
-    while (::flock(directory.fd, LOCK_EX | LOCK_NB) != 0) {
-        if (errno != EWOULDBLOCK && errno != EINTR) {
-            throw VoyemuError("STATE_LOCK", "coordination failed");
-        }
-
-        if (std::chrono::steady_clock::now() >= deadline) {
-            throw VoyemuError("STATE_LOCK_TIMEOUT", "state operation exceeded five seconds");
-        }
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    if (directory.status() == os::DirectoryLock::Status::timeout) {
+        throw VoyemuError("STATE_LOCK_TIMEOUT", "state operation exceeded five seconds");
     }
 
     if (::unlink(pending.c_str()) != 0 && errno != ENOENT) {
