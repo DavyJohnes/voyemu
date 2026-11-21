@@ -148,7 +148,20 @@ int main(int argc, char **argv) {
                 command.arguments.emplace_back("--lang=en");
                 command.directory = root;
 
-                return execute(command, 15000);
+                auto result = execute(command, 15000);
+                std::string output;
+
+                // The Windows console writes CRLF line ends; the assertions read LF.
+                for (std::size_t i = 0; i < result.output.size(); ++i) {
+                    if (result.output[i] != '\r' || i + 1 == result.output.size() ||
+                        result.output[i + 1] != '\n') {
+                        output += result.output[i];
+                    }
+                }
+
+                result.output = output;
+
+                return result;
             };
             const auto disabled =
                     run({"build", profile, "--cluster=off", "--multimedia=off", "--offline"});
