@@ -660,7 +660,8 @@ static void qinggan11_unprojected_fields(const std::filesystem::path &parent,
         write_private_json(directory / "vehicle-state.json", state);
         Backend backend({ram, directory, angle, {}, ram_base + 73728, true, false});
         auto reply = backend.dispatch(364, {0, 650, 736, projection}, {});
-        assert(reply.result == 1 && reply.payload.size() == 581 * 4);
+        assert(reply.result == state.at("sequence").get<std::uint64_t>() &&
+               reply.payload.size() == 581 * 4);
         unsigned values[581];
         std::memcpy(values, reply.payload.data(), sizeof values);
         assert(values[2 + 320] == (projection == 462 ? language : 0));
