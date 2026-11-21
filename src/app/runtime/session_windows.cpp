@@ -1003,7 +1003,9 @@ void Session::bound_android_request(const Json &operation,
 
         const auto timeout = operation.at("timeout_ms").get<std::int64_t>();
 
-        if (timeout < 0 || timeout > 180000) {
+        // A request that closes the cluster may carry its full bound, which the guest sync of the
+        // TCG engine extends beyond 180 s.
+        if (timeout < 0 || timeout > std::max(180000, request_timeout_limit_ms(op))) {
             throw VoyemuError("IPC_BOUNDS", "control timeout out of range");
         }
 
