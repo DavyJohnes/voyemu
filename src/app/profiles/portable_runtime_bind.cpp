@@ -110,8 +110,9 @@ std::filesystem::path bind_machine_configuration(const std::filesystem::path &ro
 
     Json prepared_observer = Json::object();
 
-    if (multimedia &&
-        (manifest.contains("ui_observer") || qinggan11_wheel_provider_profile(family))) {
+    // A profile with the ui_observer_required feature always binds its UI observer.
+    if (multimedia && (manifest.contains("ui_observer") ||
+                       profile_feature(retained_definition, "ui_observer_required"))) {
         const auto descriptor = portable_observer_descriptor(seed, manifest);
         const auto pin = descriptor.at("sha256").get<std::string>();
         const auto dex = root / ".local/toolchains/portable-ui-observer" / pin / "classes.dex";
@@ -587,7 +588,7 @@ std::filesystem::path bind_machine_configuration(const std::filesystem::path &ro
 
             if (launch.value("presentation_adapter", Json{}) !=
                 passion_presentation_contract(family, !prepared_mcu.empty(),
-                                              capability == passion_wheel_partial_capability())) {
+                                              passion_wheel_partial(capability))) {
                 return false;
             }
 
@@ -1372,10 +1373,9 @@ std::filesystem::path bind_machine_configuration(const std::filesystem::path &ro
 
             if (!prepared_mcu.empty()) {
                 launch["mcu_property_adapter"] = prepared_mcu;
-                launch["presentation_adapter"] =
-                        passion_presentation_contract(family, true,
-                                                      launch.value("wheel_capability", Json()) ==
-                                                              passion_wheel_partial_capability());
+                launch["presentation_adapter"] = passion_presentation_contract(
+                        family, true,
+                        passion_wheel_partial(launch.value("wheel_capability", Json())));
             }
 
             if (api == 28) {

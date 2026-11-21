@@ -312,8 +312,7 @@ Json activate_portable_runtime(const std::filesystem::path &root, std::string_vi
     if (manifest.at("android").contains("mcu_property")) {
         android["mcu_property_adapter"] = portable_passion_mcu(seed, manifest, definition);
         android["presentation_adapter"] = passion_presentation_contract(
-                family, true,
-                android.value("wheel_capability", Json()) == passion_wheel_partial_capability());
+                family, true, passion_wheel_partial(android.value("wheel_capability", Json())));
     }
 
     if (manifest.at("android").contains("camera_package")) {

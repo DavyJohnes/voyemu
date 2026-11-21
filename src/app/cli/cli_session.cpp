@@ -343,9 +343,13 @@ void wait_stopped_epoch(const Arguments &args, const voyemu::Json &reply, bool f
                       "own stopped epoch still holds supervisor lock");
 }
 
+bool passion_profile(const Arguments &args) {
+    return voyemu::embedded_profile_declares(args.profile, voyemu::ProfilePlatform::passion,
+                                             voyemu::ProfileBoard::sa8155);
+}
+
 voyemu::Json profile_startup_definition(const Arguments &args) {
-    if (voyemu::qinggan11_wheel_provider_profile(args.profile) ||
-        args.profile == voyemu::passion_profile_id ||
+    if (voyemu::qinggan11_wheel_provider_profile(args.profile) || passion_profile(args) ||
         voyemu::portable_runtime_available(args.root, args.profile, args.machine,
                                            args.machine_path)) {
         return voyemu::portable_profile_definition(args.root, args.profile, args.machine,
@@ -360,7 +364,7 @@ voyemu::Json profile_startup_values(const Arguments &args, const voyemu::Json &d
         return voyemu::qinggan11_startup_values(definition);
     }
 
-    if (args.profile == voyemu::passion_profile_id) {
+    if (passion_profile(args)) {
         return voyemu::passion_startup_values(definition);
     }
 

@@ -106,7 +106,7 @@ int main() try {
 
     for (const auto &update :
          Json::array({{{"reference_profile", "free-09-chinese-20260106-6.0.3"}},
-                      {{"reference_profile", voyemu::passion_profile_id}},
+                      {{"reference_profile", "test-passion"}},
                       {{"api", 28}},
                       {{"home",
                         {{"package", "com.qinggan.app.launcher"},

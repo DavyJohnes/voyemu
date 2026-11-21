@@ -189,7 +189,7 @@ public final class WindowCoverageTest {
                     "actual primary drag default scope bypasses proven panel ownership");
         }
 
-        if (new WindowCoverage(0, true, ObserverPlatform.QINGGAN11_731)
+        if (new WindowCoverage(0, true, ObserverPlatform.QINGGAN11)
                         .reconcilesNavigationPanels(false)
                 || new WindowCoverage(0, false, ObserverPlatform.PASSION)
                         .reconcilesNavigationPanels(false)
@@ -226,7 +226,7 @@ public final class WindowCoverageTest {
                             denial == 0 ? 1 : 0,
                             denial != 1,
                             denial == 2
-                                    ? ObserverPlatform.QINGGAN11_731
+                                    ? ObserverPlatform.QINGGAN11
                                     : denial == 3 ? "foreign" : ObserverPlatform.PASSION);
             WindowCoverage.Owner candidate = deniedRootCandidate(denial, frame);
             java.util.List<WindowCoverage.Owner> owners =

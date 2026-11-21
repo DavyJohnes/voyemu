@@ -43,14 +43,26 @@ inline Json passion_wheel_routes() {
     return {{"ok", 85}, {"next", 87}, {"previous", 88}, {"volume_up", 24}, {"volume_down", 25}};
 }
 
-inline Json passion_wheel_partial_capability() {
+// The partial capability names the profile whose wheel the provider serves.
+inline Json passion_wheel_partial_capability(std::string_view profile) {
     return {{"schema", 1},
-            {"profile", "passion-11-russian-20260403-2.1.4.80"},
+            {"profile", profile},
             {"status", "partial"},
             {"supported", true},
             {"transport", "android-media-keys"},
             {"authority", "com.voyemu.input.wheel"},
             {"routes", passion_wheel_routes()}};
+}
+
+// Whether capability is the partial capability of the valid profile name it carries.
+inline bool passion_wheel_partial(const Json &capability) {
+    if (!capability.is_object() ||
+        !valid_profile_name(capability.value("profile", std::string{}))) {
+        return false;
+    }
+
+    return capability ==
+           passion_wheel_partial_capability(capability.value("profile", std::string{}));
 }
 
 inline void passion_wheel_validate(const Json &android) {
@@ -62,13 +74,19 @@ inline void passion_wheel_validate(const Json &android) {
         return;
     }
 
-    constexpr auto id = "passion-11-russian-20260403-2.1.4.80";
-    const auto partial = passion_wheel_partial_capability();
+    const auto id = android.at("wheel_capability").is_object()
+                            ? android.at("wheel_capability").value("profile", std::string{})
+                            : std::string{};
+    const auto partial = passion_wheel_partial_capability(id);
     const Json unsupported = {{"schema", 1},
                               {"profile", id},
                               {"status", "unsupported"},
                               {"supported", false},
                               {"reason", "provider_not_installed"}};
+
+    if (!valid_profile_name(id)) {
+        throw VoyemuError("PASSION_WHEEL", "invalid capability binding");
+    }
 
     if (android.at("wheel_capability") == partial &&
         android.value("wheel_adapter", Json{}) ==
@@ -84,10 +102,10 @@ inline void passion_wheel_validate(const Json &android) {
 }
 
 inline Json passion_wheel_capability(const Json &profile) {
-    constexpr auto id = "passion-11-russian-20260403-2.1.4.80";
+    const auto id = profile.value("id", std::string{});
 
-    if (profile.value("id", std::string{}) != id) {
-        throw VoyemuError("PASSION_WHEEL", "exact profile required");
+    if (profile.value("platform", Json()) != "passion" || !valid_profile_name(id)) {
+        throw VoyemuError("PASSION_WHEEL", "Passion profile required");
     }
 
     const auto components = profile.value("components", Json::object());
@@ -116,6 +134,6 @@ inline Json passion_wheel_capability(const Json &profile) {
         throw VoyemuError("PASSION_WHEEL", "exact provider install required");
     }
 
-    return passion_wheel_partial_capability();
+    return passion_wheel_partial_capability(id);
 }
 } // namespace voyemu

@@ -74,9 +74,9 @@ final class WindowCoverage {
         this(display, unfocusedServiceSupported, "");
     }
 
-    WindowCoverage(int display, boolean unfocusedServiceSupported, String profile) {
+    WindowCoverage(int display, boolean unfocusedServiceSupported, String platform) {
         navigationPanelSupported =
-                unfocusedServiceSupported && ObserverPlatform.PASSION.equals(profile);
+                unfocusedServiceSupported && ObserverPlatform.PASSION.equals(platform);
 
         if (display < 0) {
             throw new IllegalArgumentException("display_unavailable");

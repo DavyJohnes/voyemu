@@ -10,8 +10,6 @@
 #include <stdexcept>
 
 namespace voyemu {
-inline constexpr const char *passion_profile_id = "passion-11-russian-20260403-2.1.4.80";
-
 // Whether a machine launch record belongs to a profile of the Passion platform.
 inline bool passion_launch(const Json &android) {
     return record_declares(android, ProfilePlatform::passion, ProfileBoard::sa8155);
@@ -144,8 +142,7 @@ inline bool passion_presentation(const Json &android) {
     }
 
     passion_wheel_validate(android);
-    const bool media_wheel = android.value("wheel_capability", Json()) ==
-                             passion_wheel_partial_capability();
+    const bool media_wheel = passion_wheel_partial(android.value("wheel_capability", Json()));
 
     const auto reference = android.value("reference_profile", std::string{});
 

@@ -1,6 +1,7 @@
 #include "ui_observer.hpp"
 #include "check.hpp"
 #include "error.hpp"
+#include "profile_catalog.hpp"
 #include "ui_observer_recovery.hpp"
 #include "ui_observer_shutdown.hpp"
 #include "ui_observer_wire.hpp"
@@ -370,8 +371,13 @@ Json UiObserver::connection(int timeout_ms, bool recover) {
             "CLASSPATH=" + android_shell_quote(guest_ + "/classes.dex") +
             " exec app_process /system/bin com.voyemu.api.ObserverMain " + observer_id_ + " " +
             auth_ +
+            // The API30 guest observer takes the platform of the profile that binds it.
             (definition.contains("profile")
-                     ? " " + android_shell_quote(definition.at("profile").get<std::string>())
+                     ? " " + android_shell_quote(
+                                     embedded_profile(definition.at("profile").get<std::string>())
+                                             .at("definition")
+                                             .at("platform")
+                                             .get<std::string>())
                      : "");
     // Retain the attempted guest lifetime even if it never reaches its first authenticated reply.
     write_private_json(

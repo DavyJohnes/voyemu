@@ -10,7 +10,7 @@ public:
     static Json capability() {
         return {{"schema", 1},
                 {"protocol", "passion-display-power-v1"},
-                {"profile", "passion-11-russian-20260403-2.1.4.80"},
+                {"platform", "passion"},
                 {"api", 30},
                 {"sdk_input_sha256",
                  "c6992cdc2a3e23d5aeb6ab77e7a7f6889cfcf5c262c6ed86825e6fcbf601681d"},

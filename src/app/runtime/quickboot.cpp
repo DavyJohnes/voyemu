@@ -95,7 +95,7 @@ bool android_presave_required(const Json &specification) {
     const auto capability = specification.value("wheel_capability", Json());
 
     return qinggan11_partial_wheel_capability_matches(capability) ||
-           capability == passion_wheel_partial_capability();
+           passion_wheel_partial(capability);
 }
 
 namespace {

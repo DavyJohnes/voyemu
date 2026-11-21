@@ -48,7 +48,7 @@ public final class ObserverMain {
             new java.util.concurrent.ConcurrentHashMap<>();
     private static volatile long sourceDeadline;
     private static volatile boolean running = true;
-    private static String selectedProfile = "";
+    private static String selectedPlatform = "";
     private static HandlerThread callbacks;
     private static UiAutomation automation;
     private static Method disconnect;
@@ -560,7 +560,7 @@ public final class ObserverMain {
             check(COUNTS.get()[1] <= MAX_BYTES - 65536, "output_limit");
             JSONArray unavailable = new JSONArray();
             WindowCoverage coverage =
-                    new WindowCoverage(displayId, Build.VERSION.SDK_INT == 30, selectedProfile);
+                    new WindowCoverage(displayId, Build.VERSION.SDK_INT == 30, selectedPlatform);
 
             for (AccessibilityWindowInfo window : original) {
                 readAccessibilityWindow(window, selector, role, elements, unavailable, coverage);
@@ -1701,7 +1701,7 @@ public final class ObserverMain {
                                 check(true, "deadline");
                             },
                             ObserverMain::missingFocusedApplicationRoot,
-                            ObserverPlatform.PASSION.equals(selectedProfile)
+                            ObserverPlatform.PASSION.equals(selectedPlatform)
                                     ? SystemClock::uptimeMillis
                                     : null,
                             Thread::sleep,
@@ -1973,7 +1973,7 @@ public final class ObserverMain {
             throw new IllegalArgumentException("owned_api28_observer_required");
         }
 
-        selectedProfile = args.length == 3 ? args[2] : "";
+        selectedPlatform = args.length == 3 ? args[2] : "";
         VIEW_SERVER.onInvalidation(type -> {
             try {
                 JOURNAL.append(

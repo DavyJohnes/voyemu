@@ -1,17 +1,13 @@
 package com.voyemu.api;
 
-/** API30 is enabled only by a source-built, exact-profile host binding. */
+/** API30 is enabled only by a source-built host binding that names the platform of its profile. */
 final class ObserverPlatform {
-    static final String QINGGAN11_611 = "free-11-chinese-20250710-6.11.1";
-    static final String QINGGAN11_731 = "free-11-chinese-20260731-7.3.1";
-    static final String PASSION = "passion-11-russian-20260403-2.1.4.80";
+    static final String QINGGAN11 = "qinggan11";
+    static final String PASSION = "passion";
 
-    static boolean allowed(int api, String profile) {
-        return (api == 28 && profile.isEmpty())
-                || (api == 30
-                        && (QINGGAN11_611.equals(profile)
-                                || QINGGAN11_731.equals(profile)
-                                || PASSION.equals(profile)));
+    static boolean allowed(int api, String platform) {
+        return (api == 28 && platform.isEmpty())
+                || (api == 30 && (QINGGAN11.equals(platform) || PASSION.equals(platform)));
     }
 
     static String provenance(int api, String prefix, String suffix) {

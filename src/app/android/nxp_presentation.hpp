@@ -5,7 +5,6 @@
 #include <string_view>
 
 namespace voyemu {
-inline constexpr const char *nxp_profile_id = "free-09-chinese-20221230-nxp-rc45";
 inline constexpr const char *nxp_home =
         "com.qinggan.app.launcher/com.qinggan.app.launcher.activity.MainActivity";
 

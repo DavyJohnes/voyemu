@@ -664,10 +664,10 @@ int main(int argc, char **argv) {
             passion_camera_config(other, config);
             check(config.at("hw.camera.back") == "webcam0",
                   "other profiles must retain camera config");
-            Json launch = {{"reference_profile", passion_profile_id},
+            Json launch = {{"reference_profile", "test-passion"},
                            {"platform", "passion"},
                            {"board", "8155"},
-                           {"presentation_adapter", {{"family", passion_profile_id}}},
+                           {"presentation_adapter", {{"family", "test-passion"}}},
                            {"args", Json::array()}};
             const std::string good = "hw.camera.back=emulated\nhw.camera.front=none\n";
             passion_camera_validate(launch, good);

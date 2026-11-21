@@ -680,7 +680,7 @@ int main() try {
                    .resume); // A new host lifetime validates the origin binding, not its new
                              // session id.
     auto passion_spec = spec;
-    passion_spec["wheel_capability"] = passion_wheel_partial_capability();
+    passion_spec["wheel_capability"] = passion_wheel_partial_capability("test-passion");
     assert(android_presave_required(passion_spec));
     const auto passion_key = android_quickboot_key(passion_spec);
     assert(passion_key.at("presave_protocol") == 1);
@@ -708,7 +708,7 @@ int main() try {
 
     assert(refused && !passion_cache.runtime_checkpoint().resume);
     passion_spec["wheel_capability"] = {{"schema", 1},
-                                        {"profile", "passion-11-russian-20260403-2.1.4.80"},
+                                        {"profile", "test-passion"},
                                         {"status", "unsupported"},
                                         {"supported", false},
                                         {"reason", "provider_not_installed"}};

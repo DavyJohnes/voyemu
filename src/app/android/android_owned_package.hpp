@@ -3,6 +3,7 @@
 #include "model.hpp"
 #include "os/fs.hpp"
 #include "process.hpp"
+#include "profile_catalog.hpp"
 #include "quickboot.hpp"
 #include "windows_startup.hpp"
 #include <chrono>
@@ -382,10 +383,8 @@ inline Json ensure_android_prepared_packages(
         const Json &specification, const std::string &nonce, const std::string &boot,
         const std::function<ProcessResult(const std::vector<std::string> &, int)> &run,
         const std::function<void()> &fence) {
-    const auto reference = specification.value("reference_profile", std::string{});
-
-    if (reference != "free-11-chinese-20260731-7.3.1" &&
-        reference != "free-11-russian-20260318-rc1") {
+    if (!embedded_profile_declares(specification.value("reference_profile", std::string{}),
+                                   ProfilePlatform::qinggan11, ProfileBoard::sa8155)) {
         throw VoyemuError("ANDROID_OWNED_PACKAGE", "exact Free A11 profile required");
     }
 
@@ -410,9 +409,8 @@ inline void android_camera_package_descriptor(const Json &value, bool portable) 
 }
 
 inline std::filesystem::path android_camera_package_file(const Json &specification) {
-    if (specification.value("reference_profile", std::string{}) !=
-                "free-11-chinese-20260731-7.3.1" &&
-        specification.value("reference_profile", std::string{}) != "free-11-russian-20260318-rc1") {
+    if (!embedded_profile_declares(specification.value("reference_profile", std::string{}),
+                                   ProfilePlatform::qinggan11, ProfileBoard::sa8155)) {
         throw VoyemuError("ANDROID_OWNED_PACKAGE", "exact Free A11 Camera profile required");
     }
 

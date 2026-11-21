@@ -4449,6 +4449,7 @@ int main(int argc, char **argv) {
                     {"title", "Synthetic Free 1.0"},
                     {"platform", "qinggan11"},
                     {"board", "8155"},
+                    {"features", {{"ui_observer_required", true}}},
                     {"components",
                      {{"canbus", "components/canbus"},
                       {"qg-runtime", "components/qg-runtime"},
@@ -5182,7 +5183,7 @@ int main(int argc, char **argv) {
             check(family_denied,
                   "API30 non-Free/Dreamer profile silently inherited Free/Dreamer adapters");
             auto nxp_definition = definition30;
-            nxp_definition["id"] = nxp_profile_id;
+            nxp_definition["id"] = "test-nxp";
             nxp_definition["platform"] = "qinggan09";
             nxp_definition["board"] = "nxp";
             nxp_definition["android"] = {
@@ -5237,7 +5238,7 @@ int main(int argc, char **argv) {
                 auto wheel_definition = nxp_definition;
                 wheel_definition["components"]["wheel"] = "components/wheel";
                 wheel_definition["wheel"]["androidRoutes"] = "nxp-wheel-routes.json";
-                Json metadata{{"profile", nxp_profile_id}, {"routes", Json::array()}};
+                Json metadata{{"profile", "test-nxp"}, {"routes", Json::array()}};
                 const auto nxp_routes = nxp_wheel_routes();
 
                 for (const auto &[id, code] : nxp_routes.items()) {
@@ -5266,7 +5267,7 @@ int main(int argc, char **argv) {
                 check(denied, "NXP accepted foreign A9 wheel metadata");
             }
             auto passion_definition = definition30;
-            passion_definition["id"] = passion_profile_id;
+            passion_definition["id"] = "test-passion";
             passion_definition["platform"] = "passion";
             passion_definition["board"] = "8155";
             passion_definition["configure"] = {{"home", "com.voyah.os.carlauncher"},
@@ -5325,7 +5326,7 @@ int main(int argc, char **argv) {
             }
             {
                 auto partial = passion_launch;
-                partial["wheel_capability"] = passion_wheel_partial_capability();
+                partial["wheel_capability"] = passion_wheel_partial_capability("test-passion");
                 partial["wheel_adapter"] = {{"authority", "com.voyemu.input.wheel"},
                                             {"routes", passion_wheel_routes()}};
                 partial["presentation_adapter"] = passion_presentation_contract(
@@ -5375,7 +5376,7 @@ int main(int argc, char **argv) {
             }
             {
                 auto partial = passion_launch;
-                partial["wheel_capability"] = passion_wheel_partial_capability();
+                partial["wheel_capability"] = passion_wheel_partial_capability("test-passion");
                 partial["wheel_adapter"] = {{"authority", "com.voyemu.input.wheel"},
                                             {"routes", passion_wheel_routes()}};
                 partial["mcu_property_adapter"] = passion_mcu_capability();
@@ -5481,7 +5482,7 @@ int main(int argc, char **argv) {
                         const Json nxp_audio = {
                                 {"schema", 1},
                                 {"route", "wav"},
-                                {"profile", nxp_profile_id},
+                                {"profile", "test-nxp"},
                                 {"nonce", std::string(32, 'b')},
                                 {"directory",
                                  std::filesystem::canonical(activation_directory).string()}};
@@ -5566,7 +5567,7 @@ int main(int argc, char **argv) {
                             }
 
                             if (variant == 2) {
-                                capability["profile"] = nxp_profile_id;
+                                capability["profile"] = "test-nxp";
                             }
 
                             if (variant == 3) {

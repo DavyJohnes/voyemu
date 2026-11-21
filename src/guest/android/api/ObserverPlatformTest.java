@@ -3,8 +3,7 @@ package com.voyemu.api;
 public final class ObserverPlatformTest {
     public static void main(String[] args) {
         if (!ObserverPlatform.allowed(28, "")
-                || !ObserverPlatform.allowed(30, ObserverPlatform.QINGGAN11_611)
-                || !ObserverPlatform.allowed(30, ObserverPlatform.QINGGAN11_731)
+                || !ObserverPlatform.allowed(30, ObserverPlatform.QINGGAN11)
                 || !ObserverPlatform.allowed(30, ObserverPlatform.PASSION)) {
             throw new AssertionError();
         }
@@ -15,22 +14,21 @@ public final class ObserverPlatformTest {
             }
 
             if (api != 30
-                    && (ObserverPlatform.allowed(api, ObserverPlatform.QINGGAN11_611)
-                            || ObserverPlatform.allowed(api, ObserverPlatform.QINGGAN11_731)
+                    && (ObserverPlatform.allowed(api, ObserverPlatform.QINGGAN11)
                             || ObserverPlatform.allowed(api, ObserverPlatform.PASSION))) {
-                throw new AssertionError("profile API mismatch accepted");
+                throw new AssertionError("platform API mismatch accepted");
             }
         }
 
-        for (String profile :
+        for (String platform :
                 new String[] {
                     "",
-                    ObserverPlatform.QINGGAN11_611 + "x",
+                    ObserverPlatform.QINGGAN11 + "x",
                     ObserverPlatform.PASSION + "x",
-                    ObserverPlatform.QINGGAN11_731 + "x"
+                    "qinggan09"
                 }) {
-            if (ObserverPlatform.allowed(30, profile)) {
-                throw new AssertionError("foreign API30 profile accepted");
+            if (ObserverPlatform.allowed(30, platform)) {
+                throw new AssertionError("foreign API30 platform accepted");
             }
         }
 
@@ -46,6 +44,6 @@ public final class ObserverPlatformTest {
             throw new AssertionError("false provenance");
         }
 
-        System.out.println("Exact API30 profile admission and versioned provenance passed");
+        System.out.println("API30 platform admission and versioned provenance passed");
     }
 }

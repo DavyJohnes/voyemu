@@ -1590,8 +1590,7 @@ Json portable_android_launch(const std::filesystem::path &root,
         }
 
         android["presentation_adapter"] = passion_presentation_contract(
-                reference, false,
-                android.at("wheel_capability") == passion_wheel_partial_capability());
+                reference, false, passion_wheel_partial(android.at("wheel_capability")));
 
         return android;
     }
