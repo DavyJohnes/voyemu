@@ -6050,6 +6050,9 @@ int main(int argc, char **argv) try {
               {"component",
                "com.qinggan.app.launcher/com.qinggan.app.launcher.activity.MainActivity"}}}};
     assert(qinggan11_cluster_presentation(android611));
+    // The Windows Android transaction selects the cluster skin query and command by this test.
+    assert(qinggan11_presentation(android611.value("reference_profile", std::string{}),
+                                  android611));
     auto foreign611 = android611;
     foreign611["reference_profile"] = "free-11-chinese-20260731-7.3.1";
     assert(!qinggan11_cluster_presentation(foreign611));
