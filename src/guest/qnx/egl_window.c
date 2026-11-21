@@ -468,16 +468,11 @@ EGLBoolean eglSwapBuffers(EGLDisplay d, EGLSurface surface) {
         emit("QG3 PRESENT buffer-ready level=DEBUG\n");
     }
 
-    usize bytes = (usize)w->width * w->height * 4;
     acquire();
-    int ready = cache_prepare(&w->readback, bytes);
-    u64 read_args[] = {0, 0, (u64)w->width, (u64)w->height, 0x1908, 0x1401, w->readback.blob};
-    u64 copied = ready ? call(24, read_args, 7, 0, 0) : 0;
+    int copied = cache_read(&w->readback, w->width, w->height);
     release();
 
-    if (copied != bytes || transport_error) {
-        transport_error = 1;
-
+    if (!copied) {
         return 0;
     }
 

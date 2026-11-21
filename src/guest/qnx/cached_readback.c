@@ -69,3 +69,18 @@ static int cache_prepare(ReadbackCache *cache, usize bytes) {
 
     return 1;
 }
+
+/* Caller owns api_lock. A command rejected earlier keeps its glGetError report, but only this
+ * readback decides the present: the sticky flag would otherwise fail every later present. */
+static int cache_read(ReadbackCache *cache, int width, int height) {
+    const usize bytes = (usize)width * height * 4;
+    const int earlier = transport_error;
+    transport_error = 0;
+    const int ready = cache_prepare(cache, bytes);
+    u64 args[] = {0, 0, (u64)width, (u64)height, 0x1908, 0x1401, cache->blob};
+    const u64 copied = ready ? call(24, args, 7, 0, 0) : 0;
+    const int failed = copied != bytes || transport_error;
+    transport_error = earlier || failed;
+
+    return !failed;
+}
