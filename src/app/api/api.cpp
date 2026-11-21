@@ -1,5 +1,6 @@
 #include "api_internal.hpp"
 #include "error.hpp"
+#include "field_delivery.hpp"
 #include "version.hpp"
 
 namespace voyemu::api {
@@ -1679,6 +1680,19 @@ Json Api::dispatch_catalog(const std::string &op, const Json &request, Clock::ti
 
     if (op == "vehicle.fields") {
         auto fields = catalog_json();
+        // With a session each field names the guests of its running machine that receive it.
+        std::optional<FieldDelivery> delivery;
+
+        if (request.contains("session")) {
+            const auto status = control(request, {{"op", "status"}});
+
+            if (!status.contains("field_delivery")) {
+                throw VoyemuError("TEST_UNSUPPORTED",
+                                  "stopped runtime no longer exposes field delivery");
+            }
+
+            delivery = field_delivery_from_status(status.at("field_delivery"));
+        }
 
         for (auto &field : fields) {
             auto name = field.at("name").get<std::string>();
@@ -1697,6 +1711,10 @@ Json Api::dispatch_catalog(const std::string &op, const Json &request, Clock::ti
                             : name == "speed10x" ? "0.1 km/h"
                             : name == "soc"      ? "percent"
                                                  : "raw_oem";
+
+            if (delivery) {
+                field["delivery"] = field_delivery_json(*delivery, name);
+            }
         }
 
         return {{"map_sha256", map_sha256},

@@ -1225,6 +1225,44 @@ int main(int argc, char **argv) try {
                invalid_query.at("error").get<std::string>().starts_with("CAN_MODEL_ARGUMENT:"));
     }
     {
+        // A session without guests reports that every field stays in the model.
+        const auto status = session.handle({{"op", "status"}, {"session_id", id}});
+        assert(status.at("field_delivery") ==
+               Json({{"cluster", Json::array()}, {"multimedia", Json::array()}}));
+        unsigned reads = 0;
+        api::Transports fields_transport = transport;
+        fields_transport.control = [&](const auto &, const Json &op, int) {
+            ++reads;
+            assert(op.at("op") == "status");
+
+            return Json{{"ok", true},
+                        {"session_id", id},
+                        {"catalog", catalog_json()},
+                        {"field_delivery",
+                         {{"cluster", Json::array({"soc", "speed", "spd_valid"})},
+                          {"multimedia", Json::array({"soc"})}}}};
+        };
+        api::Api fields_api(root, "unused-cli", fields_transport);
+        const auto described = fields_api.call(request("vehicle.fields"));
+        assert(described.at("ok") == true && reads == 1);
+        const auto &fields = described.at("result").at("fields");
+        assert(fields.size() == 579);
+
+        for (const auto &field : fields) {
+            const auto name = field.at("name").get<std::string>();
+            assert(field.at("delivery") == (name == "soc" ? Json::array({"cluster", "multimedia"})
+                                            : name == "speed" || name == "spd_valid"
+                                                    ? Json::array({"cluster"})
+                                                    : Json::array()));
+        }
+
+        // Without a session the catalog describes the model alone.
+        const auto bare = fields_api.call(
+                {{"schema", 1}, {"request_id", random_token()}, {"op", "vehicle.fields"}});
+        assert(bare.at("ok") == true && reads == 1 &&
+               !bare.at("result").at("fields").at(0).contains("delivery"));
+    }
+    {
         // Same-profile machines remain addressable by their retained SID alone.
         const auto scoped_root = root / "same-profile-routing";
         ensure_private_directory(scoped_root);

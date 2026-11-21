@@ -1,4 +1,5 @@
 #include "error.hpp"
+#include "field_delivery.hpp"
 #include "session_internal.hpp"
 
 namespace voyemu {
@@ -190,6 +191,7 @@ Json Session::snapshot() const {
             {"revision", model_.state()["sequence"]},
             {"state", model_.state()},
             {"catalog", catalog_json()},
+            {"field_delivery", field_delivery_status(field_delivery(cluster_spec_, android_spec_))},
             {"deliveries", observed_deliveries},
             {"wheel_routes", wheel_routes},
             {"wheel_capability",
