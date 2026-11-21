@@ -125,10 +125,14 @@ std::filesystem::path host_lease_directory() {
     return std::filesystem::canonical(std::filesystem::temp_directory_path()) / "voyemu";
 }
 
+std::filesystem::path private_control_endpoint(const std::string &name) {
+    return std::filesystem::path("\\\\.\\pipe\\voyemu-" + name);
+}
+
 namespace session_detail {
 std::filesystem::path session_control_endpoint(const std::filesystem::path &,
                                                const std::string &session_id) {
-    return std::filesystem::path("\\\\.\\pipe\\voyemu-" + session_id);
+    return private_control_endpoint(session_id);
 }
 
 std::filesystem::path session_runtime_root() {

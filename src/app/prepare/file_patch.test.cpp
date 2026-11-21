@@ -1,6 +1,7 @@
 #include "file_patch.hpp"
 #include "init_patch.hpp"
 #include "model.hpp"
+#include "os/platform.hpp"
 #include "process.hpp"
 #include "selinux_patch.hpp"
 #include <atomic>
@@ -1008,20 +1009,23 @@ int main(int argc, char **argv) {
         }
 
         check(invalid_pin, "malformed SHA rejected");
-#ifndef _WIN32
-        const auto link = directory / "linked.rc";
-        std::filesystem::create_symlink(source, link);
-        invalid = batch;
-        invalid.front().input = link;
-        bool rejected_link = false;
-        try {
-            prepare_file_patches(invalid);
-        } catch (...) {
-            rejected_link = true;
+
+        // Creating a symbolic link needs a privilege on Windows.
+        if (!voyemu::os::host_windows) {
+            const auto link = directory / "linked.rc";
+            std::filesystem::create_symlink(source, link);
+            invalid = batch;
+            invalid.front().input = link;
+            bool rejected_link = false;
+            try {
+                prepare_file_patches(invalid);
+            } catch (...) {
+                rejected_link = true;
+            }
+
+            check(rejected_link, "linked source rejected");
         }
 
-        check(rejected_link, "linked source rejected");
-#endif
         auto store = [&](const std::string &name, const std::string &bytes) {
             auto path = directory / name;
             std::ofstream file(path, std::ios::binary);

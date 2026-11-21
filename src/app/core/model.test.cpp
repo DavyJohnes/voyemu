@@ -1,5 +1,5 @@
 #include "model.hpp"
-#include "private_json_reader.hpp"
+#include "os/private_json_reader.hpp"
 #include "process.hpp"
 #include <algorithm>
 #include <atomic>

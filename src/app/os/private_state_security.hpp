@@ -1,5 +1,5 @@
 #pragma once
-#include "error.hpp"
+#include "core/error.hpp"
 // Windows security descriptor shared by the state layer and its lock sites.
 // Mirrors api/admission.cpp PrivateSecurity: the object is created owned by the
 // current user with a single protected ALLOW ACE for that user, so the

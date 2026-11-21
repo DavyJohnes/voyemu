@@ -1,6 +1,6 @@
 #include "inactive_profile.hpp"
 #include "os/fs.hpp"
-#include "private_state_security.hpp"
+#include "os/private_state_security.hpp"
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif

@@ -3,7 +3,7 @@
 #include "model.hpp"
 #include "os/fs.hpp"
 #include "os/private_region.hpp"
-#include "private_state_security.hpp"
+#include "os/private_state_security.hpp"
 #include "process.hpp"
 #include <charconv>
 #include <chrono>

@@ -8,7 +8,7 @@
 #include <windows.h>
 #include <aclapi.h>
 
-#include "private_state_security.hpp"
+#include "os/private_state_security.hpp"
 
 namespace voyemu::api::platform {
 namespace {

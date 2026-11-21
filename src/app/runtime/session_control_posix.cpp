@@ -189,13 +189,17 @@ std::filesystem::path host_lease_directory() {
            ("voyemu-" + std::to_string(::geteuid()));
 }
 
+std::filesystem::path private_control_endpoint(const std::string &name) {
+    return native_socket_root() / (name + ".sock");
+}
+
 namespace session_detail {
 std::filesystem::path session_control_endpoint(const std::filesystem::path &directory,
                                                const std::string &session_id) {
     auto endpoint = directory / "control.sock";
 
     if (endpoint.string().size() >= 104) {
-        endpoint = native_socket_root() / (session_id + ".sock");
+        endpoint = private_control_endpoint(session_id);
     }
 
     return endpoint;

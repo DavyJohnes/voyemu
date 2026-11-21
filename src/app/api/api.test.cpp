@@ -31,7 +31,7 @@
 #include <windows.h>
 #include <wincodec.h>
 
-#include "private_state_security.hpp"
+#include "os/private_state_security.hpp"
 #else
 #include <CoreGraphics/CoreGraphics.h>
 #include <ImageIO/ImageIO.h>

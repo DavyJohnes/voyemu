@@ -1,5 +1,6 @@
 #include "api.hpp"
 #include "guest_android_fake.hpp"
+#include "os/platform.hpp"
 #include "profile_runtime.hpp"
 #include "qnx_cluster_ui_wire.hpp"
 #include "qnx_runtime_layout.hpp"
@@ -670,41 +671,40 @@ void check_public_ui_budget() {
 }
 
 void check_cluster_transport_deadline() {
-#ifndef _WIN32
-    const auto root = native_socket_root() / ("cluster-deadline-" + random_token().substr(0, 8));
-    ensure_private_directory(root);
-    const auto endpoint = root / "control.sock";
+    // The deadline is exercised over a Unix control socket.
+    if (!voyemu::os::host_windows) {
+        const auto endpoint =
+                private_control_endpoint("cluster-deadline-" + random_token().substr(0, 8));
 
-    for (const bool elapsed : {false, true}) {
-        std::atomic<bool> stopped = false;
-        ControlServer server(endpoint, [&](const Json &) {
-            stopped = true;
+        for (const bool elapsed : {false, true}) {
+            std::atomic<bool> stopped = false;
+            ControlServer server(endpoint, [&](const Json &) {
+                stopped = true;
 
-            if (elapsed) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(80));
+                if (elapsed) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(80));
+                }
+
+                return Json{{"ok", true}, {"payload", "small"}};
+            });
+            std::thread serving([&] {
+                server.serve(stopped);
+            });
+            bool rejected = false;
+            try {
+                const auto reply = voyemu::request(
+                        endpoint, {{"op", "test_cluster_ui"}, {"timeout_ms", elapsed ? 10 : 1000}},
+                        1000);
+                assert(reply.at("ok") == true);
+            } catch (const std::runtime_error &) {
+                rejected = true;
             }
 
-            return Json{{"ok", true}, {"payload", "small"}};
-        });
-        std::thread serving([&] {
-            server.serve(stopped);
-        });
-        bool rejected = false;
-        try {
-            const auto reply = voyemu::request(
-                    endpoint, {{"op", "test_cluster_ui"}, {"timeout_ms", elapsed ? 10 : 1000}},
-                    1000);
-            assert(reply.at("ok") == true);
-        } catch (const std::runtime_error &) {
-            rejected = true;
+            stopped = true;
+            serving.join();
+            assert(rejected == elapsed);
         }
-
-        stopped = true;
-        serving.join();
-        assert(rejected == elapsed);
     }
-    std::filesystem::remove_all(root);
-#endif
 }
 
 void check_system_and_power(const std::filesystem::path &base) {

@@ -3,7 +3,6 @@
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
-#ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
@@ -77,8 +76,3 @@ int main(int argc, char **argv) {
         return 1;
     }
 }
-#else
-int main() {
-    return 77;
-}
-#endif

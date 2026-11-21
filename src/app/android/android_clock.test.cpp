@@ -1,4 +1,5 @@
 #include "android_clock.hpp"
+#include "os/platform.hpp"
 #include "process.hpp"
 #include <iostream>
 #include <stdexcept>
@@ -58,33 +59,37 @@ int main() try {
     }
 
     require(invalid);
-#ifndef _WIN32
-    // Exercise the exact shell frame with a local fixed child; /proc may be absent on macOS.
-    // Missing diagnostics must never overwrite the child's original exit status or output.
-    for (const auto &[child, status] :
-         {std::pair{"sh -c 'printf command-stdout; printf command-stderr >&2; exit 255'", 255},
-          std::pair{"sh -c 'kill -TERM $$'", 143}}) {
-        auto script = framed;
-        const std::string invocation = "/system/bin/cmd alarm set-time 1791579105325";
-        script.replace(script.find(invocation), invocation.size(), child);
-        ProcessSpec spec;
-        spec.executable = "/bin/sh";
-        spec.arguments = {"-c", script};
-        const auto result = execute(spec, 1500, 8192);
-        require(!result.timed_out && result.exit_code == status);
-        require(result.output.find("child_pid=") != std::string::npos);
-        require(result.output.find("wait_status=" + std::to_string(status)) != std::string::npos);
-        require(result.output.find("VOYEMU_CLOCK_V1 end") != std::string::npos);
-        require(result.output.find("after /proc/uptime=") != std::string::npos);
 
-        if (status == 255) {
-            require(result.output.find("command-stdout") != std::string::npos);
-            require(result.output.find("command-stderr") != std::string::npos);
-        } else {
-            require(result.output.find("possible_signal=15") != std::string::npos);
+    // The framed shell runs under /bin/sh of a POSIX host.
+    if (!voyemu::os::host_windows) {
+        // Exercise the exact shell frame with a local fixed child; /proc may be absent on macOS.
+        // Missing diagnostics must never overwrite the child's original exit status or output.
+        for (const auto &[child, status] :
+             {std::pair{"sh -c 'printf command-stdout; printf command-stderr >&2; exit 255'", 255},
+              std::pair{"sh -c 'kill -TERM $$'", 143}}) {
+            auto script = framed;
+            const std::string invocation = "/system/bin/cmd alarm set-time 1791579105325";
+            script.replace(script.find(invocation), invocation.size(), child);
+            ProcessSpec spec;
+            spec.executable = "/bin/sh";
+            spec.arguments = {"-c", script};
+            const auto result = execute(spec, 1500, 8192);
+            require(!result.timed_out && result.exit_code == status);
+            require(result.output.find("child_pid=") != std::string::npos);
+            require(result.output.find("wait_status=" + std::to_string(status)) !=
+                    std::string::npos);
+            require(result.output.find("VOYEMU_CLOCK_V1 end") != std::string::npos);
+            require(result.output.find("after /proc/uptime=") != std::string::npos);
+
+            if (status == 255) {
+                require(result.output.find("command-stdout") != std::string::npos);
+                require(result.output.find("command-stderr") != std::string::npos);
+            } else {
+                require(result.output.find("possible_signal=15") != std::string::npos);
+            }
         }
     }
-#endif
+
     std::cout
             << "bounded epoch parsing, timezone-independent readback, drift and overflow guards passed\n";
 } catch (const std::exception &error) {

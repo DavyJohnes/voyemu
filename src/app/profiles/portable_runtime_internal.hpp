@@ -40,7 +40,7 @@
 #include "screens.hpp"
 #include "windows_renderer.hpp"
 #ifdef _WIN32
-#include "private_state_security.hpp"
+#include "os/private_state_security.hpp"
 #include "wine_native_backend_windows.hpp"
 #endif
 #include <algorithm>

@@ -4,7 +4,7 @@
 #include <fstream>
 #include <map>
 #ifdef _WIN32
-#include "../core/private_state_security.hpp"
+#include "os/private_state_security.hpp"
 #include <winioctl.h>
 #else
 #include <fcntl.h>

@@ -1,10 +1,10 @@
 #pragma once
-#include "error.hpp"
+#include "core/error.hpp"
 #ifdef _WIN32
 #include <windows.h>
 
-#include "logging.hpp"
-#include "process.hpp"
+#include "core/logging.hpp"
+#include "core/process.hpp"
 #include <algorithm>
 #include <cstdint>
 #include <filesystem>

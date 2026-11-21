@@ -47,6 +47,9 @@ Json request(const std::filesystem::path &endpoint, const Json &operation, int t
 std::string expand_session_path(std::string value, const std::filesystem::path &directory,
                                 const std::string &token);
 std::filesystem::path native_socket_root();
+// The private control endpoint called name: the Unix socket name.sock in native_socket_root() on
+// POSIX, the named pipe voyemu-name on Windows.
+std::filesystem::path private_control_endpoint(const std::string &name);
 // Start identity of a launched SDK for the supervisor receipt; empty where the launch handle alone
 // identifies the SDK.
 Json android_launch_identity(std::int64_t pid);

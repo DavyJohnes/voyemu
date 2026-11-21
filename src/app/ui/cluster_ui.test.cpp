@@ -5070,11 +5070,7 @@ void asynchronous_client() {
 static void lifecycle_client_deadlines() {
     std::atomic<bool> stopped = false, entered = false, completed = false;
 
-#ifdef _WIN32
-    const auto endpoint = std::filesystem::path(R"(\\.\pipe\voyemu-ui-test-)" + random_token());
-#else
-    const auto endpoint = native_socket_root() / (random_token() + "-ui.sock");
-#endif
+    const auto endpoint = private_control_endpoint(random_token() + "-ui");
     const auto canonical = initial_state(VehicleCatalog::qinggan09);
     {
         ControlServer server(endpoint, [&](const Json &input) {

@@ -1,7 +1,7 @@
 #include "model.hpp"
 #include "os/fs.hpp"
-#include "private_json_reader.hpp"
-#include "private_state_security.hpp"
+#include "os/private_json_reader.hpp"
+#include "os/private_state_security.hpp"
 #include <algorithm>
 #include <array>
 #include <cerrno>

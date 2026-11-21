@@ -172,28 +172,30 @@ int main(int argc, char **) {
                                                std::string(64, 'a')),
               "a recipe output that differs from the pin is rejected");
         std::cout << "PASS recipe\n";
-#ifndef _WIN32
-        // The recipe itself runs javac and java of the developer JDK within the bounds of
-        // artifact preparation; this JDK only writes the pinned archive.
-        const auto linked = scratch / "linked";
-        ensure_private_directory(linked / "src");
-        const auto jdk = java_developer_jdk(linked) / "bin";
-        std::filesystem::create_directories(jdk);
-        const auto archive = scratch / "runtime.zip";
-        std::ofstream(archive, std::ios::binary) << bytes;
-        std::ofstream(jdk / "javac") << "#!/bin/sh\nexit 0\n";
-        std::ofstream(jdk / "java") << "#!/bin/sh\nmkdir -p \"$6\" && cp '" << archive.string()
-                                    << "' \"$6/java-runtime-" << host << ".zip\"\n";
 
-        for (const auto *name : {"javac", "java"}) {
-            std::filesystem::permissions(jdk / name, std::filesystem::perms::owner_all);
+        // The fake developer JDK is a pair of POSIX shell scripts.
+        if (!voyemu::os::host_windows) {
+            // The recipe itself runs javac and java of the developer JDK within the bounds of
+            // artifact preparation; this JDK only writes the pinned archive.
+            const auto linked = scratch / "linked";
+            ensure_private_directory(linked / "src");
+            const auto jdk = java_developer_jdk(linked) / "bin";
+            std::filesystem::create_directories(jdk);
+            const auto archive = scratch / "runtime.zip";
+            std::ofstream(archive, std::ios::binary) << bytes;
+            std::ofstream(jdk / "javac") << "#!/bin/sh\nexit 0\n";
+            std::ofstream(jdk / "java") << "#!/bin/sh\nmkdir -p \"$6\" && cp '" << archive.string()
+                                        << "' \"$6/java-runtime-" << host << ".zip\"\n";
+
+            for (const auto *name : {"javac", "java"}) {
+                std::filesystem::permissions(jdk / name, std::filesystem::perms::owner_all);
+            }
+
+            check(install_java_runtime(linked, pins, false, 0, missing) ==
+                          linked / ".local/toolchains/java-runtime" / sha / "bin" / java_name,
+                  "an unpublished asset is linked by the recipe on the developer JDK");
+            std::cout << "PASS recipe tools\n";
         }
-
-        check(install_java_runtime(linked, pins, false, 0, missing) ==
-                      linked / ".local/toolchains/java-runtime" / sha / "bin" / java_name,
-              "an unpublished asset is linked by the recipe on the developer JDK");
-        std::cout << "PASS recipe tools\n";
-#endif
 
         return 0;
     } catch (const std::exception &error) {

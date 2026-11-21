@@ -1,6 +1,6 @@
-#include "private_state_security.hpp"
-#include "model.hpp"
-#include "process.hpp"
+#include "os/private_state_security.hpp"
+#include "core/model.hpp"
+#include "core/process.hpp"
 #include <array>
 #include <iostream>
 using namespace voyemu;

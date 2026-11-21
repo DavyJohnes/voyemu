@@ -1,6 +1,6 @@
 #include "session_windows.hpp"
 #include "error.hpp"
-#include "private_state_security.hpp"
+#include "os/private_state_security.hpp"
 
 // The parts of Session that differ on Windows, where Android runs through framed transactions of
 // the embedded ADB and QNX through loopback TCP; session_posix.cpp holds the macOS and Linux parts.

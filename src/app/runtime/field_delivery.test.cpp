@@ -1,5 +1,6 @@
 #include "field_delivery.hpp"
 #include "nxp_presentation.hpp"
+#include "os/platform.hpp"
 #include "passion_mcu_property.hpp"
 #include "passion_presentation.hpp"
 #include "qnx_mcu_projection.hpp"
@@ -94,16 +95,18 @@ int main() try {
             {"api", 30},
             {"home", {{"package", "com.voyah.os.carlauncher"}, {"component", passion_home}}}};
     check(multimedia(passion).empty(), "Passion without its MCU property receives no field");
-#ifndef _WIN32
-    auto passion_mcu = passion;
-    passion_mcu["presentation_adapter"] = passion_presentation_contract("test-passion", true);
-    passion_mcu["mcu_property_adapter"] = passion_mcu_capability();
-    check(multimedia(passion_mcu) == std::set<std::string>{concept_field(VehicleCatalog::passion,
-                                                                         VehicleConcept::charge)} &&
-                  catalog_field(VehicleCatalog::passion,
-                                "PowerSysInfo.Notify_f_EnergyInform.EnergyInform.SOC"),
-          "Passion with its MCU property receives the SOC signal");
-#endif
+
+    // Windows prepares Passion without its MCU property.
+    if (!voyemu::os::host_windows) {
+        auto passion_mcu = passion;
+        passion_mcu["presentation_adapter"] = passion_presentation_contract("test-passion", true);
+        passion_mcu["mcu_property_adapter"] = passion_mcu_capability();
+        check(multimedia(passion_mcu) == std::set<std::string>{concept_field(VehicleCatalog::passion,
+                                                                             VehicleConcept::charge)} &&
+                      catalog_field(VehicleCatalog::passion,
+                                    "PowerSysInfo.Notify_f_EnergyInform.EnergyInform.SOC"),
+              "Passion with its MCU property receives the SOC signal");
+    }
 
     FieldDelivery delivery{{"speed", "soc"}, {"soc"}};
     const auto status = field_delivery_status(delivery);

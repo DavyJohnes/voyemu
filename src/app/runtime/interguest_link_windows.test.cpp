@@ -4,7 +4,7 @@
 #endif
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
-#include "../core/private_state_security.hpp"
+#include "os/private_state_security.hpp"
 #include <winsock2.h>
 #include <windows.h>
 #include <winioctl.h>

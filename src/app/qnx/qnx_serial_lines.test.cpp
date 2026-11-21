@@ -1,4 +1,5 @@
 #include "qnx_serial_lines.hpp"
+#include "os/platform.hpp"
 #include <chrono>
 #include <iostream>
 #include <stdexcept>
@@ -45,15 +46,17 @@ int main() {
         append(serial, "QMC BEGIN\n");
         check(lines.read(serial) == "QMC BEGIN\n", "new incarnation from its start");
 
-#ifndef _WIN32
-        // A symbolic link is not the session UART file.
-        const auto other = directory / "other.log";
-        append(other, "QIP STARTUP ignition reason=gauge-check\n");
-        std::filesystem::remove(serial);
-        std::filesystem::create_symlink(other, serial);
-        QnxSerialLines fresh;
-        check(fresh.read(serial).empty(), "symbolic link rejected");
-#endif
+        // Creating a symbolic link needs a privilege on Windows.
+        if (!voyemu::os::host_windows) {
+            // A symbolic link is not the session UART file.
+            const auto other = directory / "other.log";
+            append(other, "QIP STARTUP ignition reason=gauge-check\n");
+            std::filesystem::remove(serial);
+            std::filesystem::create_symlink(other, serial);
+            QnxSerialLines fresh;
+            check(fresh.read(serial).empty(), "symbolic link rejected");
+        }
+
         std::filesystem::remove_all(directory);
         std::cout << "QNX serial lines: framing, slog2, bounds, incarnation, link PASS\n";
 

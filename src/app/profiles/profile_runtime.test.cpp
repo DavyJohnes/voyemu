@@ -1,4 +1,5 @@
 #include "profile_runtime.hpp"
+#include "os/platform.hpp"
 #include "process.hpp"
 #include <exception>
 #include <fstream>
@@ -81,17 +82,20 @@ int main() try {
             check(rejected, "unsafe machine name rejected");
         }
 
-#ifndef _WIN32
-        std::filesystem::create_directory_symlink(base / profile, base / "linked");
-        bool linked = false;
-        try {
-            profile_launch_directory(root, profile, voyemu::machine_identity(profile, "linked"));
-        } catch (...) {
-            linked = true;
+        // Creating a symbolic link needs a privilege on Windows.
+        if (!voyemu::os::host_windows) {
+            std::filesystem::create_directory_symlink(base / profile, base / "linked");
+            bool linked = false;
+            try {
+                profile_launch_directory(root, profile,
+                                         voyemu::machine_identity(profile, "linked"));
+            } catch (...) {
+                linked = true;
+            }
+
+            check(linked, "linked runtime cannot alias another machine");
         }
 
-        check(linked, "linked runtime cannot alias another machine");
-#endif
         std::filesystem::remove_all(root);
         std::cout << "machine-scoped runtime isolation passed\n";
 

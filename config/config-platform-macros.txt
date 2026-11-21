@@ -5,7 +5,6 @@ src/app/adb/adb_host.test.cpp group 4 adb and api: sockets, files and admission
 src/app/adb/adb_loopback.test.cpp group 4 adb and api: sockets, files and admission
 src/app/android/android_adb.test.cpp group 5 android: console, audio and engine launch
 src/app/android/android_audio.test.cpp group 5 android: console, audio and engine launch
-src/app/android/android_clock.test.cpp group 5 android: console, audio and engine launch
 src/app/android/android_console.test.cpp group 5 android: console, audio and engine launch
 src/app/android/android_engine.test.cpp group 5 android: console, audio and engine launch
 src/app/android/passion_mcu_property.test.cpp group 5 android: console, audio and engine launch
@@ -13,7 +12,6 @@ src/app/android/passion_mcu_windows_guard.test.cpp group 5 android: console, aud
 src/app/android/passion_owned_watch.test.cpp group 5 android: console, audio and engine launch
 src/app/android/windows_startup.test.cpp group 5 android: console, audio and engine launch
 src/app/api/api.test.cpp group 4 adb and api: sockets, files and admission
-src/app/api/cluster_tree.test.cpp group 4 adb and api: sockets, files and admission
 src/app/api/platform_file.test.cpp group 4 adb and api: sockets, files and admission
 src/app/cli/build_cli.test.cpp group 6 cli: console, arguments and session hosting
 src/app/cli/cli_arguments.test.cpp group 6 cli: console, arguments and session hosting
@@ -24,17 +22,13 @@ src/app/cli/fetch_segmented.cpp later: data-out and profile-sweep branches pendi
 src/app/cli/fetch_segmented.test.cpp later: data-out and profile-sweep branches pending
 src/app/core/model.cpp later: CAN branch pending
 src/app/core/model.test.cpp later: CAN branch pending
-src/app/core/private_json_reader.hpp later: moves into os/ with its includes in the pending-branch files
-src/app/core/private_state_security.hpp later: moves into os/ with its includes in the pending-branch files
 src/app/graphics/graphics_angle.test.cpp group 7 graphics, platform and ui: frame transport and native windows
 src/app/graphics/graphics_ram.test.cpp group 7 graphics, platform and ui: frame transport and native windows
 src/app/graphics/graphics_replay.test.cpp group 7 graphics, platform and ui: frame transport and native windows
 src/app/platform/wine_native_backend_windows.test.cpp group 7 graphics, platform and ui: frame transport and native windows
 src/app/prepare/apk_alignment.test.cpp group 8 prepare: archives, Java runtime and e2fs helpers
 src/app/prepare/e2fs_helper.test.cpp group 8 prepare: archives, Java runtime and e2fs helpers
-src/app/prepare/file_patch.test.cpp group 8 prepare: archives, Java runtime and e2fs helpers
 src/app/prepare/java_preparation.test.cpp group 8 prepare: archives, Java runtime and e2fs helpers
-src/app/prepare/java_runtime.test.cpp group 8 prepare: archives, Java runtime and e2fs helpers
 src/app/prepare/java_toolchain.cpp group 8 prepare: archives, Java runtime and e2fs helpers
 src/app/prepare/java_toolchain.test.cpp group 8 prepare: archives, Java runtime and e2fs helpers
 src/app/prepare/update_image.test.cpp group 8 prepare: archives, Java runtime and e2fs helpers
@@ -53,8 +47,6 @@ src/app/profiles/profile_build.cpp later: data-out and profile-sweep branches pe
 src/app/profiles/profile_build.test.cpp later: data-out and profile-sweep branches pending
 src/app/profiles/profile_build_finalize.cpp later: data-out and profile-sweep branches pending
 src/app/profiles/profile_build_internal.hpp later: data-out and profile-sweep branches pending
-src/app/profiles/profile_runtime.test.cpp group 11 profiles: candidate transport and image clone
-src/app/profiles/wine_native_root_guard.test.cpp group 11 profiles: candidate transport and image clone
 src/app/qnx/qnx_checkpoint.test.cpp group 9 qnx: checkpoint, storage, update and shutdown
 src/app/qnx/qnx_guest_build.test.cpp group 9 qnx: checkpoint, storage, update and shutdown
 src/app/qnx/qnx_guest_shell.test.cpp group 9 qnx: checkpoint, storage, update and shutdown
@@ -65,14 +57,12 @@ src/app/qnx/qnx_native_runtime.test.cpp group 9 qnx: checkpoint, storage, update
 src/app/qnx/qnx_prepare.test.cpp group 9 qnx: checkpoint, storage, update and shutdown
 src/app/qnx/qnx_process_ram.test.cpp group 9 qnx: checkpoint, storage, update and shutdown
 src/app/qnx/qnx_qinggan11.test.cpp group 9 qnx: checkpoint, storage, update and shutdown
-src/app/qnx/qnx_serial_lines.test.cpp group 9 qnx: checkpoint, storage, update and shutdown
 src/app/qnx/qnx_shutdown_monitor.test.cpp group 9 qnx: checkpoint, storage, update and shutdown
 src/app/qnx/qnx_update.test.cpp group 9 qnx: checkpoint, storage, update and shutdown
 src/app/qnx/qnx_update_import.test.cpp group 9 qnx: checkpoint, storage, update and shutdown
 src/app/qnx/shutdown_fixture.hpp group 9 qnx tests: the shutdown fixture of both hosts
 src/app/runtime/android_port_lease.test.cpp group 10 runtime: interguest link, media, providers and sessions
 src/app/runtime/cli_flow.test.cpp group 10 runtime: interguest link, media, providers and sessions
-src/app/runtime/field_delivery.test.cpp group 10 runtime: interguest link, media, providers and sessions
 src/app/runtime/interguest_link_owner.test.cpp group 10 runtime: interguest link, media, providers and sessions
 src/app/runtime/media_discovery.hpp group 10 runtime: the Wine path translation of the Windows build
 src/app/runtime/media_discovery.test.cpp group 10 runtime: interguest link, media, providers and sessions
@@ -81,6 +71,4 @@ src/app/runtime/provider_process.test.cpp group 10 runtime: interguest link, med
 src/app/runtime/provider_registry.test.cpp group 10 runtime: interguest link, media, providers and sessions
 src/app/runtime/quickboot.test.cpp group 10 runtime: interguest link, media, providers and sessions
 src/app/runtime/session.test.cpp group 10 runtime: interguest link, media, providers and sessions
-src/app/runtime/ui_observer_diagnostics.test.cpp group 10 runtime: interguest link, media, providers and sessions
-src/app/ui/cluster_ui.test.cpp group 7 graphics, platform and ui: frame transport and native windows
 src/guest/qnx/qnx-runtime.test.cpp group 9 qnx: checkpoint, storage, update and shutdown

@@ -122,11 +122,7 @@ static void wire_fixture(int mode, bool private_operation) {
 static void ipc_fixture() {
     using namespace voyemu;
     const auto owner = random_token();
-#ifdef _WIN32
-    const std::filesystem::path endpoint = "\\\\.\\pipe\\voyemu-" + owner;
-#else
-    const auto endpoint = native_socket_root() / (owner + "-ui.sock");
-#endif
+    const auto endpoint = private_control_endpoint(owner + "-ui");
     const std::string large_observation(observer_response_bytes - 64, 'a');
     ControlServer server(endpoint, [&](const Json &op) {
         if (op.at("op") == "ui_observer_exchange") {
