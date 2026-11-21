@@ -14,7 +14,6 @@ src/app/api/api.test.cpp group 4 adb and api: sockets, files and admission
 src/app/api/platform_file.test.cpp group 4 adb and api: sockets, files and admission
 src/app/cli/build_cli.test.cpp group 6 cli: console, arguments and session hosting
 src/app/cli/cli_arguments.test.cpp group 6 cli: console, arguments and session hosting
-src/app/cli/deps.test.cpp group 6 cli: console, arguments and session hosting
 src/app/cli/fetch.cpp later: data-out and profile-sweep branches pending
 src/app/cli/fetch.test.cpp later: data-out and profile-sweep branches pending
 src/app/cli/fetch_segmented.cpp later: data-out and profile-sweep branches pending
@@ -22,7 +21,6 @@ src/app/cli/fetch_segmented.test.cpp later: data-out and profile-sweep branches 
 src/app/core/model.cpp later: CAN branch pending
 src/app/core/model.test.cpp later: CAN branch pending
 src/app/graphics/graphics_angle.test.cpp group 7 graphics, platform and ui: frame transport and native windows
-src/app/graphics/graphics_ram.test.cpp group 7 graphics, platform and ui: frame transport and native windows
 src/app/graphics/graphics_replay.test.cpp group 7 graphics, platform and ui: frame transport and native windows
 src/app/platform/wine_native_backend_windows.test.cpp group 7 graphics, platform and ui: frame transport and native windows
 src/app/prepare/apk_alignment.test.cpp group 8 prepare: archives, Java runtime and e2fs helpers

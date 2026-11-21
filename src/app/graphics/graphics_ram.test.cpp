@@ -2,6 +2,8 @@
 #include "check.hpp"
 #include "graphics.hpp"
 #include "model.hpp"
+#include "os/fs.hpp"
+#include "os/platform.hpp"
 #include "process.hpp"
 #include "qnx_process_ram.hpp"
 #include <algorithm>
@@ -10,17 +12,15 @@
 #include <fstream>
 #include <iostream>
 #include <limits>
-#ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#include <windows.h>
-#endif
 
 using namespace voyemu;
 using namespace voyemu::graphics;
 
 namespace {
 constexpr Check need{"GRAPHICS_RAM_TEST"};
+// The Windows system errors a symbolic link and a rename of a mapped file may meet.
+constexpr int windows_sharing_violation = 32, windows_not_supported = 50,
+              windows_privilege_not_held = 1314;
 
 template <class F> void rejected(F action, const char *message) {
     bool failed = false;
@@ -39,17 +39,17 @@ bool symlink_fixture(const std::filesystem::path &target, const std::filesystem:
     std::error_code error;
 
     std::filesystem::create_symlink(target, link, error);
-#ifdef _WIN32
-    if (error) {
-        need(error.value() == ERROR_PRIVILEGE_NOT_HELD || error.value() == ERROR_NOT_SUPPORTED,
+
+    // Windows grants symbolic links only with a privilege or developer mode.
+    if (voyemu::os::host_windows && error) {
+        need(error.value() == windows_privilege_not_held || error.value() == windows_not_supported,
              error.message());
         std::cerr << "symlink fixture unavailable: " << error.message() << '\n';
 
         return false;
     }
-#else
+
     need(!error, error.message());
-#endif
 
     return true;
 }
@@ -72,19 +72,12 @@ void mapped_backing(const std::filesystem::path &root) {
         if (symlink_fixture(path, link)) {
             auto linked = options;
             linked.ram = link;
-#ifdef _WIN32
+            // Windows opens the link itself and finds no RAM extent; POSIX refuses to follow it.
             rejected(
                     [&] {
                         detail::Ram invalid(linked);
                     },
-                    "RAM backing geometry");
-#else
-            rejected(
-                    [&] {
-                        detail::Ram invalid(linked);
-                    },
-                    "RAM backing open");
-#endif
+                    voyemu::os::host_windows ? "RAM backing geometry" : "RAM backing open");
             std::filesystem::remove(link);
         }
 
@@ -144,16 +137,14 @@ void mapped_backing(const std::filesystem::path &root) {
         std::error_code rename_error;
         std::filesystem::rename(directory, parked, rename_error);
 
-#ifdef _WIN32
-        if (rename_error) {
+        // Windows may refuse to rename a directory holding a mapped file.
+        if (voyemu::os::host_windows && rename_error) {
             need(rename_error == std::errc::permission_denied ||
-                         rename_error.value() == ERROR_SHARING_VIOLATION,
+                         rename_error.value() == windows_sharing_violation,
                  rename_error.message());
             need(std::filesystem::exists(path) && !std::filesystem::exists(parked),
                  "failed rename displaced the mapped backing");
-        } else
-#endif
-        {
+        } else {
             need(!rename_error, rename_error.message());
             ensure_private_directory(directory);
             create_qnx_ram(path, ram_bytes);
@@ -168,24 +159,25 @@ void mapped_backing(const std::filesystem::path &root) {
 
         first.check_identity();
 
-#ifndef _WIN32
-        const auto original = directory / "original.bin";
-        std::filesystem::rename(path, original);
-        std::filesystem::create_symlink(original, path);
-        rejected(
-                [&] {
-                    first.check_identity();
-                },
-                "RAM backing changed");
-        rejected(
-                [&] {
-                    detail::Ram linked(options);
-                },
-                "RAM backing open");
-        std::filesystem::remove(path);
-        std::filesystem::rename(original, path);
-        first.check_identity();
-#endif
+        // Creating a symbolic link needs a privilege on Windows.
+        if (!voyemu::os::host_windows) {
+            const auto original = directory / "original.bin";
+            std::filesystem::rename(path, original);
+            std::filesystem::create_symlink(original, path);
+            rejected(
+                    [&] {
+                        first.check_identity();
+                    },
+                    "RAM backing changed");
+            rejected(
+                    [&] {
+                        detail::Ram linked(options);
+                    },
+                    "RAM backing open");
+            std::filesystem::remove(path);
+            std::filesystem::rename(original, path);
+            first.check_identity();
+        }
     }
 
     std::ifstream file(path, std::ios::binary);
@@ -197,21 +189,9 @@ void mapped_backing(const std::filesystem::path &root) {
     file.read(reinterpret_cast<char *>(actual.data()), actual.size());
     need(bool(file) && actual == written, "mapped writer missing from backing file");
     file.close();
-#ifdef _WIN32
     // The cross-build's filesystem resize can narrow the sparse file size to 32 bits.
-    const HANDLE backing = CreateFileW(path.c_str(), GENERIC_WRITE, FILE_SHARE_READ, nullptr,
-                                       OPEN_EXISTING, FILE_FLAG_OPEN_REPARSE_POINT, nullptr);
-    need(backing != INVALID_HANDLE_VALUE, "open fixture RAM for truncation");
-    LARGE_INTEGER shorter{};
-    shorter.QuadPart = ram_bytes - 4096;
-    const bool truncated = SetFilePointerEx(backing, shorter, nullptr, FILE_BEGIN) &&
-                           SetEndOfFile(backing);
-    CloseHandle(backing);
-    need(truncated && std::filesystem::file_size(path) == ram_bytes - 4096,
-         "wrong-size RAM fixture extent");
-#else
-    std::filesystem::resize_file(path, ram_bytes - 4096);
-#endif
+    voyemu::os::resize_file(path, ram_bytes - 4096);
+    need(std::filesystem::file_size(path) == ram_bytes - 4096, "wrong-size RAM fixture extent");
     rejected(
             [&] {
                 detail::Ram wrong_size(options);
@@ -242,35 +222,19 @@ void control_file(const std::filesystem::path &root) {
     }
 
     need(detail::read_control_file(path, value.size()) == value, "control file bytes changed");
-#ifdef _WIN32
     rejected(
             [&] {
                 detail::read_control_file(path, value.size() + 1);
             },
-            "Control file read");
-#else
-    rejected(
-            [&] {
-                detail::read_control_file(path, value.size() + 1);
-            },
-            "Control file race");
-#endif
+            voyemu::os::host_windows ? "Control file read" : "Control file race");
     const auto link = root / "control-link.json";
 
     if (symlink_fixture(path, link)) {
-#ifdef _WIN32
         rejected(
                 [&] {
                     detail::read_control_file(link, value.size());
                 },
-                "Control file race");
-#else
-        rejected(
-                [&] {
-                    detail::read_control_file(link, value.size());
-                },
-                "Control file open");
-#endif
+                voyemu::os::host_windows ? "Control file race" : "Control file open");
     }
 
     std::filesystem::remove(path);

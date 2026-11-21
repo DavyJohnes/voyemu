@@ -9,6 +9,7 @@
 #include <atomic>
 #include <cerrno>
 #include <chrono>
+#include <cstdlib>
 #include <cstring>
 #include <fcntl.h>
 #include <fstream>
@@ -442,6 +443,14 @@ long long write_capture(FileHandle file, const char *data, std::size_t size) {
         }
 
         return count <= 0 ? -1 : count;
+    }
+}
+
+void set_environment_variable(const std::string &name, const std::string &value) {
+    if (value.empty()) {
+        ::unsetenv(name.c_str());
+    } else {
+        ::setenv(name.c_str(), value.c_str(), 1);
     }
 }
 } // namespace os

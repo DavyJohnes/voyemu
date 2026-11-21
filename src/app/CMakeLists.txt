@@ -721,7 +721,7 @@ if(BUILD_TESTING)
             VOYEMU_HVF_STR_WRITEBACK_HEADER="qnx-hvf-str-writeback.h")
         voyemu_add_test(qnx_hvf_gic LABELS host TIMEOUT 60 COMMAND qnx_hvf_gic_test)
     endif()
-    add_executable(deps_test cli/deps.test.cpp)
+    add_executable(deps_test cli/deps.test.cpp cli/deps_${voyemu_host_backend}.test.cpp)
     target_link_libraries(deps_test PRIVATE voyemu_zip)
     voyemu_add_test(deps LABELS host TIMEOUT 60 COMMAND deps_test $<TARGET_FILE:voyemu>)
     # Unit fixtures select their own external NDK without auditing the host installation.

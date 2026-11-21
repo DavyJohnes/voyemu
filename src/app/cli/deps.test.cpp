@@ -1,6 +1,8 @@
 #include "deps.hpp"
+#include "deps_test_host.hpp"
 #include "os/fs.hpp"
 #include "os/platform.hpp"
+#include "os/process.hpp"
 #include "process.hpp"
 #include "sdk_archive.hpp"
 #include "zip_archive.hpp"
@@ -11,13 +13,6 @@
 #include <iterator>
 #include <map>
 #include <set>
-#ifdef _WIN32
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <windows.h>
-#include <aclapi.h>
-#endif
 using namespace voyemu;
 
 static void check(bool value, const char *message) {
@@ -38,15 +33,7 @@ static std::string native_magic() {
 }
 
 static void set_environment(const char *name, const std::string &value) {
-#ifdef _WIN32
-    _putenv_s(name, value.c_str());
-#else
-    if (value.empty()) {
-        unsetenv(name);
-    } else {
-        setenv(name, value.c_str(), 1);
-    }
-#endif
+    os::set_environment_variable(name, value);
 }
 
 static void runtime_binding_checks(const std::filesystem::path &root) {
@@ -243,47 +230,7 @@ static void installed_metadata_checks(const std::filesystem::path &root) {
     rejects();
     std::filesystem::remove(file);
     std::filesystem::rename(alias, file);
-#ifndef _WIN32
-    std::filesystem::permissions(file, std::filesystem::perms::group_write,
-                                 std::filesystem::perm_options::add);
-    rejects();
-    std::filesystem::permissions(file, std::filesystem::perms::group_write,
-                                 std::filesystem::perm_options::remove);
-#else
-    {
-        PSECURITY_DESCRIPTOR descriptor = nullptr;
-        PACL acl = nullptr;
-        check(GetNamedSecurityInfoW(const_cast<LPWSTR>(file.c_str()), SE_FILE_OBJECT,
-                                    DACL_SECURITY_INFORMATION, nullptr, nullptr, &acl, nullptr,
-                                    &descriptor) == ERROR_SUCCESS,
-              "metadata DACL read");
-        EXPLICIT_ACCESSW access{};
-        access.grfAccessPermissions = FILE_WRITE_DATA | FILE_APPEND_DATA;
-        access.grfAccessMode = GRANT_ACCESS;
-        access.grfInheritance = NO_INHERITANCE;
-        access.Trustee.TrusteeForm = TRUSTEE_IS_SID;
-        BYTE world[SECURITY_MAX_SID_SIZE]{};
-        DWORD world_size = sizeof(world);
-        check(CreateWellKnownSid(WinWorldSid, nullptr, world, &world_size), "metadata world SID");
-        access.Trustee.ptstrName = reinterpret_cast<LPWSTR>(world);
-        PACL updated = nullptr;
-        check(SetEntriesInAclW(1, &access, acl, &updated) == ERROR_SUCCESS, "metadata DACL merge");
-        const auto added = SetNamedSecurityInfoW(const_cast<LPWSTR>(file.c_str()), SE_FILE_OBJECT,
-                                                 DACL_SECURITY_INFORMATION, nullptr, nullptr,
-                                                 updated, nullptr);
-        LocalFree(updated);
-        check(added == ERROR_SUCCESS, "metadata DACL write");
-        rejects();
-        check(SetNamedSecurityInfoW(const_cast<LPWSTR>(file.c_str()), SE_FILE_OBJECT,
-                                    DACL_SECURITY_INFORMATION, nullptr, nullptr, acl,
-                                    nullptr) == ERROR_SUCCESS,
-              "metadata DACL restore");
-
-        if (descriptor) {
-            LocalFree(descriptor);
-        }
-    }
-#endif
+    with_foreign_write(file, rejects);
     put(sdk / "platform-tools/unlisted", "extra");
     rejects();
     std::filesystem::remove(sdk / "platform-tools/unlisted");
@@ -466,8 +413,9 @@ int main(int argc, char **argv) {
         } cleanup{root};
         runtime_binding_checks(root);
         installed_metadata_checks(root);
-#ifndef _WIN32
-        {
+
+        // Creating a symbolic link needs a privilege on Windows.
+        if (!os::host_windows) {
             const auto ndk = root / "inventory-fixture";
             ensure_private_directory(ndk / "bin");
             auto put = [](const std::filesystem::path &p, const std::string &bytes) {
@@ -499,18 +447,13 @@ int main(int argc, char **argv) {
                           pin,
                   "changed alias retained upstream pin");
         }
-#endif
-#if defined(__APPLE__) || defined(_WIN32)
-        {
-            // Every supported host reuses an external NDK against its own archive inventory.
+
+        // Every supported host reuses an external NDK against its own archive inventory; Linux
+        // installs the NDK from its pinned archive only.
+        if (os::platform_name != "Linux") {
             const auto &archive = native_ndk_archive();
             check(archive.at("url").get<std::string>().ends_with(
-#ifdef _WIN32
-                          "-windows.zip"
-#else
-                          "-darwin.zip"
-#endif
-                          ) &&
+                          os::host_windows ? "-windows.zip" : "-darwin.zip") &&
                           archive.contains("archive_bytes") && archive.contains("inventory_sha256"),
                   "host NDK archive inventory pin missing");
             const auto external = root / "external-ndk";
@@ -550,7 +493,7 @@ int main(int argc, char **argv) {
             check(no_download && !std::filesystem::exists(root / ".local/toolchains/downloads"),
                   "external NDK audit must not download");
         }
-#endif
+
         bool offline = false;
         try {
             install_native_dependencies(root, true, 0);
@@ -569,11 +512,7 @@ int main(int argc, char **argv) {
         }
 
         if (argc == 2) {
-#ifdef _WIN32
-            const auto installed = root / "voyemu.exe";
-#else
-            const auto installed = root / "voyemu";
-#endif
+            const auto installed = root / ("voyemu" + std::string(os::executable_suffix));
             ensure_private_directory(root / ".local/machines");
             std::filesystem::copy_file(std::filesystem::canonical(argv[1]), installed);
             ProcessSpec command;

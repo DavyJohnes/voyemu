@@ -9,6 +9,7 @@
 #include <array>
 #include <atomic>
 #include <chrono>
+#include <cstdlib>
 #include <cstring>
 #include <fstream>
 #include <map>
@@ -574,6 +575,10 @@ long long write_capture(FileHandle file, const char *data, std::size_t size) {
     }
 
     return count;
+}
+
+void set_environment_variable(const std::string &name, const std::string &value) {
+    _putenv_s(name.c_str(), value.c_str());
 }
 } // namespace os
 } // namespace voyemu
