@@ -1825,8 +1825,15 @@ int main(int argc, char **argv) try {
                 std::filesystem::remove(root / "emulator-arguments.json");
                 const auto cluster_only = run({"start", "--multimedia=off", "--cluster=on",
                                                "--seconds", "10", "--background"});
+                // start names the cluster window of the new session and how to stop it.
                 require(!cluster_only.timed_out && cluster_only.exit_code == 0 &&
-                                cluster_only.output.empty(),
+                                cluster_only.output.starts_with(
+                                        "Session started; the cluster window opens in a few "
+                                        "seconds.\nStop it: voyemu stop ") &&
+                                cluster_only.output.ends_with(selected_machine.filename().string() +
+                                                              "\n") &&
+                                std::count(cluster_only.output.begin(), cluster_only.output.end(),
+                                           '\n') == 2,
                         "public QNX-only launch failed or emitted unsolicited output: " +
                                 cluster_only.output);
                 const auto only_status = json({"status"});
