@@ -1,4 +1,5 @@
 #include "source_registry.hpp"
+#include "error.hpp"
 #include <cassert>
 #include <exception>
 #include <future>
@@ -32,8 +33,8 @@ int main() try {
     bool duplicate = false;
     try {
         coordinator.add({"ui", collector});
-    } catch (const std::invalid_argument &) {
-        duplicate = true;
+    } catch (const VoyemuError &error) {
+        duplicate = error.code() == "PROVIDER_REGISTRATION";
     }
 
     assert(duplicate);
@@ -264,8 +265,8 @@ int main() try {
         bool rejected = false;
         try {
             ids.add({id, empty});
-        } catch (const std::invalid_argument &) {
-            rejected = true;
+        } catch (const VoyemuError &error) {
+            rejected = error.code() == "PROVIDER_REGISTRATION";
         }
 
         assert(rejected);

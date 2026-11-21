@@ -1,4 +1,5 @@
 #include "watch.hpp"
+#include "error.hpp"
 #include <algorithm>
 #include <atomic>
 #include <charconv>
@@ -15,7 +16,7 @@ std::uint64_t decimal(const std::string &value) {
 
     if (value.empty() || (value.size() > 1 && value[0] == '0') || p.ec != std::errc() ||
         p.ptr != value.data() + value.size()) {
-        throw std::invalid_argument("invalid watch cursor");
+        throw VoyemuError("TEST_ARGUMENT", "invalid watch cursor");
     }
 
     return result;
@@ -37,7 +38,7 @@ WatchReady WatchHub::start(Json condition, std::int64_t lease, std::int64_t now)
 
     if (lease <= 0 || lease > 86400000 || now < 0 ||
         now > std::numeric_limits<std::int64_t>::max() - lease) {
-        throw std::invalid_argument("invalid watch lease or clock");
+        throw VoyemuError("TEST_ARGUMENT", "invalid watch lease or clock");
     }
 
     std::lock_guard lock(mutex_);
@@ -121,14 +122,14 @@ WatchRead WatchHub::read(const std::string &id, const std::string &cursor,
 
     if (timeout.count() < 0 || timeout > std::chrono::seconds(60) || !limit || limit > 4096 ||
         now < 0) {
-        throw std::invalid_argument("invalid watch read bounds");
+        throw VoyemuError("TEST_ARGUMENT", "invalid watch read bounds");
     }
 
     std::unique_lock lock(mutex_);
     auto found = watches_.find(id);
 
     if (found != watches_.end() && (after < found->second.sequence || after > sequence_)) {
-        throw std::invalid_argument("cursor outside watch");
+        throw VoyemuError("TEST_ARGUMENT", "cursor outside watch");
     }
 
     const auto wall_start = std::chrono::steady_clock::now();

@@ -1,7 +1,7 @@
 #include "conditions.hpp"
+#include "error.hpp"
 #include <cassert>
 #include <iostream>
-#include <stdexcept>
 using namespace voyemu;
 using namespace voyemu::runtime;
 
@@ -113,8 +113,8 @@ int main() try {
     bool invalid = false;
     try {
         validate_condition({{"op", "eq"}, {"path", "/can/x"}, {"value", 0}, {"typo", 1}});
-    } catch (const std::invalid_argument &) {
-        invalid = true;
+    } catch (const VoyemuError &error) {
+        invalid = error.code() == "TEST_ARGUMENT";
     }
 
     assert(invalid);
@@ -127,16 +127,16 @@ int main() try {
     invalid = false;
     try {
         validate_condition(nested);
-    } catch (const std::invalid_argument &) {
-        invalid = true;
+    } catch (const VoyemuError &error) {
+        invalid = error.code() == "TEST_ARGUMENT";
     }
 
     assert(invalid);
     invalid = false;
     try {
         validate_condition({{"op", "count"}, {"path", "/can/x"}, {"value", -1}});
-    } catch (const std::invalid_argument &) {
-        invalid = true;
+    } catch (const VoyemuError &error) {
+        invalid = error.code() == "TEST_ARGUMENT";
     }
 
     assert(invalid);

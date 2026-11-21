@@ -21,19 +21,19 @@ void SourceCoordinator::add(SourceDefinition source) {
     if (started_ || stopped_ || slots_.size() >= 8 || source.id.empty() || source.id.size() > 64 ||
         !source.collect || source.interval.count() < 10 || source.interval.count() > 60000 ||
         source.budget.count() < 1 || source.budget.count() > 10000) {
-        throw std::invalid_argument("invalid source registration");
+        throw VoyemuError("PROVIDER_REGISTRATION", "invalid source registration");
     }
 
     if (source.id.front() < 97 || source.id.front() > 122 ||
         !std::all_of(source.id.begin(), source.id.end(), [](unsigned char c) {
             return (c >= 97 && c <= 122) || (c >= 48 && c <= 57) || c == 95 || c == 45;
         })) {
-        throw std::invalid_argument("invalid source id");
+        throw VoyemuError("PROVIDER_REGISTRATION", "invalid source id");
     }
 
     for (const auto &slot : slots_) {
         if (slot->definition.id == source.id) {
-            throw std::invalid_argument("duplicate source");
+            throw VoyemuError("PROVIDER_REGISTRATION", "duplicate source");
         }
     }
 
@@ -345,7 +345,7 @@ void SourceCoordinator::pump(Slot &slot) {
 Json SourceCoordinator::snapshot(std::chrono::milliseconds timeout,
                                  std::vector<std::string> selected) {
     if (timeout.count() < 0 || timeout.count() > 60000) {
-        throw std::invalid_argument("invalid snapshot timeout");
+        throw VoyemuError("TEST_ARGUMENT", "invalid snapshot timeout");
     }
 
     selected = select(selected.empty() ? Json() : Json(selected));

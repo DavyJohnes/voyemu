@@ -1,7 +1,7 @@
 #include "conditions.hpp"
+#include "error.hpp"
 #include <algorithm>
 #include <set>
-#include <stdexcept>
 namespace voyemu::runtime {
 namespace {
 using R = ConditionResult;
@@ -45,7 +45,7 @@ bool state_predicate(const Json &e) {
 void validate(const Json &e, unsigned depth, unsigned &nodes) {
     if (depth > 16 || ++nodes > 128 || !e.is_object() || !e.contains("op") ||
         !e["op"].is_string()) {
-        throw std::invalid_argument("invalid condition AST or limit");
+        throw VoyemuError("TEST_ARGUMENT", "invalid condition AST or limit");
     }
 
     const auto op = e["op"].get<std::string>();
@@ -55,14 +55,14 @@ void validate(const Json &e, unsigned depth, unsigned &nodes) {
         fields.insert("args");
 
         if (!e.contains("args") || !e["args"].is_array() || e["args"].empty()) {
-            throw std::invalid_argument("condition args required");
+            throw VoyemuError("TEST_ARGUMENT", "condition args required");
         }
 
         for (const auto &arg : e["args"]) {
             validate(arg, depth + 1, nodes);
 
             if ((op == "ordered" || op == "first") && !state_predicate(arg)) {
-                throw std::invalid_argument("event alternatives require state predicates");
+                throw VoyemuError("TEST_ARGUMENT", "event alternatives require state predicates");
             }
         }
     } else if (op == "stable" || op == "never") {
@@ -72,13 +72,13 @@ void validate(const Json &e, unsigned depth, unsigned &nodes) {
         if (!e.contains("condition") || !e.contains("duration_ms") ||
             !e["duration_ms"].is_number_integer() || e["duration_ms"].get<std::int64_t>() < 0 ||
             e["duration_ms"].get<std::int64_t>() > 86400000) {
-            throw std::invalid_argument("bounded duration_ms required");
+            throw VoyemuError("TEST_ARGUMENT", "bounded duration_ms required");
         }
 
         validate(e["condition"], depth + 1, nodes);
 
         if (!state_predicate(e["condition"])) {
-            throw std::invalid_argument("interval requires state predicate");
+            throw VoyemuError("TEST_ARGUMENT", "interval requires state predicate");
         }
     } else if (op == "eq" || op == "present" || op == "absent" || op == "count" ||
                op == "changed") {
@@ -86,35 +86,35 @@ void validate(const Json &e, unsigned depth, unsigned &nodes) {
 
         if (!e.contains("path") || !e["path"].is_string() ||
             e["path"].get<std::string>().size() > 1024) {
-            throw std::invalid_argument("JSON pointer required");
+            throw VoyemuError("TEST_ARGUMENT", "JSON pointer required");
         }
 
         try {
             Json::json_pointer pointer(e["path"].get<std::string>());
             (void)pointer;
         } catch (const Json::exception &) {
-            throw std::invalid_argument("invalid JSON pointer");
+            throw VoyemuError("TEST_ARGUMENT", "invalid JSON pointer");
         }
 
         if (op == "eq" || op == "count") {
             fields.insert("value");
 
             if (!e.contains("value")) {
-                throw std::invalid_argument("value required");
+                throw VoyemuError("TEST_ARGUMENT", "value required");
             }
         }
 
         if (op == "count" &&
             (!e["value"].is_number_integer() || e["value"].get<std::int64_t>() < 0)) {
-            throw std::invalid_argument("count requires nonnegative integer");
+            throw VoyemuError("TEST_ARGUMENT", "count requires nonnegative integer");
         }
     } else {
-        throw std::invalid_argument("unknown condition operator");
+        throw VoyemuError("TEST_ARGUMENT", "unknown condition operator");
     }
 
     for (auto it = e.begin(); it != e.end(); ++it) {
         if (!fields.count(it.key())) {
-            throw std::invalid_argument("unknown condition field");
+            throw VoyemuError("TEST_ARGUMENT", "unknown condition field");
         }
     }
 }
@@ -321,7 +321,7 @@ R eval(const Json &e, const ConditionObservation &base,
 
 void validate_condition(const Json &expression) {
     if (expression.dump().size() > 65536) {
-        throw std::invalid_argument("condition payload exceeds limit");
+        throw VoyemuError("TEST_ARGUMENT", "condition payload exceeds limit");
     }
 
     unsigned nodes = 0;

@@ -1,4 +1,5 @@
 #include "watch.hpp"
+#include "error.hpp"
 #include <cassert>
 #include <exception>
 #include <future>
@@ -72,6 +73,29 @@ int main() try {
     assert(leases.active(109) == 1);
     assert(leases.active(110) == 0);
     assert(leases.read(scoped_lease.watch_id, scoped_lease.cursor, {}, 1, 110).status == "ended");
+    // A malformed client condition, cursor or lease is the client's argument error.
+    const auto client_error = [](const auto &call) {
+        try {
+            call();
+        } catch (const VoyemuError &error) {
+            return error.code() == "TEST_ARGUMENT";
+        }
+
+        return false;
+    };
+    assert(client_error([&] {
+        leases.start(Json{{"op", "not-a-condition"}}, 10, 110);
+    }));
+    assert(client_error([&] {
+        leases.start(changed, 0, 110);
+    }));
+    const auto live = leases.start(changed, 1000, 110);
+    assert(live.status == "ready" && client_error([&] {
+               leases.read(live.watch_id, "01", {}, 1, 110);
+           }));
+    assert(client_error([&] {
+        leases.read(live.watch_id, "999", {}, 1, 110);
+    }));
 } catch (const std::exception &error) {
     std::cerr << error.what() << '\n';
 

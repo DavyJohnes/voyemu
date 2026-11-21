@@ -2275,7 +2275,8 @@ int main(int argc, char **argv) try {
         auto invalid_watch = watch;
         invalid_watch["condition"] = {{"op", "not-a-condition"}};
         const auto validation_calls = calls;
-        assert(api.call(invalid_watch).at("ok") == false && calls == validation_calls);
+        assert(api.call(invalid_watch).at("error").at("code") == "TEST_ARGUMENT" &&
+               calls == validation_calls);
 
         for (const auto lease : {0, 60001}) {
             invalid_watch = watch;
@@ -2362,8 +2363,9 @@ int main(int argc, char **argv) try {
         auto invalid_wait = condition_wait;
         invalid_wait["condition"] = {{"op", "not-a-condition"}};
         const auto invalid_calls = calls;
-        assert(absent_api.call(invalid_wait).at("ok") == false && calls == invalid_calls &&
-               source_starts == 1 && source_reads == 0 && source_stops == 0);
+        assert(absent_api.call(invalid_wait).at("error").at("code") == "TEST_ARGUMENT" &&
+               calls == invalid_calls && source_starts == 1 && source_reads == 0 &&
+               source_stops == 0);
 
         for (const std::string mode : {"passed", "gap", "timeout"}) {
             unsigned starts = 0, reads = 0, stops = 0;

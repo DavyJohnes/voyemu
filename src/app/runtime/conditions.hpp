@@ -27,7 +27,7 @@ struct ConditionResult {
         return {{"status", status}, {"reason", reason}};
     }
 };
-// Throws invalid_argument for malformed AST. Maximum depth 16, nodes 128,
+// Throws TEST_ARGUMENT for a malformed AST. Maximum depth 16, nodes 128,
 // history 4096. Retention loss is explicit unavailable, never silent success.
 void validate_condition(const Json &expression);
 ConditionResult evaluate_condition(const Json &expression, const ConditionObservation &baseline,
