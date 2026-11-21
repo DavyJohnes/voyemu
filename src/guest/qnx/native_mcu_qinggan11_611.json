@@ -4,7 +4,7 @@
   "map_sha256": "255335b86bb5fd782d23086018dcfc3874d088364ad5f15b264cfb12020d800e",
   "packet_bytes": 650,
   "wire_fields": 736,
-  "projected_fields": 376,
+  "projected_fields": 432,
   "source_parser_sha256": "a830d876d9091190096025f4f4eb81294078b3002d955283b3a9dec296414f05",
   "source_engine_sha256": "faeb580b46c5c92d7ecd5b707be15b85874c838471f5cb9ca010b9a90e9ae195",
   "fields": [
@@ -5834,145 +5834,385 @@
       "position": 442,
       "name": "can_msg_timeout_111",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 482,
+        "start_bit": 1840,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2234",
+        "output_bit": 1659,
+        "output_width": 2
+      }
     },
     {
       "position": 443,
       "name": "can_msg_timeout_114",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 483,
+        "start_bit": 1842,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2224",
+        "output_bit": 1661,
+        "output_width": 2
+      }
     },
     {
       "position": 444,
       "name": "can_msg_timeout_130",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 484,
+        "start_bit": 1844,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2214",
+        "output_bit": 1664,
+        "output_width": 2
+      }
     },
     {
       "position": 445,
       "name": "can_msg_timeout_140",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 485,
+        "start_bit": 1846,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2204",
+        "output_bit": 1666,
+        "output_width": 2
+      }
     },
     {
       "position": 446,
       "name": "can_msg_timeout_144",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 486,
+        "start_bit": 1848,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x21f4",
+        "output_bit": 1668,
+        "output_width": 2
+      }
     },
     {
       "position": 447,
       "name": "can_msg_timeout_212",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 487,
+        "start_bit": 1850,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x21e4",
+        "output_bit": 1670,
+        "output_width": 2
+      }
     },
     {
       "position": 448,
       "name": "can_msg_timeout_219",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 488,
+        "start_bit": 1852,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_lightitems_struct",
+        "case_address": "0x467c",
+        "output_bit": 410,
+        "output_width": 2
+      }
     },
     {
       "position": 449,
       "name": "can_msg_timeout_21a",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 489,
+        "start_bit": 1854,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_lightitems_struct",
+        "case_address": "0x466c",
+        "output_bit": 412,
+        "output_width": 2
+      }
     },
     {
       "position": 450,
       "name": "can_msg_timeout_239",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 490,
+        "start_bit": 1856,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_lightitems_struct",
+        "case_address": "0x465c",
+        "output_bit": 414,
+        "output_width": 2
+      }
     },
     {
       "position": 451,
       "name": "can_msg_timeout_23b",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 491,
+        "start_bit": 1858,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x21a4",
+        "output_bit": 1678,
+        "output_width": 2
+      }
     },
     {
       "position": 452,
       "name": "can_msg_timeout_241",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 492,
+        "start_bit": 1860,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2194",
+        "output_bit": 1680,
+        "output_width": 2
+      }
     },
     {
       "position": 453,
       "name": "can_msg_timeout_2a1",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 493,
+        "start_bit": 1862,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2184",
+        "output_bit": 1682,
+        "output_width": 2
+      }
     },
     {
       "position": 454,
       "name": "can_msg_timeout_2a2",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 494,
+        "start_bit": 1864,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2174",
+        "output_bit": 1684,
+        "output_width": 2
+      }
     },
     {
       "position": 455,
       "name": "can_msg_timeout_2ac",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 495,
+        "start_bit": 1866,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2164",
+        "output_bit": 1686,
+        "output_width": 2
+      }
     },
     {
       "position": 456,
       "name": "can_msg_timeout_2c1",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 496,
+        "start_bit": 1868,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2154",
+        "output_bit": 1688,
+        "output_width": 2
+      }
     },
     {
       "position": 457,
       "name": "can_msg_timeout_2c2",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 497,
+        "start_bit": 1870,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2144",
+        "output_bit": 1690,
+        "output_width": 2
+      }
     },
     {
       "position": 458,
       "name": "can_msg_timeout_301",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 498,
+        "start_bit": 1872,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2134",
+        "output_bit": 1692,
+        "output_width": 2
+      }
     },
     {
       "position": 459,
       "name": "can_msg_timeout_306",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 499,
+        "start_bit": 1874,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2124",
+        "output_bit": 1694,
+        "output_width": 2
+      }
     },
     {
       "position": 460,
       "name": "can_msg_timeout_309",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 500,
+        "start_bit": 1876,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2114",
+        "output_bit": 1696,
+        "output_width": 2
+      }
     },
     {
       "position": 461,
       "name": "can_msg_timeout_319",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 541,
+        "start_bit": 1958,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1e94",
+        "output_bit": 1776,
+        "output_width": 2
+      }
     },
     {
       "position": 462,
       "name": "can_msg_timeout_30e",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 502,
+        "start_bit": 1880,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x20f4",
+        "output_bit": 1700,
+        "output_width": 2
+      }
     },
     {
       "position": 463,
       "name": "can_msg_timeout_322",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 503,
+        "start_bit": 1882,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x20e4",
+        "output_bit": 1702,
+        "output_width": 2
+      }
     },
     {
       "position": 464,
       "name": "can_msg_timeout_323",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 504,
+        "start_bit": 1884,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x20d4",
+        "output_bit": 1704,
+        "output_width": 2
+      }
     },
     {
       "position": 465,
       "name": "can_msg_timeout_324",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 505,
+        "start_bit": 1886,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x20c4",
+        "output_bit": 1706,
+        "output_width": 2
+      }
     },
     {
       "position": 466,
@@ -5990,151 +6230,401 @@
       "position": 468,
       "name": "can_msg_timeout_36e",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 508,
+        "start_bit": 1892,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2094",
+        "output_bit": 1712,
+        "output_width": 2
+      }
     },
     {
       "position": 469,
       "name": "can_msg_timeout_369",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 509,
+        "start_bit": 1894,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2084",
+        "output_bit": 1714,
+        "output_width": 2
+      }
     },
     {
       "position": 470,
       "name": "can_msg_timeout_37e",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 510,
+        "start_bit": 1896,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2074",
+        "output_bit": 1716,
+        "output_width": 2
+      }
     },
     {
       "position": 471,
       "name": "can_msg_timeout_380",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 511,
+        "start_bit": 1898,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2064",
+        "output_bit": 1718,
+        "output_width": 2
+      }
     },
     {
       "position": 472,
       "name": "can_msg_timeout_38d",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 512,
+        "start_bit": 1900,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2054",
+        "output_bit": 1720,
+        "output_width": 2
+      }
     },
     {
       "position": 473,
       "name": "can_msg_timeout_394",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 513,
+        "start_bit": 1902,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2044",
+        "output_bit": 1722,
+        "output_width": 2
+      }
     },
     {
       "position": 474,
       "name": "can_msg_timeout_396",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 514,
+        "start_bit": 1904,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2034",
+        "output_bit": 1724,
+        "output_width": 2
+      }
     },
     {
       "position": 475,
       "name": "can_msg_timeout_3a0",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 515,
+        "start_bit": 1906,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2024",
+        "output_bit": 1726,
+        "output_width": 2
+      }
     },
     {
       "position": 476,
       "name": "can_msg_timeout_3a1",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 516,
+        "start_bit": 1908,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2014",
+        "output_bit": 1728,
+        "output_width": 2
+      }
     },
     {
       "position": 477,
       "name": "can_msg_timeout_3a9",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 517,
+        "start_bit": 1910,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x2004",
+        "output_bit": 1730,
+        "output_width": 2
+      }
     },
     {
       "position": 478,
       "name": "can_msg_timeout_3ad",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 518,
+        "start_bit": 1912,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1ff4",
+        "output_bit": 1732,
+        "output_width": 2
+      }
     },
     {
       "position": 479,
       "name": "can_msg_timeout_3ae",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 519,
+        "start_bit": 1914,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1fe4",
+        "output_bit": 1734,
+        "output_width": 2
+      }
     },
     {
       "position": 480,
       "name": "can_msg_timeout_3b6",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 520,
+        "start_bit": 1916,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1fd4",
+        "output_bit": 1736,
+        "output_width": 2
+      }
     },
     {
       "position": 481,
       "name": "can_msg_timeout_3be",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 521,
+        "start_bit": 1918,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1fc4",
+        "output_bit": 1738,
+        "output_width": 2
+      }
     },
     {
       "position": 482,
       "name": "can_msg_timeout_3c1",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 522,
+        "start_bit": 1920,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1fb4",
+        "output_bit": 1740,
+        "output_width": 2
+      }
     },
     {
       "position": 483,
       "name": "can_msg_timeout_3c2",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 523,
+        "start_bit": 1922,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1fa4",
+        "output_bit": 1742,
+        "output_width": 2
+      }
     },
     {
       "position": 484,
       "name": "can_msg_timeout_407",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 524,
+        "start_bit": 1924,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1f94",
+        "output_bit": 1744,
+        "output_width": 2
+      }
     },
     {
       "position": 485,
       "name": "can_msg_timeout_411",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 525,
+        "start_bit": 1926,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1f84",
+        "output_bit": 1746,
+        "output_width": 2
+      }
     },
     {
       "position": 486,
       "name": "can_msg_timeout_421",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 526,
+        "start_bit": 1928,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1f74",
+        "output_bit": 1748,
+        "output_width": 2
+      }
     },
     {
       "position": 487,
       "name": "can_msg_timeout_431",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 527,
+        "start_bit": 1930,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1f64",
+        "output_bit": 1750,
+        "output_width": 2
+      }
     },
     {
       "position": 488,
       "name": "can_msg_timeout_441",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 528,
+        "start_bit": 1932,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_pointitem_struct",
+        "case_address": "0x3d9c",
+        "output_bit": 281,
+        "output_width": 2
+      }
     },
     {
       "position": 489,
       "name": "can_msg_timeout_511",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 529,
+        "start_bit": 1934,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1f54",
+        "output_bit": 1752,
+        "output_width": 2
+      }
     },
     {
       "position": 490,
       "name": "can_msg_timeout_514",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 530,
+        "start_bit": 1936,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1f44",
+        "output_bit": 1754,
+        "output_width": 2
+      }
     },
     {
       "position": 491,
       "name": "can_msg_timeout_561",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 531,
+        "start_bit": 1938,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1f34",
+        "output_bit": 1756,
+        "output_width": 2
+      }
     },
     {
       "position": 492,
       "name": "can_msg_timeout_07e",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 532,
+        "start_bit": 1940,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1f24",
+        "output_bit": 1758,
+        "output_width": 2
+      }
     },
     {
       "position": 493,
@@ -6146,19 +6636,49 @@
       "position": 494,
       "name": "can_msg_timeout_2fa",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 534,
+        "start_bit": 1944,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_pointitem_struct",
+        "case_address": "0x3d8c",
+        "output_bit": 283,
+        "output_width": 2
+      }
     },
     {
       "position": 495,
       "name": "can_msg_timeout_331",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 535,
+        "start_bit": 1946,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1ef4",
+        "output_bit": 1764,
+        "output_width": 2
+      }
     },
     {
       "position": 496,
       "name": "can_msg_timeout_387",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 536,
+        "start_bit": 1948,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1ee4",
+        "output_bit": 1766,
+        "output_width": 2
+      }
     },
     {
       "position": 497,
@@ -6182,7 +6702,17 @@
       "position": 500,
       "name": "can_msg_timeout_1A3",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 540,
+        "start_bit": 1956,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1ea4",
+        "output_bit": 1774,
+        "output_width": 2
+      }
     },
     {
       "position": 501,
@@ -6194,19 +6724,49 @@
       "position": 502,
       "name": "can_msg_timeout_334",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 542,
+        "start_bit": 1960,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1e84",
+        "output_bit": 1778,
+        "output_width": 2
+      }
     },
     {
       "position": 503,
       "name": "can_msg_timeout_203",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 543,
+        "start_bit": 1962,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1e74",
+        "output_bit": 1780,
+        "output_width": 2
+      }
     },
     {
       "position": 504,
       "name": "can_msg_timeout_208",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 544,
+        "start_bit": 1964,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_gauteitems_struct",
+        "case_address": "0x1e64",
+        "output_bit": 1782,
+        "output_width": 2
+      }
     },
     {
       "position": 505,
