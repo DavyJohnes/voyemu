@@ -1,6 +1,5 @@
 #pragma once
 #include "error.hpp"
-#ifdef _WIN32
 #include <windows.h>
 
 #include "os/fs.hpp"
@@ -88,4 +87,3 @@ public:
     }
 };
 } // namespace voyemu::detail
-#endif

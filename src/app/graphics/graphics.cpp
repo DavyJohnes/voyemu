@@ -31,11 +31,6 @@
 #include <stdexcept>
 #include <thread>
 #include <unordered_map>
-#ifdef _WIN32
-#define GL_CALL __stdcall
-#else
-#define GL_CALL
-#endif
 namespace voyemu::graphics {
 namespace {
 using Json = nlohmann::json;
@@ -130,7 +125,7 @@ struct Dyn {
     }
 
     template <class R, class... A> R call(const char *name, A... args) {
-        return symbol<R(GL_CALL *)(A...)>(name)(args...);
+        return symbol<R (*)(A...)>(name)(args...);
     }
 };
 using GeneratedSpec = detail::CommandSpec;

@@ -126,6 +126,17 @@ struct OwnedFileObject {
     std::optional<FileObject> object;
 };
 OwnedFileObject owned_file_object(const std::filesystem::path &path, bool directory);
+// The outcome of publish_new_name.
+enum class Publication {
+    published,
+    // to exists or from cannot take its name.
+    publish_failed,
+    // POSIX published to as a second link but cannot remove from.
+    release_failed
+};
+// Gives the file at from the new name to, failing when to exists: a move on Windows, a hard link
+// and the removal of from on POSIX.
+Publication publish_new_name(const std::filesystem::path &from, const std::filesystem::path &to);
 // Adds link as a second name for existing; fails when link exists.
 bool link_exclusive(const std::filesystem::path &existing, const std::filesystem::path &link);
 // Atomically replaces to with from, durably where the host supports it; false on failure.

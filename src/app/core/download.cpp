@@ -394,8 +394,13 @@ DownloadedBlob download_pinned(const DownloadPin &pin, const std::filesystem::pa
 
     first_report(destination);
 
-    if (!os::rename_exclusive(temporary, destination)) {
+    switch (os::publish_new_name(temporary, destination)) {
+    case os::Publication::published:
+        break;
+    case os::Publication::publish_failed:
         throw VoyemuError("DOWNLOAD_PUBLISH", "fresh cache destination required");
+    case os::Publication::release_failed:
+        throw VoyemuError("DOWNLOAD_PUBLISH", "temporary link removal failed");
     }
 
     return {destination, bytes, false};

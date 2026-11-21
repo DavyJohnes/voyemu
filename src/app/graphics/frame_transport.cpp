@@ -2,21 +2,14 @@
 #include "check.hpp"
 #include "error.hpp"
 #include "little_endian.hpp"
+#include "os/file_view.hpp"
+#include "os/fs.hpp"
 #include <array>
 #include <atomic>
 #include <cstring>
 #include <limits>
 #include <stdexcept>
 #include <string>
-#ifdef _WIN32
-#define NOMINMAX
-#include <windows.h>
-#else
-#include <fcntl.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#endif
 
 namespace voyemu::frames {
 namespace {
@@ -46,180 +39,59 @@ void release(std::uint64_t &value, std::uint64_t replacement) {
 static_assert(std::atomic<std::uint64_t>::is_always_lock_free,
               "Shared transport needs lock-free 64-bit atomics");
 struct Mapping {
+    os::FileView view;
     std::byte *data = nullptr;
-#ifdef _WIN32
-    HANDLE file = INVALID_HANDLE_VALUE, mapping = nullptr;
-#else
-    int fd = -1;
-#endif
-
-    ~Mapping() {
-        reset();
-    }
 
     void reset() {
-#ifdef _WIN32
-        if (data) {
-            UnmapViewOfFile(data);
-        }
-
-        if (mapping) {
-            CloseHandle(mapping);
-        }
-
-        if (file != INVALID_HANDLE_VALUE) {
-            CloseHandle(file);
-        }
-#else
-        if (data) {
-            munmap(data, file_bytes);
-        }
-
-        if (fd >= 0) {
-            close(fd);
-        }
-#endif
+        view.reset();
         data = nullptr;
-#ifdef _WIN32
-        file = INVALID_HANDLE_VALUE;
-        mapping = nullptr;
-#else
-        fd = -1;
-#endif
     }
 
     bool open(const std::filesystem::path &path, bool create, bool writable = false) {
-        writable = writable || create;
-#ifdef _WIN32
-        file = CreateFileW(path.c_str(), writable ? GENERIC_READ | GENERIC_WRITE : GENERIC_READ,
-                           FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr,
-                           create ? CREATE_NEW : OPEN_EXISTING,
-                           FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OPEN_REPARSE_POINT, nullptr);
+        using Opening = os::FileView::Opening;
 
-        if (file == INVALID_HANDLE_VALUE) {
-            if (!create && GetLastError() == ERROR_FILE_NOT_FOUND) {
-                return false;
-            }
+        switch (view.open(path, file_bytes, create, writable || create)) {
+        case Opening::opened:
+            data = view.data();
 
+            return true;
+        case Opening::absent:
+            reset();
+
+            return false;
+        case Opening::open_failed:
             throw VoyemuError("FRAME_TRANSPORT", "Frame backing open failed");
-        }
-
-        BY_HANDLE_FILE_INFORMATION info{};
-
-        if (!GetFileInformationByHandle(file, &info) ||
-            (info.dwFileAttributes & (FILE_ATTRIBUTE_REPARSE_POINT | FILE_ATTRIBUTE_DIRECTORY))) {
+        case Opening::not_ordinary:
             throw VoyemuError("FRAME_TRANSPORT", "Frame backing ownership");
-        }
-
-        LARGE_INTEGER size{};
-        size.QuadPart = file_bytes;
-
-        if (create && (!SetFilePointerEx(file, size, nullptr, FILE_BEGIN) || !SetEndOfFile(file))) {
+        case Opening::resize_failed:
             throw VoyemuError("FRAME_TRANSPORT", "Frame backing resize");
-        }
-
-        if (!GetFileSizeEx(file, &size) || size.QuadPart != file_bytes) {
+        case Opening::extent_differs:
             throw VoyemuError("FRAME_TRANSPORT", "Frame backing extent");
-        }
-
-        mapping = CreateFileMappingW(file, nullptr, writable ? PAGE_READWRITE : PAGE_READONLY, 0, 0,
-                                     nullptr);
-
-        if (!mapping) {
+        case Opening::mapping_failed:
             throw VoyemuError("FRAME_TRANSPORT", "Frame mapping failed");
+        case Opening::view_failed:
+            break;
         }
 
-        data = static_cast<std::byte *>(
-                MapViewOfFile(mapping, writable ? FILE_MAP_WRITE | FILE_MAP_READ : FILE_MAP_READ, 0,
-                              0, file_bytes));
-#else
-        fd = ::open(path.c_str(),
-                    (create     ? O_RDWR | O_CREAT | O_EXCL
-                     : writable ? O_RDWR
-                                : O_RDONLY) |
-                            O_NOFOLLOW,
-                    0600);
-
-        if (fd < 0) {
-            if (!create && errno == ENOENT) {
-                return false;
-            }
-
-            throw VoyemuError("FRAME_TRANSPORT", "Frame backing open failed");
-        }
-
-        struct stat st{};
-
-        if (fstat(fd, &st) || !S_ISREG(st.st_mode)) {
-            throw VoyemuError("FRAME_TRANSPORT", "Frame backing ownership");
-        }
-
-        if (create && ftruncate(fd, file_bytes)) {
-            throw VoyemuError("FRAME_TRANSPORT", "Frame backing resize");
-        }
-
-        if (fstat(fd, &st) || st.st_size != file_bytes) {
-            throw VoyemuError("FRAME_TRANSPORT", "Frame backing extent");
-        }
-
-        void *p = mmap(nullptr, file_bytes, writable ? PROT_READ | PROT_WRITE : PROT_READ,
-                       MAP_SHARED, fd, 0);
-
-        if (p != MAP_FAILED) {
-            data = static_cast<std::byte *>(p);
-        }
-#endif
-
-        if (!data) {
-            throw VoyemuError("FRAME_TRANSPORT", "Frame view failed");
-        }
-
-        return true;
+        throw VoyemuError("FRAME_TRANSPORT", "Frame view failed");
     }
 
     bool current(const std::filesystem::path &path) {
-#ifdef _WIN32
-        HANDLE candidate =
-                CreateFileW(path.c_str(), 0, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-                            nullptr, OPEN_EXISTING, FILE_FLAG_OPEN_REPARSE_POINT, nullptr);
+        using Identity = os::FileView::Identity;
 
-        if (candidate == INVALID_HANDLE_VALUE) {
-            if (GetLastError() == ERROR_FILE_NOT_FOUND || GetLastError() == ERROR_PATH_NOT_FOUND) {
-                return false;
-            }
-
-            throw VoyemuError("FRAME_TRANSPORT", "Frame backing identity");
-        }
-
-        BY_HANDLE_FILE_INFORMATION original{}, replacement{};
-        const bool valid = GetFileInformationByHandle(file, &original) &&
-                           GetFileInformationByHandle(candidate, &replacement);
-        CloseHandle(candidate);
-
-        if (!valid || (replacement.dwFileAttributes &
-                       (FILE_ATTRIBUTE_REPARSE_POINT | FILE_ATTRIBUTE_DIRECTORY))) {
+        switch (view.current(path)) {
+        case Identity::same:
+            return true;
+        case Identity::replaced:
+        case Identity::absent:
+            return false;
+        case Identity::not_ordinary:
             throw VoyemuError("FRAME_TRANSPORT", "Frame backing ownership");
+        case Identity::identity_failed:
+            break;
         }
 
-        return original.dwVolumeSerialNumber == replacement.dwVolumeSerialNumber &&
-               original.nFileIndexHigh == replacement.nFileIndexHigh &&
-               original.nFileIndexLow == replacement.nFileIndexLow;
-#else
-        struct stat original{}, replacement{};
-
-        if (lstat(path.c_str(), &replacement)) {
-            if (errno == ENOENT) {
-                return false;
-            }
-
-            throw VoyemuError("FRAME_TRANSPORT", "Frame backing identity");
-        }
-
-        if (fstat(fd, &original) || !S_ISREG(replacement.st_mode)) {
-            throw VoyemuError("FRAME_TRANSPORT", "Frame backing ownership");
-        }
-        return original.st_dev == replacement.st_dev && original.st_ino == replacement.st_ino;
-#endif
+        throw VoyemuError("FRAME_TRANSPORT", "Frame backing identity");
     }
 
     Header &header() {
@@ -277,19 +149,17 @@ Writer::Writer(const std::filesystem::path &path) : impl_(std::make_unique<Impl>
     h.file_bytes = file_bytes;
     h.slot_bytes = slot_bytes;
     release(h.magic_value, magic);
-#ifdef _WIN32
-    if (!MoveFileW(pending.c_str(), path.c_str())) {
+
+    switch (os::publish_new_name(pending, path)) {
+    case os::Publication::published:
+        return;
+    case os::Publication::publish_failed:
         throw VoyemuError("FRAME_TRANSPORT", "Frame backing publish");
-    }
-#else
-    if (link(pending.c_str(), path.c_str())) {
-        throw VoyemuError("FRAME_TRANSPORT", "Frame backing publish");
+    case os::Publication::release_failed:
+        break;
     }
 
-    if (unlink(pending.c_str())) {
-        throw VoyemuError("FRAME_TRANSPORT", "Frame pending release");
-    }
-#endif
+    throw VoyemuError("FRAME_TRANSPORT", "Frame pending release");
 }
 
 Writer::~Writer() = default;

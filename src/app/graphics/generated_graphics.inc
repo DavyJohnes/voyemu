@@ -232,482 +232,482 @@ static constexpr std::uint64_t uniform_schema = 9933743703928243661ULL;
 std::uint64_t GeneratedInvoker::invoke(std::uint32_t op, const Arguments& values) {
 switch(op) {
 case 100: {
-using Fn = void (GL_CALL *)(GLenum);
+using Fn = void (*)(GLenum);
 auto f = symbol<Fn>("glActiveTexture");
 f(static_cast<GLenum>(values[0])); return 0;
 }
 case 101: {
-using Fn = void (GL_CALL *)(GLuint,GLuint,const GLchar *);
+using Fn = void (*)(GLuint,GLuint,const GLchar *);
 auto f = symbol<Fn>("glBindAttribLocation");
 f(static_cast<GLuint>(values[0]),static_cast<GLuint>(values[1]),reinterpret_cast<const GLchar *>(values[2])); return 0;
 }
 case 102: {
-using Fn = void (GL_CALL *)(GLenum,GLuint);
+using Fn = void (*)(GLenum,GLuint);
 auto f = symbol<Fn>("glBindBuffer");
 f(static_cast<GLenum>(values[0]),static_cast<GLuint>(values[1])); return 0;
 }
 case 103: {
-using Fn = void (GL_CALL *)(GLenum,GLuint);
+using Fn = void (*)(GLenum,GLuint);
 auto f = symbol<Fn>("glBindFramebuffer");
 f(static_cast<GLenum>(values[0]),static_cast<GLuint>(values[1])); return 0;
 }
 case 104: {
-using Fn = void (GL_CALL *)(GLenum,GLuint);
+using Fn = void (*)(GLenum,GLuint);
 auto f = symbol<Fn>("glBindRenderbuffer");
 f(static_cast<GLenum>(values[0]),static_cast<GLuint>(values[1])); return 0;
 }
 case 105: {
-using Fn = void (GL_CALL *)(GLenum,GLuint);
+using Fn = void (*)(GLenum,GLuint);
 auto f = symbol<Fn>("glBindTexture");
 f(static_cast<GLenum>(values[0]),static_cast<GLuint>(values[1])); return 0;
 }
 case 106: {
-using Fn = void (GL_CALL *)(GLenum,GLenum);
+using Fn = void (*)(GLenum,GLenum);
 auto f = symbol<Fn>("glBlendFunc");
 f(static_cast<GLenum>(values[0]),static_cast<GLenum>(values[1])); return 0;
 }
 case 107: {
-using Fn = void (GL_CALL *)(GLenum,GLenum,GLenum,GLenum);
+using Fn = void (*)(GLenum,GLenum,GLenum,GLenum);
 auto f = symbol<Fn>("glBlendFuncSeparate");
 f(static_cast<GLenum>(values[0]),static_cast<GLenum>(values[1]),static_cast<GLenum>(values[2]),static_cast<GLenum>(values[3])); return 0;
 }
 case 108: {
-using Fn = void (GL_CALL *)(GLint,GLint,GLint,GLint,GLint,GLint,GLint,GLint,GLbitfield,GLenum);
+using Fn = void (*)(GLint,GLint,GLint,GLint,GLint,GLint,GLint,GLint,GLbitfield,GLenum);
 auto f = symbol<Fn>("glBlitFramebuffer");
 f(signed_bits(values[0]),signed_bits(values[1]),signed_bits(values[2]),signed_bits(values[3]),signed_bits(values[4]),signed_bits(values[5]),signed_bits(values[6]),signed_bits(values[7]),static_cast<GLbitfield>(values[8]),static_cast<GLenum>(values[9])); return 0;
 }
 case 109: {
-using Fn = void (GL_CALL *)(GLenum,GLsizeiptr,const void *,GLenum);
+using Fn = void (*)(GLenum,GLsizeiptr,const void *,GLenum);
 auto f = symbol<Fn>("glBufferData");
 f(static_cast<GLenum>(values[0]),static_cast<GLsizeiptr>(values[1]),reinterpret_cast<const void *>(values[2]),static_cast<GLenum>(values[3])); return 0;
 }
 case 110: {
-using Fn = void (GL_CALL *)(GLenum,GLintptr,GLsizeiptr,const void *);
+using Fn = void (*)(GLenum,GLintptr,GLsizeiptr,const void *);
 auto f = symbol<Fn>("glBufferSubData");
 f(static_cast<GLenum>(values[0]),static_cast<GLintptr>(values[1]),static_cast<GLsizeiptr>(values[2]),reinterpret_cast<const void *>(values[3])); return 0;
 }
 case 111: {
-using Fn = GLenum (GL_CALL *)(GLenum);
+using Fn = GLenum (*)(GLenum);
 auto f = symbol<Fn>("glCheckFramebufferStatus");
 return encode_result(f(static_cast<GLenum>(values[0])));
 }
 case 112: {
-using Fn = void (GL_CALL *)(GLenum,GLint,GLfloat,GLint);
+using Fn = void (*)(GLenum,GLint,GLfloat,GLint);
 auto f = symbol<Fn>("glClearBufferfi");
 f(static_cast<GLenum>(values[0]),signed_bits(values[1]),float_bits(values[2]),signed_bits(values[3])); return 0;
 }
 case 113: {
-using Fn = void (GL_CALL *)(GLenum,GLint,const GLfloat *);
+using Fn = void (*)(GLenum,GLint,const GLfloat *);
 auto f = symbol<Fn>("glClearBufferfv");
 f(static_cast<GLenum>(values[0]),signed_bits(values[1]),reinterpret_cast<const GLfloat *>(values[2])); return 0;
 }
 case 114: {
-using Fn = void (GL_CALL *)(GLenum,GLint,const GLint *);
+using Fn = void (*)(GLenum,GLint,const GLint *);
 auto f = symbol<Fn>("glClearBufferiv");
 f(static_cast<GLenum>(values[0]),signed_bits(values[1]),reinterpret_cast<const GLint *>(values[2])); return 0;
 }
 case 115: {
-using Fn = void (GL_CALL *)(GLenum,GLint,const GLuint *);
+using Fn = void (*)(GLenum,GLint,const GLuint *);
 auto f = symbol<Fn>("glClearBufferuiv");
 f(static_cast<GLenum>(values[0]),signed_bits(values[1]),reinterpret_cast<const GLuint *>(values[2])); return 0;
 }
 case 116: {
-using Fn = void (GL_CALL *)(GLfloat);
+using Fn = void (*)(GLfloat);
 auto f = symbol<Fn>("glClearDepthf");
 f(float_bits(values[0])); return 0;
 }
 case 117: {
-using Fn = void (GL_CALL *)(GLint);
+using Fn = void (*)(GLint);
 auto f = symbol<Fn>("glClearStencil");
 f(signed_bits(values[0])); return 0;
 }
 case 118: {
-using Fn = void (GL_CALL *)(GLboolean,GLboolean,GLboolean,GLboolean);
+using Fn = void (*)(GLboolean,GLboolean,GLboolean,GLboolean);
 auto f = symbol<Fn>("glColorMask");
 f(static_cast<GLboolean>(values[0]),static_cast<GLboolean>(values[1]),static_cast<GLboolean>(values[2]),static_cast<GLboolean>(values[3])); return 0;
 }
 case 119: {
-using Fn = void (GL_CALL *)(GLenum,GLint,GLenum,GLsizei,GLsizei,GLint,GLsizei,const void *);
+using Fn = void (*)(GLenum,GLint,GLenum,GLsizei,GLsizei,GLint,GLsizei,const void *);
 auto f = symbol<Fn>("glCompressedTexImage2D");
 f(static_cast<GLenum>(values[0]),signed_bits(values[1]),static_cast<GLenum>(values[2]),signed_bits(values[3]),signed_bits(values[4]),signed_bits(values[5]),signed_bits(values[6]),reinterpret_cast<const void *>(values[7])); return 0;
 }
 case 120: {
-using Fn = void (GL_CALL *)(GLenum,GLint,GLenum,GLsizei,GLsizei,GLsizei,GLint,GLsizei,const void *);
+using Fn = void (*)(GLenum,GLint,GLenum,GLsizei,GLsizei,GLsizei,GLint,GLsizei,const void *);
 auto f = symbol<Fn>("glCompressedTexImage3D");
 f(static_cast<GLenum>(values[0]),signed_bits(values[1]),static_cast<GLenum>(values[2]),signed_bits(values[3]),signed_bits(values[4]),signed_bits(values[5]),signed_bits(values[6]),signed_bits(values[7]),reinterpret_cast<const void *>(values[8])); return 0;
 }
 case 121: {
-using Fn = void (GL_CALL *)(GLenum,GLint,GLint,GLint,GLsizei,GLsizei,GLenum,GLsizei,const void *);
+using Fn = void (*)(GLenum,GLint,GLint,GLint,GLsizei,GLsizei,GLenum,GLsizei,const void *);
 auto f = symbol<Fn>("glCompressedTexSubImage2D");
 f(static_cast<GLenum>(values[0]),signed_bits(values[1]),signed_bits(values[2]),signed_bits(values[3]),signed_bits(values[4]),signed_bits(values[5]),static_cast<GLenum>(values[6]),signed_bits(values[7]),reinterpret_cast<const void *>(values[8])); return 0;
 }
 case 122: {
-using Fn = void (GL_CALL *)(GLenum);
+using Fn = void (*)(GLenum);
 auto f = symbol<Fn>("glCullFace");
 f(static_cast<GLenum>(values[0])); return 0;
 }
 case 123: {
-using Fn = void (GL_CALL *)(GLsizei,const GLuint *);
+using Fn = void (*)(GLsizei,const GLuint *);
 auto f = symbol<Fn>("glDeleteBuffers");
 f(signed_bits(values[0]),reinterpret_cast<const GLuint *>(values[1])); return 0;
 }
 case 124: {
-using Fn = void (GL_CALL *)(GLsizei,const GLuint *);
+using Fn = void (*)(GLsizei,const GLuint *);
 auto f = symbol<Fn>("glDeleteFramebuffers");
 f(signed_bits(values[0]),reinterpret_cast<const GLuint *>(values[1])); return 0;
 }
 case 125: {
-using Fn = void (GL_CALL *)(GLsizei,const GLuint *);
+using Fn = void (*)(GLsizei,const GLuint *);
 auto f = symbol<Fn>("glDeleteRenderbuffers");
 f(signed_bits(values[0]),reinterpret_cast<const GLuint *>(values[1])); return 0;
 }
 case 126: {
-using Fn = void (GL_CALL *)(GLsizei,const GLuint *);
+using Fn = void (*)(GLsizei,const GLuint *);
 auto f = symbol<Fn>("glDeleteTextures");
 f(signed_bits(values[0]),reinterpret_cast<const GLuint *>(values[1])); return 0;
 }
 case 127: {
-using Fn = void (GL_CALL *)(GLenum);
+using Fn = void (*)(GLenum);
 auto f = symbol<Fn>("glDepthFunc");
 f(static_cast<GLenum>(values[0])); return 0;
 }
 case 128: {
-using Fn = void (GL_CALL *)(GLboolean);
+using Fn = void (*)(GLboolean);
 auto f = symbol<Fn>("glDepthMask");
 f(static_cast<GLboolean>(values[0])); return 0;
 }
 case 129: {
-using Fn = void (GL_CALL *)(GLuint,GLuint);
+using Fn = void (*)(GLuint,GLuint);
 auto f = symbol<Fn>("glDetachShader");
 f(static_cast<GLuint>(values[0]),static_cast<GLuint>(values[1])); return 0;
 }
 case 130: {
-using Fn = void (GL_CALL *)(GLenum);
+using Fn = void (*)(GLenum);
 auto f = symbol<Fn>("glDisable");
 f(static_cast<GLenum>(values[0])); return 0;
 }
 case 131: {
-using Fn = void (GL_CALL *)(GLuint);
+using Fn = void (*)(GLuint);
 auto f = symbol<Fn>("glDisableVertexAttribArray");
 f(static_cast<GLuint>(values[0])); return 0;
 }
 case 132: {
-using Fn = void (GL_CALL *)(GLsizei,const GLenum *);
+using Fn = void (*)(GLsizei,const GLenum *);
 auto f = symbol<Fn>("glDrawBuffers");
 f(signed_bits(values[0]),reinterpret_cast<const GLenum *>(values[1])); return 0;
 }
 case 133: {
-using Fn = void (GL_CALL *)(GLenum,GLsizei,GLenum,const void *);
+using Fn = void (*)(GLenum,GLsizei,GLenum,const void *);
 auto f = symbol<Fn>("glDrawElements");
 f(static_cast<GLenum>(values[0]),signed_bits(values[1]),static_cast<GLenum>(values[2]),reinterpret_cast<const void *>(values[3])); return 0;
 }
 case 134: {
-using Fn = void (GL_CALL *)(GLenum);
+using Fn = void (*)(GLenum);
 auto f = symbol<Fn>("glEnable");
 f(static_cast<GLenum>(values[0])); return 0;
 }
 case 135: {
-using Fn = void (GL_CALL *)(GLuint);
+using Fn = void (*)(GLuint);
 auto f = symbol<Fn>("glEnableVertexAttribArray");
 f(static_cast<GLuint>(values[0])); return 0;
 }
 case 136: {
-using Fn = void (GL_CALL *)();
+using Fn = void (*)();
 auto f = symbol<Fn>("glFlush");
 f(); return 0;
 }
 case 137: {
-using Fn = void (GL_CALL *)(GLenum,GLenum,GLenum,GLuint);
+using Fn = void (*)(GLenum,GLenum,GLenum,GLuint);
 auto f = symbol<Fn>("glFramebufferRenderbuffer");
 f(static_cast<GLenum>(values[0]),static_cast<GLenum>(values[1]),static_cast<GLenum>(values[2]),static_cast<GLuint>(values[3])); return 0;
 }
 case 138: {
-using Fn = void (GL_CALL *)(GLenum,GLenum,GLenum,GLuint,GLint);
+using Fn = void (*)(GLenum,GLenum,GLenum,GLuint,GLint);
 auto f = symbol<Fn>("glFramebufferTexture2D");
 f(static_cast<GLenum>(values[0]),static_cast<GLenum>(values[1]),static_cast<GLenum>(values[2]),static_cast<GLuint>(values[3]),signed_bits(values[4])); return 0;
 }
 case 139: {
-using Fn = void (GL_CALL *)(GLsizei,GLuint *);
+using Fn = void (*)(GLsizei,GLuint *);
 auto f = symbol<Fn>("glGenBuffers");
 f(signed_bits(values[0]),reinterpret_cast<GLuint *>(values[1])); return 0;
 }
 case 140: {
-using Fn = void (GL_CALL *)(GLsizei,GLuint *);
+using Fn = void (*)(GLsizei,GLuint *);
 auto f = symbol<Fn>("glGenFramebuffers");
 f(signed_bits(values[0]),reinterpret_cast<GLuint *>(values[1])); return 0;
 }
 case 141: {
-using Fn = void (GL_CALL *)(GLsizei,GLuint *);
+using Fn = void (*)(GLsizei,GLuint *);
 auto f = symbol<Fn>("glGenRenderbuffers");
 f(signed_bits(values[0]),reinterpret_cast<GLuint *>(values[1])); return 0;
 }
 case 142: {
-using Fn = void (GL_CALL *)(GLsizei,GLuint *);
+using Fn = void (*)(GLsizei,GLuint *);
 auto f = symbol<Fn>("glGenTextures");
 f(signed_bits(values[0]),reinterpret_cast<GLuint *>(values[1])); return 0;
 }
 case 143: {
-using Fn = void (GL_CALL *)(GLenum);
+using Fn = void (*)(GLenum);
 auto f = symbol<Fn>("glGenerateMipmap");
 f(static_cast<GLenum>(values[0])); return 0;
 }
 case 144: {
-using Fn = void (GL_CALL *)(GLuint,GLuint,GLsizei,GLsizei *,GLint *,GLenum *,GLchar *);
+using Fn = void (*)(GLuint,GLuint,GLsizei,GLsizei *,GLint *,GLenum *,GLchar *);
 auto f = symbol<Fn>("glGetActiveAttrib");
 f(static_cast<GLuint>(values[0]),static_cast<GLuint>(values[1]),signed_bits(values[2]),reinterpret_cast<GLsizei *>(values[3]),reinterpret_cast<GLint *>(values[4]),reinterpret_cast<GLenum *>(values[5]),reinterpret_cast<GLchar *>(values[6])); return 0;
 }
 case 145: {
-using Fn = void (GL_CALL *)(GLuint,GLuint,GLsizei,GLsizei *,GLint *,GLenum *,GLchar *);
+using Fn = void (*)(GLuint,GLuint,GLsizei,GLsizei *,GLint *,GLenum *,GLchar *);
 auto f = symbol<Fn>("glGetActiveUniform");
 f(static_cast<GLuint>(values[0]),static_cast<GLuint>(values[1]),signed_bits(values[2]),reinterpret_cast<GLsizei *>(values[3]),reinterpret_cast<GLint *>(values[4]),reinterpret_cast<GLenum *>(values[5]),reinterpret_cast<GLchar *>(values[6])); return 0;
 }
 case 146: {
-using Fn = GLint (GL_CALL *)(GLuint,const GLchar *);
+using Fn = GLint (*)(GLuint,const GLchar *);
 auto f = symbol<Fn>("glGetAttribLocation");
 return encode_result(f(static_cast<GLuint>(values[0]),reinterpret_cast<const GLchar *>(values[1])));
 }
 case 147: {
-using Fn = void (GL_CALL *)(GLenum,GLboolean *);
+using Fn = void (*)(GLenum,GLboolean *);
 auto f = symbol<Fn>("glGetBooleanv");
 f(static_cast<GLenum>(values[0]),reinterpret_cast<GLboolean *>(values[1])); return 0;
 }
 case 148: {
-using Fn = void (GL_CALL *)(GLenum,GLenum,GLint *);
+using Fn = void (*)(GLenum,GLenum,GLint *);
 auto f = symbol<Fn>("glGetBufferParameteriv");
 f(static_cast<GLenum>(values[0]),static_cast<GLenum>(values[1]),reinterpret_cast<GLint *>(values[2])); return 0;
 }
 case 149: {
-using Fn = void (GL_CALL *)(GLenum,GLfloat *);
+using Fn = void (*)(GLenum,GLfloat *);
 auto f = symbol<Fn>("glGetFloatv");
 f(static_cast<GLenum>(values[0]),reinterpret_cast<GLfloat *>(values[1])); return 0;
 }
 case 150: {
-using Fn = void (GL_CALL *)(GLenum,GLenum,GLenum,GLint *);
+using Fn = void (*)(GLenum,GLenum,GLenum,GLint *);
 auto f = symbol<Fn>("glGetFramebufferAttachmentParameteriv");
 f(static_cast<GLenum>(values[0]),static_cast<GLenum>(values[1]),static_cast<GLenum>(values[2]),reinterpret_cast<GLint *>(values[3])); return 0;
 }
 case 151: {
-using Fn = void (GL_CALL *)(GLenum,GLint *);
+using Fn = void (*)(GLenum,GLint *);
 auto f = symbol<Fn>("glGetIntegerv");
 f(static_cast<GLenum>(values[0]),reinterpret_cast<GLint *>(values[1])); return 0;
 }
 case 152: {
-using Fn = void (GL_CALL *)(GLuint,GLsizei,GLsizei *,GLenum *,void *);
+using Fn = void (*)(GLuint,GLsizei,GLsizei *,GLenum *,void *);
 auto f = symbol<Fn>("glGetProgramBinary");
 f(static_cast<GLuint>(values[0]),signed_bits(values[1]),reinterpret_cast<GLsizei *>(values[2]),reinterpret_cast<GLenum *>(values[3]),reinterpret_cast<void *>(values[4])); return 0;
 }
 case 153: {
-using Fn = void (GL_CALL *)(GLuint,GLsizei,GLsizei *,GLchar *);
+using Fn = void (*)(GLuint,GLsizei,GLsizei *,GLchar *);
 auto f = symbol<Fn>("glGetProgramInfoLog");
 f(static_cast<GLuint>(values[0]),signed_bits(values[1]),reinterpret_cast<GLsizei *>(values[2]),reinterpret_cast<GLchar *>(values[3])); return 0;
 }
 case 154: {
-using Fn = void (GL_CALL *)(GLenum,GLenum,GLint *);
+using Fn = void (*)(GLenum,GLenum,GLint *);
 auto f = symbol<Fn>("glGetRenderbufferParameteriv");
 f(static_cast<GLenum>(values[0]),static_cast<GLenum>(values[1]),reinterpret_cast<GLint *>(values[2])); return 0;
 }
 case 155: {
-using Fn = void (GL_CALL *)(GLuint,GLsizei,GLsizei *,GLchar *);
+using Fn = void (*)(GLuint,GLsizei,GLsizei *,GLchar *);
 auto f = symbol<Fn>("glGetShaderInfoLog");
 f(static_cast<GLuint>(values[0]),signed_bits(values[1]),reinterpret_cast<GLsizei *>(values[2]),reinterpret_cast<GLchar *>(values[3])); return 0;
 }
 case 156: {
-using Fn = void (GL_CALL *)(GLenum,GLenum,GLint *);
+using Fn = void (*)(GLenum,GLenum,GLint *);
 auto f = symbol<Fn>("glGetTexParameteriv");
 f(static_cast<GLenum>(values[0]),static_cast<GLenum>(values[1]),reinterpret_cast<GLint *>(values[2])); return 0;
 }
 case 157: {
-using Fn = GLint (GL_CALL *)(GLuint,const GLchar *);
+using Fn = GLint (*)(GLuint,const GLchar *);
 auto f = symbol<Fn>("glGetUniformLocation");
 return encode_result(f(static_cast<GLuint>(values[0]),reinterpret_cast<const GLchar *>(values[1])));
 }
 case 158: {
-using Fn = void (GL_CALL *)(GLuint,GLint,GLfloat *);
+using Fn = void (*)(GLuint,GLint,GLfloat *);
 auto f = symbol<Fn>("glGetUniformfv");
 f(static_cast<GLuint>(values[0]),signed_bits(values[1]),reinterpret_cast<GLfloat *>(values[2])); return 0;
 }
 case 159: {
-using Fn = void (GL_CALL *)(GLuint,GLint,GLint *);
+using Fn = void (*)(GLuint,GLint,GLint *);
 auto f = symbol<Fn>("glGetUniformiv");
 f(static_cast<GLuint>(values[0]),signed_bits(values[1]),reinterpret_cast<GLint *>(values[2])); return 0;
 }
 case 160: {
-using Fn = void (GL_CALL *)(GLuint,GLenum,void **);
+using Fn = void (*)(GLuint,GLenum,void **);
 auto f = symbol<Fn>("glGetVertexAttribPointerv");
 f(static_cast<GLuint>(values[0]),static_cast<GLenum>(values[1]),reinterpret_cast<void **>(values[2])); return 0;
 }
 case 161: {
-using Fn = void (GL_CALL *)(GLuint,GLenum,GLint *);
+using Fn = void (*)(GLuint,GLenum,GLint *);
 auto f = symbol<Fn>("glGetVertexAttribiv");
 f(static_cast<GLuint>(values[0]),static_cast<GLenum>(values[1]),reinterpret_cast<GLint *>(values[2])); return 0;
 }
 case 162: {
-using Fn = void (GL_CALL *)(GLenum,GLenum);
+using Fn = void (*)(GLenum,GLenum);
 auto f = symbol<Fn>("glHint");
 f(static_cast<GLenum>(values[0]),static_cast<GLenum>(values[1])); return 0;
 }
 case 163: {
-using Fn = void (GL_CALL *)(GLenum,GLsizei,const GLenum *);
+using Fn = void (*)(GLenum,GLsizei,const GLenum *);
 auto f = symbol<Fn>("glInvalidateFramebuffer");
 f(static_cast<GLenum>(values[0]),signed_bits(values[1]),reinterpret_cast<const GLenum *>(values[2])); return 0;
 }
 case 164: {
-using Fn = GLboolean (GL_CALL *)(GLenum);
+using Fn = GLboolean (*)(GLenum);
 auto f = symbol<Fn>("glIsEnabled");
 return encode_result(f(static_cast<GLenum>(values[0])));
 }
 case 165: {
-using Fn = GLboolean (GL_CALL *)(GLuint);
+using Fn = GLboolean (*)(GLuint);
 auto f = symbol<Fn>("glIsFramebuffer");
 return encode_result(f(static_cast<GLuint>(values[0])));
 }
 case 166: {
-using Fn = GLboolean (GL_CALL *)(GLuint);
+using Fn = GLboolean (*)(GLuint);
 auto f = symbol<Fn>("glIsTexture");
 return encode_result(f(static_cast<GLuint>(values[0])));
 }
 case 167: {
-using Fn = void (GL_CALL *)(GLfloat);
+using Fn = void (*)(GLfloat);
 auto f = symbol<Fn>("glLineWidth");
 f(float_bits(values[0])); return 0;
 }
 case 168: {
-using Fn = void (GL_CALL *)(GLenum,GLint);
+using Fn = void (*)(GLenum,GLint);
 auto f = symbol<Fn>("glPixelStorei");
 f(static_cast<GLenum>(values[0]),signed_bits(values[1])); return 0;
 }
 case 169: {
-using Fn = void (GL_CALL *)(GLuint,GLenum,const void *,GLsizei);
+using Fn = void (*)(GLuint,GLenum,const void *,GLsizei);
 auto f = symbol<Fn>("glProgramBinary");
 f(static_cast<GLuint>(values[0]),static_cast<GLenum>(values[1]),reinterpret_cast<const void *>(values[2]),signed_bits(values[3])); return 0;
 }
 case 170: {
-using Fn = void (GL_CALL *)(GLenum,GLenum,GLsizei,GLsizei);
+using Fn = void (*)(GLenum,GLenum,GLsizei,GLsizei);
 auto f = symbol<Fn>("glRenderbufferStorage");
 f(static_cast<GLenum>(values[0]),static_cast<GLenum>(values[1]),signed_bits(values[2]),signed_bits(values[3])); return 0;
 }
 case 171: {
-using Fn = void (GL_CALL *)(GLenum,GLsizei,GLenum,GLsizei,GLsizei);
+using Fn = void (*)(GLenum,GLsizei,GLenum,GLsizei,GLsizei);
 auto f = symbol<Fn>("glRenderbufferStorageMultisample");
 f(static_cast<GLenum>(values[0]),signed_bits(values[1]),static_cast<GLenum>(values[2]),signed_bits(values[3]),signed_bits(values[4])); return 0;
 }
 case 172: {
-using Fn = void (GL_CALL *)(GLfloat,GLboolean);
+using Fn = void (*)(GLfloat,GLboolean);
 auto f = symbol<Fn>("glSampleCoverage");
 f(float_bits(values[0]),static_cast<GLboolean>(values[1])); return 0;
 }
 case 173: {
-using Fn = void (GL_CALL *)(GLint,GLint,GLsizei,GLsizei);
+using Fn = void (*)(GLint,GLint,GLsizei,GLsizei);
 auto f = symbol<Fn>("glScissor");
 f(signed_bits(values[0]),signed_bits(values[1]),signed_bits(values[2]),signed_bits(values[3])); return 0;
 }
 case 174: {
-using Fn = void (GL_CALL *)(GLsizei,const GLuint *,GLenum,const void *,GLsizei);
+using Fn = void (*)(GLsizei,const GLuint *,GLenum,const void *,GLsizei);
 auto f = symbol<Fn>("glShaderBinary");
 f(signed_bits(values[0]),reinterpret_cast<const GLuint *>(values[1]),static_cast<GLenum>(values[2]),reinterpret_cast<const void *>(values[3]),signed_bits(values[4])); return 0;
 }
 case 175: {
-using Fn = void (GL_CALL *)(GLenum,GLint,GLuint);
+using Fn = void (*)(GLenum,GLint,GLuint);
 auto f = symbol<Fn>("glStencilFunc");
 f(static_cast<GLenum>(values[0]),signed_bits(values[1]),static_cast<GLuint>(values[2])); return 0;
 }
 case 176: {
-using Fn = void (GL_CALL *)(GLuint);
+using Fn = void (*)(GLuint);
 auto f = symbol<Fn>("glStencilMask");
 f(static_cast<GLuint>(values[0])); return 0;
 }
 case 177: {
-using Fn = void (GL_CALL *)(GLenum,GLenum,GLenum);
+using Fn = void (*)(GLenum,GLenum,GLenum);
 auto f = symbol<Fn>("glStencilOp");
 f(static_cast<GLenum>(values[0]),static_cast<GLenum>(values[1]),static_cast<GLenum>(values[2])); return 0;
 }
 case 178: {
-using Fn = void (GL_CALL *)(GLenum,GLint,GLint,GLsizei,GLsizei,GLint,GLenum,GLenum,const void *);
+using Fn = void (*)(GLenum,GLint,GLint,GLsizei,GLsizei,GLint,GLenum,GLenum,const void *);
 auto f = symbol<Fn>("glTexImage2D");
 f(static_cast<GLenum>(values[0]),signed_bits(values[1]),signed_bits(values[2]),signed_bits(values[3]),signed_bits(values[4]),signed_bits(values[5]),static_cast<GLenum>(values[6]),static_cast<GLenum>(values[7]),reinterpret_cast<const void *>(values[8])); return 0;
 }
 case 179: {
-using Fn = void (GL_CALL *)(GLenum,GLenum,GLfloat);
+using Fn = void (*)(GLenum,GLenum,GLfloat);
 auto f = symbol<Fn>("glTexParameterf");
 f(static_cast<GLenum>(values[0]),static_cast<GLenum>(values[1]),float_bits(values[2])); return 0;
 }
 case 180: {
-using Fn = void (GL_CALL *)(GLenum,GLenum,GLint);
+using Fn = void (*)(GLenum,GLenum,GLint);
 auto f = symbol<Fn>("glTexParameteri");
 f(static_cast<GLenum>(values[0]),static_cast<GLenum>(values[1]),signed_bits(values[2])); return 0;
 }
 case 181: {
-using Fn = void (GL_CALL *)(GLenum,GLsizei,GLenum,GLsizei,GLsizei);
+using Fn = void (*)(GLenum,GLsizei,GLenum,GLsizei,GLsizei);
 auto f = symbol<Fn>("glTexStorage2D");
 f(static_cast<GLenum>(values[0]),signed_bits(values[1]),static_cast<GLenum>(values[2]),signed_bits(values[3]),signed_bits(values[4])); return 0;
 }
 case 182: {
-using Fn = void (GL_CALL *)(GLenum,GLsizei,GLenum,GLsizei,GLsizei,GLboolean);
+using Fn = void (*)(GLenum,GLsizei,GLenum,GLsizei,GLsizei,GLboolean);
 auto f = symbol<Fn>("glTexStorage2DMultisample");
 f(static_cast<GLenum>(values[0]),signed_bits(values[1]),static_cast<GLenum>(values[2]),signed_bits(values[3]),signed_bits(values[4]),static_cast<GLboolean>(values[5])); return 0;
 }
 case 183: {
-using Fn = void (GL_CALL *)(GLenum,GLsizei,GLenum,GLsizei,GLsizei,GLsizei);
+using Fn = void (*)(GLenum,GLsizei,GLenum,GLsizei,GLsizei,GLsizei);
 auto f = symbol<Fn>("glTexStorage3D");
 f(static_cast<GLenum>(values[0]),signed_bits(values[1]),static_cast<GLenum>(values[2]),signed_bits(values[3]),signed_bits(values[4]),signed_bits(values[5])); return 0;
 }
 case 184: {
-using Fn = void (GL_CALL *)(GLenum,GLint,GLint,GLint,GLsizei,GLsizei,GLenum,GLenum,const void *);
+using Fn = void (*)(GLenum,GLint,GLint,GLint,GLsizei,GLsizei,GLenum,GLenum,const void *);
 auto f = symbol<Fn>("glTexSubImage2D");
 f(static_cast<GLenum>(values[0]),signed_bits(values[1]),signed_bits(values[2]),signed_bits(values[3]),signed_bits(values[4]),signed_bits(values[5]),static_cast<GLenum>(values[6]),static_cast<GLenum>(values[7]),reinterpret_cast<const void *>(values[8])); return 0;
 }
 case 185: {
-using Fn = void (GL_CALL *)(GLint,GLfloat);
+using Fn = void (*)(GLint,GLfloat);
 auto f = symbol<Fn>("glUniform1f");
 f(signed_bits(values[0]),float_bits(values[1])); return 0;
 }
 case 186: {
-using Fn = void (GL_CALL *)(GLint,GLsizei,const GLfloat *);
+using Fn = void (*)(GLint,GLsizei,const GLfloat *);
 auto f = symbol<Fn>("glUniform1fv");
 f(signed_bits(values[0]),signed_bits(values[1]),reinterpret_cast<const GLfloat *>(values[2])); return 0;
 }
 case 187: {
-using Fn = void (GL_CALL *)(GLint,GLint);
+using Fn = void (*)(GLint,GLint);
 auto f = symbol<Fn>("glUniform1i");
 f(signed_bits(values[0]),signed_bits(values[1])); return 0;
 }
 case 188: {
-using Fn = void (GL_CALL *)(GLint,GLfloat,GLfloat);
+using Fn = void (*)(GLint,GLfloat,GLfloat);
 auto f = symbol<Fn>("glUniform2f");
 f(signed_bits(values[0]),float_bits(values[1]),float_bits(values[2])); return 0;
 }
 case 189: {
-using Fn = void (GL_CALL *)(GLint,GLfloat,GLfloat,GLfloat);
+using Fn = void (*)(GLint,GLfloat,GLfloat,GLfloat);
 auto f = symbol<Fn>("glUniform3f");
 f(signed_bits(values[0]),float_bits(values[1]),float_bits(values[2]),float_bits(values[3])); return 0;
 }
 case 190: {
-using Fn = void (GL_CALL *)(GLint,GLsizei,const GLfloat *);
+using Fn = void (*)(GLint,GLsizei,const GLfloat *);
 auto f = symbol<Fn>("glUniform3fv");
 f(signed_bits(values[0]),signed_bits(values[1]),reinterpret_cast<const GLfloat *>(values[2])); return 0;
 }
 case 191: {
-using Fn = void (GL_CALL *)(GLint,GLfloat,GLfloat,GLfloat,GLfloat);
+using Fn = void (*)(GLint,GLfloat,GLfloat,GLfloat,GLfloat);
 auto f = symbol<Fn>("glUniform4f");
 f(signed_bits(values[0]),float_bits(values[1]),float_bits(values[2]),float_bits(values[3]),float_bits(values[4])); return 0;
 }
 case 192: {
-using Fn = void (GL_CALL *)(GLint,GLsizei,const GLfloat *);
+using Fn = void (*)(GLint,GLsizei,const GLfloat *);
 auto f = symbol<Fn>("glUniform4fv");
 f(signed_bits(values[0]),signed_bits(values[1]),reinterpret_cast<const GLfloat *>(values[2])); return 0;
 }
 case 193: {
-using Fn = void (GL_CALL *)(GLint,GLsizei,GLboolean,const GLfloat *);
+using Fn = void (*)(GLint,GLsizei,GLboolean,const GLfloat *);
 auto f = symbol<Fn>("glUniformMatrix3fv");
 f(signed_bits(values[0]),signed_bits(values[1]),static_cast<GLboolean>(values[2]),reinterpret_cast<const GLfloat *>(values[3])); return 0;
 }
 case 194: {
-using Fn = void (GL_CALL *)(GLint,GLsizei,GLboolean,const GLfloat *);
+using Fn = void (*)(GLint,GLsizei,GLboolean,const GLfloat *);
 auto f = symbol<Fn>("glUniformMatrix4fv");
 f(signed_bits(values[0]),signed_bits(values[1]),static_cast<GLboolean>(values[2]),reinterpret_cast<const GLfloat *>(values[3])); return 0;
 }
 case 195: {
-using Fn = void (GL_CALL *)(GLuint,GLint,GLenum,GLboolean,GLsizei,const void *);
+using Fn = void (*)(GLuint,GLint,GLenum,GLboolean,GLsizei,const void *);
 auto f = symbol<Fn>("glVertexAttribPointer");
 f(static_cast<GLuint>(values[0]),signed_bits(values[1]),static_cast<GLenum>(values[2]),static_cast<GLboolean>(values[3]),signed_bits(values[4]),reinterpret_cast<const void *>(values[5])); return 0;
 }

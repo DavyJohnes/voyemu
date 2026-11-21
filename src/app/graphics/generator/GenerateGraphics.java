@@ -130,7 +130,7 @@ public final class GenerateGraphics {
                     .append(Json.integer(function, "opcode"))
                     .append(": {\nusing Fn = ")
                     .append(result)
-                    .append(" (GL_CALL *)(")
+                    .append(" (*)(")
                     .append(types)
                     .append(");\nauto f = symbol<Fn>(")
                     .append(Json.write(Json.str(function, "name")))

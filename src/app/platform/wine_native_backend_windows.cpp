@@ -1,7 +1,6 @@
 #include "wine_native_backend_windows.hpp"
 #include "error.hpp"
 #include "wine_native_proof_reader.hpp"
-#ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
@@ -379,4 +378,3 @@ int wine_native_proxy_main(int argc, char **argv) {
     }
 }
 } // namespace voyemu
-#endif

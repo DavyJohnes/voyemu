@@ -1,4 +1,5 @@
 #include "licenses.hpp"
+#include "os/platform.hpp"
 #include <cassert>
 #include <exception>
 #include <iostream>
@@ -39,15 +40,17 @@ int main() try {
     assert(license_site(entries[0], Language::russian) == "https://voyemu.ru");
     assert(license_site(entries[0], Language::english) == "https://voyemu.com");
     assert(license_site(entries[0], Language::chinese) == "https://voyemu.com");
-#ifdef __APPLE__
-    assert(entries.size() == 10);
-    assert(entries[6].component == "libarchive" && entries[7].component == "nghttp2" &&
-           entries[8].component == "Android Debug Bridge (AOSP)" && entries[9].component == "SDL3");
-#else
-    assert(entries.size() == 10);
-    assert(entries[6].component == "curl" && entries[7].component == "nghttp2" &&
-           entries[8].component == "Android Debug Bridge (AOSP)" && entries[9].component == "SDL3");
-#endif
+
+    if (voyemu::os::platform_name == "macOS") {
+        assert(entries.size() == 10);
+        assert(entries[6].component == "libarchive" && entries[7].component == "nghttp2" &&
+               entries[8].component == "Android Debug Bridge (AOSP)" && entries[9].component == "SDL3");
+    } else {
+        assert(entries.size() == 10);
+        assert(entries[6].component == "curl" && entries[7].component == "nghttp2" &&
+               entries[8].component == "Android Debug Bridge (AOSP)" && entries[9].component == "SDL3");
+    }
+
     // SDL3 carries the notices of the third-party code it compiles into the static library.
     const auto &sdl = entries[9].text;
 
@@ -56,19 +59,20 @@ int main() try {
         assert(sdl.find(author) != std::string_view::npos);
     }
 
-#ifdef __linux__
-    assert(sdl.find("xdg-user-dirs") != std::string_view::npos &&
-           sdl.find("Copyright (c) 2007 Red Hat, Inc.") != std::string_view::npos);
+    if (voyemu::os::platform_name == "Linux") {
+        assert(sdl.find("xdg-user-dirs") != std::string_view::npos &&
+               sdl.find("Copyright (c) 2007 Red Hat, Inc.") != std::string_view::npos);
 
-    // The X11 and Wayland drivers: EDID and XSETTINGS parsing, the keysym table and the protocols.
-    for (const auto *author : {"Owen Taylor", "Igalia S.L.", "Jamey Sharp", "Kristian Høgsberg",
-                               "Jonas Ådahl", "Simon Ser"}) {
-        assert(sdl.find(author) != std::string_view::npos);
+        // The X11 and Wayland drivers: EDID and XSETTINGS parsing, the keysym table and the
+        // protocols.
+        for (const auto *author : {"Owen Taylor", "Igalia S.L.", "Jamey Sharp", "Kristian Høgsberg",
+                                   "Jonas Ådahl", "Simon Ser"}) {
+            assert(sdl.find(author) != std::string_view::npos);
+        }
+    } else {
+        assert(sdl.find("xdg-user-dirs") == std::string_view::npos &&
+               sdl.find("Igalia S.L.") == std::string_view::npos);
     }
-#else
-    assert(sdl.find("xdg-user-dirs") == std::string_view::npos &&
-           sdl.find("Igalia S.L.") == std::string_view::npos);
-#endif
 } catch (const std::exception &error) {
     std::cerr << error.what() << '\n';
 
