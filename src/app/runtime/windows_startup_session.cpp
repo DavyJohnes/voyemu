@@ -1245,6 +1245,7 @@ void Session::advance_windows_android_transaction() {
                     oem_language_ = value;
                 }
 
+                queue_cluster_language();
                 language["source_revision"] = model_.state()["sequence"];
                 language["canonical_matches"] =
                         model_.state().at("raw_oem").at("ivi_languageSet") == *value;

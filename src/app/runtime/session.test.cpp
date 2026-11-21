@@ -369,6 +369,43 @@ struct SessionPersistenceFixture {
         std::filesystem::remove_all(root);
     }
 
+    // The cluster language command carries the ivi_languageSet of the model, which a qinggan11
+    // guest also receives in its MCU word: every writer of the model field reaches both, and a
+    // started cluster receives the current value again.
+    static void cluster_language_single_source() {
+        const auto root = std::filesystem::canonical(std::filesystem::temp_directory_path()) /
+                          ("voyemu-cluster-language-" + random_token());
+        ensure_private_directory(root);
+        {
+            Session session(root, random_token());
+            auto command = [&] {
+                return read_private_json(root / "language-command.json");
+            };
+            session.queue_cluster_language();
+            assert(!std::filesystem::exists(root / "language-command.json"));
+            session.cluster_requested_ = true;
+            session.model_.patch({{"ivi_languageSet", 1}});
+            session.queue_cluster_language();
+            assert(command() ==
+                           Json({{"value", 1u}, {"source", "IPP_LANGUAGE_SET"}, {"seq", 1u}}) &&
+                   session.deliveries_["qnx"]["language"]["value"] == 1);
+            session.queue_cluster_language();
+            assert(command()["seq"] == 1);
+            session.model_.patch({{"ivi_languageSet", 0}});
+            session.queue_cluster_language();
+            assert(command()["seq"] == 2 && command()["value"] == 0);
+            // A value without a command leaves the last command.
+            session.model_.patch({{"ivi_languageSet", 2}});
+            session.queue_cluster_language();
+            assert(command()["seq"] == 2);
+            session.model_.patch({{"ivi_languageSet", 0}});
+            session.cluster_language_.reset();
+            session.queue_cluster_language();
+            assert(command()["seq"] == 3 && command()["value"] == 0);
+        }
+        std::filesystem::remove_all(root);
+    }
+
 #ifdef _WIN32
     static void wheel_pair_flush_run() {
         const auto root = std::filesystem::canonical(std::filesystem::temp_directory_path()) /
@@ -5207,6 +5244,7 @@ int main(int argc, char **argv) try {
     graphics_launch_angle_pins();
     qnx_vehicle_receipts();
     SessionPersistenceFixture::vehicle_receiver_lifecycle();
+    SessionPersistenceFixture::cluster_language_single_source();
 
     if (argc == 2 && std::string_view(argv[1]) == "--qnx-vehicle-receiver-only") {
         return 0;

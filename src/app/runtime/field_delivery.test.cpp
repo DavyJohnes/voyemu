@@ -49,7 +49,7 @@ int main() try {
                           qnx_adapter(QnxGuestAdapter::sa8155_qinggan11_611).mcu_projected_fields &&
                   qinggan11_611.contains("remain_mileage_e") &&
                   qinggan11_611.contains("mrr_fcwSts") && !qinggan11_611.contains("acc_mode") &&
-                  !qinggan11_611.contains("ivi_languageSet"),
+                  qinggan11_611.contains("ivi_languageSet"),
           "qinggan11 6.11.1 delivers the fields of its MCU layout");
     check(cluster({{"hardware_adapter", "sa8155-qinggan11-611"},
                    {"mcu_projection",

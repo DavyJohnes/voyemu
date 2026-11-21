@@ -309,6 +309,8 @@ Json Session::handle(const Json &operation) {
                 deliveries_["qnx"]["vehicle"] = qnx_vehicle_pending();
             }
 
+            queue_cluster_language();
+
             if (!reconciled.patch.empty() && !operation.at("values").contains("acc_mode") &&
                 !operation.at("values").contains("mpc_icaSts")) {
                 reconciled.receipt["before_revision"] = before;

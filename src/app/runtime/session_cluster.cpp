@@ -467,6 +467,7 @@ void Session::attach_cluster(const Json &input, std::optional<unsigned> seconds,
     issued_.reset();
     qnx_events_.clear();
     theme_.reset();
+    cluster_language_.reset();
     next_qnx_ = next_oem_settings_ = std::chrono::steady_clock::now();
     // Manual lifecycle commands bypass the cache without quarantining a valid checkpoint.
     const auto validation_start = std::chrono::steady_clock::now();

@@ -4,7 +4,7 @@
   "map_sha256": "255335b86bb5fd782d23086018dcfc3874d088364ad5f15b264cfb12020d800e",
   "packet_bytes": 650,
   "wire_fields": 736,
-  "projected_fields": 461,
+  "projected_fields": 462,
   "source_parser_sha256": "a830d876d9091190096025f4f4eb81294078b3002d955283b3a9dec296414f05",
   "source_engine_sha256": "faeb580b46c5c92d7ecd5b707be15b85874c838471f5cb9ca010b9a90e9ae195",
   "fields": [
@@ -4378,7 +4378,17 @@
       "position": 320,
       "name": "ivi_languageSet",
       "normalized_width": 2,
-      "unsupported_initial": 0
+      "unsupported_initial": 0,
+      "wire": {
+        "index": 322,
+        "start_bit": 1283,
+        "width": 2,
+        "order": 1,
+        "named_consumer": "_mcumiscitems_struct",
+        "case_address": "0x5de4",
+        "output_bit": 22,
+        "output_width": 2
+      }
     },
     {
       "position": 321,

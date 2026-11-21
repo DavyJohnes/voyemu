@@ -667,8 +667,11 @@ int main(int argc, char **argv) {
                 {"cfg_reserve_13", 2184, 8, 171},
         });
 
-        // AdasEcu acc and cancel, the lane departure lamp and the language write fields that this
-        // layout does not project. The guest rejects the logical revision as a whole, and the host
+        // The language of the model reaches the MCU word of the OEM cluster beside its mcd command.
+        deliver_cases({{"ivi_languageSet", 1283, 2, 1}});
+
+        // AdasEcu acc and cancel and the lane departure lamp write fields that this layout does not
+        // project. The guest rejects the logical revision as a whole, and the host
         // state for the guest carries their initial values and the new speed.
         {
             auto state = voyemu::apply_patch(voyemu::initial_state(),
@@ -686,8 +689,7 @@ int main(int argc, char **argv) {
             press("acc");
             assert(state.at("raw_oem").at("acc_mode") == 3);
             press("cancel");
-            state = voyemu::apply_patch(state,
-                                        {{"speed", 60}, {"ldws_lamp", 1}, {"ivi_languageSet", 1}});
+            state = voyemu::apply_patch(state, {{"speed", 60}, {"ldws_lamp", 1}});
             const auto &raw = state.at("raw_oem");
             assert(raw.at("acc_mode") == 0 && raw.at("mpc_icaSts") == 1 &&
                    raw.at("mrr_vSetDis") == 160 && raw.at("time_gap_set") == 1);
@@ -706,8 +708,8 @@ int main(int argc, char **argv) {
             assert(!deliver(raw) && qinggan11_rejects == rejects + 1);
             const auto guest = voyemu::qnx_qinggan11_guest_state(source, raw);
 
-            for (const auto *name : {"acc_mode", "mpc_icaSts", "mrr_vSetDis", "time_gap_set",
-                                     "ldws_lamp", "ivi_languageSet"}) {
+            for (const auto *name :
+                 {"acc_mode", "mpc_icaSts", "mrr_vSetDis", "time_gap_set", "ldws_lamp"}) {
                 assert(guest.at(name) == 0);
             }
 
@@ -792,8 +794,8 @@ int main(int argc, char **argv) {
                 voyemu::qnx_mcu_projection(voyemu::QnxGuestAdapter::sa8155_qinggan11_611)));
         const auto projection =
                 voyemu::qnx_mcu_projection(voyemu::QnxGuestAdapter::sa8155_qinggan11_611);
-        assert(voyemu::qnx_mcu_request_projection(650, 736, qinggan11_projected_fields) ==
-               projection);
+        assert(voyemu::qnx_mcu_request_projection(650, 736, qinggan11_projected_fields, false,
+                                                  "sa8155-qinggan11-611") == projection);
         assert(voyemu::qnx_mcu_delivery_scope(Json{{"mcu_projection", projection}}, projection));
         assert(!voyemu::qnx_mcu_delivery_scope(Json{{"mcu_projection", projection}}, previous));
         assert(!voyemu::qnx_mcu_delivery_scope(

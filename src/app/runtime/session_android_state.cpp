@@ -939,6 +939,27 @@ std::optional<Json> oem_language_command(std::optional<unsigned> previous, unsig
     return Json{{"value", current}, {"source", "IPP_LANGUAGE_SET"}};
 }
 
+void Session::queue_cluster_language() {
+    const auto current = model_.state().at("raw_oem").at("ivi_languageSet").get<unsigned>();
+
+    // The OEM cluster applies the language through mcd message 24 (setting id 3) besides the MCU
+    // word; the command has values 0 and 1 only. A cluster started later receives it again.
+    if (!cluster_requested_ || current > 1) {
+        return;
+    }
+
+    if (auto command = oem_language_command(cluster_language_, current)) {
+        (*command)["seq"] = ++language_sequence_;
+        write_private_json(directory_ / "language-command.json", *command);
+        deliveries_["qnx"]["language"] = {{"sequence", language_sequence_},
+                                          {"status", "queued"},
+                                          {"value", (*command)["value"]},
+                                          {"source", (*command)["source"]}};
+    }
+
+    cluster_language_ = current;
+}
+
 void Session::poll_oem_settings() {
     if (nxp_presentation(android_spec_)) {
         for (const char *key : {"language", "appearance"}) {
@@ -988,23 +1009,10 @@ void Session::poll_oem_settings() {
                             {{"value", *current}, {"source_revision", model_.state()["sequence"]}});
                 }
 
-                // The cluster language is not carried by the MCU wire: the OEM cluster applies
-                // it through mcd message 24 (setting id 3). Emit the owned command independent of
-                // the raw MCU value so a preexisting equal MCU word cannot suppress the first sync.
-                if (cluster_requested_) {
-                    if (auto command = oem_language_command(oem_language_, *current)) {
-                        (*command)["seq"] = ++language_sequence_;
-                        write_private_json(directory_ / "language-command.json", *command);
-                        deliveries_["qnx"]["language"] = {{"sequence", language_sequence_},
-                                                          {"status", "queued"},
-                                                          {"value", (*command)["value"]},
-                                                          {"source", (*command)["source"]}};
-                    }
-                }
-
                 oem_language_ = current;
             }
 
+            queue_cluster_language();
             language["source_revision"] = model_.state()["sequence"];
             language["canonical_matches"] = model_.state().at("raw_oem").at("ivi_languageSet") ==
                                             *current;

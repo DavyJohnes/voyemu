@@ -1,6 +1,7 @@
 #include "graphics.hpp"
 #include "model.hpp"
 #include "process.hpp"
+#include "qnx_adapter.hpp"
 #include <cassert>
 #include <chrono>
 #include <cstring>
@@ -654,7 +655,8 @@ static void qinggan11_unprojected_fields(const std::filesystem::path &parent,
                reply.payload.size() == 581 * 4);
         unsigned values[581];
         std::memcpy(values, reply.payload.data(), sizeof values);
-        assert(values[2 + 320] == (projection == 462 ? language : 0));
+        // Both qinggan11 layouts carry the language of the model in the MCU word.
+        assert(values[2 + 320] == language);
 
         // Signals outside the MCU layout, the AdasEcu ones included, reach the guest with their
         // initial values, and the projected speed passes.
@@ -666,10 +668,12 @@ static void qinggan11_unprojected_fields(const std::filesystem::path &parent,
         assert(read_private_json(directory / "vehicle-state.json") == state);
     };
 
-    run("qinggan11-611-language-legacy", 34, 1);
-    run("qinggan11-611-language-en", 56, 1);
-    run("qinggan11-611-language-other", 56, 2);
-    run("qinggan11-731-language-unchanged", 462, 1);
+    const auto &qinggan11_611 = qnx_adapter(QnxGuestAdapter::sa8155_qinggan11_611);
+    run("qinggan11-611-language-legacy", qinggan11_611.mcu_previous_projected_fields, 1);
+    run("qinggan11-611-language-en", qinggan11_611.mcu_projected_fields, 1);
+    run("qinggan11-611-language-other", qinggan11_611.mcu_projected_fields, 2);
+    run("qinggan11-731-language",
+        qnx_adapter(QnxGuestAdapter::sa8155_qinggan11_731).mcu_projected_fields, 1);
 }
 
 static void input_wake_protocol(const std::filesystem::path &parent,

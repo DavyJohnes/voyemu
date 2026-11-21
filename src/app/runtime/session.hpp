@@ -369,6 +369,9 @@ private:
     Json wheel_provider(const std::string &method, const std::vector<std::string> &extras = {},
                         const std::string &argument = {});
     void poll_oem_settings();
+    // Queues the cluster language command with the ivi_languageSet of the model when it differs
+    // from the last queued value, so the command and the MCU word carry one value.
+    void queue_cluster_language();
     // Records the observed OEM theme and queues the cluster theme command when it changed.
     void observe_oem_theme(ThemeState current);
     void poll_qnx();
@@ -612,7 +615,7 @@ private:
     std::map<std::uint32_t, std::pair<int, bool>> android_short_pairs_;
     std::optional<WheelEvent> issued_;
     std::optional<ThemeState> theme_;
-    std::optional<unsigned> oem_language_;
+    std::optional<unsigned> oem_language_, cluster_language_;
     std::filesystem::path ui_executable_, assets_;
     std::string ui_profile_;
     std::chrono::steady_clock::time_point next_android_, next_oem_settings_,
