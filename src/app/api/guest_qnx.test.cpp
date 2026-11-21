@@ -3,6 +3,7 @@
 #endif
 #include "api.hpp"
 #include "guest_qnx_fake.hpp"
+#include "os/platform.hpp"
 #include "profile_catalog.hpp"
 #include <cassert>
 #include <exception>
@@ -248,7 +249,6 @@ void observations(const std::filesystem::path &base) {
     std::filesystem::remove_all(owned.root);
 }
 
-#ifndef _WIN32
 // The supervisor reports a stop that failed after lifecycle side effects as SESSION_STOP_UNKNOWN.
 // Windows probes the named pipe before dispatch, so this fixture endpoint takes recovery there.
 void stop_outcome(const std::filesystem::path &base) {
@@ -273,7 +273,6 @@ void stop_outcome(const std::filesystem::path &base) {
     assert(instance.call(owned.request("session.stop")).at("error").at("outcome") == "not_started");
     std::filesystem::remove_all(owned.root);
 }
-#endif
 } // namespace
 
 int main(int argc, char **argv) try {
@@ -284,9 +283,11 @@ int main(int argc, char **argv) try {
     flush_outcome(base);
     unknown_suffix(base);
     observations(base);
-#ifndef _WIN32
-    stop_outcome(base);
-#endif
+
+    if (!os::host_windows) {
+        stop_outcome(base);
+    }
+
     std::cout << "QNX cluster API lifecycle and observations dispatch through GuestQnx; *_UNKNOWN "
                  "and uncertain flush and stop outcomes stay unknown\n";
 } catch (const std::exception &error) {

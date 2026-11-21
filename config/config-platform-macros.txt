@@ -1,9 +1,7 @@
 # Files outside src/app/os/ that still test a platform macro, checked by
 # src/dev/checks/CheckPlatformMacros.java: "path reason", one line each. Remove a line when its file
 # moves its platform code to an os/ backend; each reason names the group of its area.
-src/app/adb/adb_host.cpp group 4 adb and api: sockets, files and admission
 src/app/adb/adb_host.test.cpp group 4 adb and api: sockets, files and admission
-src/app/adb/adb_loopback.cpp group 4 adb and api: sockets, files and admission
 src/app/adb/adb_loopback.test.cpp group 4 adb and api: sockets, files and admission
 src/app/android/android_adb.test.cpp group 5 android: console, audio and engine launch
 src/app/android/android_audio.hpp group 5 android: console, audio and engine launch
@@ -20,17 +18,8 @@ src/app/android/passion_mcu_windows_guard.test.cpp group 5 android: console, aud
 src/app/android/passion_owned_watch.test.cpp group 5 android: console, audio and engine launch
 src/app/android/windows_renderer.cpp group 5 android: console, audio and engine launch
 src/app/android/windows_startup.test.cpp group 5 android: console, audio and engine launch
-src/app/api/admission.cpp group 4 adb and api: sockets, files and admission
-src/app/api/api.cpp group 4 adb and api: sockets, files and admission
-src/app/api/api_input.cpp group 4 adb and api: sockets, files and admission
-src/app/api/api_internal.hpp group 4 adb and api: sockets, files and admission
-src/app/api/api_session.cpp group 4 adb and api: sockets, files and admission
 src/app/api/api.test.cpp group 4 adb and api: sockets, files and admission
 src/app/api/cluster_tree.test.cpp group 4 adb and api: sockets, files and admission
-src/app/api/guest_qnx.test.cpp group 4 adb and api: sockets, files and admission
-src/app/api/platform_file.cpp group 4 adb and api: sockets, files and admission
-src/app/api/platform_file.test.cpp group 4 adb and api: sockets, files and admission
-src/app/api/session_recovery.hpp group 4 adb and api: sockets, files and admission
 src/app/cli/build_cli.test.cpp group 6 cli: console, arguments and session hosting
 src/app/cli/cli_arguments.hpp group 6 cli: console, arguments and session hosting
 src/app/cli/cli_arguments.test.cpp group 6 cli: console, arguments and session hosting

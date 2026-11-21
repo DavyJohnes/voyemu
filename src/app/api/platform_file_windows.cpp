@@ -1,25 +1,17 @@
-#include "platform_file.hpp"
 #include "model.hpp"
+#include "platform_file.hpp"
 #include <limits>
 #include <stdexcept>
 #include <vector>
-#ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
 #include <aclapi.h>
 
 #include "private_state_security.hpp"
-#else
-#include <fcntl.h>
-#include <sys/file.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#endif
 
 namespace voyemu::api {
 namespace {
-#ifdef _WIN32
 struct Handle {
     HANDLE value = INVALID_HANDLE_VALUE;
 
@@ -64,28 +56,11 @@ bool ordinary(HANDLE file, BY_HANDLE_FILE_INFORMATION &info) {
            !(info.dwFileAttributes & (FILE_ATTRIBUTE_REPARSE_POINT | FILE_ATTRIBUTE_DIRECTORY)) &&
            info.nNumberOfLinks == 1 && owned(file);
 }
-#else
-struct Handle {
-    int value = -1;
-
-    ~Handle() {
-        if (value >= 0) {
-            ::close(value);
-        }
-    }
-};
-
-bool ordinary(int file, struct stat &info) {
-    return ::fstat(file, &info) == 0 && S_ISREG(info.st_mode) && info.st_uid == ::geteuid() &&
-           info.st_nlink == 1;
-}
-#endif
 } // namespace
 struct FileLock::Impl {
     Handle file;
 
     bool open(const std::filesystem::path &path, bool create) {
-#ifdef _WIN32
         // Share mode zero matches cli::OperationLock, including supervisor locks.
         file.value = voyemu::detail::open_private_state_lock(
                 path, GENERIC_READ | GENERIC_WRITE | READ_CONTROL,
@@ -94,14 +69,6 @@ struct FileLock::Impl {
         BY_HANDLE_FILE_INFORMATION info{};
 
         return file.value != INVALID_HANDLE_VALUE && ordinary(file.value, info);
-#else
-        file.value = ::open(path.c_str(), O_RDWR | O_CLOEXEC | O_NOFOLLOW | (create ? O_CREAT : 0),
-                            0600);
-        struct stat info{};
-
-        return file.value >= 0 && ordinary(file.value, info) &&
-               ::flock(file.value, LOCK_EX | LOCK_NB) == 0;
-#endif
     }
 };
 
@@ -127,7 +94,6 @@ struct LogFile::Impl {
     std::uint64_t size{};
 
     explicit Impl(const std::filesystem::path &path) {
-#ifdef _WIN32
         file.value = CreateFileW(path.c_str(), GENERIC_READ | READ_CONTROL,
                                  FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr,
                                  OPEN_EXISTING,
@@ -146,22 +112,6 @@ struct LogFile::Impl {
         identity = std::to_string(info.dwVolumeSerialNumber) + ":" +
                    std::to_string((std::uint64_t(info.nFileIndexHigh) << 32) | info.nFileIndexLow);
         size = (std::uint64_t(info.nFileSizeHigh) << 32) | info.nFileSizeLow;
-#else
-        file.value = ::open(path.c_str(), O_RDONLY | O_NOFOLLOW | O_CLOEXEC);
-
-        if (file.value < 0) {
-            throw VoyemuError("TEST_LOGS_UNAVAILABLE", "supervisor log unavailable");
-        }
-
-        struct stat info{};
-
-        if (!ordinary(file.value, info)) {
-            throw VoyemuError("TEST_LOGS", "ordinary owned log required");
-        }
-
-        identity = std::to_string(info.st_dev) + ":" + std::to_string(info.st_ino);
-        size = static_cast<std::uint64_t>(info.st_size);
-#endif
     }
 };
 
@@ -184,7 +134,6 @@ std::string LogFile::read(std::uint64_t offset) const {
         throw VoyemuError("TEST_LOGS", "bounded log read failed");
     }
 
-#ifdef _WIN32
     LARGE_INTEGER position{};
     position.QuadPart = static_cast<LONGLONG>(offset);
     DWORD count = 0;
@@ -193,14 +142,7 @@ std::string LogFile::read(std::uint64_t offset) const {
         !ReadFile(impl_->file.value, bytes.data(), DWORD(bytes.size()), &count, nullptr)) {
         throw VoyemuError("TEST_LOGS", "bounded log read failed");
     }
-#else
-    const auto count = ::pread(impl_->file.value, bytes.data(), bytes.size(),
-                               static_cast<off_t>(offset));
 
-    if (count < 0) {
-        throw VoyemuError("TEST_LOGS", "bounded log read failed");
-    }
-#endif
     bytes.resize(count);
 
     return bytes;

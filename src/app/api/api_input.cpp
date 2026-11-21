@@ -1,5 +1,6 @@
 #include "api_internal.hpp"
 #include "error.hpp"
+#include "os/platform.hpp"
 
 namespace voyemu::api {
 using namespace detail;
@@ -17,9 +18,9 @@ Json Api::dispatch_input(const std::string &op, const Json &request, Clock::time
                                                     : text(request, "button");
         const auto hold = number(request, "hold_ms", 100, 1, 2000);
         const auto owner = request.at("session").at("ownership_id");
-#ifndef _WIN32
-        if (op == "input.wheel.press" && (id == "volume_up" || id == "volume_down") &&
-            hold <= 200) {
+
+        if (!os::host_windows && op == "input.wheel.press" &&
+            (id == "volume_up" || id == "volume_down") && hold <= 200) {
             const auto current = control(request, {{"op", "status"}});
 
             if (qinggan11_partial_wheel_capability_matches(
@@ -34,7 +35,7 @@ Json Api::dispatch_input(const std::string &op, const Json &request, Clock::time
                 return paired;
             }
         }
-#endif
+
         auto down = control(
                 request, {{"op", "wheel"}, {"id", id}, {"phase", "down"}, {"owner", owner}}, true);
         try {

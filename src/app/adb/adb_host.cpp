@@ -4,6 +4,7 @@
 #include "adb_host.hpp"
 #include "adb_io.h"
 #include "adb_loopback.hpp"
+#include "adb_loopback_socket.hpp"
 #include "shell_protocol.h"
 #include "transport.h"
 #include <algorithm>
@@ -611,10 +612,7 @@ int32_t adb_host_create(const AdbHostConfig *cfg, AdbHost **out) {
         return ADB_STATUS_BUSY;
     }
 
-#if !defined(_WIN32) && !defined(SO_NOSIGPIPE)
-    // Like the upstream adb client: sockets without SO_NOSIGPIPE report EPIPE instead of a signal.
-    signal(SIGPIPE, SIG_IGN);
-#endif
+    adb_loopback_ignore_broken_pipe();
     auto *h = new AdbHost();
 
     if (cfg->maximum_queued_input_bytes) {

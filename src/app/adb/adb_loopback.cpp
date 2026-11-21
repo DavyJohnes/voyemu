@@ -2,27 +2,12 @@
 #include "sysdeps.h"
 
 #include "adb_loopback.hpp"
+#include "adb_loopback_socket.hpp"
 #include "transport.h"
-
-#if !defined(_WIN32)
-#include <arpa/inet.h>
-#include <fcntl.h>
-#include <poll.h>
-#include <sys/socket.h>
-#include <unistd.h>
-#endif
 
 #include "adb_utils.h"
 #include <algorithm>
 #include <chrono>
-
-// AOSP adb_poll retries EINTR internally with a fresh relative timeout. Keep
-// interruption visible so every retry checks our absolute deadline and Close.
-#undef poll
-
-#ifdef _WIN32
-bool adb_host_connect_loopback(borrowed_fd fd, uint16_t port, const std::atomic<bool> &stopping);
-#endif
 
 using Clock = std::chrono::steady_clock;
 using namespace std::chrono_literals;
@@ -107,11 +92,7 @@ private:
             }
 
             adb_pollfd wait{fd_.get(), static_cast<short>(writing ? POLLOUT : POLLIN), 0};
-#ifdef _WIN32
-            int ready = adb_poll(&wait, 1, 100);
-#else
-            int ready = ::poll(&wait, 1, 100);
-#endif
+            int ready = adb_loopback_poll(&wait, 100);
 
             if (ready < 0 && errno == EINTR) {
                 continue;
@@ -127,18 +108,7 @@ private:
 
             // Read retained bytes even with POLLHUP so an exact final packet is
             // delivered before EOF. No blocking syscall follows the poll.
-#ifdef _WIN32
-            ssize_t count = writing ? adb_write(fd_, cursor, static_cast<int>(size))
-                                    : adb_read(fd_, cursor, static_cast<int>(size));
-#else
-#ifdef MSG_NOSIGNAL
-            constexpr int send_flags = MSG_NOSIGNAL;
-#else
-            constexpr int send_flags = 0;
-#endif
-            ssize_t count = writing ? send(fd_.get(), cursor, size, send_flags)
-                                    : recv(fd_.get(), cursor, size, 0);
-#endif
+            ssize_t count = adb_loopback_transfer(fd_, cursor, size, writing);
 
             if (count < 0 && (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK)) {
                 continue;
@@ -172,77 +142,11 @@ std::unique_ptr<BlockingConnection> adb_host_connect_emulator(uint32_t console_p
         return {};
     }
 
-#ifdef _WIN32
-    unique_fd fd(adb_socket(AF_INET, SOCK_STREAM, IPPROTO_TCP));
+    unique_fd fd = adb_loopback_connect(static_cast<uint16_t>(console_port + 1), stopping);
 
-    if (!fd.ok() || !set_file_block_mode(fd, false)) {
+    if (!fd.ok()) {
         return {};
     }
-
-    if (!adb_host_connect_loopback(fd, static_cast<uint16_t>(console_port + 1), stopping)) {
-        return {};
-    }
-#else
-    unique_fd fd(socket(AF_INET, SOCK_STREAM, 0));
-
-    if (fd.get() < 0 || fcntl(fd.get(), F_SETFD, FD_CLOEXEC) < 0 ||
-        fcntl(fd.get(), F_SETFL, O_NONBLOCK) < 0) {
-        return {};
-    }
-
-#ifdef SO_NOSIGPIPE
-    int yes = 1;
-
-    if (adb_setsockopt(fd.get(), SOL_SOCKET, SO_NOSIGPIPE, &yes, sizeof(yes)) < 0) {
-        return {};
-    }
-#endif
-    sockaddr_in address{};
-    address.sin_family = AF_INET;
-    address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-    address.sin_port = htons(static_cast<uint16_t>(console_port + 1));
-    int result = connect(fd.get(), reinterpret_cast<const sockaddr *>(&address), sizeof(address));
-
-    if (result < 0 && errno != EINPROGRESS && errno != EINTR) {
-        return {};
-    }
-
-    if (result < 0) {
-        const auto deadline = Clock::now() + 500ms;
-        bool connected = false;
-
-        while (!stopping.load() && Clock::now() < deadline) {
-            adb_pollfd wait{fd.get(), POLLOUT, 0};
-            int ready = ::poll(&wait, 1, 50);
-
-            if (ready < 0 && errno == EINTR) {
-                continue;
-            }
-
-            if (ready < 0) {
-                return {};
-            }
-
-            if (!ready) {
-                continue;
-            }
-
-            int error = 0;
-            socklen_t size = sizeof(error);
-
-            if (getsockopt(fd.get(), SOL_SOCKET, SO_ERROR, &error, &size) < 0 || error) {
-                return {};
-            }
-
-            connected = true;
-            break;
-        }
-
-        if (!connected) {
-            return {};
-        }
-    }
-#endif
 
     if (stopping.load()) {
         return {};

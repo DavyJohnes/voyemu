@@ -1,6 +1,7 @@
 #include "api_internal.hpp"
 #include "error.hpp"
 #include "field_delivery.hpp"
+#include "os/platform.hpp"
 #include "version.hpp"
 #include <algorithm>
 #include <sstream>
@@ -232,7 +233,6 @@ std::string admission_scope(const Json &request) {
     return "profile:" + profile(request);
 }
 
-#ifndef _WIN32
 bool owned_wheel_lease_held(const std::filesystem::path &path) {
     LogFile before(path);
     const auto private_mode = std::filesystem::perms::owner_read |
@@ -306,7 +306,6 @@ bool matching_wheel_writer(const std::filesystem::path &root,
            pending.value("op", std::string{}) == "input.wheel.press" &&
            pending.value("status", std::string{}) == "pending";
 }
-#endif
 
 Json operations() {
     return Json::array({"info",
@@ -1152,12 +1151,7 @@ Api::Api(std::filesystem::path root, std::filesystem::path executable, Transport
                 spec.arguments.push_back(std::to_string(number(request, "seconds", 0, 1, 3600)));
             }
 
-            return capture_source_start(spec,
-#ifdef _WIN32
-                                        true,
-#else
-                           false,
-#endif
+            return capture_source_start(spec, os::host_windows,
                                         [](const ProcessSpec &process, int timeout) {
                                             return execute(process, timeout);
                                         });
@@ -1281,19 +1275,20 @@ Json Api::control(const Json &request, const Json &operation, bool mutation, int
     op["schema"] = 1;
     op["session_id"] = record.at("session_id");
     op["request_id"] = request.at("request_id");
-#ifdef _WIN32
-    // Internal IPC carries the caller's remaining budget; it cannot enlarge an
-    // operation-specific timeout already present in the source request.
-    if (timeout_ms < 1) {
-        throw VoyemuError("TEST_DEADLINE", "no remaining control budget");
-    }
 
-    op["timeout_ms"] =
-            op.contains("timeout_ms")
-                    ? std::min<std::uint64_t>(number(op, "timeout_ms", timeout_ms, 0, 180000),
-                                              static_cast<unsigned>(timeout_ms))
-                    : static_cast<unsigned>(timeout_ms);
-#endif
+    // Internal IPC on Windows carries the caller's remaining budget; it cannot enlarge an
+    // operation-specific timeout already present in the source request.
+    if (os::host_windows) {
+        if (timeout_ms < 1) {
+            throw VoyemuError("TEST_DEADLINE", "no remaining control budget");
+        }
+
+        op["timeout_ms"] =
+                op.contains("timeout_ms")
+                        ? std::min<std::uint64_t>(number(op, "timeout_ms", timeout_ms, 0, 180000),
+                                                  static_cast<unsigned>(timeout_ms))
+                        : static_cast<unsigned>(timeout_ms);
+    }
 
     if (mutation) {
         op["ownership_id"] = request.at("session").at("ownership_id");
@@ -1401,13 +1396,12 @@ Json Api::call(const Json &supplied) {
     std::filesystem::path operation_path;
     std::unique_ptr<Lock> lock;
 
-#ifndef _WIN32
     // Destruction releases the private wheel lease before the global writer.
     std::unique_ptr<Lock> wheel_lease, cancellation_gate;
-#endif
     std::unique_ptr<AdmissionStore> admission;
     std::string scope, request_id;
     bool admitted = false, public_ui = false;
+
     contacted_ = false;
     dispatched_ = false;
     try {
@@ -1511,43 +1505,44 @@ Json Api::call(const Json &supplied) {
                                 "automation";
                 }
 
-#ifndef _WIN32
-                auto gate = std::make_unique<Lock>(execution / "writer-admission.lock");
-                bool cancel = false;
-
-                if (op == "input.wheel.release") {
-                    (void)session_record(request, true);
-                    cancel = matching_wheel_writer(root_, execution, request);
-                }
-
-                if (cancel) {
-                    cancellation_gate = std::move(gate);
-                } else {
+                if (os::host_windows) {
                     lock = std::make_unique<Lock>(execution / "writer.lock");
-                    std::filesystem::remove(execution / "wheel-writer.json");
+                } else {
+                    auto gate = std::make_unique<Lock>(execution / "writer-admission.lock");
+                    bool cancel = false;
 
-                    if (op == "input.wheel.press" &&
-                        qinggan11_wheel_provider_profile(profile(request)) &&
-                        number(request, "hold_ms", 100, 1, 2000) > 200) {
+                    if (op == "input.wheel.release") {
                         (void)session_record(request, true);
-                        const auto button = text(request, "button");
+                        cancel = matching_wheel_writer(root_, execution, request);
+                    }
 
-                        if (button == "volume_up" || button == "volume_down") {
-                            wheel_lease = std::make_unique<Lock>(execution / "wheel-writer.lock");
-                            write_private_json(
-                                    execution / "wheel-writer.json",
-                                    {{"schema", 1},
-                                     {"profile", profile(request)},
-                                     {"session_id", request.at("session").at("id")},
-                                     {"ownership_sha256",
-                                      sha256_bytes(text(request.at("session"), "ownership_id"))},
-                                     {"operation_id", response.at("operation_id")}});
+                    if (cancel) {
+                        cancellation_gate = std::move(gate);
+                    } else {
+                        lock = std::make_unique<Lock>(execution / "writer.lock");
+                        std::filesystem::remove(execution / "wheel-writer.json");
+
+                        if (op == "input.wheel.press" &&
+                            qinggan11_wheel_provider_profile(profile(request)) &&
+                            number(request, "hold_ms", 100, 1, 2000) > 200) {
+                            (void)session_record(request, true);
+                            const auto button = text(request, "button");
+
+                            if (button == "volume_up" || button == "volume_down") {
+                                wheel_lease =
+                                        std::make_unique<Lock>(execution / "wheel-writer.lock");
+                                write_private_json(execution / "wheel-writer.json",
+                                                   {{"schema", 1},
+                                                    {"profile", profile(request)},
+                                                    {"session_id", request.at("session").at("id")},
+                                                    {"ownership_sha256",
+                                                     sha256_bytes(text(request.at("session"),
+                                                                       "ownership_id"))},
+                                                    {"operation_id", response.at("operation_id")}});
+                            }
                         }
                     }
                 }
-#else
-                lock = std::make_unique<Lock>(execution / "writer.lock");
-#endif
             }
         }
 

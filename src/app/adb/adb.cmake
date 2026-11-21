@@ -14,7 +14,7 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${voyemu_aosp_ad
 
 set(voyemu_aosp_adb_inputs)
 set(voyemu_adb_sources "${voyemu_adb_root}/adb_auth.cpp" "${voyemu_adb_root}/adb_host.cpp"
-    "${voyemu_adb_root}/adb_loopback.cpp")
+    "${voyemu_adb_root}/adb_loopback.cpp" "${voyemu_adb_root}/adb_loopback_${voyemu_host_backend}.cpp")
 if(WIN32)
     list(APPEND voyemu_adb_sources "${voyemu_adb_root}/adb_crt_windows.cpp"
         "${voyemu_adb_root}/adb_socket_windows.cpp")

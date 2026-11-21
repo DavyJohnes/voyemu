@@ -246,63 +246,42 @@ Json Api::dispatch_lifecycle(const std::string &op, const Json &request,
                         ? read_private_json(selection_path, 4096).at("machine").get<std::string>()
                         : std::string{});
         const auto active_directory = session_active_directory(root_, profile(request), machine);
-#ifdef _WIN32
-        auto recover = [&] {
-            StoppedAndroidLease lease(root_, profile(request), machine,
-                                      record.at("session_id").get<std::string>(),
-                                      text(request.at("session"), "ownership_id"));
-            auto terminal = lease.publish_terminal();
-            terminal["accepted"] = true;
-            terminal["cleanup"] = {{"verified", true},
-                                   {"supervisor_endpoint_closed", true},
-                                   {"supervisor_lock_released", true},
-                                   {"guest_shutdown_verified", false},
-                                   {"guest_shutdown_unverified", true},
-                                   {"visible_effect_verified", false}};
+        const auto recovered = [&](bool failed_stop) {
+            auto terminal = recover_stopped_supervisor(root_, profile(request), machine, record,
+                                                       text(request.at("session"), "ownership_id"),
+                                                       active_directory, failed_stop);
+
+            if (terminal) {
+                (*terminal)["accepted"] = true;
+                (*terminal)["cleanup"] = {{"verified", true},
+                                          {"supervisor_endpoint_closed", true},
+                                          {"supervisor_lock_released", true},
+                                          {"guest_shutdown_verified", false},
+                                          {"guest_shutdown_unverified", true},
+                                          {"visible_effect_verified", false}};
+            }
 
             return terminal;
         };
 
-        if (StoppedAndroidLease::endpoint_absent(record.at("endpoint").get<std::string>())) {
-            return recover();
+        if (auto terminal = recovered(false)) {
+            return *terminal;
         }
-#else
-        // A free supervisor lock proves that its holder exited; the session receipts then decide
-        // what remains to stop.
-        const auto supervisor_lock = active_directory / (profile(request) + ".supervisor.lock");
 
-        if (StoppedAndroidLease::endpoint_absent(record.at("endpoint").get<std::string>()) &&
-            file_lock_released(supervisor_lock)) {
-            const FileLock launch(active_directory / (profile(request) + ".launch.lock")),
-                    supervisor(supervisor_lock);
-            auto terminal = stop_orphaned_session(record.at("directory").get<std::string>(),
-                                                  record.at("session_id").get<std::string>(),
-                                                  record.at("endpoint").get<std::string>());
-            terminal["accepted"] = true;
-            terminal["cleanup"] = {{"verified", true},
-                                   {"supervisor_endpoint_closed", true},
-                                   {"supervisor_lock_released", true},
-                                   {"guest_shutdown_verified", false},
-                                   {"guest_shutdown_unverified", true},
-                                   {"visible_effect_verified", false}};
-
-            return terminal;
-        }
-#endif
         Json result;
         try {
             result = control(request, {{"op", "stop"}}, true, request_timeout_limit_ms("stop"));
         } catch (const std::exception &failure) {
-#ifdef _WIN32
             const std::string message = failure.what();
             const auto code = message.substr(0, message.find(':'));
 
-            if ((code == "IPC_CONNECT" || code == "IPC_READ_UNKNOWN" ||
-                 code == "IPC_WRITE_UNKNOWN" || code == "IPC_TIMEOUT_UNKNOWN") &&
-                StoppedAndroidLease::endpoint_absent(record.at("endpoint").get<std::string>())) {
-                return recover();
+            if (code == "IPC_CONNECT" || code == "IPC_READ_UNKNOWN" ||
+                code == "IPC_WRITE_UNKNOWN" || code == "IPC_TIMEOUT_UNKNOWN") {
+                if (auto terminal = recovered(true)) {
+                    return *terminal;
+                }
             }
-#endif
+
             throw;
         }
 

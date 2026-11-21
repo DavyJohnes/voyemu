@@ -82,11 +82,9 @@ void validate_sources(const Json &request);
 std::string terminal_outcome(const Json &response);
 Json error(const std::exception_ptr &failure, bool contacted = false, bool dispatched = false);
 std::string admission_scope(const Json &request);
-#ifndef _WIN32
 bool owned_wheel_lease_held(const std::filesystem::path &path);
 bool matching_wheel_writer(const std::filesystem::path &root,
                            const std::filesystem::path &directory, const Json &request);
-#endif
 Json operations();
 Json requested_screens(const Json &request, bool android_only = false);
 std::size_t observed_slot(std::string_view surface);
