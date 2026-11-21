@@ -498,13 +498,14 @@ int main(int argc, char **argv) try {
     assert(platform_initial["map_sha256"] == qinggan11_map_sha256 &&
            state_catalog(platform_initial) == VehicleCatalog::qinggan11 &&
            platform_initial["raw_oem"].size() == 736 && platform_initial["raw_oem"]["soc"] == 55 &&
+           platform_initial["raw_oem"]["vcu_ready"] == 1 &&
            platform_initial["raw_oem"]["ADCU_TargetType_1"] == 0);
     // A field of one catalogue is unknown to the other, and a state names its own catalogue.
     rejects([&] {
         apply_patch(platform_initial, {{"mrr_vSetDis", 1}});
     });
     rejects([&] {
-        apply_patch(initial, {{"ADCU_TargetType_1", 0}});
+        apply_patch(initial, {{"vcu_ready", 0}});
     });
     auto foreign = platform_initial;
     foreign["map_sha256"] = qinggan09_map_sha256;
@@ -515,7 +516,11 @@ int main(int argc, char **argv) try {
         select_vehicle_startup(VehicleStartup::resume, VehicleCatalog::qinggan11, Json::object(),
                                &saved_scenario);
     });
-    // A wide range saturates its narrower copy.
+    // ready_lamp carries the qinggan11 VCU READY flag; a wide range saturates its narrower copy.
+    const auto not_ready = apply_patch(platform_initial, {{"ready_lamp", 0}});
+    assert(not_ready["raw_oem"]["vcu_ready"] == 0);
+    assert(apply_patch(not_ready, {{"ready_lamp", 1}, {"vcu_ready", 0}})["raw_oem"]["vcu_ready"] ==
+           0);
     const auto unknown_range = apply_patch(platform_initial, {{"remain_mileage_f", 2047}});
     assert(unknown_range["raw_oem"]["remain_mileage_f_wltc"] == 2047 &&
            unknown_range["raw_oem"]["remain_mileage_f_nedc"] == 1023);

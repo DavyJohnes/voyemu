@@ -779,6 +779,8 @@ Json normal_initial_values(VehicleCatalog catalog) {
 
     // 13.80 V in the 0.01 V of the OEM powermgr: the DC-DC converter charges the battery at READY.
     values["ic_bat_voltage"] = 1380;
+    // The READY flag of the qinggan11 VCU follows ready_lamp, see field_couplings.
+    values["vcu_ready"] = 1;
     Json result = Json::object();
 
     for (const auto &field : voyemu::catalog(catalog)) {
@@ -875,7 +877,9 @@ const std::vector<FieldCoupling> &field_couplings() {
                 {"remain_mileage_e", "vcu_remainingMileageReal", 1, 0},
                 {"remain_mileage_e", "vcu_remainingMileageCLTCWLTC", 1, 0},
                 {"remain_mileage_f", "remain_mileage_f_nedc", 1, 0},
-                {"remain_mileage_f", "remain_mileage_f_wltc", 1, 0}};
+                {"remain_mileage_f", "remain_mileage_f_wltc", 1, 0},
+                // The VCU of a qinggan11 vehicle reports READY in its own flag beside the lamp.
+                {"ready_lamp", "vcu_ready", 1, 0}};
 
         // A tyre reading makes the measurement of its corner valid.
         for (const std::string corner : {"LF", "RF", "LR", "RR"}) {

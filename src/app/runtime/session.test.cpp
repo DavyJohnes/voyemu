@@ -5219,7 +5219,7 @@ static void graphics_launch_angle_pins() {
 }
 
 // A session of a qinggan11 machine works on the 736 fields of the qinggan11 catalogue: status,
-// patch read and write its fields, and qinggan09 fields are unknown.
+// patch and the power state read and write its fields, and qinggan09 fields are unknown.
 static void qinggan11_vehicle_catalog() {
     const auto root = std::filesystem::canonical(std::filesystem::temp_directory_path()) /
                       ("voyemu-qinggan11-catalog-" + random_token());
@@ -5229,11 +5229,18 @@ static void qinggan11_vehicle_catalog() {
         Session session(root, random_token(), {}, VehicleCatalog::qinggan11);
         auto status = session.handle({{"op", "status"}});
         assert(status["catalog"].size() == 736 &&
-               status["state"]["map_sha256"] == qinggan11_map_sha256);
+               status["state"]["map_sha256"] == qinggan11_map_sha256 &&
+               status["state"]["raw_oem"]["vcu_ready"] == 1);
         auto patched = session.handle({{"op", "patch"}, {"values", {{"ADCU_TargetType_1", 3}}}});
         assert(patched["ok"] == true && patched["state"]["raw_oem"]["ADCU_TargetType_1"] == 3);
         auto foreign = session.handle({{"op", "patch"}, {"values", {{"mrr_vSetDis", 1}}}});
         assert(foreign["ok"] == false);
+        // The power state ON clears ready_lamp and with it the READY flag of the VCU.
+        auto on = session.handle({{"op", "patch"}, {"values", {{"power", "on"}}}});
+        assert(on["ok"] == true && on["state"]["raw_oem"]["ready_lamp"] == 0 &&
+               on["state"]["raw_oem"]["vcu_ready"] == 0 && on["state"]["raw_oem"]["ign"] == 1);
+        auto ready = session.handle({{"op", "patch"}, {"values", {{"power", "ready"}}}});
+        assert(ready["state"]["raw_oem"]["vcu_ready"] == 1);
     }
     std::filesystem::remove_all(root);
 }
