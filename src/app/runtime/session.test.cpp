@@ -2934,6 +2934,7 @@ static void android_avd_config_guards() {
                 {"package", "com.qinggan.app.launcher"},
                 {"component",
                  "com.qinggan.app.launcher/com.qinggan.app.launcher.activity.MainActivity"}};
+        unsupported["reference_profile"] = qinggan11_731_profile_id;
         unsupported["vehicle_adapter"] = {{"authority", "com.voyemu.output.vehicle"}};
         unsupported["wheel_capability"] = {{"schema", 1},
                                            {"profile", qinggan11_731_profile_id},
@@ -2978,6 +2979,7 @@ static void android_avd_config_guards() {
                 {"component",
                  "com.qinggan.app.launcher/com.qinggan.app.launcher.activity.MainActivity"}};
         prepared["vehicle_adapter"] = {{"authority", "com.voyemu.output.vehicle"}};
+        prepared["reference_profile"] = qinggan11_731_profile_id;
         prepared["wheel_adapter"] = qinggan11_wheel_adapter();
         prepared["wheel_capability"] = qinggan11_partial_wheel_capability(qinggan11_731_profile_id);
         prepared["gpuMode"] = "invalid-before-child";
@@ -5852,6 +5854,7 @@ int main(int argc, char **argv) try {
                                      {{"artifact", "component:bootstrap"}, {"type", "apk"}}})}};
     const auto free_capability = qinggan11_wheel_capability(free_graph);
     const Json free_android = {
+            {"reference_profile", qinggan11_731_profile_id},
             {"api", 30},
             {"home",
              {{"package", "com.qinggan.app.launcher"},
