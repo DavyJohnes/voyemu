@@ -32,20 +32,8 @@ struct ChildProcess::Impl {
     int exit_code = -1;
 };
 
-std::int64_t ChildProcess::pid() const {
-    if (!impl_) {
-        return 0;
-    }
-
-    return impl_->id;
-}
-
 std::string_view ChildProcess::pid_namespace() const {
     return "posix";
-}
-
-int ChildProcess::exit_code() const {
-    return impl_ && impl_->finished ? impl_->exit_code : -1;
 }
 
 static pid_t launch_native(const ProcessSpec &spec, int output) {
@@ -79,12 +67,7 @@ static pid_t launch_native(const ProcessSpec &spec, int output) {
     }
 
     for (const auto &[key, value] : spec.environment) {
-        check_process_string(key);
-        check_process_string(value);
-
-        if (key.empty() || key.find('=') != std::string::npos) {
-            throw VoyemuError("PROCESS_ENV", "invalid key");
-        }
+        check_process_variable(key, value);
 
         environment[key] = value;
     }
@@ -362,6 +345,14 @@ ChildProcess launch_child_process(const ProcessSpec &spec, std::intptr_t output)
     child.impl_->id = launch_native(spec, static_cast<int>(output));
 
     return child;
+}
+
+std::int64_t child_pid(const ChildProcess::Impl &impl) {
+    return impl.id;
+}
+
+std::optional<int> child_exit(const ChildProcess::Impl &impl) {
+    return impl.finished ? std::optional(impl.exit_code) : std::nullopt;
 }
 
 void ChildProcess::ImplDelete::operator()(Impl *impl) const {

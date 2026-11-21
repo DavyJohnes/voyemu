@@ -11,6 +11,16 @@ void qnx_shutdown_channel_require(bool yes) {
     }
 }
 
+long long qnx_shutdown_channel_remaining(QnxShutdownChannel::Deadline deadline) {
+    const auto remaining = std::chrono::ceil<std::chrono::milliseconds>(
+                                   deadline - std::chrono::steady_clock::now())
+                                   .count();
+
+    qnx_shutdown_channel_require(remaining > 0);
+
+    return remaining;
+}
+
 struct QnxShutdownMonitor::Impl {
     Json endpoint;
     std::unique_ptr<QnxShutdownChannel> channel;

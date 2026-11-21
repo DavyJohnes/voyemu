@@ -403,6 +403,23 @@ bool ChildProcess::sanitized_output_failed() const {
     return impl_ && sanitized_ && sanitized_->failed.load();
 }
 
+std::int64_t ChildProcess::pid() const {
+    return impl_ ? child_pid(*impl_) : 0;
+}
+
+int ChildProcess::exit_code() const {
+    return impl_ ? child_exit(*impl_).value_or(-1) : -1;
+}
+
+void check_process_variable(const std::string &key, const std::string &value) {
+    check_process_string(key);
+    check_process_string(value);
+
+    if (key.empty() || key.find('=') != std::string::npos) {
+        throw VoyemuError("PROCESS_ENV", "invalid key");
+    }
+}
+
 void check_capture_request(const ProcessSpec &spec, int timeout_ms, std::size_t output_limit,
                            int maximum_timeout_ms) {
     if (spec.wine_native_diagnostic) {

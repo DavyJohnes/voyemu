@@ -39,4 +39,6 @@ private:
 };
 
 void qnx_shutdown_channel_require(bool yes);
+// The whole milliseconds left before deadline; throws when none are left.
+long long qnx_shutdown_channel_remaining(QnxShutdownChannel::Deadline deadline);
 } // namespace voyemu

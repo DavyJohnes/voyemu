@@ -4,6 +4,7 @@
 #include "os/socket.hpp"
 #include "process.hpp"
 #include <atomic>
+#include <optional>
 #include <thread>
 
 namespace voyemu {
@@ -20,6 +21,11 @@ struct SanitizedProcessOutput {
 
 // Starts spec with output as its standard output and error; the backend of the host defines it.
 ChildProcess launch_child_process(const ProcessSpec &spec, std::intptr_t output);
+// The process id of a started child and its exit code once finished; the host backend defines them.
+std::int64_t child_pid(const ChildProcess::Impl &impl);
+std::optional<int> child_exit(const ChildProcess::Impl &impl);
+// Rejects an environment variable with an embedded NUL, an empty name or a name with '='.
+void check_process_variable(const std::string &key, const std::string &value);
 // Throws unless spec and the bounds describe a capture that execute_capture accepts.
 void check_capture_request(const ProcessSpec &spec, int timeout_ms, std::size_t output_limit,
                            int maximum_timeout_ms);

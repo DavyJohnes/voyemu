@@ -30,28 +30,8 @@ struct ChildProcess::Impl {
     int exit_code = -1;
 };
 
-std::int64_t ChildProcess::pid() const {
-    if (!impl_) {
-        return 0;
-    }
-
-    if (impl_->wine_native) {
-        return impl_->wine_native->pid();
-    }
-
-    return impl_->id;
-}
-
 std::string_view ChildProcess::pid_namespace() const {
     return impl_ && impl_->wine_native ? "macos-diagnostic" : "windows";
-}
-
-int ChildProcess::exit_code() const {
-    if (impl_ && impl_->wine_native) {
-        return impl_->wine_native->exit_code();
-    }
-
-    return impl_ && impl_->finished ? impl_->exit_code : -1;
 }
 
 static std::wstring wide(const std::string &value) {
@@ -98,12 +78,7 @@ static ChildProcess::Impl *launch_native(const ProcessSpec &spec, HANDLE output)
     }
 
     for (const auto &[key, value] : spec.environment) {
-        check_process_string(key);
-        check_process_string(value);
-
-        if (key.find('=') != std::string::npos) {
-            throw VoyemuError("PROCESS_ENV", "invalid key");
-        }
+        check_process_variable(key, value);
 
         variables[wide(key)] = wide(value);
     }
@@ -474,6 +449,18 @@ ChildProcess launch_child_process(const ProcessSpec &spec, std::intptr_t output)
     child.impl_.reset(launch_native(spec, reinterpret_cast<HANDLE>(output)));
 
     return child;
+}
+
+std::int64_t child_pid(const ChildProcess::Impl &impl) {
+    return impl.wine_native ? impl.wine_native->pid() : impl.id;
+}
+
+std::optional<int> child_exit(const ChildProcess::Impl &impl) {
+    if (impl.wine_native) {
+        return impl.wine_native->exit_code();
+    }
+
+    return impl.finished ? std::optional(impl.exit_code) : std::nullopt;
 }
 
 void ChildProcess::ImplDelete::operator()(Impl *impl) const {

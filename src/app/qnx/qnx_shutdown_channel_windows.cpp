@@ -73,10 +73,7 @@ void QnxShutdownChannel::verify(const std::function<void()> &verify_owner) {
 
 void QnxShutdownChannel::wait(bool writable, Deadline deadline) {
     for (;;) {
-        const auto remaining = std::chrono::ceil<std::chrono::milliseconds>(
-                                       deadline - std::chrono::steady_clock::now())
-                                       .count();
-        qnx_shutdown_channel_require(remaining > 0);
+        const auto remaining = qnx_shutdown_channel_remaining(deadline);
         fd_set selected;
         FD_ZERO(&selected);
         FD_SET(state_->socket, &selected);

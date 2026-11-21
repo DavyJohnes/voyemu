@@ -96,10 +96,7 @@ void QnxShutdownChannel::verify(const std::function<void()> &) {
 
 void QnxShutdownChannel::wait(bool writable, Deadline deadline) {
     for (;;) {
-        const auto remaining = std::chrono::ceil<std::chrono::milliseconds>(
-                                       deadline - std::chrono::steady_clock::now())
-                                       .count();
-        qnx_shutdown_channel_require(remaining > 0);
+        const auto remaining = qnx_shutdown_channel_remaining(deadline);
         pollfd p{state_->fd, static_cast<short>(writable ? POLLOUT : POLLIN), 0};
         const int result = ::poll(&p, 1, static_cast<int>(remaining));
 
