@@ -10,6 +10,7 @@
 #include "process.hpp"
 #include "progress.hpp"
 #include "project_files.hpp"
+#include "qnx_originals_directory.hpp"
 #include "qnx_qinggan11.hpp"
 #include "qnx_update_import.hpp"
 #include "quickboot.hpp"
@@ -148,18 +149,8 @@ Json segmented_acquisition_plan(const Json &definition, const Json &qnx) {
          "exact full owner update required");
     // The acquisition recipe names the QNX originals the update must restore; profile-qnx.json
     // pins exactly those.
-    const auto &roles = recipe.at("qnxOriginals");
-    need(roles.is_array() && !roles.empty() && roles.size() == qnx.at("originals").size(),
+    need(qnx_acquisition_originals_match(recipe, qnx.at("originals")),
          "declared QNX original roles required");
-
-    std::set<std::string> declared;
-
-    for (const auto &role : roles) {
-        need(role.is_string() && declared.insert(role.get<std::string>()).second &&
-                     qnx.at("originals").contains(role.get<std::string>()) &&
-                     pinned(qnx.at("originals").at(role.get<std::string>()).at("sha256")),
-             "declared QNX original missing");
-    }
 
     // A qinggan11 guest adapter takes exactly the pinned originals of its OEM build.
     const auto adapter = qnx.value("hardware_adapter", std::string{});

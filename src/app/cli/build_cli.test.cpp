@@ -83,22 +83,26 @@ int main(int argc, char **argv) {
             const std::string synthetic = "sigint-fixture";
             const auto archive = root / "update.zip";
             const std::string pin(64, '0');
-            write_private_json(
-                    root / "profiles" / synthetic / "profile.json",
-                    {{"schema", 1},
-                     {"acquisition", {{"format", "pinned-zip-tgz-raw-scatter"}, {"diff", false}}},
-                     {"ownerUpdate",
-                      {{"file", "update.zip"},
-                       {"bytes", 4ULL << 30},
-                       {"sha256", pin},
-                       {"inner", {{"file", "inner.tgz"}, {"sha256", pin}}}}}});
-            write_private_json(root / "profiles" / synthetic / "profile-qnx.json",
+            write_private_json(root / "profiles" / synthetic / "profile.json",
                                {{"schema", 1},
-                                {"update",
-                                 {{"container", "zip-stored-tgz"},
+                                {"acquisition",
+                                 {{"format", "pinned-zip-tgz-raw-scatter"},
+                                  {"diff", false},
+                                  {"qnxOriginals", Json::array({"role.img"})}}},
+                                {"ownerUpdate",
+                                 {{"file", "update.zip"},
+                                  {"bytes", 4ULL << 30},
                                   {"sha256", pin},
-                                  {"nested_member", "inner.tgz"},
-                                  {"nested_sha256", pin}}}});
+                                  {"inner", {{"file", "inner.tgz"}, {"sha256", pin}}}}}});
+            write_private_json(
+                    root / "profiles" / synthetic / "profile-qnx.json",
+                    {{"schema", 1},
+                     {"originals", {{"role.img", {{"file", "role.img"}, {"sha256", pin}}}}},
+                     {"update",
+                      {{"container", "zip-stored-tgz"},
+                       {"sha256", pin},
+                       {"nested_member", "inner.tgz"},
+                       {"nested_sha256", pin}}}});
             std::ofstream(archive).close();
             std::filesystem::resize_file(archive, 4ULL << 30);
             ProcessSpec spec;

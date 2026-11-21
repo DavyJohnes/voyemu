@@ -232,7 +232,11 @@ static void owner_fetch_sequence(const std::filesystem::path &project) {
                 {"acquisition", {{"image", "system"}, {"path", "/system/own"}}}}}}},
             {"ownerUpdate", owner},
             {"acquisition",
-             {{"format", "pinned-zip-tgz-raw-scatter"}, {"diff", false}, {"system", scatter}}}};
+             {{"format", "pinned-zip-tgz-raw-scatter"},
+              {"diff", false},
+              {"qnxOriginals",
+               Json::array({"hyp_la.img", "ifs2_la.img", "system_la.img", "ifs2_recovery_la.img"})},
+              {"system", scatter}}}};
     const auto selected = root / "profiles/owner-sequence",
                destination = root / ".local/profiles/owner-sequence";
     write_private_json(selected / "profile.json", definition);
@@ -1074,6 +1078,7 @@ int main(int argc, char **argv) {
                        {{"format", "pinned-zip-tgz-raw-scatter"},
                         {"diff", false},
                         {"implemented", false},
+                        {"qnxOriginals", Json::array({"role.img"})},
                         {"system", scatter}}}};
         const Json qnx = {
                 {"schema", 1},
@@ -1100,7 +1105,7 @@ int main(int argc, char **argv) {
                 {"source", {{"package", "com.voyah.car"}}},
                 {"acquisition", {{"image", "vendor"}, {"path", "/vendor/app/LY_Car/LY_Car.apk"}}}};
 
-        for (unsigned mode = 0; mode < 6; ++mode) {
+        for (unsigned mode = 0; mode < 7; ++mode) {
             auto requested = vendor_definition;
 
             if (mode == 0) {
@@ -1128,6 +1133,10 @@ int main(int argc, char **argv) {
                 requested["platform"] = "qinggan11";
             }
 
+            if (mode == 6) {
+                requested["acquisition"].erase("qnxOriginals");
+            }
+
             write_private_json(root / "profiles" / passion / "profile.json", requested);
             write_private_json(root / "profiles" / passion / "profile-qnx.json", qnx);
             bool denied = false;
@@ -1138,7 +1147,7 @@ int main(int argc, char **argv) {
             }
 
             check(denied && !std::filesystem::exists(root / ".local/profiles" / passion),
-                  "finite vendor acquisition rejects wrong API, unknown partition, traversal, package, image pin and platform without publication");
+                  "finite vendor acquisition rejects wrong API, unknown partition, traversal, package, image pin, platform and undeclared QNX originals without publication");
         }
 
         auto media_definition = local;

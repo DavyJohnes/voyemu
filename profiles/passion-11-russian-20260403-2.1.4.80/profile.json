@@ -830,6 +830,13 @@
     "implemented": true,
     "format": "pinned-zip-tgz-raw-scatter",
     "diff": false,
+    "qnxOriginals": [
+      "mifs_hyp_la.img",
+      "mifs_recovery_hyp_la.img",
+      "ifs2_la.img",
+      "ifs2_recovery_la.img",
+      "system_la.img"
+    ],
     "system": {
       "bytes": 2684354560,
       "sha256": "218b99296c6963e0c0644dd76d444ea953fcc25b9d187bb65c281e3c9eedff80",

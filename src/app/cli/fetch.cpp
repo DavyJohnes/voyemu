@@ -583,7 +583,8 @@ Json fetch_update(const std::filesystem::path &root, std::string_view profile,
         acquisition.at("diff") != false || qnx.at("update").at("container") != "zip-stored-tgz" ||
         qnx.at("update").at("sha256") != owner.at("sha256") ||
         qnx.at("update").at("nested_member") != owner.at("inner").at("file") ||
-        qnx.at("update").at("nested_sha256") != owner.at("inner").at("sha256")) {
+        qnx.at("update").at("nested_sha256") != owner.at("inner").at("sha256") ||
+        !qnx_acquisition_originals_match(acquisition, qnx.at("originals"))) {
         throw VoyemuError("FETCH_UPDATE", "exact shared Android/QNX owner recipe required");
     }
 

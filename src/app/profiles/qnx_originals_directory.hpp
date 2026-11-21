@@ -1,9 +1,35 @@
 #pragma once
+#include "check.hpp"
 #include "error.hpp"
 #include "os/fs.hpp"
 #include "profile_identity.hpp"
+#include <set>
 #include <stdexcept>
 namespace voyemu {
+// Whether acquisition.qnxOriginals names exactly the pinned QNX originals of profile-qnx.json that
+// the acquisition imports.
+inline bool qnx_acquisition_originals_match(const Json &acquisition, const Json &originals) {
+    const auto roles = acquisition.is_object() ? acquisition.value("qnxOriginals", Json()) : Json();
+
+    if (!roles.is_array() || roles.empty() || !originals.is_object() ||
+        roles.size() != originals.size()) {
+        return false;
+    }
+
+    std::set<std::string> declared;
+
+    for (const auto &role : roles) {
+        if (!role.is_string() || !declared.insert(role.get<std::string>()).second ||
+            !originals.contains(role.get<std::string>()) ||
+            !originals.at(role.get<std::string>()).is_object() ||
+            !sha256_text(originals.at(role.get<std::string>()).value("sha256", std::string{}))) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 inline std::filesystem::path qnx_originals_directory(const std::filesystem::path &root,
                                                      std::string_view profile) {
     const auto ordinary_qnx = [](const std::filesystem::path &path) {
