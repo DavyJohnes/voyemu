@@ -59,8 +59,7 @@ public:
         return Change{{{"ign", 0}}, "cluster_cold_start"};
     }
 
-    // `QIP STARTUP ignition reason=R` is the request of the runtime with the startup sequence; a
-    // runtime prepared before it switches the guest ignition on itself in its `ign-on` child.
+    // `QIP STARTUP ignition reason=R` is the request of the runtime with the startup sequence.
     // The gauge window and the animation-ready child bound the wait for a lost request.
     std::optional<Change> marker(std::string_view line, Clock::time_point now) {
         constexpr std::string_view request = "QIP STARTUP ignition reason=";
@@ -70,10 +69,6 @@ public:
 
         if (line.starts_with(request)) {
             return on("runtime_" + std::string(line.substr(request.size())));
-        }
-
-        if (line == "QMC CHILD begin=ign-on") {
-            return on("runtime_ign_on");
         }
 
         if (line.starts_with("QIP GAUGE window-ready=")) {

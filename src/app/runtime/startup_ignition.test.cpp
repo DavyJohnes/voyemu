@@ -72,11 +72,6 @@ int main() {
                       !ignition.expire(start + StartupIgnition::boot_limit) && !ignition.finish(),
               "one request per cold start");
 
-        // A runtime prepared before the startup sequence switches the guest ignition on itself.
-        check(ignition.begin(model.state(), start) &&
-                      reason(ignition.marker("QMC CHILD begin=ign-on", start)) == "runtime_ign_on",
-              "previous runtime ignition");
-
         // Without a request the guest timeline switches ignition on: a lost request costs seconds,
         // inside the 6000 ms animation state of the OEM powermgr. Each bound runs from the guest
         // marker it follows and, except the animation bound, scales with the engine.
