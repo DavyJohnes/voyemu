@@ -3,9 +3,6 @@
 #include <cstddef>
 #include <filesystem>
 
-// Creates the empty SDK descriptor at path with the private security of Voyemu state on Windows;
-// POSIX writes it with the ordinary file stream.
-void create_private_descriptor(const std::filesystem::path &path);
 // Makes Everyone the owner of path; true when the SID read back confirms it. Windows only.
 bool assign_world_owner(const std::filesystem::path &path);
 // Whether the mapped frame file has bytes and is private to the current user.

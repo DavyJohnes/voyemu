@@ -1,8 +1,11 @@
 #include "api.hpp"
+#include "api_test_host.hpp"
 #include "can_restart_boundary.hpp"
 #include "frame_transport.hpp"
 #include "full_restart.hpp"
 #include "guest_android_fake.hpp"
+#include "os/fs.hpp"
+#include "os/platform.hpp"
 #include "platform_file.hpp"
 #include "profile_catalog.hpp"
 #include "qinggan11_startup.hpp"
@@ -25,771 +28,39 @@
 #include <thread>
 #include <tuple>
 #include <vector>
-#ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#include <windows.h>
-#include <wincodec.h>
-
-#include "os/private_state_security.hpp"
-#else
-#include <CoreGraphics/CoreGraphics.h>
-#include <ImageIO/ImageIO.h>
-#endif
 using namespace voyemu;
 
 // The bundled Android 9 profile on the 8155 board, read from the catalog.
-static const std::string &qinggan09_profile() {
+const std::string &qinggan09_profile() {
     static const auto id =
             embedded_profile_names(ProfilePlatform::qinggan09, ProfileBoard::sa8155).at(0);
 
     return id;
 }
 
-// Opens path for writing as a new file owned by the current user. An elevated Windows process
-// creates files owned by Administrators, while the readers of the SDK descriptor, the supervisor
-// log and the supervisor lock require the current user as owner.
 static std::ofstream user_owned_file(const std::filesystem::path &path) {
     std::filesystem::remove(path);
-#ifdef _WIN32
-    detail::PrivateStateSecurity security;
-    HANDLE owned = CreateFileW(path.c_str(), GENERIC_WRITE, 0, &security.attributes, CREATE_NEW,
-                               FILE_ATTRIBUTE_NORMAL, nullptr);
-    assert(owned != INVALID_HANDLE_VALUE && CloseHandle(owned));
-#endif
+
+    if (os::host_windows) {
+        assert(os::create_private_file(path));
+    }
 
     return std::ofstream(path);
 }
 
-void image_dimensions(const std::filesystem::path &path, std::size_t width, std::size_t height) {
-#ifdef _WIN32
-    const auto initialized = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
-    assert(SUCCEEDED(initialized) || initialized == RPC_E_CHANGED_MODE);
-    IWICImagingFactory *factory = nullptr;
-    assert(SUCCEEDED(CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER,
-                                      IID_IWICImagingFactory,
-                                      reinterpret_cast<void **>(&factory))));
-    IWICBitmapDecoder *decoder = nullptr;
-    assert(SUCCEEDED(factory->CreateDecoderFromFilename(path.c_str(), nullptr, GENERIC_READ,
-                                                        WICDecodeMetadataCacheOnLoad, &decoder)));
-    IWICBitmapFrameDecode *frame = nullptr;
-    assert(SUCCEEDED(decoder->GetFrame(0, &frame)));
-    UINT w = 0, h = 0;
-    assert(SUCCEEDED(frame->GetSize(&w, &h)) && w == width && h == height);
-    frame->Release();
-    decoder->Release();
-    factory->Release();
+const std::string &qinggan11_wheel_profile() {
+    static const auto id = [] {
+        const auto profiles =
+                embedded_profile_names(ProfilePlatform::qinggan11, ProfileBoard::sa8155);
+        const auto profile = std::find_if(profiles.begin(), profiles.end(),
+                                          qinggan11_wheel_provider_profile);
+        assert(profile != profiles.end());
 
-    if (SUCCEEDED(initialized)) {
-        CoUninitialize();
-    }
-#else
-    auto name = CFStringCreateWithCString(nullptr, path.c_str(), kCFStringEncodingUTF8);
-    auto url = CFURLCreateWithFileSystemPath(nullptr, name, kCFURLPOSIXPathStyle, false);
-    CFRelease(name);
-    auto source = CGImageSourceCreateWithURL(url, nullptr);
-    CFRelease(url);
-    assert(source);
-    auto image = CGImageSourceCreateImageAtIndex(source, 0, nullptr);
-    CFRelease(source);
-    assert(image && CGImageGetWidth(image) == width && CGImageGetHeight(image) == height);
-    CGImageRelease(image);
-#endif
+        return *profile;
+    }();
+
+    return id;
 }
-
-#ifdef _WIN32
-void owned_recovery_tests(const std::filesystem::path &base, const std::filesystem::path &self) {
-    const auto root = base / ("test-owned-recovery-" + random_token());
-
-    ensure_private_directory(root);
-    const std::string profile = qinggan09_profile(), id = random_token(),
-                      ownership = random_token();
-    const auto directory = root / ".local/machines" / profile / "sessions" / id,
-               active = root / ".local/machines" / profile / "active" / (profile + ".json"),
-               scoped = root / ".local/machines" / profile;
-    ensure_private_directory(directory);
-    ensure_private_directory(scoped);
-    auto put = [](const auto &file) {
-        ensure_private_directory(file.parent_path());
-        std::ofstream out(file);
-        out << "fixture";
-    };
-    const auto sdk_root = root / "sdk", sdk = android_sdk_program(sdk_root, true),
-               frontend = root / "voyemu.exe", wrapper = sdk_root / "emulator/emulator.exe";
-    put(sdk);
-    put(frontend);
-    put(wrapper);
-    const unsigned port = 5626, grpc = 42626;
-    const auto endpoint = "\\\\.\\pipe\\voyemu-" + id;
-    const Json selection{{"schema", 1},
-                         {"session_id", id},
-                         {"profile", profile},
-                         {"directory", directory.string()},
-                         {"endpoint", endpoint}};
-    const Json owner{
-            {"schema", 1}, {"session_id", id}, {"profile", profile}, {"ownership_id", ownership}};
-    const Json supervisor{{"schema", 1},
-                          {"session_id", id},
-                          {"directory", directory.string()},
-                          {"origin", "voyemu-native-supervisor"},
-                          {"creator_pid", 0xfffffff0u}};
-    const std::string source_pin(64, 'f');
-    const auto runtime_root = root / ".local/machines" / profile / "portable" /
-                              ("portable-" + source_pin);
-    ensure_private_directory(runtime_root / "android-machine/base");
-    const Json launch{
-            {"machine", (runtime_root / "android-machine").string()},
-            {"base", (runtime_root / "android-machine/base").string()},
-            {"android_sdk_root", sdk_root.string()},
-            {"pins", Json::array({{{"path", sdk.string()}, {"sha256", sha256_file(sdk)}},
-                                  {{"path", wrapper.string()}, {"sha256", sha256_file(wrapper)}}})},
-            {"port", port},
-            {"sdk_control", {{"grpc_port", grpc}}},
-            {"executable", wrapper.string()},
-            {"adb_transport", "direct"},
-            {"frontend", {{"executable", frontend.string()}}}};
-    const Json runtime{{"schema", 1},
-                       {"session_id", id},
-                       {"endpoint", endpoint},
-                       {"android_pid", 0},
-                       {"qnx_pid", 0},
-                       {"stopped", false},
-                       {"deliveries",
-                        {{"android", {{"generation", 1}, {"status", "booting"}}},
-                         {"qnx", {{"status", "not_started"}}}}}};
-    write_private_json(active, selection);
-    write_private_json(directory / "automation-owner.json", owner);
-    write_private_json(directory / "session-owner.json", supervisor);
-    write_private_json(directory / "runtime.json", runtime);
-    write_private_json(scoped / "android-launch.json", launch);
-    const Json activation{{"profile", profile},
-                          {"manifest_sha256", source_pin},
-                          {"runtime", runtime_root.string()},
-                          {"android_launch_sha256", sha256_file(scoped / "android-launch.json")}};
-    write_private_json(scoped / "activation.json", activation);
-    auto refused = [&] {
-        bool rejected = false;
-        try {
-            api::StoppedAndroidLease lease(root, profile, machine_identity(profile, {}), id,
-                                           ownership);
-        } catch (const std::exception &) {
-            rejected = true;
-        }
-
-        assert(rejected && read_private_json(directory / "runtime.json") == runtime);
-    };
-    {
-        auto bad = owner;
-        bad["ownership_id"] = random_token();
-        write_private_json(directory / "automation-owner.json", bad);
-        refused();
-        write_private_json(directory / "automation-owner.json", owner);
-    }
-    {
-        auto bad = runtime;
-        bad["android_pid"] = GetCurrentProcessId();
-        write_private_json(directory / "runtime.json", bad);
-        bool rejected = false;
-        try {
-            api::StoppedAndroidLease lease(root, profile, machine_identity(profile, {}), id,
-                                           ownership);
-        } catch (const std::exception &) {
-            rejected = true;
-        }
-
-        assert(rejected && read_private_json(directory / "runtime.json") == bad);
-        write_private_json(directory / "runtime.json", runtime);
-    }
-    {
-        auto bad = supervisor;
-        bad["android_processes"] = {{"generation", 1}, {"phase", "launch_pending"}};
-        write_private_json(directory / "session-owner.json", bad);
-        refused();
-        write_private_json(directory / "session-owner.json", supervisor);
-    }
-    {
-        auto bad = activation;
-        bad["android_launch_sha256"] = std::string(64, '0');
-        write_private_json(scoped / "activation.json", bad);
-        refused();
-        write_private_json(scoped / "activation.json", activation);
-    }
-    {
-        const auto pipe = CreateNamedPipeW(std::filesystem::path(endpoint).c_str(),
-                                           PIPE_ACCESS_DUPLEX, PIPE_TYPE_BYTE | PIPE_WAIT, 1, 4096,
-                                           4096, 0, nullptr);
-        assert(pipe != INVALID_HANDLE_VALUE);
-        refused();
-        CloseHandle(pipe);
-    }
-    WSADATA data{};
-    assert(WSAStartup(MAKEWORD(2, 2), &data) == 0);
-
-    for (const auto family : {AF_INET, AF_INET6}) {
-        const auto listener = socket(family, SOCK_STREAM, IPPROTO_TCP);
-        assert(listener != INVALID_SOCKET);
-        BOOL yes = TRUE;
-        assert(setsockopt(listener, SOL_SOCKET, SO_EXCLUSIVEADDRUSE,
-                          reinterpret_cast<const char *>(&yes), sizeof(yes)) == 0);
-
-        if (family == AF_INET) {
-            sockaddr_in address{};
-            address.sin_family = AF_INET;
-            address.sin_port = htons(port);
-            address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-            assert(bind(listener, reinterpret_cast<const sockaddr *>(&address), sizeof(address)) ==
-                   0);
-        } else {
-            assert(setsockopt(listener, IPPROTO_IPV6, IPV6_V6ONLY,
-                              reinterpret_cast<const char *>(&yes), sizeof(yes)) == 0);
-            sockaddr_in6 address{};
-            address.sin6_family = AF_INET6;
-            address.sin6_port = htons(port);
-            address.sin6_addr = in6addr_loopback;
-            assert(bind(listener, reinterpret_cast<const sockaddr *>(&address), sizeof(address)) ==
-                   0);
-        }
-
-        assert(listen(listener, 1) == 0);
-        refused();
-        closesocket(listener);
-    }
-
-    WSACleanup();
-    {
-        api::FileLock lock(root / ".local/machines" / profile / "active" /
-                           (profile + ".supervisor.lock"));
-        refused();
-    }
-    {
-        // The launcher is absent and runtime has no backend PID. A backend-only
-        // child with differently cased Windows spelling must still block recovery.
-        std::filesystem::remove(sdk);
-        const auto upper = sdk.parent_path() / "QEMU-SYSTEM-AARCH64.EXE";
-        std::filesystem::copy_file(self, upper);
-        auto backend_launch = launch;
-        backend_launch["pins"][0]["sha256"] = sha256_file(sdk);
-        write_private_json(scoped / "android-launch.json", backend_launch);
-        auto backend_activation = activation;
-        backend_activation["android_launch_sha256"] = sha256_file(scoped / "android-launch.json");
-        write_private_json(scoped / "activation.json", backend_activation);
-        ProcessSpec child;
-        child.executable = upper;
-        child.arguments = {"--recovery-child"};
-        child.directory = root;
-        child.output = root / "backend-child.log";
-        auto retained = ChildProcess::launch(child);
-        assert(retained.alive());
-        refused();
-        retained.terminate(100);
-        assert(!retained.alive());
-        std::filesystem::remove(upper);
-        put(sdk);
-        write_private_json(scoped / "android-launch.json", launch);
-        write_private_json(scoped / "activation.json", activation);
-    }
-    {
-        api::StoppedAndroidLease lease(root, profile, machine_identity(profile, {}), id, ownership);
-        auto changed = runtime;
-        changed["revision"] = 99;
-        write_private_json(directory / "runtime.json", changed);
-        bool rejected = false;
-        try {
-            lease.publish_terminal();
-        } catch (const std::exception &) {
-            rejected = true;
-        }
-
-        assert(rejected && read_private_json(directory / "runtime.json") == changed);
-        write_private_json(directory / "runtime.json", runtime);
-    }
-    {
-        api::StoppedAndroidLease lease(root, profile, machine_identity(profile, {}), id, ownership);
-
-        for (const auto value : {port, port + 1, grpc}) {
-            assert(!tcp_port_free(value));
-        }
-
-        const auto terminal = lease.publish_terminal();
-        assert(terminal.at("stopped") == true &&
-               terminal.at("deliveries")
-                               .at("android")
-                               .at("shutdown")
-                               .at("guest_shutdown_unverified") == true);
-    }
-    {
-        write_private_json(directory / "runtime.json", runtime);
-        unsigned dispatched = 0;
-        api::Transports absent_transport;
-        absent_transport.control = [&](const auto &, const Json &, int) -> Json {
-            ++dispatched;
-            throw std::runtime_error(
-                    "TEST_CONTROL_DISPATCHED: absent endpoint must recover before IPC");
-        };
-        api::Api absent_api(root, self, absent_transport);
-        const Json request{{"schema", 1},
-                           {"request_id", random_token()},
-                           {"op", "session.stop"},
-                           {"profile", profile},
-                           {"session", {{"id", id}, {"ownership_id", ownership}}}};
-        const auto recovered = absent_api.call(request);
-        assert(recovered.at("ok") == true && dispatched == 0);
-        const auto &result = recovered.at("result");
-        assert(result.at("accepted") == true && result.at("stopped") == true &&
-               result.at("cleanup").at("guest_shutdown_unverified") == true &&
-               result.at("host_recovery").at("guest_shutdown_unverified") == true);
-    }
-
-    for (const auto value : {port, port + 1, grpc}) {
-        assert(tcp_port_free(value));
-    }
-
-    {
-        // A recorded process receipt names the adbd port and no adb server.
-        auto direct_owner = supervisor;
-        direct_owner["android_processes"] = {{"phase", "recorded"},  {"generation", 1},
-                                             {"sdk_pid", 0},         {"frontend_pid", 0},
-                                             {"console_port", port}, {"grpc_port", grpc},
-                                             {"adbd_port", port + 1}};
-        write_private_json(directory / "session-owner.json", direct_owner);
-        write_private_json(directory / "runtime.json", runtime);
-        {
-            api::StoppedAndroidLease lease(root, profile, machine_identity(profile, {}), id,
-                                           ownership);
-            lease.verify();
-
-            for (const auto value : {port, port + 1, grpc}) {
-                assert(!tcp_port_free(value));
-            }
-        }
-        auto inconsistent = direct_owner;
-        inconsistent["android_processes"]["adb_pid"] = 0;
-        write_private_json(directory / "session-owner.json", inconsistent);
-        refused();
-        write_private_json(directory / "session-owner.json", supervisor);
-    }
-    {
-        // Ordinary runtime configurations intentionally have no persisted host
-        // executable hashes. Maintenance still requires the exact seed and all
-        // existing process, owner, endpoint and listener fences.
-        write_private_json(directory / "runtime.json", runtime);
-        const auto seed = root / "machines" / profile;
-        ensure_private_directory(seed / "android");
-        const Json manifest{
-                {"schema", 1},
-                {"kind", "portable-guest-runtime"},
-                {"profile", profile},
-                {"android",
-                 {{"api", 28}, {"abi", "arm64-v8a"}, {"base_archive_sha256", source_pin}}}};
-        write_private_json(seed / "runtime.json", manifest);
-        auto configured_launch = launch;
-        configured_launch["machine"] = (seed / "android").string();
-        configured_launch["base"] = (seed / "android").string();
-        configured_launch["executable"] = sdk.string();
-        configured_launch["pins"] = Json::array();
-        write_private_json(scoped / "android-launch.json", configured_launch);
-        const Json configured{{"schema", 1},
-                              {"kind", "runtime-configuration"},
-                              {"profile", profile},
-                              {"machine", ""},
-                              {"seed", seed.string()},
-                              {"manifest_sha256", sha256_file(seed / "runtime.json")},
-                              {"integrity_audited", false}};
-        write_private_json(scoped / "activation.json", configured);
-        {
-            api::StoppedAndroidLease lease(root, profile, machine_identity(profile, {}), id,
-                                           ownership);
-            lease.verify();
-
-            for (const auto value : {port, port + 1, grpc}) {
-                assert(!tcp_port_free(value));
-            }
-        }
-        {
-            auto bad = configured;
-            const auto foreign = root / "machines/foreign";
-            ensure_private_directory(foreign);
-            bad["seed"] = foreign.string();
-            write_private_json(scoped / "activation.json", bad);
-            refused();
-            write_private_json(scoped / "activation.json", configured);
-        }
-        {
-            auto bad = configured;
-            bad["manifest_sha256"] = std::string(64, '0');
-            write_private_json(scoped / "activation.json", bad);
-            refused();
-            write_private_json(scoped / "activation.json", configured);
-        }
-        {
-            auto bad = runtime;
-            bad["android_pid"] = GetCurrentProcessId();
-            write_private_json(directory / "runtime.json", bad);
-            bool rejected = false;
-            try {
-                api::StoppedAndroidLease lease(root, profile, machine_identity(profile, {}), id,
-                                               ownership);
-            } catch (const std::exception &) {
-                rejected = true;
-            }
-
-            assert(rejected);
-            write_private_json(directory / "runtime.json", runtime);
-        }
-        {
-            api::StoppedAndroidLease lease(root, profile, machine_identity(profile, {}), id,
-                                           ownership);
-            auto updated = configured_launch;
-            updated["config_template"] = "source-refresh";
-            write_private_json(scoped / "android-launch.json", updated);
-            lease.verify_host_absence();
-            bool rejected = false;
-            try {
-                lease.verify();
-            } catch (const std::exception &) {
-                rejected = true;
-            }
-
-            assert(rejected);
-        }
-        // A portable positional machine outside root/machines keeps its exact
-        // registered seed/selector; recovery must not invent a root-relative seed.
-        const auto external = root.parent_path() / ("external-recovery-" + random_token());
-        ensure_private_directory(external / "android");
-        write_private_json(external / "runtime.json", manifest);
-        const auto external_name = machine_path_name(root, {external, profile});
-        const auto external_scoped = profile_launch_directory(
-                root, profile, voyemu::machine_identity(profile, external_name));
-        ensure_private_directory(external_scoped);
-        auto external_launch = configured_launch;
-        external_launch["machine"] = (external / "android").string();
-        external_launch["base"] = (external / "android").string();
-        write_private_json(external_scoped / "android-launch.json", external_launch);
-        auto external_activation = configured;
-        external_activation["machine"] = external_name;
-        external_activation["seed"] = external.string();
-        external_activation["manifest_sha256"] = sha256_file(external / "runtime.json");
-        write_private_json(external_scoped / "activation.json", external_activation);
-        const Json external_selection{
-                {"machine", external_name},
-                {"seed", external.string()},
-                {"manifest_sha256", external_activation.at("manifest_sha256")}};
-        const auto external_directory = native_session_directory(
-                root, profile, voyemu::machine_identity(profile, external_name), id);
-        ensure_private_directory(external_directory);
-
-        for (const auto &entry : std::filesystem::directory_iterator(directory)) {
-            if (entry.is_regular_file()) {
-                std::filesystem::copy_file(entry.path(),
-                                           external_directory / entry.path().filename());
-            }
-        }
-
-        write_private_json(external_directory / "machine-selection.json", external_selection);
-        auto external_active = selection;
-        external_active["directory"] = external_directory.string();
-        const auto external_active_path =
-                native_current_active_directory(root, profile,
-                                                voyemu::machine_identity(profile, external_name)) /
-                (profile + ".json");
-        write_private_json(external_active_path, external_active);
-        auto external_supervisor = supervisor;
-        external_supervisor["directory"] = external_directory.string();
-        write_private_json(external_directory / "session-owner.json", external_supervisor);
-        {
-            api::StoppedAndroidLease lease(root, profile, machine_identity(profile, external_name),
-                                           id, ownership);
-            lease.verify();
-        }
-        auto external_refused = [&] {
-            bool rejected = false;
-            try {
-                api::StoppedAndroidLease lease(
-                        root, profile, machine_identity(profile, external_name), id, ownership);
-            } catch (const std::exception &) {
-                rejected = true;
-            }
-
-            assert(rejected);
-        };
-        {
-            auto bad = external_selection;
-            bad["machine"] = "external-wrong";
-            write_private_json(external_directory / "machine-selection.json", bad);
-            external_refused();
-            write_private_json(external_directory / "machine-selection.json", external_selection);
-        }
-        {
-            auto bad = external_selection;
-            bad["manifest_sha256"] = std::string(64, '0');
-            write_private_json(external_directory / "machine-selection.json", bad);
-            external_refused();
-            write_private_json(external_directory / "machine-selection.json", external_selection);
-        }
-        {
-            auto bad = external_activation;
-            bad["seed"] = seed.string();
-            write_private_json(external_scoped / "activation.json", bad);
-            external_refused();
-            write_private_json(external_scoped / "activation.json", external_activation);
-        }
-        std::filesystem::remove(external_active_path);
-        std::filesystem::remove(external_directory / "machine-selection.json");
-        std::filesystem::remove_all(external);
-        write_private_json(scoped / "android-launch.json", launch);
-        write_private_json(scoped / "activation.json", activation);
-    }
-    {
-        api::Transports offline;
-        offline.control = [](const auto &, const Json &, int) -> Json {
-            throw std::runtime_error("IPC_CONNECT: exact fixture endpoint is absent");
-        };
-        api::Api recovery_api(root, frontend, offline);
-        Json stop{{"schema", 1},
-                  {"request_id", random_token()},
-                  {"op", "session.stop"},
-                  {"profile", profile},
-                  {"session", {{"id", id}, {"ownership_id", ownership}}}};
-        const auto stopped = recovery_api.call(stop);
-        assert(stopped.at("ok") == true &&
-               stopped.at("result").at("cleanup").at("verified") == true &&
-               stopped.at("result").at("cleanup").at("guest_shutdown_unverified") == true);
-        const auto present = CreateNamedPipeW(std::filesystem::path(endpoint).c_str(),
-                                              PIPE_ACCESS_DUPLEX, PIPE_TYPE_BYTE | PIPE_WAIT, 1,
-                                              4096, 4096, 0, nullptr);
-        assert(present != INVALID_HANDLE_VALUE);
-        offline.control = [](const auto &, const Json &, int) -> Json {
-            throw std::runtime_error(
-                    "TEST_SESSION: ownership rejection is not a transport failure");
-        };
-        api::Api rejected_api(root, frontend, offline);
-        stop["request_id"] = random_token();
-        const auto rejected = rejected_api.call(stop);
-        assert(rejected.at("ok") == false && rejected.at("error").at("code") == "TEST_SESSION");
-        CloseHandle(present);
-    }
-}
-#endif
-#ifndef _WIN32
-static void wheel_release_admission_tests(const std::filesystem::path &base) {
-    const auto root = base / ("test-wheel-cancel-admission-" + random_token());
-
-    ensure_private_directory(root);
-    const std::string name = "free-11-chinese-20260731-7.3.1", id = random_token(),
-                      owner = random_token();
-    const auto directory = root / ".local/machines" / name / "sessions" / id;
-    ensure_private_directory(directory);
-    Session session(directory, id);
-    auto select = [&](const std::string &selected, const std::string &epoch) {
-        const auto path = root / ".local/machines" / selected / "sessions" / epoch;
-        ensure_private_directory(path);
-        write_private_json(root / ".local/machines" / selected / "active" / (selected + ".json"),
-                           {{"schema", 1},
-                            {"session_id", epoch},
-                            {"directory", path.string()},
-                            {"endpoint", "owned-cancel-fixture"}});
-        write_private_json(path / "automation-owner.json",
-                           {{"schema", 1}, {"session_id", epoch}, {"ownership_id", owner}});
-    };
-    select(name, id);
-    const std::string other = qinggan09_profile(), other_id = random_token();
-    select(other, other_id);
-    auto request = [&](const char *op) {
-        return Json{{"schema", 1},
-                    {"request_id", random_token()},
-                    {"op", op},
-                    {"profile", name},
-                    {"session", {{"id", id}, {"ownership_id", owner}}}};
-    };
-    std::mutex mutex;
-    std::condition_variable condition;
-    bool started = false, resume = false;
-    unsigned releases = 0, accepted_ups = 0;
-    api::Transports transport;
-    transport.control = [&](const auto &, const Json &command, int) -> Json {
-        const auto op = command.at("op").get<std::string>();
-
-        if (op == "status") {
-            auto reply = session.handle(command);
-            reply["wheel_capability"] =
-                    qinggan11_partial_wheel_capability("free-11-chinese-20260731-7.3.1");
-
-            return reply;
-        }
-
-        if (op == "wheel_pair") {
-            {
-                std::unique_lock lock(mutex);
-                started = true;
-                condition.notify_all();
-                condition.wait(lock, [&] {
-                    return resume;
-                });
-            }
-
-            return Json{{"ok", true},
-                        {"session_id", id},
-                        {"down", {{"accepted", true}}},
-                        {"up", {{"accepted", true}}},
-                        {"released", true},
-                        {"guest_acknowledged", false},
-                        {"visible_effect_verified", false}};
-        }
-
-        auto reply = session.handle(command);
-
-        if (op == "wheel" && command.at("phase") == "down") {
-            std::unique_lock lock(mutex);
-            started = true;
-            condition.notify_all();
-            condition.wait(lock, [&] {
-                return resume;
-            });
-        }
-
-        if (op == "release_owner") {
-            ++releases;
-        }
-
-        if (op == "wheel" && command.at("phase") == "up" && reply.value("ok", false)) {
-            ++accepted_ups;
-        }
-
-        return reply;
-    };
-    api::Api pressing(root, "unused-cli", transport), canceling(root, "unused-cli", transport);
-    auto busy = [&](const Json &value) {
-        const auto result = canceling.call(value);
-        assert(!result.at("ok").get<bool>() && result.at("error").at("code") == "TEST_BUSY");
-    };
-    Json press_result;
-    auto press = request("input.wheel.press");
-    press["button"] = "volume_down";
-    press["hold_ms"] = 201;
-    auto unowned = press;
-    unowned["request_id"] = random_token();
-    unowned["session"]["ownership_id"] = random_token();
-    assert(pressing.call(unowned).at("ok") == false && !started &&
-           !std::filesystem::exists(directory / "automation/wheel-writer.json"));
-    std::thread held([&] {
-        press_result = pressing.call(press);
-    });
-    {
-        std::unique_lock lock(mutex);
-        assert(condition.wait_for(lock, std::chrono::seconds(2), [&] {
-            return started;
-        }));
-    }
-    auto capture = request("session.screenshot");
-    busy(capture);
-    auto foreign = request("input.wheel.release");
-    foreign["session"]["ownership_id"] = random_token();
-    const auto rejected = canceling.call(foreign);
-    assert(!rejected.at("ok").get<bool>() && releases == 0);
-    auto other_session = request("input.wheel.release");
-    other_session["profile"] = other;
-    other_session["session"]["id"] = other_id;
-    const auto independent = canceling.call(other_session);
-    assert(independent.value("error", Json::object()).value("code", std::string{}) != "TEST_BUSY");
-    const auto marker = directory / "automation/wheel-writer.json",
-               lease = directory / "automation/wheel-writer.lock";
-    const auto valid_marker = read_private_json(marker);
-    auto denied = [&] {
-        const auto before = releases;
-        assert(canceling.call(request("input.wheel.release")).at("ok") == false &&
-               releases == before);
-    };
-
-    for (const auto &patch : Json::array({Json{{"schema", 1.0}}, Json{{"unexpected", true}},
-                                          Json{{"operation_id", "../outside"}},
-                                          Json{{"operation_id", std::string(32, 'A')}},
-                                          Json{{"ownership_sha256", std::string(64, 'f')}},
-                                          Json{{"session_id", random_token()}}})) {
-        auto invalid = valid_marker;
-        invalid.update(patch);
-        write_private_json(marker, invalid);
-        denied();
-        write_private_json(marker, valid_marker);
-    }
-
-    for (const auto mode :
-         {std::filesystem::perms::owner_read,
-          std::filesystem::perms::owner_read | std::filesystem::perms::owner_write |
-                  std::filesystem::perms::group_read | std::filesystem::perms::others_read}) {
-        for (const auto &path : {marker, lease}) {
-            std::filesystem::permissions(path, mode);
-            denied();
-            std::filesystem::permissions(path, std::filesystem::perms::owner_read |
-                                                       std::filesystem::perms::owner_write);
-        }
-    }
-
-    for (const auto &path : {marker, lease}) {
-        const auto saved = path.string() + ".saved";
-        std::filesystem::rename(path, saved);
-        std::filesystem::create_symlink(saved, path);
-        denied();
-        std::filesystem::remove(path);
-        std::filesystem::rename(saved, path);
-    }
-
-    const auto pending = root / ".local/build/automation/operations" /
-                         (valid_marker.at("operation_id").get<std::string>() + ".json");
-    const auto original_pending = read_private_json(pending);
-    auto terminal = original_pending;
-    terminal["status"] = "terminal";
-    write_private_json(pending, terminal);
-    denied();
-    write_private_json(pending, original_pending);
-    const auto released = canceling.call(request("input.wheel.release"));
-    {
-        std::lock_guard lock(mutex);
-        resume = true;
-        condition.notify_all();
-    }
-    held.join();
-    // Real admission/FileLock overlap, rather than direct transport calls, must permit the owner's
-    // cancellation.
-    assert(released.at("ok") == true && releases >= 1 && accepted_ups == 0);
-    assert(!press_result.at("ok").get<bool>() &&
-           press_result.at("error").at("code") == "TEST_INPUT_CANCELLED_UNKNOWN" &&
-           press_result.at("error").at("outcome") == "unknown");
-    // A retained marker plus an old client/capture writer without the live wheel lease grants no
-    // bypass.
-    {
-        api::FileLock capture_writer(directory / "automation/writer.lock");
-        const auto before = releases;
-        busy(request("input.wheel.release"));
-        assert(releases == before);
-    }
-    started = false;
-    resume = false;
-    press = request("input.wheel.press");
-    press["button"] = "volume_down";
-    press["hold_ms"] = 100;
-    std::thread short_press([&] {
-        press_result = pressing.call(press);
-    });
-    {
-        std::unique_lock lock(mutex);
-        assert(condition.wait_for(lock, std::chrono::seconds(2), [&] {
-            return started;
-        }));
-    }
-    const auto before = releases;
-    busy(request("input.wheel.release"));
-    assert(releases == before);
-    {
-        std::lock_guard lock(mutex);
-        resume = true;
-        condition.notify_all();
-    }
-    short_press.join();
-    assert(press_result.at("ok") == true);
-    session.stop();
-    std::filesystem::remove_all(root);
-}
-#endif
 
 static void phone_api_contract_tests(const std::filesystem::path &base) {
     const auto root = base / ("test-phone-api-" + random_token());
@@ -869,15 +140,18 @@ static void phone_api_contract_tests(const std::filesystem::path &base) {
     auto reading = request("multimedia.phone.state");
     reading["session"].erase("ownership_id");
     assert(instance.call(reading).at("ok") == true && !calls.back().contains("ownership_id"));
-#ifndef _WIN32
-    {
-        api::FileLock writer(directory / "automation/writer.lock");
-        const auto count = calls.size();
-        const auto busy = instance.call(request("multimedia.phone.connect"));
-        assert(busy.at("ok") == false && busy.at("error").at("code") == "TEST_BUSY" &&
-               calls.size() == count);
+
+    // The writer lock contention cases run on POSIX hosts.
+    if (!voyemu::os::host_windows) {
+        {
+            api::FileLock writer(directory / "automation/writer.lock");
+            const auto count = calls.size();
+            const auto busy = instance.call(request("multimedia.phone.connect"));
+            assert(busy.at("ok") == false && busy.at("error").at("code") == "TEST_BUSY" &&
+                   calls.size() == count);
+        }
     }
-#endif
+
     const std::string other_profile = "free-11-chinese-20260731-7.3.1";
     const auto other_directory = root / ".local/machines" / other_profile / "sessions" / id;
     ensure_private_directory(other_directory);
@@ -894,15 +168,17 @@ static void phone_api_contract_tests(const std::filesystem::path &base) {
     const auto count = calls.size();
     assert(instance.call(unsupported).at("error").at("code") == "TEST_UNSUPPORTED" &&
            calls.size() == count);
-#ifndef _WIN32
-    {
-        api::FileLock writer(directory / "automation/writer.lock");
-        unsupported["request_id"] = random_token();
-        // Another machine reaches its own adapter instead of failing on this machine's writer.
-        assert(instance.call(unsupported).at("error").at("code") == "TEST_UNSUPPORTED" &&
-               calls.size() == count);
+
+    // The writer lock contention cases run on POSIX hosts.
+    if (!voyemu::os::host_windows) {
+        {
+            api::FileLock writer(directory / "automation/writer.lock");
+            unsupported["request_id"] = random_token();
+            // Another machine reaches its own adapter instead of failing on this machine's writer.
+            assert(instance.call(unsupported).at("error").at("code") == "TEST_UNSUPPORTED" &&
+                   calls.size() == count);
+        }
     }
-#endif
 
     // The _UNKNOWN suffix alone classifies an unknown outcome.
     for (const char *code :
@@ -987,13 +263,12 @@ int main(int argc, char **argv) try {
         return 0;
     }
 
-#ifdef _WIN32
     if (argc == 2 && std::string_view(argv[1]) == "--recovery-child") {
-        Sleep(10000);
+        std::this_thread::sleep_for(std::chrono::seconds(10));
 
         return 0;
     }
-#endif
+
     {
         ProcessSpec source;
         source.executable = "owned-source-cli";
@@ -1058,9 +333,7 @@ int main(int argc, char **argv) try {
     const auto base = argc > 2 ? std::filesystem::path(argv[2]) : project / ".local/build/tmp";
     const auto root = base / ("test-api-" + random_token());
     ensure_private_directory(root);
-#ifdef _WIN32
     owned_recovery_tests(base, std::filesystem::canonical(argv[0]));
-#endif
     const auto id = random_token(), owner = random_token();
     const std::string name = qinggan09_profile();
     const auto directory = root / ".local/machines" / name / "sessions" / id;
@@ -1099,16 +372,17 @@ int main(int argc, char **argv) try {
     std::function<Json(const Json &)> fixture_media_input;
     transport.control = [&](const auto &, const Json &op, int) {
         ++calls;
-#ifdef _WIN32
-        // This API unit has no SDK. The retained Android guard is exercised by
-        // the compiled CLI fixture; here the explicit transport mock supplies input.
-        if (op.at("op") == "media_input" && fixture_media_input) {
-            auto reply = fixture_media_input(op.at("input"));
-            reply["session_id"] = id;
 
-            return reply;
+        if (voyemu::os::host_windows) {
+            // This API unit has no SDK. The retained Android guard is exercised by
+            // the compiled CLI fixture; here the explicit transport mock supplies input.
+            if (op.at("op") == "media_input" && fixture_media_input) {
+                auto reply = fixture_media_input(op.at("input"));
+                reply["session_id"] = id;
+
+                return reply;
+            }
         }
-#endif
 
         if (op.at("op") == "test_boot_identity") {
             return Json{{"ok", true},
@@ -1407,43 +681,47 @@ int main(int argc, char **argv) try {
         auto mismatched = invoke(first, first_owner, "session.status");
         mismatched["machine"] = "machine-b";
         assert(scoped_api.call(mismatched).at("ok") == false && dispatches == before);
-#ifndef _WIN32
-        {
-            // Retain the actual released lock file left by our terminal supervisor.
-            const auto own_lock = scoped_root / ".local/machines/machine-a/active" /
-                                  (name + ".supervisor.lock");
-            { api::FileLock supervisor(own_lock); }
-            assert(api::file_lock_released(own_lock));
-            // A foreign legacy supervisor remains locked throughout our scoped stop.
-            api::FileLock foreign(scoped_root / ".local/machines" / name / "active" /
-                                  (name + ".supervisor.lock"));
-            // The live supervisor serves its endpoint until it stops; an absent endpoint with a
-            // released lock would be an orphaned session.
-            { std::ofstream(endpoints.at(first)) << "live supervisor endpoint"; }
-            const auto prior = scoped_transport.control;
-            scoped_transport.control = [&](const std::filesystem::path &endpoint, const Json &op,
-                                           int timeout) {
-                auto reply = prior(endpoint, op, timeout);
 
-                if (op.at("op") == "stop") {
-                    write_private_json(scoped_root / ".local/machines/machine-a/sessions" / first /
-                                               "runtime.json",
-                                       {{"session_id", first},
-                                        {"stopped", true},
-                                        {"deliveries", {{"qnx", {{"status", "not_started"}}}}}});
-                    std::filesystem::remove(endpoint);
-                }
+        // POSIX supervisor locks are flock files that a released lock leaves behind.
+        if (!voyemu::os::host_windows) {
+            {
+                // Retain the actual released lock file left by our terminal supervisor.
+                const auto own_lock = scoped_root / ".local/machines/machine-a/active" /
+                                      (name + ".supervisor.lock");
+                { api::FileLock supervisor(own_lock); }
+                assert(api::file_lock_released(own_lock));
+                // A foreign legacy supervisor remains locked throughout our scoped stop.
+                api::FileLock foreign(scoped_root / ".local/machines" / name / "active" /
+                                      (name + ".supervisor.lock"));
+                // The live supervisor serves its endpoint until it stops; an absent endpoint with a
+                // released lock would be an orphaned session.
+                { std::ofstream(endpoints.at(first)) << "live supervisor endpoint"; }
+                const auto prior = scoped_transport.control;
+                scoped_transport.control = [&](const std::filesystem::path &endpoint,
+                                               const Json &op, int timeout) {
+                    auto reply = prior(endpoint, op, timeout);
 
-                return reply;
-            };
-            api::Api stop_api(scoped_root, "unused-cli", scoped_transport);
-            const auto stopped = stop_api.call(invoke(first, first_owner, "session.stop"));
-            assert(stopped.at("ok") == true &&
-                   stopped.at("result").at("cleanup").at("supervisor_lock_released") == true);
-            assert(!api::file_lock_released(scoped_root / ".local/machines" / name / "active" /
-                                            (name + ".supervisor.lock")));
+                    if (op.at("op") == "stop") {
+                        write_private_json(
+                                scoped_root / ".local/machines/machine-a/sessions" / first /
+                                        "runtime.json",
+                                {{"session_id", first},
+                                 {"stopped", true},
+                                 {"deliveries", {{"qnx", {{"status", "not_started"}}}}}});
+                        std::filesystem::remove(endpoint);
+                    }
+
+                    return reply;
+                };
+                api::Api stop_api(scoped_root, "unused-cli", scoped_transport);
+                const auto stopped = stop_api.call(invoke(first, first_owner, "session.stop"));
+                assert(stopped.at("ok") == true &&
+                       stopped.at("result").at("cleanup").at("supervisor_lock_released") == true);
+                assert(!api::file_lock_released(scoped_root / ".local/machines" / name / "active" /
+                                                (name + ".supervisor.lock")));
+            }
         }
-#endif
+
         const auto active = scoped_root / ".local/machines/machine-a/active" / (name + ".json");
         auto replacement = read_private_json(active);
         replacement["session_id"] = random_token();
@@ -1459,36 +737,32 @@ int main(int argc, char **argv) try {
         explicit_scope["machine"] = "machine-b";
         assert(scoped_api.call(explicit_scope).at("ok") == true);
     }
-#ifdef _WIN32
-    {
-        // A live connected Windows endpoint is not a filesystem object. The
-        // status preflight must still dispatch while its only instance is busy.
-        const auto active = root / ".local/machines" / name / "active" / (name + ".json");
-        const auto original = read_private_json(active, 4096);
-        auto record = original;
-        const auto endpoint = std::filesystem::path("\\\\.\\pipe\\voyemu-" + id);
-        HANDLE server = CreateNamedPipeW(endpoint.c_str(), PIPE_ACCESS_DUPLEX,
-                                         PIPE_TYPE_BYTE | PIPE_NOWAIT, 1, 4096, 4096, 0, nullptr);
-        assert(server != INVALID_HANDLE_VALUE);
-        HANDLE client = CreateFileW(endpoint.c_str(), GENERIC_READ | GENERIC_WRITE, 0, nullptr,
-                                    OPEN_EXISTING, 0, nullptr);
-        assert(client != INVALID_HANDLE_VALUE);
-        assert(!api::StoppedAndroidLease::endpoint_absent(endpoint));
-        record["endpoint"] = endpoint.string();
-        write_private_json(active, record);
-        const auto before = calls;
-        const auto response = api.call(request("session.status"));
-        CloseHandle(client);
-        CloseHandle(server);
-        write_private_json(active, original);
 
-        if (!response.value("ok", false)) {
-            std::cerr << "live named-pipe status rejected: " << response.dump() << std::endl;
+    if (voyemu::os::host_windows) {
+        {
+            // A live connected Windows endpoint is not a filesystem object. The
+            // status preflight must still dispatch while its only instance is busy.
+            const auto active = root / ".local/machines" / name / "active" / (name + ".json");
+            const auto original = read_private_json(active, 4096);
+            auto record = original;
+            const auto endpoint = std::filesystem::path("\\\\.\\pipe\\voyemu-" + id);
+            ConnectedPipe pipe(endpoint);
+            assert(!api::StoppedAndroidLease::endpoint_absent(endpoint));
+            record["endpoint"] = endpoint.string();
+            write_private_json(active, record);
+            const auto before = calls;
+            const auto response = api.call(request("session.status"));
+            pipe.close();
+            write_private_json(active, original);
+
+            if (!response.value("ok", false)) {
+                std::cerr << "live named-pipe status rejected: " << response.dump() << std::endl;
+            }
+
+            assert(response.at("ok") == true && calls == before + 1);
         }
-
-        assert(response.at("ok") == true && calls == before + 1);
     }
-#endif
+
     {
         // The real CLI canonicalizes its session argument before publishing it.
         // On Windows this changes mixed source separators into backslashes.
@@ -1736,96 +1010,90 @@ int main(int argc, char **argv) try {
            surfaces.at(1).at("positive_after_sequence_supported") == false &&
            surfaces.at(2).at("positive_after_sequence_supported") == true);
     assert(!std::filesystem::exists(root / ".local/build/automation"));
-#if defined(_WIN32)
-    const char *expected_platform = "Windows";
-    const bool expected_windows_runtime = true;
-#elif defined(__APPLE__)
-    const char *expected_platform = "macOS";
-    const bool expected_windows_runtime = false;
-#else
-    const char *expected_platform = "Linux";
-    const bool expected_windows_runtime = false;
-#endif
+    const auto expected_platform = std::string(os::platform_name);
+    const bool expected_windows_runtime = os::host_windows;
     assert(capabilities.at("result").at("platform") == expected_platform &&
            capabilities.at("result").at("windows_runtime_supported") == expected_windows_runtime);
-#ifndef _WIN32
-    {
-        bool partial = true;
-        std::vector<Json> sent;
-        auto paired_transport = transport;
-        paired_transport.control = [&](const auto &endpoint, const Json &operation,
-                                       int timeout) -> Json {
-            if (operation.at("op") == "status") {
-                auto reply = transport.control(endpoint, operation, timeout);
-                reply["wheel_capability"] = partial ? qinggan11_partial_wheel_capability(
-                                                              "free-11-chinese-20260731-7.3.1")
-                                                    : Json(nullptr);
 
-                return reply;
+    // The partial wheel delivery cases run on POSIX hosts.
+    if (!os::host_windows) {
+        {
+            bool partial = true;
+            std::vector<Json> sent;
+            auto paired_transport = transport;
+            paired_transport.control = [&](const auto &endpoint, const Json &operation,
+                                           int timeout) -> Json {
+                if (operation.at("op") == "status") {
+                    auto reply = transport.control(endpoint, operation, timeout);
+                    reply["wheel_capability"] =
+                            partial ? qinggan11_partial_wheel_capability(qinggan11_wheel_profile())
+                                    : Json(nullptr);
+
+                    return reply;
+                }
+
+                if (operation.at("op") == "wheel_pair") {
+                    sent.push_back(operation);
+                    assert(operation.at("ownership_id") == owner && operation.at("owner") == owner);
+
+                    return Json{{"ok", true},
+                                {"session_id", id},
+                                {"down", {{"accepted", true}}},
+                                {"up", {{"accepted", true}}},
+                                {"released", true},
+                                {"guest_acknowledged", false},
+                                {"visible_effect_verified", false}};
+                }
+
+                if (operation.at("op") == "wheel") {
+                    sent.push_back(operation);
+                }
+
+                return transport.control(endpoint, operation, timeout);
+            };
+            api::Api paired_api(root, "unused-cli", paired_transport);
+            auto press = [&](int hold) {
+                auto value = request("input.wheel.press");
+                value["button"] = "volume_down";
+                value["hold_ms"] = hold;
+
+                return paired_api.call(value);
+            };
+
+            for (int hold : {1, 100, 200}) {
+                sent.clear();
+                const auto reply = press(hold);
+                assert(reply.at("ok") == true && sent.size() == 1 &&
+                       sent[0].at("op") == "wheel_pair" && sent[0].at("hold_ms") == hold &&
+                       reply.at("result").at("released") == true &&
+                       reply.at("result").at("guest_acknowledged") == false);
             }
 
-            if (operation.at("op") == "wheel_pair") {
-                sent.push_back(operation);
-                assert(operation.at("ownership_id") == owner && operation.at("owner") == owner);
-
-                return Json{{"ok", true},
-                            {"session_id", id},
-                            {"down", {{"accepted", true}}},
-                            {"up", {{"accepted", true}}},
-                            {"released", true},
-                            {"guest_acknowledged", false},
-                            {"visible_effect_verified", false}};
+            for (int hold : {201, 1300}) {
+                sent.clear();
+                assert(press(hold).at("ok") == true && sent.size() == 2 &&
+                       sent[0].at("phase") == "down" && sent[1].at("phase") == "up");
             }
 
-            if (operation.at("op") == "wheel") {
-                sent.push_back(operation);
+            for (const char *button : {"next", "previous", "ok", "photo", "voice", "phone"}) {
+                sent.clear();
+                auto value = request("input.wheel.press");
+                value["button"] = button;
+                value["hold_ms"] = 100;
+                const auto reply = paired_api.call(value);
+                assert(reply.at("ok") == true && sent.size() == 2 && sent[0].at("op") == "wheel" &&
+                       sent[0].at("id") == button && sent[0].at("phase") == "down" &&
+                       sent[1].at("phase") == "up");
             }
 
-            return transport.control(endpoint, operation, timeout);
-        };
-        api::Api paired_api(root, "unused-cli", paired_transport);
-        auto press = [&](int hold) {
-            auto value = request("input.wheel.press");
-            value["button"] = "volume_down";
-            value["hold_ms"] = hold;
-
-            return paired_api.call(value);
-        };
-
-        for (int hold : {1, 100, 200}) {
+            partial = false;
             sent.clear();
-            const auto reply = press(hold);
-            assert(reply.at("ok") == true && sent.size() == 1 && sent[0].at("op") == "wheel_pair" &&
-                   sent[0].at("hold_ms") == hold && reply.at("result").at("released") == true &&
-                   reply.at("result").at("guest_acknowledged") == false);
+            assert(press(1).at("ok") == true && sent.size() == 2 && sent[0].at("op") == "wheel" &&
+                   sent[1].at("op") == "wheel");
         }
-
-        for (int hold : {201, 1300}) {
-            sent.clear();
-            assert(press(hold).at("ok") == true && sent.size() == 2 &&
-                   sent[0].at("phase") == "down" && sent[1].at("phase") == "up");
-        }
-
-        for (const char *button : {"next", "previous", "ok", "photo", "voice", "phone"}) {
-            sent.clear();
-            auto value = request("input.wheel.press");
-            value["button"] = button;
-            value["hold_ms"] = 100;
-            const auto reply = paired_api.call(value);
-            assert(reply.at("ok") == true && sent.size() == 2 && sent[0].at("op") == "wheel" &&
-                   sent[0].at("id") == button && sent[0].at("phase") == "down" &&
-                   sent[1].at("phase") == "up");
-        }
-
-        partial = false;
-        sent.clear();
-        assert(press(1).at("ok") == true && sent.size() == 2 && sent[0].at("op") == "wheel" &&
-               sent[1].at("op") == "wheel");
     }
-#endif
-#ifndef _WIN32
+
     wheel_release_admission_tests(base);
-#endif
     phone_api_contract_tests(base);
     auto invalid = request("session.status");
     invalid["schema"] = 2;
@@ -3203,49 +2471,52 @@ int main(int argc, char **argv) try {
                rejected.at("error").at("code") == "TEST_UNSUPPORTED" && calls == old_calls);
     }
 
-#ifdef _WIN32
-    {
-        // Status fences use control IPC; boot identity and the frame use the guest. Every call
-        // receives the remaining part of one caller budget, which never grows; the budget leaves
-        // room for host PNG encoding on slow runners.
-        unsigned control_calls = 0, guest_calls = 0;
-        int budget = 4000;
-        auto bounded_budget = [&](int timeout) {
-            assert(timeout > 0 && timeout <= budget);
-            budget = timeout;
-        };
-        auto bounded_transport = shot_transport;
-        bounded_transport.control = [&](const auto &endpoint, const Json &command, int timeout) {
-            ++control_calls;
-            bounded_budget(timeout);
-            assert(command.at("timeout_ms").get<unsigned>() <= static_cast<unsigned>(timeout));
+    if (voyemu::os::host_windows) {
+        {
+            // Status fences use control IPC; boot identity and the frame use the guest. Every call
+            // receives the remaining part of one caller budget, which never grows; the budget
+            // leaves room for host PNG encoding on slow runners.
+            unsigned control_calls = 0, guest_calls = 0;
+            int budget = 4000;
+            auto bounded_budget = [&](int timeout) {
+                assert(timeout > 0 && timeout <= budget);
+                budget = timeout;
+            };
+            auto bounded_transport = shot_transport;
+            bounded_transport.control = [&](const auto &endpoint, const Json &command,
+                                            int timeout) {
+                ++control_calls;
+                bounded_budget(timeout);
+                assert(command.at("timeout_ms").get<unsigned>() <= static_cast<unsigned>(timeout));
 
-            return transport.control(endpoint, command, timeout);
-        };
-        auto bounded_guest = std::make_shared<api::ScriptedGuestAndroid>();
-        bounded_guest->identity = [&](int timeout) {
-            ++guest_calls;
-            bounded_budget(timeout);
+                return transport.control(endpoint, command, timeout);
+            };
+            auto bounded_guest = std::make_shared<api::ScriptedGuestAndroid>();
+            bounded_guest->identity = [&](int timeout) {
+                ++guest_calls;
+                bounded_budget(timeout);
 
-            return shot->identity(timeout);
-        };
-        bounded_guest->capture = [&](const std::string &epoch, unsigned display, int timeout) {
-            ++guest_calls;
-            bounded_budget(timeout);
+                return shot->identity(timeout);
+            };
+            bounded_guest->capture = [&](const std::string &epoch, unsigned display, int timeout) {
+                ++guest_calls;
+                bounded_budget(timeout);
 
-            return shot->capture(epoch, display, timeout);
-        };
-        bounded_transport.android = bounded_guest;
-        api::Api bounded(root, "unused-cli", bounded_transport);
-        auto short_capture = request("session.screenshot");
-        short_capture["screen"] = "primary";
-        short_capture["timeout_ms"] = 4000;
-        short_capture["artifact_dir"] = (root / ".local/build/tmp/bounded-control-budget").string();
-        const auto response = bounded.call(short_capture);
-        assert(response.at("ok") == true && response.at("result").at("accepted") == true &&
-               control_calls == 2 && guest_calls == 3);
+                return shot->capture(epoch, display, timeout);
+            };
+            bounded_transport.android = bounded_guest;
+            api::Api bounded(root, "unused-cli", bounded_transport);
+            auto short_capture = request("session.screenshot");
+            short_capture["screen"] = "primary";
+            short_capture["timeout_ms"] = 4000;
+            short_capture["artifact_dir"] =
+                    (root / ".local/build/tmp/bounded-control-budget").string();
+            const auto response = bounded.call(short_capture);
+            assert(response.at("ok") == true && response.at("result").at("accepted") == true &&
+                   control_calls == 2 && guest_calls == 3);
+        }
     }
-#endif
+
     {
         api::Transports roi_transport = transport;
         unsigned reads = 0;
@@ -3723,10 +2994,13 @@ int main(int argc, char **argv) try {
             auto file = user_owned_file(descriptor);
             file << "grpc.port=35554\nport.serial=5554\ngrpc.token=private-fixture-bearer\n";
         }
-#ifndef _WIN32
-        std::filesystem::permissions(descriptor, std::filesystem::perms::owner_read |
-                                                         std::filesystem::perms::owner_write);
-#endif
+
+        // Windows guards the descriptor with ACLs, not mode bits.
+        if (!voyemu::os::host_windows) {
+            std::filesystem::permissions(descriptor, std::filesystem::perms::owner_read |
+                                                             std::filesystem::perms::owner_write);
+        }
+
         const auto connection = directory / "media-connection.json",
                    launch = root / ".local/machines" / name / "android-launch.json";
         write_private_json(connection, {{"schema", 1},
@@ -4219,48 +3493,45 @@ int main(int argc, char **argv) try {
         file << "owned-lock-fixture";
     }
     Json stopped;
-#ifdef _WIN32
-    {
-        // A terminal runtime record cannot authorize cleanup while the exact
-        // named pipe still has a connected client. Wait for its actual closure.
-        const auto endpoint = session.endpoint();
-        HANDLE server = CreateNamedPipeW(endpoint.c_str(), PIPE_ACCESS_DUPLEX,
-                                         PIPE_TYPE_BYTE | PIPE_NOWAIT, 1, 4096, 4096, 0, nullptr);
-        assert(server != INVALID_HANDLE_VALUE);
-        HANDLE client = CreateFileW(endpoint.c_str(), GENERIC_READ | GENERIC_WRITE, 0, nullptr,
-                                    OPEN_EXISTING, 0, nullptr);
-        assert(client != INVALID_HANDLE_VALUE &&
-               !api::StoppedAndroidLease::endpoint_absent(endpoint));
-        std::atomic<bool> stop_dispatched = false;
-        api::Transports stopping = transport;
-        stopping.control = [&](const auto &address, const Json &operation, int timeout) {
-            auto response = transport.control(address, operation, timeout);
 
-            if (operation.at("op") == "stop") {
-                stop_dispatched = true;
-            }
+    // The named pipe of a Windows session can keep a connected client after its terminal record.
+    if (os::host_windows) {
+        {
+            // A terminal runtime record cannot authorize cleanup while the exact
+            // named pipe still has a connected client. Wait for its actual closure.
+            const auto endpoint = session.endpoint();
+            ConnectedPipe pipe(endpoint);
+            assert(!api::StoppedAndroidLease::endpoint_absent(endpoint));
+            std::atomic<bool> stop_dispatched = false;
+            api::Transports stopping = transport;
+            stopping.control = [&](const auto &address, const Json &operation, int timeout) {
+                auto response = transport.control(address, operation, timeout);
 
-            return response;
-        };
-        std::thread close_pipe([&] {
-            const auto end = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+                if (operation.at("op") == "stop") {
+                    stop_dispatched = true;
+                }
 
-            while (!stop_dispatched && std::chrono::steady_clock::now() < end) {
-                Sleep(1);
-            }
+                return response;
+            };
+            std::thread close_pipe([&] {
+                const auto end = std::chrono::steady_clock::now() + std::chrono::seconds(5);
 
-            Sleep(100);
-            CloseHandle(client);
-            CloseHandle(server);
-        });
-        api::Api stopping_api(root, "unused-cli", stopping);
-        stopped = stopping_api.call(request("session.stop"));
-        close_pipe.join();
-        assert(stop_dispatched);
+                while (!stop_dispatched && std::chrono::steady_clock::now() < end) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                }
+
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                pipe.close();
+            });
+            api::Api stopping_api(root, "unused-cli", stopping);
+            stopped = stopping_api.call(request("session.stop"));
+            close_pipe.join();
+            assert(stop_dispatched);
+        }
+    } else {
+        stopped = api.call(request("session.stop"));
     }
-#else
-    stopped = api.call(request("session.stop"));
-#endif
+
     assert(stopped.at("ok") == true &&
            stopped.at("result").at("cleanup").at("supervisor_lock_released") == true);
     auto terminal = api.call(request("session.status"));

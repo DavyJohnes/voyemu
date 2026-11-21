@@ -1,6 +1,7 @@
 #include "media_rpc.hpp"
 #include "media_rpc_test_host.hpp"
 #include "model.hpp"
+#include "os/fs.hpp"
 #include "os/platform.hpp"
 #include "process.hpp"
 #include <cassert>
@@ -66,8 +67,9 @@ int main(int argc, char **argv) try {
     ensure_private_directory(root);
     const auto descriptor = root / "pid_123.ini", record = root / "connection.json";
     auto ini = [&](const std::string &extra = "") {
-        if (!std::filesystem::exists(descriptor)) {
-            create_private_descriptor(descriptor);
+        // The SDK descriptor of a Windows engine must be owned by the current user.
+        if (voyemu::os::host_windows && !std::filesystem::exists(descriptor)) {
+            assert(voyemu::os::create_private_file(descriptor));
         }
 
         std::ofstream file(descriptor);

@@ -91,6 +91,9 @@ private:
     std::uint64_t device_ = 0, inode_ = 0, ticket_ = 0;
 };
 #endif
+// Creates an empty file at path owned by and private to the current user: the private state
+// security of Voyemu on Windows, mode 0600 elsewhere; false when path exists or cannot be created.
+bool create_private_file(const std::filesystem::path &path);
 // Opens a new private file for reading and writing as a binary stdio stream; null when path
 // already exists or cannot be created.
 std::FILE *open_exclusive_stream(const std::filesystem::path &path);

@@ -61,6 +61,14 @@ ExclusiveFile::ExclusiveFile(const std::filesystem::path &path, bool share_read)
     }
 }
 
+bool create_private_file(const std::filesystem::path &path) {
+    detail::PrivateStateSecurity security;
+    const HANDLE file = CreateFileW(path.c_str(), GENERIC_WRITE, 0, &security.attributes,
+                                    CREATE_NEW, FILE_ATTRIBUTE_NORMAL, nullptr);
+
+    return file != INVALID_HANDLE_VALUE && CloseHandle(file);
+}
+
 std::FILE *open_exclusive_stream(const std::filesystem::path &path) {
     const auto fd = _wopen(path.c_str(), _O_CREAT | _O_EXCL | _O_RDWR | _O_BINARY,
                            _S_IREAD | _S_IWRITE);

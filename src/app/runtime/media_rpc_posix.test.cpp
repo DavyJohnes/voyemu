@@ -1,8 +1,6 @@
 #include "media_rpc_test_host.hpp"
 #include <sys/stat.h>
 
-void create_private_descriptor(const std::filesystem::path &) {}
-
 bool assign_world_owner(const std::filesystem::path &) {
     return false;
 }

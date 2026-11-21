@@ -1,16 +1,8 @@
 #include "media_rpc_test_host.hpp"
 #include "os/current_user_windows.hpp"
-#include "os/private_state_security.hpp"
+#include <windows.h>
 #include <aclapi.h>
 #include <cassert>
-
-void create_private_descriptor(const std::filesystem::path &path) {
-    voyemu::detail::PrivateStateSecurity security;
-    HANDLE owned = CreateFileW(path.c_str(), GENERIC_WRITE, 0, &security.attributes, CREATE_NEW,
-                               FILE_ATTRIBUTE_NORMAL, nullptr);
-
-    assert(owned != INVALID_HANDLE_VALUE && CloseHandle(owned));
-}
 
 // Wine may report successful owner assignment without changing the owner SID.
 bool assign_world_owner(const std::filesystem::path &path) {
