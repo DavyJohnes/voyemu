@@ -83,9 +83,11 @@ checked=$("$app/voyemu" check "$machine" --lang=en 2>&1 || true)
 deps=$("$app/voyemu" deps --offline --lang=en 2>&1 || true)
 [[ "$deps" == "Voyemu: DOWNLOAD_OFFLINE: "* ]] || fail "deps --offline: $deps"
 [[ -d "$app/.local/toolchains" && ! -e "$app/src" ]] || fail "deps root"
-# Offline build reads the profile and stops at its first pinned download, still without src/.
+# Offline build reads the profile and stops at its first pinned download after its progress
+# lines, still without src/.
 built=$("$app/voyemu" build free-09-chinese-20260106-6.0.3 "$app/machines/release-build" --offline --lang=en 2>&1 || true)
-[[ "$built" == "Voyemu: DOWNLOAD_OFFLINE: "* && ! -e "$app/src" ]] || fail "build --offline: $built"
+[[ "$built" == "Preparing machine "*$'\n\n'"Voyemu: DOWNLOAD_OFFLINE: "* && ! -e "$app/src" ]] ||
+    fail "build --offline: $built"
 # Without SOURCE_DATE_EPOCH every archive time is 00:00 UTC of the release date of the launcher.
 (unset SOURCE_DATE_EPOCH && "$script" "$version" linux-x64 "$work/stage" "$work/dated" > /dev/null)
 [[ "$(tar -tvJf "$work/dated/$linux.tar.xz" --full-time --utc |
