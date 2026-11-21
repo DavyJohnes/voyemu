@@ -209,6 +209,12 @@ void Window::record_item(const std::string &name, const char *kind) {
                  {"visible", ImGui::IsItemVisible()},
                  {"enabled", !(ImGui::GetItemFlags() & ImGuiItemFlags_Disabled)}};
 
+    if (std::string_view(kind) == "numeric" || std::string_view(kind) == "checkbox") {
+        item["profile_limit"] = name == "hazard" ? !field_reaches_guest(view_, "turn_left") ||
+                                                           !field_reaches_guest(view_, "turn_right")
+                                                 : !field_reaches_guest(view_, name);
+    }
+
     if (std::string_view(kind) == "tab") {
         inspection_["tabs"].push_back(std::move(item));
     } else if (std::string_view(kind) == "toggle") {
@@ -291,6 +297,8 @@ void Window::numeric(const char *label, const std::string &name, double divisor,
                      double minimum, double maximum, double step, bool available,
                      float requested_width, const char *unit) {
     const auto source = value(name);
+    // A field that reaches neither guest stays visible but grayed out as a profile limit.
+    const bool limited = !field_reaches_guest(view_, name);
     const ImVec2 origin = ImGui::GetCursorScreenPos();
     const float width = requested_width;
     const float value_x = origin.x;
@@ -346,10 +354,11 @@ void Window::numeric(const char *label, const std::string &name, double divisor,
     if (*label) {
         caption(name, "numeric_label", label, origin.x + width + field_layout.label_gap(), origin.y,
                 numeric_label_width_, numeric_height_, label_font_size_,
-                control_ink(source ? control_palette(light_theme_).text
-                                   : control_palette(light_theme_).muted));
+                control_ink(source && !limited ? control_palette(light_theme_).text
+                                               : control_palette(light_theme_).muted));
     }
 
+    ImGui::BeginDisabled(limited);
     ImGui::PushFont(value_font, value_font_size);
     ImGui::SetCursorScreenPos(ImVec2(value_x, origin.y));
     ImGui::BeginGroup();
@@ -396,6 +405,7 @@ void Window::numeric(const char *label, const std::string &name, double divisor,
         complete_group();
         ImGui::EndDisabled();
         ImGui::PopFont();
+        ImGui::EndDisabled();
         ImGui::PopStyleColor(4);
         ImGui::PopStyleVar(3);
         ImGui::PopID();
@@ -546,6 +556,7 @@ void Window::numeric(const char *label, const std::string &name, double divisor,
     }
 
     ImGui::PopFont();
+    ImGui::EndDisabled();
     ImGui::PopStyleColor(4);
     ImGui::PopStyleVar(3);
     ImGui::PopID();
@@ -554,8 +565,12 @@ void Window::numeric(const char *label, const std::string &name, double divisor,
 void Window::checkbox(const char *label, const std::string &name, float width) {
     const bool hazard = name == "hazard";
     const auto raw = value(hazard ? "turn_left" : name), other = hazard ? value("turn_right") : raw;
-    const bool available = raw && other && *raw <= 1 && *other <= 1;
-    const bool checked = available && *raw == 1 && *other == 1;
+    const bool delivered = hazard ? field_reaches_guest(view_, "turn_left") &&
+                                            field_reaches_guest(view_, "turn_right")
+                                  : field_reaches_guest(view_, name);
+    const bool known = raw && other && *raw <= 1 && *other <= 1;
+    const bool available = known && delivered;
+    const bool checked = known && *raw == 1 && *other == 1;
     const auto origin = ImGui::GetCursorScreenPos();
     const auto ink = toggle_ink(light_theme_);
 
@@ -578,7 +593,7 @@ void Window::checkbox(const char *label, const std::string &name, float width) {
     auto *draw = ImGui::GetWindowDrawList();
     const ImVec2 track(origin.x, origin.y + 2.5f), track_end(track.x + 41.5f, track.y + 21);
     const float animated = toggle_animations_[name].value(checked, ImGui::GetTime());
-    const float progress = available ? animated : 0;
+    const float progress = known ? animated : 0;
 
     draw->AddRectFilled(track, track_end, control_ink(ink.track), 10.5f);
 
@@ -874,11 +889,15 @@ void Window::editor() {
                                               {"animation_seconds", MusicTabIndicator::duration}};
         }
 
+        ImGui::BeginDisabled(!field_reaches_guest(view_, "gear"));
+
         if (const int picked = choice("gear", radio, column.choice_cell, column.choice_font,
                                       gear_labels, gear_known ? int(*gear) : -1, gear_indicator_);
             picked >= 0) {
             client_.patch({{"gear", picked}, {"gear_valid", 1}});
         }
+
+        ImGui::EndDisabled();
 
         position(0, 2);
         numeric(tr("Запас EV"), "remain_mileage_e", 1, 0, 0, 2046, 1, true, movement_width,

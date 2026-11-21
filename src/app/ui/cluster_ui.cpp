@@ -1,4 +1,5 @@
 #include "cluster_ui_internal.hpp"
+#include "field_delivery.hpp"
 
 namespace voyemu::cluster {
 using namespace cluster_ui_detail;
@@ -552,6 +553,10 @@ bool Client::patch(const Json &values) {
     return true;
 }
 
+bool field_reaches_guest(const ViewState &state, const std::string &name) {
+    return !state.model_only.contains(name);
+}
+
 bool wheel_action_available(const ViewState &state, std::string_view id) {
     const auto family = state.deliveries.value("android", Json::object())
                                 .value("presentation_family", std::string{});
@@ -773,7 +778,7 @@ void Client::ingest(const Json &response) {
         throw VoyemuError("CLUSTER_UI", "Incompatible canonical vehicle catalog");
     }
 
-    std::set<std::string> names;
+    std::set<std::string> names, model_only;
     std::set<unsigned> indexes;
 
     for (const auto &field : catalog) {
@@ -795,6 +800,17 @@ void Client::ingest(const Json &response) {
         }
     }
 
+    // A status without field delivery, such as the local keyboard smoke, reaches every guest.
+    if (response.contains("field_delivery")) {
+        const auto delivery = field_delivery_from_status(response.at("field_delivery"));
+
+        for (const auto &name : names) {
+            if (!delivery.cluster.contains(name) && !delivery.multimedia.contains(name)) {
+                model_only.insert(name);
+            }
+        }
+    }
+
     const std::string session = response.at("session_id").get<std::string>();
     const auto revision = response.at("revision").get<std::uint64_t>();
     std::lock_guard lock(mutex_);
@@ -812,6 +828,7 @@ void Client::ingest(const Json &response) {
     state_.revision = revision;
     state_.raw = raw;
     state_.catalog = catalog;
+    state_.model_only = std::move(model_only);
     state_.deliveries = response.value("deliveries", Json::object());
     state_.routes = response.value("wheel_routes", Json::object());
     state_.wheel_capability = response.value("wheel_capability", Json::object());

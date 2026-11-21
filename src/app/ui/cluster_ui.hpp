@@ -15,6 +15,7 @@
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <set>
 #include <span>
 #include <string>
 #include <thread>
@@ -71,8 +72,13 @@ struct ViewState {
     std::string session_id, error;
     Json raw = Json::object(), catalog = Json::array(), deliveries = Json::object(),
          routes = Json::object(), wheel_capability = Json::object();
+    // Fields that reach neither guest of the machine and stay in the model.
+    std::set<std::string> model_only;
 };
 bool wheel_action_available(const ViewState &state, std::string_view id);
+// Whether a field reaches a guest of the machine; the window grays out the controls of the others
+// as a profile limit.
+bool field_reaches_guest(const ViewState &state, const std::string &name);
 // Only this thread touches the IPC client. The render thread never waits on a guest.
 class Client {
 public:

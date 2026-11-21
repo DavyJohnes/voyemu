@@ -5063,6 +5063,146 @@ static void lifecycle_client_deadlines() {
     }
 }
 
+// Controls of fields that reach neither guest are grayed out as a profile limit, and every edited
+// field reaches the session alone: the model keeps its coupled fields.
+void profile_limited_controls(const std::filesystem::path &assets) {
+    ImGui::CreateContext();
+    try {
+        auto &io = ImGui::GetIO();
+        io.IniFilename = nullptr;
+        io.BackendFlags |= ImGuiBackendFlags_RendererHasTextures;
+        io.DeltaTime = 1.f / 60;
+        io.ConfigInputTrickleEventQueue = false;
+        load_ui_font(assets.parent_path().parent_path() / "fonts/Inter-Regular.ttf");
+        const auto geometry = view_layout(canonical_ui_scale);
+        io.DisplaySize = ImVec2(geometry.canvas_width, geometry.canvas_height);
+        io.DisplayFramebufferScale = ImVec2(1920.f / canonical_ui_width,
+                                            1920.f / canonical_ui_width);
+        const auto canonical = initial_state();
+        auto cluster = Json::array();
+
+        for (const auto &field : catalog()) {
+            if (field.name != "door_fl" && field.name != "remain_mileage_e" &&
+                field.name != "hood") {
+                cluster.push_back(field.name);
+            }
+        }
+
+        const Json delivery = {{"cluster", cluster}, {"multimedia", Json::array({"hood"})}};
+
+        std::mutex mutex;
+        std::vector<Json> patches;
+        auto transport = [&](const Json &operation) -> Json {
+            if (operation.at("op") == "patch") {
+                std::lock_guard lock(mutex);
+                patches.push_back(operation.at("values"));
+            }
+
+            return Json{{"ok", true},
+                        {"session_id", "profile-limit-fixture"},
+                        {"revision", canonical.at("sequence")},
+                        {"state", canonical},
+                        {"catalog", catalog_json()},
+                        {"field_delivery", delivery}};
+        };
+        auto sent = [&] {
+            std::lock_guard lock(mutex);
+
+            return patches;
+        };
+
+        for (const std::size_t panel : {std::size_t{2}, std::size_t{0}}) {
+            Options options;
+            options.assets = assets;
+            options.endpoint = "profile-limit-fixture";
+            options.capture_ui = "headless-profile-limit-inspection";
+            options.inspect_panel = panel;
+            options.smoke_seconds = .25;
+            Window window(options, transport);
+            wait(
+                    [&] {
+                        return window.client().state().ready;
+                    },
+                    "profile limit fixture must have a canonical state");
+            check(!field_reaches_guest(window.client().state(), "door_fl") &&
+                          field_reaches_guest(window.client().state(), "hood"),
+                  "a field in neither delivery list stays in the model");
+            auto render = [&](ImVec2 mouse, bool down) {
+                io.AddMousePosEvent(mouse.x, mouse.y);
+                io.AddMouseButtonEvent(ImGuiMouseButton_Left, down);
+                ImGui::NewFrame();
+                window.draw({1001, 1920, 720}, {1002, 360, 308}, {1003, 360, 308},
+                            canonical_ui_scale);
+                ImGui::Render();
+            };
+
+            for (int frame = 0; frame < 60; ++frame) {
+                render(ImVec2(0, 0), false);
+            }
+
+            auto item = [&](const char *name) {
+                for (const auto &field : window.inspection().at("fields")) {
+                    if (field.at("name") == name) {
+                        return field;
+                    }
+                }
+
+                throw std::runtime_error(std::string("control is not rendered: ") + name);
+            };
+            auto click = [&](const Json &field) {
+                const auto rect = field.at("rect_points").get<std::array<float, 4>>();
+                const ImVec2 point(rect[0] + 8, rect[1] + rect[3] / 2);
+                render(point, false);
+                render(point, true);
+                render(point, false);
+                render(point, false);
+            };
+            const char *limited = panel == 2 ? "door_fl" : "remain_mileage_e";
+            const char *delivered = panel == 2 ? "hood" : "actual_power";
+            check(!item(limited).at("enabled").get<bool>() &&
+                          item(limited).at("profile_limit").get<bool>(),
+                  "a control whose field reaches neither guest is grayed out as a profile limit");
+            check(item(delivered).at("enabled").get<bool>() &&
+                          !item(delivered).at("profile_limit").get<bool>(),
+                  "a control whose field reaches one guest stays enabled");
+            click(item(limited));
+
+            if (panel == 0) {
+                io.AddInputCharactersUTF8("3");
+                render(ImVec2(0, 0), false);
+                render(ImVec2(0, 0), false);
+            }
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            check(sent().empty(), "a profile-limited control sends no patch");
+            click(item(delivered));
+
+            if (panel == 0) {
+                io.AddInputCharactersUTF8("3");
+                const auto rect = item(delivered).at("rect_points").get<std::array<float, 4>>();
+                render(ImVec2(rect[0] + 8, rect[1] + rect[3] / 2), false);
+            }
+
+            wait(
+                    [&] {
+                        return sent().size() == 1;
+                    },
+                    "an enabled control sends its patch");
+            const auto values = sent().front();
+            check(values.size() == 1 && values.contains(delivered),
+                  "the window sends the edited field alone");
+            window.close();
+            std::lock_guard lock(mutex);
+            patches.clear();
+        }
+
+        ImGui::DestroyContext();
+    } catch (...) {
+        ImGui::DestroyContext();
+        throw;
+    }
+}
+
 int main(int argc, char **argv) {
     try {
         lifecycle_client_deadlines();
@@ -5108,6 +5248,7 @@ int main(int argc, char **argv) {
                                      : std::filesystem::path(argv[1]).parent_path() / "free-2024");
         }
         unavailable_toggle(argv[1]);
+        profile_limited_controls(argv[1]);
         editor_sections_fill_available_height(argv[1]);
         editor_sections_fill_available_height(argv[1], true);
         radio_transition_colors(argv[1]);
