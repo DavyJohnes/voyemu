@@ -211,54 +211,67 @@ final class FrameworkDexMaterializer {
             this.implementation = implementation;
         }
 
+        @Override
         public MethodImplementation getImplementation() {
             return implementation;
         }
 
+        @Override
         public String getDefiningClass() {
             return method.getDefiningClass();
         }
 
+        @Override
         public String getName() {
             return method.getName();
         }
 
+        @Override
         public String getReturnType() {
             return method.getReturnType();
         }
 
+        @Override
         public List<? extends CharSequence> getParameterTypes() {
             return method.getParameterTypes();
         }
 
+        @Override
         public List<? extends MethodParameter> getParameters() {
             return method.getParameters();
         }
 
+        @Override
         public int getAccessFlags() {
             return method.getAccessFlags();
         }
 
+        @Override
         public Set<? extends Annotation> getAnnotations() {
             return method.getAnnotations();
         }
 
+        @Override
         public Set<HiddenApiRestriction> getHiddenApiRestrictions() {
             return method.getHiddenApiRestrictions();
         }
 
+        @Override
         public void validateReference() throws Reference.InvalidReferenceException {
             method.validateReference();
         }
 
+        @Override
         public int compareTo(MethodReference other) {
             return method.compareTo(other);
         }
 
+        @Override
         public int hashCode() {
             return method.hashCode();
         }
 
+        @Override
         public boolean equals(Object other) {
             return this == other;
         }
