@@ -49,6 +49,21 @@ bool sync_stream(std::FILE *stream) {
     return ::fsync(::fileno(stream)) == 0;
 }
 
+std::optional<FileObject> owned_file_object(const std::filesystem::path &path, bool directory) {
+    struct stat info{};
+
+    if (::lstat(path.c_str(), &info) || info.st_uid != ::geteuid() ||
+        (!directory && info.st_nlink != 1)) {
+        return std::nullopt;
+    }
+
+    return FileObject{std::uint64_t(info.st_dev), std::uint64_t(info.st_ino)};
+}
+
+bool create_junction(const std::filesystem::path &, const std::filesystem::path &) {
+    return false;
+}
+
 ExclusiveFile::~ExclusiveFile() {
     close();
 }

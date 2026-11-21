@@ -1,16 +1,11 @@
 #include "windows_renderer.hpp"
 #include "error.hpp"
+#include "os/fs.hpp"
 #include "process.hpp"
 #include "quickboot.hpp"
 #include "toolchain_manifest.hpp"
 #include <algorithm>
 #include <array>
-#ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#include <windows.h>
-#include <winioctl.h>
-#endif
 namespace voyemu {
 const WindowsRendererRecipe &windows_android_renderer_recipe() {
     // The renderer files of the Windows Emulator archive, pinned in sdk.runtimeFilePins.
@@ -64,44 +59,10 @@ void link_directory(const std::filesystem::path &target, const std::filesystem::
         return;
     }
 
-#ifdef _WIN32
     // Junctions need no Developer Mode/symlink privilege on native Windows.
-    need(std::filesystem::create_directory(link), "ANDROID_RENDERER_LINK: fresh junction required");
-    auto print = std::filesystem::path(target).make_preferred().wstring();
-    need(print.size() < 2000, "ANDROID_RENDERER_LINK: junction target too long");
-    auto substitute = L"\\??\\" + print;
-    struct Junction {
-        DWORD tag;
-        WORD length, reserved, substitute_offset, substitute_length, print_offset, print_length;
-        WCHAR paths[16384];
-    } buffer{};
-    buffer.tag = IO_REPARSE_TAG_MOUNT_POINT;
-    buffer.substitute_length = WORD(substitute.size() * 2);
-    buffer.print_offset = WORD((substitute.size() + 1) * 2);
-    buffer.print_length = WORD(print.size() * 2);
-    buffer.length = WORD(8 + (substitute.size() + print.size() + 2) * 2);
-    need(buffer.length < sizeof(buffer.paths), "ANDROID_RENDERER_LINK: junction target too long");
-    std::copy(substitute.begin(), substitute.end(), buffer.paths);
-    std::copy(print.begin(), print.end(), buffer.paths + substitute.size() + 1);
-    const auto handle = CreateFileW(link.c_str(), GENERIC_WRITE, 0, nullptr, OPEN_EXISTING,
-                                    FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS,
-                                    nullptr);
-    DWORD returned = 0;
-    const bool ok = handle != INVALID_HANDLE_VALUE &&
-                    DeviceIoControl(handle, FSCTL_SET_REPARSE_POINT, &buffer, buffer.length + 8,
-                                    nullptr, 0, &returned, nullptr);
-
-    if (handle != INVALID_HANDLE_VALUE) {
-        CloseHandle(handle);
+    if (!os::create_junction(target, link)) {
+        throw VoyemuError("ANDROID_RENDERER_LINK", "directory link unavailable");
     }
-
-    if (!ok) {
-        std::filesystem::remove(link);
-        throw VoyemuError("ANDROID_RENDERER_LINK", "directory link/junction unavailable");
-    }
-#else
-    throw VoyemuError("ANDROID_RENDERER_LINK", "directory link unavailable");
-#endif
 }
 } // namespace
 

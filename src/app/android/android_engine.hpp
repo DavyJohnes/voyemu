@@ -1,5 +1,6 @@
 #pragma once
 #include "error.hpp"
+#include "os/platform.hpp"
 #include <filesystem>
 #include <map>
 #include <stdexcept>
@@ -110,12 +111,7 @@ inline std::vector<std::string> android_network_arguments(bool qemu_boundary_pre
 }
 
 // Fixed second NIC; the legacy SDK eth0/router and its backend remain unchanged.
-inline constexpr bool android_interguest_listener =
-#ifdef _WIN32
-        true;
-#else
-        false;
-#endif
+inline constexpr bool android_interguest_listener = os::host_windows;
 
 inline std::vector<std::string>
 android_interguest_arguments(unsigned port, bool qemu_boundary_present,

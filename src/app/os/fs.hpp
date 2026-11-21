@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <filesystem>
+#include <optional>
 #include <vector>
 
 namespace voyemu::os {
@@ -96,6 +97,17 @@ std::FILE *open_exclusive_stream(const std::filesystem::path &path);
 bool truncate_stream(std::FILE *stream, std::uint64_t bytes);
 // Flushes the file behind stream, whose buffer the caller flushed, to the device; false on failure.
 bool sync_stream(std::FILE *stream);
+// Creates link as a directory junction to target, which needs no symlink privilege; false when the
+// host has no junctions or creation fails, leaving no link behind.
+bool create_junction(const std::filesystem::path &target, const std::filesystem::path &link);
+// The volume and the file index that tell a file apart from every other on the host.
+struct FileObject {
+    std::uint64_t volume = 0, index = 0;
+};
+// The FileObject of path when it is a directory or an ordinary file with one link, not a reparse
+// point, and on POSIX owned by the effective user (Windows callers check the owner on a handle);
+// none otherwise.
+std::optional<FileObject> owned_file_object(const std::filesystem::path &path, bool directory);
 // Adds link as a second name for existing; fails when link exists.
 bool link_exclusive(const std::filesystem::path &existing, const std::filesystem::path &link);
 // Atomically replaces to with from, durably where the host supports it; false on failure.

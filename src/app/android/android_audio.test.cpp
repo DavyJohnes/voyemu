@@ -146,9 +146,7 @@ int main() {
 #ifdef _WIN32
         // Wine reports its Z:\ drive root as a reparse point; the session directory reached
         // through that drive is still an ordinary owned path below the volume root.
-        const auto drive = GetFileAttributesW(L"Z:\\");
-
-        if (drive != INVALID_FILE_ATTRIBUTES && (drive & FILE_ATTRIBUTE_REPARSE_POINT)) {
+        if (os::reparse_point("Z:\\")) {
             const auto mapped =
                     std::filesystem::path("Z:") /
                     std::filesystem::path(wine_native_unix_path(directory)).make_preferred();

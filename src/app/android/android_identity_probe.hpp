@@ -1,17 +1,11 @@
 #pragma once
 #include "model.hpp"
+#include "os/fs.hpp"
 #include "process.hpp"
 #include <chrono>
 #include <functional>
 #include <optional>
 #include <stdexcept>
-#ifdef _WIN32
-#include <winsock2.h>
-#include <windows.h>
-#else
-#include <sys/stat.h>
-#include <unistd.h>
-#endif
 namespace voyemu {
 struct AndroidIdentityProbeOwner {
     std::string epoch;
@@ -91,40 +85,13 @@ private:
             throw VoyemuError("ANDROID_IDENTITY_PROBE", "replaced output slot");
         }
 
-#ifdef _WIN32
-        const auto handle = CreateFileW(
-                path.c_str(), FILE_READ_ATTRIBUTES,
-                FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING,
-                FILE_FLAG_OPEN_REPARSE_POINT | (directory ? FILE_FLAG_BACKUP_SEMANTICS : 0),
-                nullptr);
+        const auto object = os::owned_file_object(path, directory);
 
-        if (handle == INVALID_HANDLE_VALUE) {
-            throw VoyemuError("ANDROID_IDENTITY_PROBE", "output identity unavailable");
-        }
-
-        BY_HANDLE_FILE_INFORMATION info{};
-        const bool valid = GetFileInformationByHandle(handle, &info) &&
-                           !(info.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) &&
-                           (directory ? bool(info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
-                                      : !(info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) &&
-                                                info.nNumberOfLinks == 1);
-        CloseHandle(handle);
-
-        if (!valid) {
+        if (!object) {
             throw VoyemuError("ANDROID_IDENTITY_PROBE", "ordinary owned output required");
         }
 
-        return {info.dwVolumeSerialNumber,
-                (std::uint64_t(info.nFileIndexHigh) << 32) | info.nFileIndexLow};
-#else
-        struct stat info{};
-
-        if (::lstat(path.c_str(), &info) || info.st_uid != ::geteuid() ||
-            (!directory && info.st_nlink != 1)) {
-            throw VoyemuError("ANDROID_IDENTITY_PROBE", "ordinary owned output required");
-        }
-        return {std::uint64_t(info.st_dev), std::uint64_t(info.st_ino)};
-#endif
+        return {object->volume, object->index};
     }
 
     void retire_output() {

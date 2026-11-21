@@ -4,19 +4,13 @@
 src/app/adb/adb_host.test.cpp group 4 adb and api: sockets, files and admission
 src/app/adb/adb_loopback.test.cpp group 4 adb and api: sockets, files and admission
 src/app/android/android_adb.test.cpp group 5 android: console, audio and engine launch
-src/app/android/android_audio.hpp group 5 android: console, audio and engine launch
 src/app/android/android_audio.test.cpp group 5 android: console, audio and engine launch
 src/app/android/android_clock.test.cpp group 5 android: console, audio and engine launch
-src/app/android/android_console.hpp group 5 android: console, audio and engine launch
 src/app/android/android_console.test.cpp group 5 android: console, audio and engine launch
-src/app/android/android_engine.hpp group 5 android: console, audio and engine launch
 src/app/android/android_engine.test.cpp group 5 android: console, audio and engine launch
-src/app/android/android_identity_probe.hpp group 5 android: console, audio and engine launch
-src/app/android/passion_mcu_property.hpp group 5 android: console, audio and engine launch
 src/app/android/passion_mcu_property.test.cpp group 5 android: console, audio and engine launch
 src/app/android/passion_mcu_windows_guard.test.cpp group 5 android: console, audio and engine launch
 src/app/android/passion_owned_watch.test.cpp group 5 android: console, audio and engine launch
-src/app/android/windows_renderer.cpp group 5 android: console, audio and engine launch
 src/app/android/windows_startup.test.cpp group 5 android: console, audio and engine launch
 src/app/api/api.test.cpp group 4 adb and api: sockets, files and admission
 src/app/api/cluster_tree.test.cpp group 4 adb and api: sockets, files and admission

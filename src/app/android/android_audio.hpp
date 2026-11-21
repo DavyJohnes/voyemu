@@ -2,15 +2,10 @@
 #include "check.hpp"
 #include "model.hpp"
 #include "os/fs.hpp"
+#include "os/platform.hpp"
 #include "process.hpp"
 #include <algorithm>
 #include <stdexcept>
-#ifdef _WIN32
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <windows.h>
-#endif
 namespace voyemu {
 inline bool android_audio_output_enabled(const Json &specification) {
     if (specification.contains("audioOutput") && !specification.at("audioOutput").is_boolean()) {
@@ -18,11 +13,10 @@ inline bool android_audio_output_enabled(const Json &specification) {
     }
 
     const bool enabled = specification.value("audioOutput", false);
-#if !defined(__APPLE__) && !defined(_WIN32)
-    if (enabled) {
+
+    if (enabled && os::platform_name == "Linux") {
         throw VoyemuError("ANDROID_AUDIO_MODE", "unsupported output host");
     }
-#endif
 
     return enabled;
 }
@@ -68,7 +62,11 @@ inline void configure_android_audio(ProcessSpec &process, bool output,
                                     const std::filesystem::path &session = {},
                                     unsigned generation = 0) {
     if (!diagnostic.is_null()) {
-#if defined(__APPLE__) || defined(_WIN32)
+        if (os::platform_name == "Linux") {
+            throw VoyemuError("ANDROID_AUDIO_DIAGNOSTIC",
+                              "direct WAV route requires macOS or Windows");
+        }
+
         const auto reject = [](bool accepted, const char *why) {
             if (!accepted) {
                 throw VoyemuError("ANDROID_AUDIO_DIAGNOSTIC", why);
@@ -91,12 +89,7 @@ inline void configure_android_audio(ProcessSpec &process, bool output,
                "owned canonical session directory required");
 
         for (const auto &path : os::ancestors(session)) {
-#ifdef _WIN32
-            const auto attributes = GetFileAttributesW(path.c_str());
-            reject(attributes != INVALID_FILE_ATTRIBUTES &&
-                           !(attributes & FILE_ATTRIBUTE_REPARSE_POINT),
-                   "session reparse path rejected");
-#endif
+            reject(!os::reparse_point(path), "session reparse path rejected");
             reject(!std::filesystem::is_symlink(std::filesystem::symlink_status(path)),
                    "session symlink path rejected");
         }
@@ -106,9 +99,6 @@ inline void configure_android_audio(ProcessSpec &process, bool output,
         configure_android_wav_audio(process, wave, input);
 
         return;
-#else
-        throw VoyemuError("ANDROID_AUDIO_DIAGNOSTIC", "direct WAV route requires macOS or Windows");
-#endif
     }
 
     if (!output) {
@@ -118,11 +108,7 @@ inline void configure_android_audio(ProcessSpec &process, bool output,
     }
 
     // SDK documents directional backends. Never open a host recording device.
-#ifdef _WIN32
-    const char *driver = "dsound";
-#else
-    const char *driver = "coreaudio";
-#endif
+    const char *driver = os::host_windows ? "dsound" : "coreaudio";
     process.environment["QEMU_AUDIO_DRV"] = driver;
     process.environment["QEMU_AUDIO_OUT_DRV"] = driver;
     process.environment["QEMU_AUDIO_IN_DRV"] = "none";

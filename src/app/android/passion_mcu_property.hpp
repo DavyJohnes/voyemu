@@ -2,6 +2,7 @@
 #include "android_reboot.hpp"
 #include "check.hpp"
 #include "model.hpp"
+#include "os/platform.hpp"
 #include "process.hpp"
 #include <chrono>
 #include <cmath>
@@ -28,9 +29,10 @@ inline bool passion_mcu_available(const Json &android) {
         return false;
     }
 
-#ifdef _WIN32
-    throw VoyemuError("PASSION_MCU", "Windows partial projection is unsupported");
-#endif
+    if (os::host_windows) {
+        throw VoyemuError("PASSION_MCU", "Windows partial projection is unsupported");
+    }
+
     passion_mcu_need(android.at("api") == 30 &&
                              android.at("mcu_property_adapter") == passion_mcu_capability(),
                      "exact prepared partial SOC capability required");

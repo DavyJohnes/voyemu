@@ -4,6 +4,8 @@
 #define NOMINMAX
 #include <windows.h>
 
+#include <algorithm>
+
 #include <fcntl.h>
 
 #include <io.h>
@@ -72,6 +74,76 @@ bool truncate_stream(std::FILE *stream, std::uint64_t bytes) {
 
 bool sync_stream(std::FILE *stream) {
     return _commit(_fileno(stream)) == 0;
+}
+
+std::optional<FileObject> owned_file_object(const std::filesystem::path &path, bool directory) {
+    const auto handle = CreateFileW(
+            path.c_str(), FILE_READ_ATTRIBUTES,
+            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING,
+            FILE_FLAG_OPEN_REPARSE_POINT | (directory ? FILE_FLAG_BACKUP_SEMANTICS : 0), nullptr);
+
+    if (handle == INVALID_HANDLE_VALUE) {
+        return std::nullopt;
+    }
+
+    BY_HANDLE_FILE_INFORMATION info{};
+    const bool valid = GetFileInformationByHandle(handle, &info) &&
+                       !(info.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) &&
+                       (directory ? bool(info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+                                  : !(info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) &&
+                                            info.nNumberOfLinks == 1);
+    CloseHandle(handle);
+
+    if (!valid) {
+        return std::nullopt;
+    }
+
+    return FileObject{info.dwVolumeSerialNumber,
+                      (std::uint64_t(info.nFileIndexHigh) << 32) | info.nFileIndexLow};
+}
+
+bool create_junction(const std::filesystem::path &target, const std::filesystem::path &link) {
+    std::error_code error;
+
+    if (!std::filesystem::create_directory(link, error)) {
+        return false;
+    }
+
+    auto print = std::filesystem::path(target).make_preferred().wstring();
+    auto substitute = L"\\??\\" + print;
+    struct Junction {
+        DWORD tag;
+        WORD length, reserved, substitute_offset, substitute_length, print_offset, print_length;
+        WCHAR paths[16384];
+    } buffer{};
+    buffer.tag = IO_REPARSE_TAG_MOUNT_POINT;
+    buffer.substitute_length = WORD(substitute.size() * 2);
+    buffer.print_offset = WORD((substitute.size() + 1) * 2);
+    buffer.print_length = WORD(print.size() * 2);
+    buffer.length = WORD(8 + (substitute.size() + print.size() + 2) * 2);
+    bool ok = print.size() < 2000 && buffer.length < sizeof(buffer.paths);
+    HANDLE handle = INVALID_HANDLE_VALUE;
+
+    if (ok) {
+        std::copy(substitute.begin(), substitute.end(), buffer.paths);
+        std::copy(print.begin(), print.end(), buffer.paths + substitute.size() + 1);
+        handle = CreateFileW(link.c_str(), GENERIC_WRITE, 0, nullptr, OPEN_EXISTING,
+                             FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS, nullptr);
+        DWORD returned = 0;
+        ok = handle != INVALID_HANDLE_VALUE &&
+             DeviceIoControl(handle, FSCTL_SET_REPARSE_POINT, &buffer, buffer.length + 8, nullptr,
+                             0, &returned, nullptr);
+    }
+
+    if (handle != INVALID_HANDLE_VALUE) {
+        CloseHandle(handle);
+    }
+
+    if (!ok) {
+        std::filesystem::remove(link, error);
+    }
+
+    return ok;
 }
 
 ExclusiveFile::~ExclusiveFile() {
