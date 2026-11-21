@@ -931,9 +931,7 @@ void InterguestLink::flush(int timeout_ms) {
     std::uint32_t sequence = 0;
     // After publication the guest may already sync and remount, so failure is not "not started".
     const auto fail = [&](const char *reason) {
-        throw std::runtime_error(
-                std::string(sequence ? "INTERGUEST_FLUSH_UNKNOWN: " : "INTERGUEST_FLUSH: ") +
-                reason);
+        throw VoyemuError(sequence ? "INTERGUEST_FLUSH_UNKNOWN" : "INTERGUEST_FLUSH", reason);
     };
 
     for (;;) {

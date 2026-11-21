@@ -101,10 +101,11 @@ public:
         }
 
         if (result != WAIT_OBJECT_0) {
-            throw std::runtime_error(
-                    result == WAIT_TIMEOUT
-                            ? "STATE_LOCK_TIMEOUT: state operation exceeded five seconds"
-                            : "STATE_LOCK: coordination wait failed");
+            if (result == WAIT_TIMEOUT) {
+                throw VoyemuError("STATE_LOCK_TIMEOUT", "state operation exceeded five seconds");
+            }
+
+            throw VoyemuError("STATE_LOCK", "coordination wait failed");
         }
 
         acquired_ = true;

@@ -480,9 +480,8 @@ void check(HANDLE file, bool directory = false, bool parent = false,
 
         if (!identity.trusted(trustee) && !(installer && EqualSid(trustee, installer)) &&
             (!parent || (ace->Mask & mutation))) {
-            throw std::runtime_error(
-                    parent ? "ADMISSION_STATE: writable foreign parent ACL"
-                           : "ADMISSION_STATE: foreign access in private receipt ACL");
+            throw VoyemuError("ADMISSION_STATE", parent ? "writable foreign parent ACL"
+                                                        : "foreign access in private receipt ACL");
         }
     }
 }

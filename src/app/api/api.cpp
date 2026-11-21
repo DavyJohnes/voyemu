@@ -38,9 +38,8 @@ std::filesystem::path session_active_directory(const std::filesystem::path &root
     } catch (const std::runtime_error &failure) {
         const std::string message = failure.what();
 
-        if (message.starts_with("SESSION_IDENTITY:")) {
-            throw std::runtime_error("TEST_SESSION:" +
-                                     message.substr(std::string("SESSION_IDENTITY:").size()));
+        if (message_code(message) == "SESSION_IDENTITY") {
+            throw VoyemuError("TEST_SESSION", message.substr(sizeof "SESSION_IDENTITY: " - 1));
         }
 
         throw;
@@ -1322,9 +1321,12 @@ Json Api::control(const Json &request, const Json &operation, bool mutation, int
                 throw VoyemuError("ANDROID_POWER_UNKNOWN", "response epoch differs after dispatch");
             }
 
-            throw std::runtime_error(
-                    restart ? "SESSION_RESTART_UNKNOWN: response epoch differs after dispatch"
-                            : "TEST_SESSION: response epoch differs");
+            if (restart) {
+                throw VoyemuError("SESSION_RESTART_UNKNOWN",
+                                  "response epoch differs after dispatch");
+            }
+
+            throw VoyemuError("TEST_SESSION", "response epoch differs");
         }
 
         if (power && !response.at("ok").is_boolean()) {
@@ -1415,10 +1417,12 @@ Json Api::call(const Json &supplied) {
                     return saved;
                 }
 
-                throw std::runtime_error(
-                        state.status == "pending"
-                                ? "OPERATION_PENDING_UNKNOWN: action is already admitted; query operation.get"
-                                : "OPERATION_UNKNOWN: interrupted admission cannot be replayed");
+                if (state.status == "pending") {
+                    throw VoyemuError("OPERATION_PENDING_UNKNOWN",
+                                      "action is already admitted; query operation.get");
+                }
+
+                throw VoyemuError("OPERATION_UNKNOWN", "interrupted admission cannot be replayed");
             }
 
             admitted = true;

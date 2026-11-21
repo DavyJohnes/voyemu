@@ -97,9 +97,8 @@ Json exchange_ui_observer(const Json &connection, Json message, std::string_view
                 timeout(phase);
             }
 
-            throw std::runtime_error(
-                    opened ? "TREE_TRANSPORT_UNKNOWN: observer closed before response"
-                           : "TREE_TRANSPORT_UNKNOWN: observer unavailable");
+            throw VoyemuError("TREE_TRANSPORT_UNKNOWN",
+                              opened ? "observer closed before response" : "observer unavailable");
         }
 
         if (state.output.empty()) {

@@ -1,4 +1,5 @@
 #pragma once
+#include "error.hpp"
 #include "model.hpp"
 #include <cstdint>
 #include <regex>
@@ -82,8 +83,8 @@ inline Json qinggan09_canbus_startup(Qinggan09CanBusStartup &state, const std::s
     }
 
     if (state.unknown) {
-        throw std::runtime_error(
-                role + "_DELIVERY_UNKNOWN: replacement outcome requires a new verified boot");
+        throw VoyemuError((role + "_DELIVERY_UNKNOWN").c_str(),
+                          "replacement outcome requires a new verified boot");
     }
 
     if (state.generation != generation) {
@@ -119,9 +120,9 @@ inline Json qinggan09_canbus_startup(Qinggan09CanBusStartup &state, const std::s
     auto reply = observe();
 
     if (!ready(reply, boot)) {
-        throw std::runtime_error(role + (role == "ANDROID_CANBUS"
-                                                 ? "_STARTUP: current registered service required"
-                                                 : "_STARTUP: current service readiness required"));
+        throw VoyemuError((role + "_STARTUP").c_str(),
+                          role == "ANDROID_CANBUS" ? "current registered service required"
+                                                   : "current service readiness required");
     }
 
     state.completed = true;

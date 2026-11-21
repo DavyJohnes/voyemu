@@ -433,8 +433,13 @@ inline Json phone_provider_exchange(std::string_view verb, Exchange exchange,
         // A malformed receipt after a dispatched mutation leaves its outcome unknown; snapshot
         // replies keep PHONE_PROTOCOL because nothing was mutated.
         if (mutating && message.starts_with("PHONE_PROTOCOL:")) {
-            throw std::runtime_error("PHONE_PROTOCOL_UNKNOWN:" +
-                                     std::string(message.substr(sizeof "PHONE_PROTOCOL:" - 1)));
+            auto detail = std::string(message.substr(sizeof "PHONE_PROTOCOL:" - 1));
+
+            if (detail.starts_with(' ')) {
+                detail.erase(0, 1);
+            }
+
+            throw VoyemuError("PHONE_PROTOCOL_UNKNOWN", detail);
         }
 
         if (message.starts_with("PHONE_PROVIDER_UNKNOWN:") ||
@@ -533,10 +538,8 @@ inline void reject_phone_provider_failure(const Json &reply) {
                                  (stage == "request" || stage == "identity" ||
                                   stage == "bootstrap" || stage == "adapter_lookup" ||
                                   (stage == "adapter_precondition" && reason == "PHONE_POWER_OFF"));
-    throw std::runtime_error(std::string(before_mutation ? "PHONE_PROVIDER_REJECTED: "
-                                                         : "PHONE_PROVIDER_UNKNOWN: ") +
-                             "synthetic peer rejected the request; stage=" + stage +
-                             "; reason=" + reason);
+    throw VoyemuError(before_mutation ? "PHONE_PROVIDER_REJECTED" : "PHONE_PROVIDER_UNKNOWN",
+                      "synthetic peer rejected the request; stage=" + stage + "; reason=" + reason);
 }
 
 inline void validate_phone_reply(const Json &reply, std::string_view session, std::string_view boot,

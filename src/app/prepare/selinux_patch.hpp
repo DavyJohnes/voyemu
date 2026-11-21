@@ -1,4 +1,5 @@
 #pragma once
+#include "error.hpp"
 #include <array>
 #include <span>
 #include <stdexcept>
@@ -124,14 +125,16 @@ inline std::span<const Api30FileRecipe> api30_file_recipes_for(std::string_view 
 
     if (profile == "free-11-russian-20260318-rc1") {
         if (original_navi) {
-            throw std::invalid_argument("original Navi file recipes require Free A11 7.3.1");
+            throw VoyemuError("QINGGAN11_ORIGINAL_NAVI",
+                              "original Navi file recipes require Free A11 7.3.1");
         }
 
         return qinggan11_611_api30_file_recipes;
     }
 
     if (original_navi) {
-        throw std::invalid_argument("original Navi file recipes require Free A11 7.3.1");
+        throw VoyemuError("QINGGAN11_ORIGINAL_NAVI",
+                          "original Navi file recipes require Free A11 7.3.1");
     }
 
     if (profile == "free-11-chinese-20250710-6.11.1") {

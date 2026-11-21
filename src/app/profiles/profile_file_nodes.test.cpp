@@ -244,16 +244,16 @@ int main(int argc, char **argv) {
         bool wrong_original = false;
         try {
             (void)api30_file_recipes_for("api30-fixture", true);
-        } catch (const std::exception &) {
-            wrong_original = true;
+        } catch (const VoyemuError &error) {
+            wrong_original = error.code() == "QINGGAN11_ORIGINAL_NAVI";
         }
 
         check(wrong_original, "original Navi MAC graph rejects foreign profile");
         bool old_navi_rejected = false;
         try {
             (void)api30_file_recipes_for("free-11-chinese-20250710-6.11.1", true);
-        } catch (const std::exception &) {
-            old_navi_rejected = true;
+        } catch (const VoyemuError &error) {
+            old_navi_rejected = error.code() == "QINGGAN11_ORIGINAL_NAVI";
         }
 
         check(old_navi_rejected, "6.11 graph rejects unverified Navi");
