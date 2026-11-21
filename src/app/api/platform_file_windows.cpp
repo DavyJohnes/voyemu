@@ -8,6 +8,7 @@
 #include <windows.h>
 #include <aclapi.h>
 
+#include "os/current_user_windows.hpp"
 #include "os/private_state_security.hpp"
 
 namespace voyemu::api::platform {
@@ -27,32 +28,7 @@ struct Handle {
 };
 
 bool owned(HANDLE file) {
-    Handle token;
-
-    if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token.value)) {
-        return false;
-    }
-
-    DWORD size = 0;
-    GetTokenInformation(token.value, TokenUser, nullptr, 0, &size);
-    std::vector<std::byte> bytes(size);
-
-    if (!size || !GetTokenInformation(token.value, TokenUser, bytes.data(), size, &size)) {
-        return false;
-    }
-
-    PSID owner = nullptr;
-    PSECURITY_DESCRIPTOR descriptor = nullptr;
-    const auto status = GetSecurityInfo(file, SE_FILE_OBJECT, OWNER_SECURITY_INFORMATION, &owner,
-                                        nullptr, nullptr, nullptr, &descriptor);
-    const bool same = status == ERROR_SUCCESS && owner &&
-                      EqualSid(owner, reinterpret_cast<TOKEN_USER *>(bytes.data())->User.Sid);
-
-    if (descriptor) {
-        LocalFree(descriptor);
-    }
-
-    return same;
+    return os::owned_by_current_user(file);
 }
 
 bool ordinary(HANDLE file, BY_HANDLE_FILE_INFORMATION &info) {

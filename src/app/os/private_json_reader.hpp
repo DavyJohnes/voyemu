@@ -3,6 +3,8 @@
 #ifdef _WIN32
 #include <windows.h>
 
+#include "os/current_user_windows.hpp"
+
 #include "core/logging.hpp"
 #include "core/process.hpp"
 #include <algorithm>
@@ -57,26 +59,19 @@ public:
         }
 
         canonical = std::move(folded);
-        Handle token;
+        os::CurrentUser user;
 
-        if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token.value)) {
-            throw VoyemuError("STATE_LOCK", "user identity unavailable");
-        }
-
-        DWORD bytes = 0;
-        GetTokenInformation(token.value, TokenUser, nullptr, 0, &bytes);
-
-        if (!bytes || bytes > 65536) {
+        switch (user.read()) {
+        case os::CurrentUser::Reading::read:
+            break;
+        case os::CurrentUser::Reading::extent_differs:
             throw VoyemuError("STATE_LOCK", "user identity extent differs");
-        }
-
-        std::vector<unsigned char> storage(bytes);
-
-        if (!GetTokenInformation(token.value, TokenUser, storage.data(), bytes, &bytes)) {
+        case os::CurrentUser::Reading::token_unavailable:
+        case os::CurrentUser::Reading::identity_unavailable:
             throw VoyemuError("STATE_LOCK", "user identity unavailable");
         }
 
-        const auto sid = reinterpret_cast<TOKEN_USER *>(storage.data())->User.Sid;
+        const auto sid = user.sid();
 
         if (!IsValidSid(sid)) {
             throw VoyemuError("STATE_LOCK", "invalid user identity");

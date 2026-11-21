@@ -1,3 +1,4 @@
+#include "os/current_user_windows.hpp"
 #include "os/held_file.hpp"
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -12,43 +13,12 @@ HANDLE native(std::intptr_t handle) {
     return reinterpret_cast<HANDLE>(handle);
 }
 
-bool owned(HANDLE file) {
-    HANDLE token = nullptr;
-
-    if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token)) {
-        return false;
-    }
-
-    DWORD size = 0;
-    GetTokenInformation(token, TokenUser, nullptr, 0, &size);
-    std::vector<unsigned char> user(size);
-    const bool valid = size && GetTokenInformation(token, TokenUser, user.data(), size, &size);
-    CloseHandle(token);
-
-    if (!valid) {
-        return false;
-    }
-
-    PSID owner = nullptr;
-    PSECURITY_DESCRIPTOR descriptor = nullptr;
-    const auto result = GetSecurityInfo(file, SE_FILE_OBJECT, OWNER_SECURITY_INFORMATION, &owner,
-                                        nullptr, nullptr, nullptr, &descriptor);
-    const bool same = result == ERROR_SUCCESS && owner &&
-                      EqualSid(owner, reinterpret_cast<TOKEN_USER *>(user.data())->User.Sid);
-
-    if (descriptor) {
-        LocalFree(descriptor);
-    }
-
-    return same;
-}
-
 // One owned link to a plain disk file, never a reparse point.
 bool ordinary(HANDLE file, BY_HANDLE_FILE_INFORMATION &info) {
     return file != INVALID_HANDLE_VALUE && GetFileType(file) == FILE_TYPE_DISK &&
            GetFileInformationByHandle(file, &info) &&
            !(info.dwFileAttributes & (FILE_ATTRIBUTE_REPARSE_POINT | FILE_ATTRIBUTE_DIRECTORY)) &&
-           info.nNumberOfLinks == 1 && owned(file);
+           info.nNumberOfLinks == 1 && owned_by_current_user(file);
 }
 
 std::uint64_t join(DWORD high, DWORD low) {

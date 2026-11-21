@@ -1,3 +1,4 @@
+#include "os/current_user_windows.hpp"
 #include "os/durable_disk.hpp"
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -8,45 +9,13 @@
 
 namespace voyemu::os {
 namespace {
-bool owned(HANDLE file) {
-    HANDLE token = nullptr;
-
-    if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token)) {
-        return false;
-    }
-
-    alignas(TOKEN_USER) std::array<unsigned char, 256> user{};
-    DWORD bytes = 0;
-    const bool found = GetTokenInformation(token, TokenUser, user.data(),
-                                           static_cast<DWORD>(user.size()), &bytes) != 0;
-    CloseHandle(token);
-
-    if (!found) {
-        return false;
-    }
-
-    PSID owner = nullptr;
-    PSECURITY_DESCRIPTOR descriptor = nullptr;
-    const auto status = GetSecurityInfo(file, SE_FILE_OBJECT, OWNER_SECURITY_INFORMATION, &owner,
-                                        nullptr, nullptr, nullptr, &descriptor);
-    const auto sid = reinterpret_cast<TOKEN_USER *>(user.data())->User.Sid;
-    const bool valid = status == ERROR_SUCCESS && owner && IsValidSid(owner) && IsValidSid(sid) &&
-                       EqualSid(owner, sid);
-
-    if (descriptor) {
-        LocalFree(descriptor);
-    }
-
-    return valid;
-}
-
 // The identity of an ordinary single-link writable disk file of the current user.
 bool information(HANDLE file, BY_HANDLE_FILE_INFORMATION &value) {
     return file != INVALID_HANDLE_VALUE && GetFileType(file) == FILE_TYPE_DISK &&
            GetFileInformationByHandle(file, &value) && value.nNumberOfLinks == 1 &&
            !(value.dwFileAttributes &
              (FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_REPARSE_POINT | FILE_ATTRIBUTE_READONLY)) &&
-           owned(file);
+           owned_by_current_user(file);
 }
 
 std::uint64_t join(DWORD high, DWORD low) {

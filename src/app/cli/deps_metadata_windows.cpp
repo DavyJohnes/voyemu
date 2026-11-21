@@ -1,6 +1,7 @@
 #include "../platform/wine_native_backend_windows.hpp"
 #include "deps_metadata.hpp"
 #include "error.hpp"
+#include "os/current_user_windows.hpp"
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
@@ -54,37 +55,14 @@ void verify_owner_controlled_metadata(const std::filesystem::path &file) {
         throw VoyemuError("DEPS_METADATA", "generated SDK metadata must be owner-controlled");
     }
 
-    HANDLE token = INVALID_HANDLE_VALUE;
+    os::CurrentUser user;
+    os::TrustedAccounts accounts;
 
-    if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token)) {
+    if (user.read() != os::CurrentUser::Reading::read || !accounts.create()) {
         throw VoyemuError("DEPS_METADATA", "generated SDK metadata must be owner-controlled");
     }
 
-    struct CloseToken {
-        HANDLE value;
-
-        ~CloseToken() {
-            if (value != INVALID_HANDLE_VALUE) {
-                CloseHandle(value);
-            }
-        }
-    } close_token{token};
-    std::byte user[SECURITY_MAX_SID_SIZE + sizeof(TOKEN_USER)];
-    DWORD bytes = sizeof(user);
-
-    if (!GetTokenInformation(token, TokenUser, user, bytes, &bytes)) {
-        throw VoyemuError("DEPS_METADATA", "generated SDK metadata must be owner-controlled");
-    }
-
-    const PSID current = reinterpret_cast<TOKEN_USER *>(user)->User.Sid;
-    BYTE system[SECURITY_MAX_SID_SIZE]{}, administrators[SECURITY_MAX_SID_SIZE]{};
-    DWORD system_size = sizeof(system), administrators_size = sizeof(administrators);
-
-    if (!CreateWellKnownSid(WinLocalSystemSid, nullptr, system, &system_size) ||
-        !CreateWellKnownSid(WinBuiltinAdministratorsSid, nullptr, administrators,
-                            &administrators_size)) {
-        throw VoyemuError("DEPS_METADATA", "generated SDK metadata must be owner-controlled");
-    }
+    const PSID current = user.sid();
 
     // Wine reports the anonymous logon owner for every node of the DOS volume mapped to the Unix
     // root; accept that owner only on a Wine host so the DACL guard below stays live there.
@@ -93,7 +71,7 @@ void verify_owner_controlled_metadata(const std::filesystem::path &file) {
     const bool wine = wine_native_host() &&
                       CreateWellKnownSid(WinAnonymousSid, nullptr, anonymous, &anonymous_size);
     auto trusted = [&](PSID sid) {
-        return EqualSid(sid, current) || EqualSid(sid, system) || EqualSid(sid, administrators) ||
+        return EqualSid(sid, current) || accounts.contains(sid) ||
                (wine && EqualSid(sid, anonymous));
     };
 

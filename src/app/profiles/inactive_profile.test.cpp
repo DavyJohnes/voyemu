@@ -20,6 +20,8 @@
 #include <windows.h>
 #include <aclapi.h>
 
+#include "os/current_user_windows.hpp"
+
 #include <exception>
 #include <vector>
 #endif
@@ -233,27 +235,22 @@ int main(int argc, char **argv) try {
     // mirrors the 0660/0770 mode it must refuse. The descriptor must ride the creating call: Wine
     // synthesises the DACL at creation and ignores later mutation.
     struct Descriptor {
-        std::vector<unsigned char> user;
+        voyemu::os::CurrentUser user;
         PACL acl = nullptr;
         SECURITY_DESCRIPTOR descriptor{};
         SECURITY_ATTRIBUTES attributes{sizeof(SECURITY_ATTRIBUTES), &descriptor, FALSE};
 
         explicit Descriptor(bool foreign) {
-            HANDLE token = INVALID_HANDLE_VALUE;
-            check(OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token) != 0,
-                  "fixture token failed");
-            DWORD bytes = 0;
-            GetTokenInformation(token, TokenUser, nullptr, 0, &bytes);
-            check(bytes != 0, "fixture token size failed");
-            user.resize(bytes);
-            check(GetTokenInformation(token, TokenUser, user.data(), bytes, &bytes) != 0,
-                  "fixture token identity failed");
-            CloseHandle(token);
+            using Reading = voyemu::os::CurrentUser::Reading;
+            const auto reading = user.read();
+            check(reading != Reading::token_unavailable, "fixture token failed");
+            check(reading != Reading::extent_differs, "fixture token size failed");
+            check(reading != Reading::identity_unavailable, "fixture token identity failed");
             BYTE world[SECURITY_MAX_SID_SIZE]{};
             DWORD size = sizeof world;
             check(CreateWellKnownSid(WinWorldSid, nullptr, world, &size) != 0,
                   "fixture world identity failed");
-            const auto owner = reinterpret_cast<TOKEN_USER *>(user.data())->User.Sid;
+            const auto owner = user.sid();
             PSID sid = foreign ? static_cast<PSID>(world) : owner;
             EXPLICIT_ACCESSW access{};
             access.grfAccessPermissions = FILE_ALL_ACCESS;

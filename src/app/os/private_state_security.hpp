@@ -8,6 +8,7 @@
 // descriptor has to ride CreateDirectoryW/CreateFileW. Non-Windows builds see an
 // empty header: no new dependency and no <windows.h> reaches the POSIX branches.
 #ifdef _WIN32
+#include "os/current_user_windows.hpp"
 #include "os/fs.hpp"
 #include <windows.h>
 #include <aclapi.h>
@@ -17,35 +18,23 @@
 #include <vector>
 namespace voyemu::detail {
 struct PrivateStateSecurity {
-    std::vector<unsigned char> user;
+    os::CurrentUser user;
     PACL acl = nullptr;
     SECURITY_DESCRIPTOR descriptor{};
     SECURITY_ATTRIBUTES attributes{sizeof(SECURITY_ATTRIBUTES), &descriptor, FALSE};
 
     PrivateStateSecurity() {
-        HANDLE token = nullptr;
-
-        if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token)) {
-            throw VoyemuError("STATE_OWNER", "user identity unavailable");
-        }
-
-        DWORD bytes = 0;
-        GetTokenInformation(token, TokenUser, nullptr, 0, &bytes);
-
-        if (!bytes || bytes > 65536) {
-            CloseHandle(token);
+        switch (user.read()) {
+        case os::CurrentUser::Reading::read:
+            break;
+        case os::CurrentUser::Reading::extent_differs:
             throw VoyemuError("STATE_OWNER", "user identity extent differs");
-        }
-
-        user.resize(bytes);
-        const bool loaded = GetTokenInformation(token, TokenUser, user.data(), bytes, &bytes);
-        CloseHandle(token);
-
-        if (!loaded) {
+        case os::CurrentUser::Reading::token_unavailable:
+        case os::CurrentUser::Reading::identity_unavailable:
             throw VoyemuError("STATE_OWNER", "user identity unavailable");
         }
 
-        PSID owner = reinterpret_cast<TOKEN_USER *>(user.data())->User.Sid;
+        PSID owner = user.sid();
 
         if (!IsValidSid(owner)) {
             throw VoyemuError("STATE_OWNER", "invalid user identity");
@@ -79,8 +68,7 @@ struct PrivateStateSecurity {
         return SetSecurityInfo(file, SE_FILE_OBJECT,
                                OWNER_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION |
                                        PROTECTED_DACL_SECURITY_INFORMATION,
-                               reinterpret_cast<const TOKEN_USER *>(user.data())->User.Sid, nullptr,
-                               acl, nullptr) == ERROR_SUCCESS;
+                               user.sid(), nullptr, acl, nullptr) == ERROR_SUCCESS;
     }
 
     // Existing Windows policy trusts the current user, SYSTEM and Administrators.
@@ -110,7 +98,7 @@ struct PrivateStateSecurity {
     }
 
     bool accepts(PSID owner, PACL observed, bool private_access) const {
-        const auto current = reinterpret_cast<const TOKEN_USER *>(user.data())->User.Sid;
+        const auto current = user.sid();
 
         if (!owner || !IsValidSid(owner) || !EqualSid(owner, current) || !observed ||
             !IsValidAcl(observed)) {

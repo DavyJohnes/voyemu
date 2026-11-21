@@ -7,6 +7,7 @@
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
+#include "os/current_user_windows.hpp"
 #include "os/private_state_security.hpp"
 #include <windows.h>
 #include <aclapi.h>
@@ -207,37 +208,7 @@ int main(int argc, char **argv) try {
             return false;
         }
 
-        HANDLE token = nullptr;
-
-        if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token)) {
-            CloseHandle(file);
-
-            return false;
-        }
-
-        DWORD size = 0;
-        GetTokenInformation(token, TokenUser, nullptr, 0, &size);
-        std::vector<std::byte> user(size);
-        const bool loaded = size && GetTokenInformation(token, TokenUser, user.data(), size, &size);
-        CloseHandle(token);
-
-        if (!loaded) {
-            CloseHandle(file);
-
-            return false;
-        }
-
-        PSID owner = nullptr;
-        PSECURITY_DESCRIPTOR security = nullptr;
-        const auto status = GetSecurityInfo(file, SE_FILE_OBJECT, OWNER_SECURITY_INFORMATION,
-                                            &owner, nullptr, nullptr, nullptr, &security);
-        const bool owned = status == ERROR_SUCCESS && owner &&
-                           EqualSid(owner, reinterpret_cast<TOKEN_USER *>(user.data())->User.Sid);
-
-        if (security) {
-            LocalFree(security);
-        }
-
+        const bool owned = voyemu::os::owned_by_current_user(file);
         CloseHandle(file);
 
         return owned;

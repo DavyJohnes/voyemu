@@ -1,5 +1,6 @@
 #include "cli_messages.hpp"
 #include "fs.hpp"
+#include "os/current_user_windows.hpp"
 #include "os/private_state_security.hpp"
 #include <cstdlib>
 #define WIN32_LEAN_AND_MEAN
@@ -165,39 +166,15 @@ OwnedFile read_owned_file(const std::filesystem::path &path, std::size_t limit) 
         return result;
     }
 
-    HANDLE token = nullptr;
+    CurrentUser user;
 
-    if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token)) {
+    if (user.read() != CurrentUser::Reading::read) {
         result.status = OwnedFile::Status::unverifiable;
 
         return result;
     }
 
-    DWORD token_size = 0;
-    GetTokenInformation(token, TokenUser, nullptr, 0, &token_size);
-    std::vector<std::byte> user(token_size);
-    const bool loaded = token_size &&
-                        GetTokenInformation(token, TokenUser, user.data(), token_size, &token_size);
-    CloseHandle(token);
-
-    if (!loaded) {
-        result.status = OwnedFile::Status::unverifiable;
-
-        return result;
-    }
-
-    PSID owner = nullptr;
-    PSECURITY_DESCRIPTOR security = nullptr;
-    const auto status = GetSecurityInfo(file, SE_FILE_OBJECT, OWNER_SECURITY_INFORMATION, &owner,
-                                        nullptr, nullptr, nullptr, &security);
-    const bool owned = status == ERROR_SUCCESS && owner &&
-                       EqualSid(owner, reinterpret_cast<TOKEN_USER *>(user.data())->User.Sid);
-
-    if (security) {
-        LocalFree(security);
-    }
-
-    if (!owned) {
+    if (!owned_by(file, user.sid())) {
         result.status = OwnedFile::Status::foreign;
 
         return result;

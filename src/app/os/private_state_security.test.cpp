@@ -70,7 +70,7 @@ int main(int argc, char **argv) {
     try {
         check(argc == 2, "fixture root required");
         detail::PrivateStateSecurity security;
-        const auto current = reinterpret_cast<TOKEN_USER *>(security.user.data())->User.Sid;
+        const auto current = security.user.sid();
         BYTE world[SECURITY_MAX_SID_SIZE]{}, system[SECURITY_MAX_SID_SIZE]{},
                 administrators[SECURITY_MAX_SID_SIZE]{};
         DWORD size = sizeof world;

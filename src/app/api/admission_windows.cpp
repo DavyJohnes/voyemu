@@ -1,6 +1,7 @@
 #include "../platform/wine_native_backend_windows.hpp"
 #include "admission_store.hpp"
 #include "error.hpp"
+#include "os/current_user_windows.hpp"
 #include "process.hpp"
 #include <cstdlib>
 #include <stdexcept>
@@ -29,48 +30,21 @@ struct Handle {
     Handle(const Handle &) = delete;
 };
 struct Identity {
-    std::vector<std::byte> user;
-    BYTE system[SECURITY_MAX_SID_SIZE]{}, administrators[SECURITY_MAX_SID_SIZE]{};
+    os::CurrentUser user;
+    os::TrustedAccounts accounts;
 
     Identity() {
-        Handle token;
-
-        if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token.value)) {
-            fail();
-        }
-
-        DWORD size = 0;
-        GetTokenInformation(token.value, TokenUser, nullptr, 0, &size);
-
-        if (!size) {
-            fail();
-        }
-
-        user.resize(size);
-
-        if (!GetTokenInformation(token.value, TokenUser, user.data(), size, &size)) {
-            fail();
-        }
-
-        size = sizeof(system);
-
-        if (!CreateWellKnownSid(WinLocalSystemSid, nullptr, system, &size)) {
-            fail();
-        }
-
-        size = sizeof(administrators);
-
-        if (!CreateWellKnownSid(WinBuiltinAdministratorsSid, nullptr, administrators, &size)) {
+        if (user.read() != os::CurrentUser::Reading::read || !accounts.create()) {
             fail();
         }
     }
 
     PSID sid() {
-        return reinterpret_cast<TOKEN_USER *>(user.data())->User.Sid;
+        return user.sid();
     }
 
     bool trusted(PSID value) {
-        return EqualSid(value, sid()) || EqualSid(value, system) || EqualSid(value, administrators);
+        return EqualSid(value, sid()) || accounts.contains(value);
     }
 };
 

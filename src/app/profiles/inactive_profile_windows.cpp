@@ -1,4 +1,5 @@
 #include "inactive_profile.hpp"
+#include "os/current_user_windows.hpp"
 #include "os/fs.hpp"
 #include "os/private_state_security.hpp"
 #ifndef WIN32_LEAN_AND_MEAN
@@ -23,53 +24,12 @@ struct Handle {
     }
 };
 
-// The SID of the current user in user, false when the token cannot be read.
-bool current_user(std::vector<unsigned char> &user) {
-    Handle token;
-
-    if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token.value)) {
-        return false;
-    }
-
-    DWORD bytes = 0;
-    GetTokenInformation(token.value, TokenUser, nullptr, 0, &bytes);
-
-    if (!bytes || bytes > 65536) {
-        return false;
-    }
-
-    user.resize(bytes);
-
-    return GetTokenInformation(token.value, TokenUser, user.data(), bytes, &bytes);
-}
-
-bool owned(PSID sid) {
-    std::vector<unsigned char> user;
-
-    return current_user(user) &&
-           EqualSid(sid, reinterpret_cast<TOKEN_USER *>(user.data())->User.Sid);
-}
-
 bool trusted(PSID sid) {
-    std::vector<unsigned char> user;
+    os::CurrentUser user;
+    os::TrustedAccounts accounts;
 
-    if (!current_user(user)) {
-        return false;
-    }
-
-    BYTE system[SECURITY_MAX_SID_SIZE]{};
-    DWORD system_size = sizeof system;
-    BYTE administrators[SECURITY_MAX_SID_SIZE]{};
-    DWORD administrators_size = sizeof administrators;
-
-    if (!CreateWellKnownSid(WinLocalSystemSid, nullptr, system, &system_size) ||
-        !CreateWellKnownSid(WinBuiltinAdministratorsSid, nullptr, administrators,
-                            &administrators_size)) {
-        return false;
-    }
-
-    return EqualSid(sid, reinterpret_cast<TOKEN_USER *>(user.data())->User.Sid) ||
-           EqualSid(sid, system) || EqualSid(sid, administrators);
+    return user.read() == os::CurrentUser::Reading::read && accounts.create() &&
+           (EqualSid(sid, user.sid()) || accounts.contains(sid));
 }
 
 // The DACL analogue of the POSIX 0077 check: only the current user, SYSTEM and Administrators
@@ -96,7 +56,9 @@ void object(HANDLE file, bool directory) {
             }
         }
     } release{descriptor};
-    require(owner && acl && owned(owner));
+    os::CurrentUser user;
+    require(owner && acl && user.read() == os::CurrentUser::Reading::read &&
+            EqualSid(owner, user.sid()));
 
     for (DWORD i = 0; i < acl->AceCount; ++i) {
         void *raw = nullptr;

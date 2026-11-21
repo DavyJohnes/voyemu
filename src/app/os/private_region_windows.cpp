@@ -1,3 +1,4 @@
+#include "os/current_user_windows.hpp"
 #include "os/private_region.hpp"
 #include "os/private_state_security.hpp"
 #ifndef NOMINMAX
@@ -22,35 +23,7 @@ bool owned_private_region(HANDLE file, std::size_t bytes) {
         return false;
     }
 
-    HANDLE token = nullptr;
-
-    if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token)) {
-        return false;
-    }
-
-    DWORD token_size = 0;
-    GetTokenInformation(token, TokenUser, nullptr, 0, &token_size);
-    std::vector<std::byte> user(token_size);
-    const bool loaded = token_size &&
-                        GetTokenInformation(token, TokenUser, user.data(), token_size, &token_size);
-    CloseHandle(token);
-
-    if (!loaded) {
-        return false;
-    }
-
-    PSID owner = nullptr;
-    PSECURITY_DESCRIPTOR security = nullptr;
-    const auto status = GetSecurityInfo(file, SE_FILE_OBJECT, OWNER_SECURITY_INFORMATION, &owner,
-                                        nullptr, nullptr, nullptr, &security);
-    const bool owned = status == ERROR_SUCCESS && owner &&
-                       EqualSid(owner, reinterpret_cast<TOKEN_USER *>(user.data())->User.Sid);
-
-    if (security) {
-        LocalFree(security);
-    }
-
-    return owned;
+    return owned_by_current_user(file);
 }
 
 HANDLE native(std::intptr_t handle) {

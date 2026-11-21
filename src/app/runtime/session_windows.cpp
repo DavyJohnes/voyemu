@@ -1,5 +1,6 @@
 #include "session_windows.hpp"
 #include "error.hpp"
+#include "os/current_user_windows.hpp"
 #include "os/private_state_security.hpp"
 
 // The parts of Session that differ on Windows, where Android runs through framed transactions of
@@ -11,34 +12,7 @@ namespace session_detail {
 // detail::PrivateStateSecurity, so the token default owner, Administrators under an elevated
 // token, never qualifies.
 bool owned_windows_file(HANDLE file) {
-    HANDLE token = nullptr;
-
-    if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token)) {
-        return false;
-    }
-
-    DWORD size = 0;
-    GetTokenInformation(token, TokenUser, nullptr, 0, &size);
-    std::vector<std::byte> bytes(size);
-    bool valid = GetTokenInformation(token, TokenUser, bytes.data(), size, &size) != 0;
-    CloseHandle(token);
-
-    if (!valid) {
-        return false;
-    }
-
-    PSID owner = nullptr;
-    PSECURITY_DESCRIPTOR descriptor = nullptr;
-    DWORD result = GetSecurityInfo(file, SE_FILE_OBJECT, OWNER_SECURITY_INFORMATION, &owner,
-                                   nullptr, nullptr, nullptr, &descriptor);
-    bool same = result == ERROR_SUCCESS &&
-                EqualSid(owner, reinterpret_cast<TOKEN_USER *>(bytes.data())->User.Sid);
-
-    if (descriptor) {
-        LocalFree(descriptor);
-    }
-
-    return same;
+    return os::owned_by_current_user(file);
 }
 
 std::filesystem::path session_sdk_registration_directory(const std::filesystem::path &directory,
