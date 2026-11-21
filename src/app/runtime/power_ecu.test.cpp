@@ -32,15 +32,17 @@ int main() try {
     check(power.state() == State::ready, "default model with ign and READY lamp is READY");
 
     // Each state sets ign and ready_lamp for both guests and the multimedia ACC.
+    check(raw(state, "ic_bat_voltage") == 1380, "the default READY model charges the battery");
     check(apply(power.request(state, State::on)) == "applied" && power.state() == State::on &&
                   raw(state, "ign") == 1 && raw(state, "ready_lamp") == 0 &&
-                  PowerEcu::android_acc(power.state()) == 2,
+                  raw(state, "ic_bat_voltage") == 1240 && PowerEcu::android_acc(power.state()) == 2,
           "ON");
     check(apply(power.request(state, State::acc)) == "applied" && raw(state, "ign") == 0 &&
                   raw(state, "ready_lamp") == 0 && PowerEcu::android_acc(power.state()) == 2,
           "ACC keeps the multimedia on");
     check(apply(power.request(state, State::off)) == "applied" && raw(state, "ign") == 0 &&
-                  raw(state, "ready_lamp") == 0 && PowerEcu::android_acc(power.state()) == 0,
+                  raw(state, "ready_lamp") == 0 && raw(state, "ic_bat_voltage") == 1240 &&
+                  PowerEcu::android_acc(power.state()) == 0,
           "OFF switches the multimedia ACC off");
     const auto revision = state.at("sequence");
     const auto same = power.request(state, State::off);
@@ -48,7 +50,8 @@ int main() try {
                   state.at("sequence") == revision,
           "a repeated state changes no field");
     check(apply(power.request(state, State::ready)) == "applied" && raw(state, "ign") == 1 &&
-                  raw(state, "ready_lamp") == 1 && PowerEcu::android_acc(power.state()) == 2,
+                  raw(state, "ready_lamp") == 1 && raw(state, "ic_bat_voltage") == 1380 &&
+                  PowerEcu::android_acc(power.state()) == 2,
           "READY from OFF in P");
 
     // READY needs P or N; a moving vehicle stays at ON or above.

@@ -4514,7 +4514,7 @@
       "position": 331,
       "name": "ic_bat_voltage",
       "normalized_width": 12,
-      "unsupported_initial": 0,
+      "unsupported_initial": 1380,
       "wire": {
         "index": 333,
         "start_bit": 1295,

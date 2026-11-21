@@ -6,8 +6,9 @@
 #include <string_view>
 
 namespace voyemu {
-// Own power policy of the vehicle: one state OFF/ACC/ON/READY that sets ign and ready_lamp of the
-// model for both guests and the ACC of the multimedia CAN model. Not a recovered OEM BCM protocol.
+// Own power policy of the vehicle: one state OFF/ACC/ON/READY that sets ign, ready_lamp and the
+// 12 V battery voltage of the model for both guests and the ACC of the multimedia CAN model. Not a
+// recovered OEM BCM protocol.
 class PowerEcu {
 public:
     enum class State {
@@ -124,6 +125,9 @@ private:
     static constexpr std::array<std::string_view, 4> names{"off", "acc", "on", "ready"};
     // cluster_ui_controls gear_labels: P, R, N, D.
     static constexpr unsigned gear_p = 0, gear_n = 2;
+    // ic_bat_voltage in 0.01 V, the unit of the OEM powermgr voltage levels, whose normal band is
+    // 9.00-16.00 V: a resting battery, and the DC-DC converter charging it at READY.
+    static constexpr unsigned battery_rest = 1240, battery_charging = 1380;
 
     Json fields(const Json &raw) const {
         const unsigned ign = state_ >= State::on ? 1 : 0, ready = state_ == State::ready ? 1 : 0;
@@ -135,6 +139,11 @@ private:
 
         if (raw.at("ready_lamp") != ready) {
             patch["ready_lamp"] = ready;
+        }
+
+        if (const auto voltage = ready ? battery_charging : battery_rest;
+            raw.at("ic_bat_voltage") != voltage) {
+            patch["ic_bat_voltage"] = voltage;
         }
 
         return patch;

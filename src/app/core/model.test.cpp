@@ -370,7 +370,7 @@ int main(int argc, char **argv) try {
     }
 
     const auto normal = normal_initial_values();
-    assert(normal.size() == 34);
+    assert(normal.size() == 35);
     auto initial = initial_state();
     validate_state(initial);
     const auto &initial_raw = initial.at("raw_oem");
@@ -378,7 +378,8 @@ int main(int argc, char **argv) try {
     assert(normal["gear_valid"] == 1 && normal["gear"] == 0 && normal["spd_valid"] == 1);
     assert(normal["speed"] == 0 && normal["speed10x"] == 0 && normal["vcu_ExhibitionSts"] == 0);
     assert(normal["ambient_temp"] == 120 && normal["soc"] == 55 && normal["fuel_percent"] == 50);
-    assert(normal["fuel_cap"] == 0 && normal["fuel_cap_err"] == 0 && normal["dcdc_systemSts"] == 2);
+    assert(normal["fuel_cap"] == 0 && normal["fuel_cap_err"] == 0 &&
+           normal["dcdc_systemSts"] == 2 && normal["ic_bat_voltage"] == 1380);
     assert(normal["esc_hhcAvailable"] == 1 && normal["esc_hdcAvailable"] == 1);
 
     for (const auto *door : {"door_fl", "door_fr", "door_rl", "door_rr"}) {

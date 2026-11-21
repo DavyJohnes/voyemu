@@ -737,6 +737,9 @@ Json normal_initial_values() {
         values["bcm_tyre" + name + "Temp"] = 81;
     }
 
+    // 13.80 V in the 0.01 V of the OEM powermgr: the DC-DC converter charges the battery at READY.
+    values["ic_bat_voltage"] = 1380;
+
     return values;
 }
 
