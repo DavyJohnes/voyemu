@@ -421,6 +421,105 @@ static Json upgrade_profile_combined(const std::filesystem::path &root, std::str
     return result;
 }
 
+// Checks that candidate is an accepted stopped Android candidate of the authoring definition, with
+// its registered clean base, ABI and development kernel.
+static void validate_android_candidate(const std::filesystem::path &android, const Json &candidate,
+                                       std::string_view profile, const Json &definition) {
+    need(candidate.at("schema") == 1 && candidate.at("kind") == "android-candidate" &&
+                 candidate.at("profile") == profile && candidate.at("stopped") == true &&
+                 candidate.at("cold_boot_verified") == true && candidate.at("prepared_VM") == true,
+         "accepted stopped Android candidate required");
+    validate_accepted_android_profile(android, candidate, profile, definition);
+    need(candidate.at("clean_base_archive_sha256") == definition.at("android").at("sha256") &&
+                 candidate.at("android").at("abi") == "arm64-v8a",
+         "candidate registered clean base/ABI differs");
+
+    if (const auto development = portable_development_kernel(definition); !development.is_null()) {
+        need(candidate.contains("development_kernel") &&
+                     candidate.at("development_kernel") == development,
+             "candidate development kernel differs from cold boot");
+    } else {
+        need(!candidate.contains("development_kernel"), "unexpected candidate development kernel");
+    }
+}
+
+namespace {
+// The exclusive pending directory of a new machine beside its final directory, removed unless
+// published.
+struct MachineStage {
+    std::filesystem::path final, stage;
+    bool owned = true;
+
+    MachineStage(std::filesystem::path target, const std::string &machine)
+        : final(std::move(target)) {
+        need(!std::filesystem::exists(final) && !std::filesystem::is_symlink(final),
+             "final profile already exists; never replaced");
+        ensure_private_directory(final.parent_path());
+        stage = final.parent_path() / (".pending-" + machine + "-" + random_token());
+        need(std::filesystem::create_directory(stage), "exclusive prepared stage required");
+
+        try {
+            ensure_private_directory(stage);
+        } catch (...) {
+            remove();
+            throw;
+        }
+    }
+
+    ~MachineStage() {
+        if (owned) {
+            remove();
+        }
+    }
+
+    void remove() const {
+        std::error_code e;
+        std::filesystem::remove_all(stage, e);
+    }
+
+    MachineStage(const MachineStage &) = delete;
+    MachineStage &operator=(const MachineStage &) = delete;
+};
+} // namespace
+
+// Exports the Android-side parts of a new machine from the accepted candidate into stage and
+// records them in runtime.
+static void export_android_machine_parts(const std::filesystem::path &root,
+                                         std::string_view profile, const Json &definition,
+                                         const Json &candidate,
+                                         const std::filesystem::path &android,
+                                         const MachineStage &machine,
+                                         const std::string &profile_pin, Json &runtime) {
+    const auto &stage = machine.stage;
+    export_built_owned_package(root, profile, candidate, android, stage, runtime,
+                               android_candidate_reserve_bytes(definition, profile), machine.final);
+    export_can_model_receipt(definition, candidate, android, stage, runtime, std::string(profile),
+                             profile_pin);
+
+    if (const auto observer = export_built_ui_observer(root, profile, stage); !observer.empty()) {
+        runtime["ui_observer"] = observer;
+    }
+
+    if (passion_power_requested(definition)) {
+        runtime["android"]["display_power"] = export_passion_power(definition, candidate, stage,
+                                                                   profile_pin);
+    }
+
+    if (passion_mcu_requested(definition)) {
+        runtime["android"]["mcu_property"] = export_passion_mcu(definition, candidate, stage,
+                                                                profile_pin);
+    }
+
+    runtime["android"]["boot_files"] = export_portable_boot_files(
+            root, definition, stage, android_candidate_reserve_bytes(definition, profile));
+
+    if (const auto development = portable_development_kernel(definition); !development.is_null()) {
+        runtime["android"]["development_kernel"] = development;
+    }
+
+    runtime["resources"] = export_portable_resources(root, definition, profile, stage);
+}
+
 Json finalize_profile_build(const std::filesystem::path &root, std::string_view profile,
                             const MachineIdentity &machine, const std::filesystem::path &android,
                             const std::filesystem::path &qnx_file, const std::string &qnx_pin,
@@ -441,10 +540,6 @@ Json finalize_profile_build(const std::filesystem::path &root, std::string_view 
     const auto qnx = read_private_json(qnx_file, 1 << 20),
                candidate = read_private_json(android / "receipt.json", 1 << 20);
     const auto authoring_pin = hash(authoring_definition(root, profile), 1 << 20);
-    need(candidate.at("schema") == 1 && candidate.at("kind") == "android-candidate" &&
-                 candidate.at("profile") == profile && candidate.at("stopped") == true &&
-                 candidate.at("cold_boot_verified") == true && candidate.at("prepared_VM") == true,
-         "accepted stopped Android candidate required");
     need(qnx.at("schema") == 1 && qnx.at("kind") == "accepted-qnx-portable-seed" &&
                  qnx.at("profile") == profile && qnx.at("source_built") == true &&
                  qnx.at("cold_boot_verified") == true,
@@ -459,42 +554,15 @@ Json finalize_profile_build(const std::filesystem::path &root, std::string_view 
     }
 
     const auto definition = read_private_json(authoring_definition(root, profile), 1 << 20);
-    validate_accepted_android_profile(android, candidate, profile, definition);
+    validate_android_candidate(android, candidate, profile, definition);
     const auto profile_pin = candidate.at("profile_sha256").get<std::string>();
     const auto reused_qnx = reuse_qnx ? validate_accepted_qnx_reuse(root, profile, qnx_file,
                                                                     qnx_pin, reuse_qnx_source)
                                       : Json();
     const auto api = native_base_api(definition.at("android"));
-    need(candidate.at("clean_base_archive_sha256") == definition.at("android").at("sha256") &&
-                 candidate.at("android").at("abi") == "arm64-v8a",
-         "candidate registered clean base/ABI differs");
-
-    if (const auto development = portable_development_kernel(definition); !development.is_null()) {
-        need(candidate.contains("development_kernel") &&
-                     candidate.at("development_kernel") == development,
-             "candidate development kernel differs from cold boot");
-    } else {
-        need(!candidate.contains("development_kernel"), "unexpected candidate development kernel");
-    }
-
-    const auto final = build_target(root, profile, machine);
-    need(!std::filesystem::exists(final) && !std::filesystem::is_symlink(final),
-         "final profile already exists; never replaced");
-    ensure_private_directory(final.parent_path());
-    const auto stage = final.parent_path() / (".pending-" + machine.name + "-" + random_token());
-    need(std::filesystem::create_directory(stage), "exclusive prepared stage required");
-    struct Cleanup {
-        std::filesystem::path p;
-        bool owned = true;
-
-        ~Cleanup() {
-            if (owned) {
-                std::error_code e;
-                std::filesystem::remove_all(p, e);
-            }
-        }
-    } cleanup{stage};
-    ensure_private_directory(stage);
+    MachineStage built(build_target(root, profile, machine), machine.name);
+    const auto &final = built.final;
+    const auto &stage = built.stage;
     // The machine assembly shows the bytes of the guest images it copies.
     progress::block();
     progress::Meter assembling("build_machine", {{"machine", progress::path_text(final)}});
@@ -542,44 +610,20 @@ Json finalize_profile_build(const std::filesystem::path &root, std::string_view 
                       {"images", android_images}}},
                     {"qnx", {{"guest_arch", "aarch64"}, {"images", qnx_images}}}};
     qnx_runtime_metadata(runtime["qnx"], layout);
-    export_built_owned_package(root, profile, candidate, android, stage, runtime,
-                               android_candidate_reserve_bytes(definition, profile), final);
-    export_can_model_receipt(definition, candidate, android, stage, runtime, std::string(profile),
-                             profile_pin);
+    export_android_machine_parts(root, profile, definition, candidate, android, built, profile_pin,
+                                 runtime);
 
     if (!reused_qnx.is_null()) {
         write_private_json(stage / "build-provenance.json", {{"schema", 1}, {"qnx", reused_qnx}});
     }
 
-    if (const auto observer = export_built_ui_observer(root, profile, stage); !observer.empty()) {
-        runtime["ui_observer"] = observer;
-    }
-
-    if (passion_power_requested(definition)) {
-        runtime["android"]["display_power"] = export_passion_power(definition, candidate, stage,
-                                                                   profile_pin);
-    }
-
-    if (passion_mcu_requested(definition)) {
-        runtime["android"]["mcu_property"] = export_passion_mcu(definition, candidate, stage,
-                                                                profile_pin);
-    }
-
-    runtime["android"]["boot_files"] = export_portable_boot_files(
-            root, definition, stage, android_candidate_reserve_bytes(definition, profile));
-
-    if (const auto development = portable_development_kernel(definition); !development.is_null()) {
-        runtime["android"]["development_kernel"] = development;
-    }
-
-    runtime["resources"] = export_portable_resources(root, definition, profile, stage);
     write_private_json(stage / "runtime.json", runtime);
     need(hash(authoring_definition(root, profile), 1 << 20) == authoring_pin &&
                  hash(qnx_file, 1 << 20) == qnx_pin,
          "finalization inputs changed");
     inspect_portable_runtime(root, profile, machine, stage);
     publish(stage, final);
-    cleanup.owned = false;
+    built.owned = false;
     assembling.finish("");
     const auto verified = inspect_portable_runtime(root, profile, machine);
     Json provenance = Json::object();
@@ -620,43 +664,12 @@ Json finalize_android_profile_build(const std::filesystem::path &root, std::stri
     const auto profile_file = authoring_definition(root, profile);
     const auto authoring_pin = hash(profile_file, 1 << 20);
     const auto definition = read_private_json(profile_file, 1 << 20);
-    need(candidate.at("schema") == 1 && candidate.at("kind") == "android-candidate" &&
-                 candidate.at("profile") == profile && candidate.at("stopped") == true &&
-                 candidate.at("cold_boot_verified") == true && candidate.at("prepared_VM") == true,
-         "accepted stopped Android candidate required");
-    validate_accepted_android_profile(android, candidate, profile, definition);
+    validate_android_candidate(android, candidate, profile, definition);
     const auto profile_pin = candidate.at("profile_sha256").get<std::string>();
     const auto api = native_base_api(definition.at("android"));
-    need(candidate.at("clean_base_archive_sha256") == definition.at("android").at("sha256") &&
-                 candidate.at("android").at("abi") == "arm64-v8a",
-         "candidate registered clean base/ABI differs");
-
-    if (const auto development = portable_development_kernel(definition); !development.is_null()) {
-        need(candidate.contains("development_kernel") &&
-                     candidate.at("development_kernel") == development,
-             "candidate development kernel differs from cold boot");
-    } else {
-        need(!candidate.contains("development_kernel"), "unexpected candidate development kernel");
-    }
-
-    const auto final = build_target(root, profile, machine);
-    need(!std::filesystem::exists(final) && !std::filesystem::is_symlink(final),
-         "final profile already exists; never replaced");
-    ensure_private_directory(final.parent_path());
-    const auto stage = final.parent_path() / (".pending-" + machine.name + "-" + random_token());
-    need(std::filesystem::create_directory(stage), "exclusive prepared stage required");
-    struct Cleanup {
-        std::filesystem::path p;
-        bool owned = true;
-
-        ~Cleanup() {
-            if (owned) {
-                std::error_code e;
-                std::filesystem::remove_all(p, e);
-            }
-        }
-    } cleanup{stage};
-    ensure_private_directory(stage);
+    MachineStage built(build_target(root, profile, machine), machine.name);
+    const auto &final = built.final;
+    const auto &stage = built.stage;
     progress::block();
     progress::Meter assembling("build_machine", {{"machine", progress::path_text(final)}});
     assembling.length(image_bytes(candidate.at("android").at("images")));
@@ -682,38 +695,13 @@ Json finalize_android_profile_build(const std::filesystem::path &root, std::stri
                       {"abi", "arm64-v8a"},
                       {"base_archive_sha256", candidate.at("clean_base_archive_sha256")},
                       {"images", images}}}};
-    export_built_owned_package(root, profile, candidate, android, stage, runtime,
-                               android_candidate_reserve_bytes(definition, profile), final);
-    export_can_model_receipt(definition, candidate, android, stage, runtime, std::string(profile),
-                             profile_pin);
-
-    if (const auto observer = export_built_ui_observer(root, profile, stage); !observer.empty()) {
-        runtime["ui_observer"] = observer;
-    }
-
-    if (passion_power_requested(definition)) {
-        runtime["android"]["display_power"] = export_passion_power(definition, candidate, stage,
-                                                                   profile_pin);
-    }
-
-    if (passion_mcu_requested(definition)) {
-        runtime["android"]["mcu_property"] = export_passion_mcu(definition, candidate, stage,
-                                                                profile_pin);
-    }
-
-    runtime["android"]["boot_files"] = export_portable_boot_files(
-            root, definition, stage, android_candidate_reserve_bytes(definition, profile));
-
-    if (const auto development = portable_development_kernel(definition); !development.is_null()) {
-        runtime["android"]["development_kernel"] = development;
-    }
-
-    runtime["resources"] = export_portable_resources(root, definition, profile, stage);
+    export_android_machine_parts(root, profile, definition, candidate, android, built, profile_pin,
+                                 runtime);
     write_private_json(stage / "runtime.json", runtime);
     need(hash(profile_file, 1 << 20) == authoring_pin && hash(receipt, 1 << 20) == receipt_pin,
          "finalization inputs changed");
     publish(stage, final);
-    cleanup.owned = false;
+    built.owned = false;
     assembling.finish("");
 
     return {{"schema", 1},
