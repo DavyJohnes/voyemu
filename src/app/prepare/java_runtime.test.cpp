@@ -1,6 +1,7 @@
 #include "java_runtime.hpp"
 #include "e2fs_helper.hpp"
 #include "os/https.hpp"
+#include "os/platform.hpp"
 #include <fstream>
 #include <iostream>
 #include <memory>
@@ -71,11 +72,7 @@ void unreachable(const DownloadPin &, const DownloadSink &) {
 int main(int argc, char **) {
     try {
         check(argc == 1, "usage: no arguments");
-#ifdef _WIN32
-        const auto java_name = "java.exe";
-#else
-        const auto java_name = "java";
-#endif
+        const auto java_name = "java" + std::string(voyemu::os::executable_suffix);
         const auto bytes = runtime_archive(java_name);
         const auto sha = sha256_bytes(bytes);
         const std::string host = e2fs_helper_host();

@@ -4,6 +4,7 @@
 #include "interruption.hpp"
 #include "ordinary_path.hpp"
 #include "os/fs.hpp"
+#include "os/platform.hpp"
 #include "process.hpp"
 #include "quickboot.hpp"
 #include "zip_archive.hpp"
@@ -15,20 +16,6 @@
 #include <miniz.h>
 #include <set>
 #include <thread>
-#ifndef _WIN32
-#include <sys/stat.h>
-#include <unistd.h>
-#endif
-#ifdef __APPLE__
-#include <archive.h>
-#include <archive_entry.h>
-#endif
-#ifdef _WIN32
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <windows.h>
-#endif
 namespace voyemu {
 namespace {
 constexpr std::uint64_t bound = 16ULL << 30;
@@ -64,29 +51,12 @@ void space(const std::filesystem::path &path, std::uint64_t reserve) {
 
 Json directory_identity(const std::filesystem::path &path) {
     ordinary(path);
-#ifdef _WIN32
-    const auto handle = CreateFileW(
-            path.c_str(), FILE_READ_ATTRIBUTES,
-            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING,
-            FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS, nullptr);
-    need(handle != INVALID_HANDLE_VALUE, "directory identity open failed");
-    BY_HANDLE_FILE_INFORMATION info{};
-    const bool valid = GetFileInformationByHandle(handle, &info) &&
-                       (info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) &&
-                       !(info.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT);
-    CloseHandle(handle);
-    need(valid, "ordinary directory required");
+    const auto owned = os::owned_file_object(path, true);
+    need(owned.opened, "directory identity open failed");
+    need(owned.object.has_value(),
+         os::host_windows ? "ordinary directory required" : "owned directory required");
 
-    return {{"volume", info.dwVolumeSerialNumber},
-            {"high", info.nFileIndexHigh},
-            {"low", info.nFileIndexLow}};
-#else
-    struct stat info{};
-    need(!::lstat(path.c_str(), &info) && S_ISDIR(info.st_mode) && info.st_uid == ::geteuid(),
-         "owned directory required");
-
-    return {{"device", info.st_dev}, {"inode", info.st_ino}};
-#endif
+    return {{"volume", owned.object->volume}, {"index", owned.object->index}};
 }
 
 struct Member {
@@ -125,115 +95,6 @@ void copy(std::istream &input, std::ostream &output, std::uint64_t bytes,
     }
 }
 
-#ifdef __APPLE__
-// Selected members of one pinned gzip TAR layer; ZIP layers use the portable pinned reader.
-void extract(const std::filesystem::path &source, const std::vector<Member> &members,
-             const std::filesystem::path &stage, std::uint64_t reserve,
-             const std::function<void(std::uint64_t)> &advance) {
-    auto *reader = archive_read_new();
-
-    need(reader, "archive allocation failed");
-    struct Cleanup {
-        archive *value;
-
-        ~Cleanup() {
-            archive_read_free(value);
-        }
-    } cleanup{reader};
-    need(archive_read_support_format_tar(reader) == ARCHIVE_OK, "archive format unavailable");
-    need(archive_read_support_filter_gzip(reader) == ARCHIVE_OK, "gzip filter unavailable");
-    need(archive_read_open_filename(reader, source.c_str(), 65536) == ARCHIVE_OK,
-         "archive open failed");
-    std::map<std::string, const Member *> selected;
-
-    for (const auto &item : members) {
-        selected.emplace(item.name, &item);
-    }
-
-    std::set<std::string> seen;
-    archive_entry *header = nullptr;
-    unsigned count = 0;
-    std::uint64_t expanded = 0;
-    const auto deadline = std::chrono::steady_clock::now() + std::chrono::minutes(5);
-
-    for (;;) {
-        need(std::chrono::steady_clock::now() < deadline, "archive deadline reached");
-        const auto status = archive_read_next_header(reader, &header);
-
-        if (status == ARCHIVE_EOF) {
-            break;
-        }
-
-        need(status == ARCHIVE_OK && ++count <= 100000, "archive header/count failed");
-        const auto *raw = archive_entry_pathname_utf8(header);
-        need(raw, "UTF8 archive name required");
-        need(archive_entry_size_is_set(header) && archive_entry_size(header) >= 0 &&
-                     static_cast<std::uint64_t>(archive_entry_size(header)) <=
-                             (32ULL << 30) - expanded,
-             "expanded archive bound exceeded");
-        expanded += static_cast<std::uint64_t>(archive_entry_size(header));
-        const auto found = selected.find(raw);
-
-        if (found == selected.end()) {
-            std::array<char, 65536> ignored{};
-            std::uint64_t skipped = 0;
-
-            for (;;) {
-                const auto got = archive_read_data(reader, ignored.data(), ignored.size());
-                need(got >= 0 && std::chrono::steady_clock::now() < deadline,
-                     "archive skipped payload/deadline failed");
-
-                if (!got) {
-                    break;
-                }
-
-                need(static_cast<std::uint64_t>(got) <=
-                             static_cast<std::uint64_t>(archive_entry_size(header)) - skipped,
-                     "skipped payload extent differs");
-                skipped += got;
-            }
-
-            continue;
-        }
-
-        const auto &item = *found->second;
-        need(seen.insert(item.name).second && archive_entry_filetype(header) == AE_IFREG &&
-                     !archive_entry_hardlink(header) && !archive_entry_symlink(header) &&
-                     !archive_entry_is_encrypted(header) && archive_entry_size_is_set(header) &&
-                     archive_entry_size(header) >= 0 &&
-                     static_cast<std::uint64_t>(archive_entry_size(header)) == item.bytes,
-             "selected duplicate/type/extent rejected");
-        std::ofstream output(item.file, std::ios::binary);
-        need(bool(output), "selected output open failed");
-        std::array<char, 65536> buffer{};
-        std::uint64_t written = 0;
-
-        for (;;) {
-            interruption::check();
-            const auto got = archive_read_data(reader, buffer.data(), buffer.size());
-            need(got >= 0 && std::chrono::steady_clock::now() < deadline,
-                 "archive payload/deadline failed");
-
-            if (!got) {
-                break;
-            }
-
-            need(static_cast<std::uint64_t>(got) <= item.bytes - written, "selected payload grew");
-            output.write(buffer.data(), got);
-            need(bool(output), "selected output failed");
-            written += got;
-            space(stage, reserve);
-            advance(static_cast<std::uint64_t>(got));
-        }
-
-        output.close();
-        need(bool(output) && written == item.bytes, "selected payload truncated");
-        exact(item);
-    }
-
-    need(seen.size() == members.size(), "selected member missing");
-}
-#else
 class GzipReader {
     std::ifstream input_;
     mz_stream stream_{};
@@ -587,7 +448,6 @@ void extract(const std::filesystem::path &source, const std::vector<Member> &mem
              "nonzero trailing tar data");
     }
 }
-#endif
 } // namespace
 
 static Json import_selected(const std::filesystem::path &file, const Json &owner,

@@ -7,6 +7,7 @@
 #include "native_component.hpp"
 #include "original_navi_candidate.hpp"
 #include "os/fs.hpp"
+#include "os/platform.hpp"
 #include "passion_generated_helper.hpp"
 #include "process.hpp"
 #include "profile_build.hpp"
@@ -145,11 +146,7 @@ std::string classpath(const std::filesystem::path &root, const JavaPreparationRu
     }
 
     need(main, "PreparationMain class missing");
-#ifdef _WIN32
-    const char separator = ';';
-#else
-    const char separator = ':';
-#endif
+    const char separator = os::path_list_separator;
     std::string result = runtime.helper.string();
     need(receipt.at("dependencies").is_array() && receipt.at("dependencies").size() <= 64,
          "bounded helper dependencies");
@@ -461,11 +458,7 @@ static Json request_document(const std::filesystem::path &root,
     need(std::regex_match(version, std::regex("[0-9]+\\.[0-9]+\\.[0-9]+")) && api >= 28 &&
                  api <= 100,
          "SDK selector bounds");
-#ifdef _WIN32
-    const std::string exe = ".exe";
-#else
-    const std::string exe;
-#endif
+    const std::string exe(os::executable_suffix);
 
     for (const auto &required : {"build-tools/" + version + "/aapt2" + exe,
                                  "build-tools/" + version + "/zipalign" + exe}) {
@@ -644,11 +637,7 @@ Json prepare_java_artifacts(const std::filesystem::path &root,
     invocation.source_snapshot = current_profile_revision(root, request.profile);
     const auto document = java_preparation_request(root, request);
     path(runtime.jdk);
-#ifdef _WIN32
-    const std::string exe = ".exe";
-#else
-    const std::string exe;
-#endif
+    const std::string exe(os::executable_suffix);
     const auto java = runtime.jdk / "bin" / ("java" + exe),
                javac = runtime.jdk / "bin" / ("javac" + exe);
     pinned(java, runtime.java_sha256, 256ULL << 20);

@@ -369,6 +369,21 @@ void ChildProcess::ImplDelete::operator()(Impl *impl) const {
 }
 
 namespace os {
+std::vector<std::pair<std::string, std::string>> environment_variables() {
+    std::vector<std::pair<std::string, std::string>> result;
+
+    for (char **entry = environment(); *entry; ++entry) {
+        const std::string_view row(*entry);
+        const auto equal = row.find('=');
+
+        if (equal != std::string_view::npos) {
+            result.emplace_back(row.substr(0, equal), row.substr(equal + 1));
+        }
+    }
+
+    return result;
+}
+
 void close_file(FileHandle file) {
     ::close(static_cast<int>(file));
 }

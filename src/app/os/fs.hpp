@@ -126,6 +126,15 @@ struct OwnedFileObject {
     std::optional<FileObject> object;
 };
 OwnedFileObject owned_file_object(const std::filesystem::path &path, bool directory);
+// The outcome of sync_file.
+enum class FileSync {
+    synced,
+    open_failed,
+    // Flushing or closing the file failed.
+    sync_failed
+};
+// Flushes the data and metadata of the existing file at path to the device.
+FileSync sync_file(const std::filesystem::path &path);
 // The outcome of publish_new_name.
 enum class Publication {
     published,

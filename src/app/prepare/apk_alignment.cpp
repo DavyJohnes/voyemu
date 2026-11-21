@@ -13,19 +13,6 @@
 #include <stdexcept>
 #include <string_view>
 #include <vector>
-#ifdef _WIN32
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <cwchar>
-
-#include <windows.h>
-#else
-#include <fcntl.h>
-#include <stdio.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#endif
 namespace voyemu {
 namespace {
 [[noreturn]] void invalid() {
@@ -223,48 +210,12 @@ std::string align_pinned_apk(const std::filesystem::path &source, const std::str
         throw VoyemuError("APK_ALIGN_SPACE", "reserve plus planned output required");
     }
 
-#ifdef _WIN32
-    bool loader_override = false;
-
-    if (const auto environment = ::GetEnvironmentStringsW()) {
-        for (const wchar_t *entry = environment; *entry; entry += std::wcslen(entry) + 1) {
-            const std::wstring row(entry);
-            const auto equal = row.find(L'=', row.starts_with(L'=') ? 1 : 0);
-
-            if (equal == std::wstring::npos) {
-                continue;
-            }
-
-            const auto name = row.substr(0, equal);
-
-            if ((name.starts_with(L"DYLD_") || name == L"LD_LIBRARY_PATH") &&
-                equal + 1 < row.size()) {
-                loader_override = true;
-            }
-        }
-
-        ::FreeEnvironmentStringsW(environment);
-    }
-
-    if (loader_override) {
-        throw VoyemuError("APK_ALIGN_ENV", "loader overrides are not accepted");
-    }
-#else
-    for (char **entry = os::environment(); *entry; ++entry) {
-        std::string_view value(*entry);
-        const auto equal = value.find('=');
-
-        if (equal == std::string_view::npos) {
-            continue;
-        }
-
-        const auto name = value.substr(0, equal);
-
-        if ((name.starts_with("DYLD_") || name == "LD_LIBRARY_PATH") && equal + 1 < value.size()) {
+    for (const auto &[name, value] : os::environment_variables()) {
+        if ((name.starts_with("DYLD_") || name == "LD_LIBRARY_PATH") && !value.empty()) {
             throw VoyemuError("APK_ALIGN_ENV", "loader overrides are not accepted");
         }
     }
-#endif
+
     ensure_private_directory(parent);
     const auto stage = parent /
                        ("." + destination.filename().string() + ".align-" + random_token());
@@ -327,34 +278,16 @@ std::string align_pinned_apk(const std::filesystem::path &source, const std::str
     std::filesystem::permissions(
             candidate, std::filesystem::perms::owner_read | std::filesystem::perms::owner_write,
             std::filesystem::perm_options::replace);
-#ifdef _WIN32
-    const auto candidate_handle = ::CreateFileW(candidate.c_str(), GENERIC_READ | GENERIC_WRITE,
-                                                FILE_SHARE_READ, nullptr, OPEN_EXISTING,
-                                                FILE_ATTRIBUTE_NORMAL, nullptr);
 
-    if (candidate_handle == INVALID_HANDLE_VALUE) {
+    switch (os::sync_file(candidate)) {
+    case os::FileSync::synced:
+        break;
+    case os::FileSync::open_failed:
         throw VoyemuError("APK_ALIGN_OUTPUT", "candidate open failed");
-    }
-
-    const auto synced = ::FlushFileBuffers(candidate_handle) != 0;
-    const auto closed = ::CloseHandle(candidate_handle) != 0;
-
-    if (!synced || !closed) {
+    case os::FileSync::sync_failed:
         throw VoyemuError("APK_ALIGN_OUTPUT", "candidate sync failed");
     }
-#else
-    int fd = ::open(candidate.c_str(), O_RDONLY | O_NOFOLLOW);
 
-    if (fd < 0) {
-        throw VoyemuError("APK_ALIGN_OUTPUT", "candidate open failed");
-    }
-
-    const auto synced = ::fsync(fd), closed = ::close(fd);
-
-    if (synced || closed) {
-        throw VoyemuError("APK_ALIGN_OUTPUT", "candidate sync failed");
-    }
-#endif
     const auto digest = sha256_file(candidate);
     verify_pinned_apk_alignment(candidate, digest);
     std::map<std::string, std::pair<std::uint64_t, bool>> expected;

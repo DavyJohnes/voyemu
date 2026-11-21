@@ -10,16 +10,6 @@
 #include <fstream>
 #include <limits>
 #include <stdexcept>
-#ifdef _WIN32
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <windows.h>
-#else
-#include <fcntl.h>
-#include <stdio.h>
-#include <unistd.h>
-#endif
 namespace voyemu {
 namespace {
 [[noreturn]] void invalid() {
@@ -139,25 +129,10 @@ std::string sign_pinned_apk_v2(const std::filesystem::path &source, const std::s
     const auto pending = parent /
                          ("." + destination.filename().string() + ".pending-" + random_token());
     struct Cleanup {
-#ifdef _WIN32
-        HANDLE handle = INVALID_HANDLE_VALUE;
-#else
-        int handle = -1;
-#endif
         std::filesystem::path pending;
         bool owned = false;
 
         ~Cleanup() {
-#ifdef _WIN32
-            if (handle != INVALID_HANDLE_VALUE) {
-                ::CloseHandle(handle);
-            }
-#else
-            if (handle >= 0) {
-                ::close(handle);
-            }
-#endif
-
             if (owned) {
                 std::error_code e;
                 std::filesystem::remove(pending, e);
@@ -165,45 +140,16 @@ std::string sign_pinned_apk_v2(const std::filesystem::path &source, const std::s
         }
     } cleanup;
     cleanup.pending = pending;
-#ifdef _WIN32
-    cleanup.handle = ::CreateFileW(pending.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_NEW,
-                                   FILE_ATTRIBUTE_NORMAL, nullptr);
+    os::ExclusiveFile file(pending);
 
-    if (cleanup.handle == INVALID_HANDLE_VALUE) {
+    if (!file.open()) {
         invalid();
     }
-#else
-    cleanup.handle = ::open(pending.c_str(), O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW, 0600);
 
-    if (cleanup.handle < 0) {
-        invalid();
-    }
-#endif
     cleanup.owned = true;
     auto write = [&](std::string_view bytes) {
-        while (!bytes.empty()) {
-#ifdef _WIN32
-            DWORD count = 0;
-
-            if (!::WriteFile(cleanup.handle, bytes.data(), static_cast<DWORD>(bytes.size()), &count,
-                             nullptr) ||
-                count == 0) {
-                invalid();
-            }
-
-            bytes.remove_prefix(count);
-#else
-            const auto count = ::write(cleanup.handle, bytes.data(), bytes.size());
-
-            if (count < 0 && errno == EINTR) {
-                continue;
-            }
-
-            if (count <= 0) {
-                invalid();
-            }
-            bytes.remove_prefix(count);
-#endif
+        if (!file.write(bytes.data(), bytes.size())) {
+            invalid();
         }
     };
     auto copy = [&](std::uint64_t offset, std::uint64_t length) {
@@ -228,24 +174,10 @@ std::string sign_pinned_apk_v2(const std::filesystem::path &source, const std::s
     write(block);
     copy(central, eocd - central);
     write(end_record);
-#ifdef _WIN32
-    if (!::FlushFileBuffers(cleanup.handle) || !::CloseHandle(cleanup.handle)) {
+
+    if (!file.sync() || !file.close()) {
         invalid();
     }
-
-    cleanup.handle = INVALID_HANDLE_VALUE;
-#else
-    if (::fsync(cleanup.handle) != 0) {
-        invalid();
-    }
-
-    const auto closed = ::close(cleanup.handle);
-    cleanup.handle = -1;
-
-    if (closed != 0) {
-        invalid();
-    }
-#endif
 
     if (sha256_file(source) != source_pin) {
         invalid();

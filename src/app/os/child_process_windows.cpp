@@ -481,6 +481,36 @@ void ChildProcess::ImplDelete::operator()(Impl *impl) const {
 }
 
 namespace os {
+std::vector<std::pair<std::string, std::string>> environment_variables() {
+    const auto utf8 = [](const std::wstring &value) {
+        const int size = WideCharToMultiByte(CP_UTF8, 0, value.data(),
+                                             static_cast<int>(value.size()), nullptr, 0, nullptr,
+                                             nullptr);
+        std::string result(static_cast<std::size_t>(std::max(size, 0)), '\0');
+        WideCharToMultiByte(CP_UTF8, 0, value.data(), static_cast<int>(value.size()), result.data(),
+                            size, nullptr, nullptr);
+
+        return result;
+    };
+    std::vector<std::pair<std::string, std::string>> result;
+
+    if (const auto environment = ::GetEnvironmentStringsW()) {
+        for (const wchar_t *entry = environment; *entry; entry += std::wcslen(entry) + 1) {
+            const std::wstring row(entry);
+            // The hidden per-drive directories start with '=': C:=C:\work.
+            const auto equal = row.find(L'=', row.starts_with(L'=') ? 1 : 0);
+
+            if (equal != std::wstring::npos) {
+                result.emplace_back(utf8(row.substr(0, equal)), utf8(row.substr(equal + 1)));
+            }
+        }
+
+        ::FreeEnvironmentStringsW(environment);
+    }
+
+    return result;
+}
+
 void close_file(FileHandle file) {
     CloseHandle(reinterpret_cast<HANDLE>(file));
 }

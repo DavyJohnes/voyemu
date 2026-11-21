@@ -1,34 +1,27 @@
 #include "java_runtime.hpp"
 #include "e2fs_helper.hpp"
+#include "os/platform.hpp"
 #include "progress.hpp"
 #include "project_files.hpp"
 #include "sdk_archive.hpp"
 namespace voyemu {
-namespace {
-#ifdef _WIN32
-constexpr char executable_suffix[] = ".exe";
-#else
-constexpr char executable_suffix[] = "";
-#endif
-} // namespace
+namespace {} // namespace
 
 std::filesystem::path java_developer_jdk(const std::filesystem::path &root) {
-#ifdef _WIN32
-    const auto host = "windowsBuild";
-#elif defined(__APPLE__)
-    const auto host = "macosBuild";
-#else
-    const auto host = "linuxBuild";
-#endif
+    const auto host = os::host_windows               ? "windowsBuild"
+                      : os::platform_name == "macOS" ? "macosBuild"
+                                                     : "linuxBuild";
     auto home = root / embedded_toolchain_manifest()
                                .at("optionalTools")
                                .at(host)
                                .at("jdk")
                                .at("directory")
                                .get<std::string>();
-#ifdef __APPLE__
-    home /= "Contents/Home";
-#endif
+
+    // The macOS archive wraps the JDK home in Contents/Home.
+    if (os::platform_name == "macOS") {
+        home /= "Contents/Home";
+    }
 
     return home;
 }
@@ -41,7 +34,7 @@ void build_java_runtimes(const std::filesystem::path &root, const std::filesyste
     }
 
     const auto jdk = java_developer_jdk(root);
-    const auto javac = jdk / "bin" / (std::string("javac") + executable_suffix);
+    const auto javac = jdk / "bin" / (std::string("javac") + std::string(os::executable_suffix));
 
     if (!std::filesystem::is_regular_file(javac)) {
         throw VoyemuError("JAVA_RUNTIME_ASSET_MISSING",
@@ -66,7 +59,7 @@ void build_java_runtimes(const std::filesystem::path &root, const std::filesyste
         throw VoyemuError("JAVA_RUNTIME", "runtime recipe javac failed: " + result.output);
     }
 
-    spec.executable = jdk / "bin" / (std::string("java") + executable_suffix);
+    spec.executable = jdk / "bin" / (std::string("java") + std::string(os::executable_suffix));
     spec.arguments = {"-cp",
                       classes.string(),
                       "com.voyemu.prepare.JavaRuntimeBuild",
@@ -88,7 +81,7 @@ install_java_runtime(const std::filesystem::path &root, const Json &pins, bool o
     const auto &pin = pins.at("assets").at(host);
     const auto sha = pin.at("sha256").get<std::string>();
     const auto cache = root / ".local/toolchains/java-runtime", folder = cache / sha;
-    const auto java = folder / "bin" / (std::string("java") + executable_suffix);
+    const auto java = folder / "bin" / (std::string("java") + std::string(os::executable_suffix));
 
     if (std::filesystem::exists(std::filesystem::symlink_status(folder))) {
         if (!std::filesystem::is_regular_file(std::filesystem::symlink_status(java))) {
@@ -156,7 +149,8 @@ install_java_runtime(const std::filesystem::path &root, const Json &pins, bool o
         extract_sdk_archive(archive, sha, staging, reserve, 1ULL << 30, true);
 
         if (!std::filesystem::is_regular_file(std::filesystem::symlink_status(
-                    staging / "bin" / (std::string("java") + executable_suffix)))) {
+                    staging / "bin" /
+                    (std::string("java") + std::string(os::executable_suffix))))) {
             throw VoyemuError("JAVA_RUNTIME", "runtime archive lacks bin/java");
         }
 

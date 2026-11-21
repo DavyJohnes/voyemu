@@ -237,7 +237,6 @@ int main() {
         check(escaped && !std::filesystem::exists(directory / "outside") &&
                       !std::filesystem::exists(directory / "sdk-escape"),
               "SDK link outside the component rejected");
-#ifdef _WIN32
         const auto sdk = store(
                 "sdk.zip",
                 decode("504b0304140000000800b380625d86a6103607000000050000000c00000073646b2f62696e2f746f6f6ccb48cdc9c90700504b0304140000000000b380625d0000000000000000000000000d00000073646b2f62696e2f656d707479504b0304140000000000b380625d2e272a2507000000070000001200000073646b2f6c69622f756e757365642e6a61726f6d6974746564504b01021403140000000800b380625d86a6103607000000050000000c000000000000000000000080010000000073646b2f62696e2f746f6f6c504b01021403140000000000b380625d0000000000000000000000000d000000000000000000000080013100000073646b2f62696e2f656d707479504b01021403140000000000b380625d2e272a25070000000700000012000000000000000000000080015c00000073646b2f6c69622f756e757365642e6a6172504b05060000000003000300b5000000930000000000"));
@@ -247,8 +246,7 @@ int main() {
                       sha256_file(sdk_out / "bin/tool") == sha256_bytes("hello") &&
                       std::filesystem::file_size(sdk_out / "bin/empty") == 0 &&
                       !std::filesystem::exists(sdk_out / "lib/unused.jar"),
-              "Windows pinned SDK extracts compressed and empty files and excludes jar");
-#endif
+              "pinned SDK extracts compressed and empty files and excludes jar");
         auto entries = pinned_zip_inventory(good, pin);
         check(read_pinned_zip_entry(good, pin, "AndroidManifest.xml", std::size_t{32}) == expected,
               "archive-pinned payload read");

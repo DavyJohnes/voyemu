@@ -54,7 +54,7 @@ OwnedFileObject owned_file_object(const std::filesystem::path &path, bool direct
     struct stat info{};
 
     if (::lstat(path.c_str(), &info) || info.st_uid != ::geteuid() ||
-        (!directory && info.st_nlink != 1)) {
+        (directory ? !S_ISDIR(info.st_mode) : !S_ISREG(info.st_mode) || info.st_nlink != 1)) {
         return {true, std::nullopt};
     }
 
@@ -98,6 +98,18 @@ std::filesystem::path home_directory() {
     const auto *home = std::getenv("HOME");
 
     return home ? std::filesystem::path(home) : std::filesystem::path();
+}
+
+FileSync sync_file(const std::filesystem::path &path) {
+    const int fd = ::open(path.c_str(), O_RDONLY | O_NOFOLLOW);
+
+    if (fd < 0) {
+        return FileSync::open_failed;
+    }
+
+    const auto synced = ::fsync(fd), closed = ::close(fd);
+
+    return synced || closed ? FileSync::sync_failed : FileSync::synced;
 }
 
 JunctionResult create_junction(const std::filesystem::path &, const std::filesystem::path &) {

@@ -21,6 +21,8 @@ enum class FileUse {
     unknown
 };
 FileUse file_use(const std::filesystem::path &path);
+// The variables of the process environment as UTF-8 name and value pairs, in environment order.
+std::vector<std::pair<std::string, std::string>> environment_variables();
 // A file or pipe of the host: a descriptor on POSIX, a HANDLE on Windows; no_file when absent.
 using FileHandle = std::intptr_t;
 inline constexpr FileHandle no_file = -1;

@@ -32,28 +32,15 @@ src/app/graphics/graphics_angle.test.cpp group 7 graphics, platform and ui: fram
 src/app/graphics/graphics_ram.test.cpp group 7 graphics, platform and ui: frame transport and native windows
 src/app/graphics/graphics_replay.test.cpp group 7 graphics, platform and ui: frame transport and native windows
 src/app/platform/wine_native_backend_windows.test.cpp group 7 graphics, platform and ui: frame transport and native windows
-src/app/prepare/apk_alignment.cpp group 8 prepare: archives, Java runtime and e2fs helpers
 src/app/prepare/apk_alignment.test.cpp group 8 prepare: archives, Java runtime and e2fs helpers
-src/app/prepare/apk_build.cpp group 8 prepare: archives, Java runtime and e2fs helpers
-src/app/prepare/apk_sign.cpp group 8 prepare: archives, Java runtime and e2fs helpers
-src/app/prepare/e2fs_helper.hpp group 8 prepare: archives, Java runtime and e2fs helpers
 src/app/prepare/e2fs_helper.test.cpp group 8 prepare: archives, Java runtime and e2fs helpers
-src/app/prepare/e2fs_helper_file.h group 8 prepare: archives, Java runtime and e2fs helpers
-src/app/prepare/file_patch.cpp group 8 prepare: archives, Java runtime and e2fs helpers
 src/app/prepare/file_patch.test.cpp group 8 prepare: archives, Java runtime and e2fs helpers
-src/app/prepare/java_preparation.cpp group 8 prepare: archives, Java runtime and e2fs helpers
 src/app/prepare/java_preparation.test.cpp group 8 prepare: archives, Java runtime and e2fs helpers
-src/app/prepare/java_runtime.cpp group 8 prepare: archives, Java runtime and e2fs helpers
 src/app/prepare/java_runtime.test.cpp group 8 prepare: archives, Java runtime and e2fs helpers
 src/app/prepare/java_toolchain.cpp group 8 prepare: archives, Java runtime and e2fs helpers
 src/app/prepare/java_toolchain.test.cpp group 8 prepare: archives, Java runtime and e2fs helpers
-src/app/prepare/owner_update_archive.cpp group 8 prepare: archives, Java runtime and e2fs helpers
 src/app/prepare/owner_update_archive.test.cpp group 8 prepare: archives, Java runtime and e2fs helpers
-src/app/prepare/resource_apk.cpp group 8 prepare: archives, Java runtime and e2fs helpers
-src/app/prepare/sdk_archive.cpp group 8 prepare: archives, Java runtime and e2fs helpers
 src/app/prepare/update_image.test.cpp group 8 prepare: archives, Java runtime and e2fs helpers
-src/app/prepare/zip_archive.cpp group 8 prepare: archives, Java runtime and e2fs helpers
-src/app/prepare/zip_archive.test.cpp group 8 prepare: archives, Java runtime and e2fs helpers
 src/app/profiles/candidate_ui_observer_transport.hpp group 11 profiles: candidate transport and image clone
 src/app/profiles/image_clone.hpp group 11 profiles: candidate transport and image clone
 src/app/profiles/inactive_profile.hpp group 11 profiles: candidate transport and image clone

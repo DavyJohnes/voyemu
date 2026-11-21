@@ -18,12 +18,6 @@
 #include <mutex>
 #include <set>
 #include <stdexcept>
-#ifdef _WIN32
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <windows.h>
-#endif
 namespace voyemu {
 namespace {
 bool valid_sha(const std::string &value) {

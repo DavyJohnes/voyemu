@@ -11,9 +11,6 @@
 #include "quickboot.hpp"
 #include "resource_component.hpp"
 #include <limits>
-#ifdef __APPLE__
-#include <stdio.h>
-#endif
 namespace voyemu {
 namespace {
 constexpr Check need{"RESOURCE_APK"};

@@ -1,5 +1,5 @@
 /* Preparation-only helper. Never use on a mounted or shared image. */
-#include "e2fs_helper_file.h"
+#include "../os/e2fs_helper_file.h"
 #include "e2fs_helper_sha256.h"
 #include <ext2fs/ext2fs.h>
 #include <stdint.h>

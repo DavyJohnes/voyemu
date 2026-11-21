@@ -12,11 +12,6 @@
 #include <functional>
 #include <map>
 #include <set>
-#ifdef __APPLE__
-#include <stdio.h>
-#elif defined(_WIN32)
-#include <windows.h>
-#endif
 namespace voyemu {
 namespace {
 constexpr ProfileScope qinggan09_scope{ProfilePlatform::qinggan09, ProfileBoard::sa8155},

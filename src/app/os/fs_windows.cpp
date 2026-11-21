@@ -140,6 +140,20 @@ std::filesystem::path home_directory() {
     return home ? std::filesystem::path(home) : std::filesystem::path();
 }
 
+FileSync sync_file(const std::filesystem::path &path) {
+    const auto handle = ::CreateFileW(path.c_str(), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ,
+                                      nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+
+    if (handle == INVALID_HANDLE_VALUE) {
+        return FileSync::open_failed;
+    }
+
+    const auto synced = ::FlushFileBuffers(handle) != 0;
+    const auto closed = ::CloseHandle(handle) != 0;
+
+    return synced && closed ? FileSync::synced : FileSync::sync_failed;
+}
+
 JunctionResult create_junction(const std::filesystem::path &target,
                                const std::filesystem::path &link) {
     if (!std::filesystem::create_directory(link)) {

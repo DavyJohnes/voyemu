@@ -3,6 +3,7 @@
 #include "download.hpp"
 #include "logging.hpp"
 #include "model.hpp"
+#include "os/platform.hpp"
 #include "process.hpp"
 #include "project_files.hpp"
 #include <filesystem>
@@ -12,13 +13,9 @@
 namespace voyemu {
 // Host key of the e2fsprogs.helpers pins in toolchain.json.
 inline const char *e2fs_helper_host() {
-#ifdef _WIN32
-    return "win32-x64";
-#elif defined(__APPLE__)
-    return "darwin-arm64";
-#else
-    return "linux-x64";
-#endif
+    return os::host_windows               ? "win32-x64"
+           : os::platform_name == "macOS" ? "darwin-arm64"
+                                          : "linux-x64";
 }
 
 // Builds the helpers of this host into output with src/app/prepare/e2fsprogs_build.cmake of
@@ -31,18 +28,15 @@ inline void build_e2fs_helpers(const std::filesystem::path &project,
                                          "checkout; publish the release asset");
     }
 
-#ifdef _WIN32
-    (void)project;
-    (void)output;
+    if (os::host_windows) {
+        throw VoyemuError(
+                "E2FS_HELPER",
+                "the helper recipe needs a POSIX shell and make; publish the release asset");
+    }
 
-    throw VoyemuError("E2FS_HELPER",
-                      "the helper recipe needs a POSIX shell and make; publish the release asset");
-#else
-#ifdef __APPLE__
-    const auto host = "macosBuild", binary = "CMake.app/Contents/bin/cmake";
-#else
-    const auto host = "linuxBuild", binary = "bin/cmake";
-#endif
+    const bool macos = os::platform_name == "macOS";
+    const auto host = macos ? "macosBuild" : "linuxBuild",
+               binary = macos ? "CMake.app/Contents/bin/cmake" : "bin/cmake";
     ProcessSpec spec;
     spec.executable = project /
                       embedded_toolchain_manifest()
@@ -61,7 +55,6 @@ inline void build_e2fs_helpers(const std::filesystem::path &project,
     if (result.timed_out || result.exit_code != 0) {
         throw VoyemuError("E2FS_HELPER", "helper recipe failed: " + result.output);
     }
-#endif
 }
 
 // Installs the image helper name of this host, pinned in helpers (e2fsprogs.helpers of
@@ -77,11 +70,7 @@ install_e2fs_helper(const std::filesystem::path &root, const Json &helpers, cons
     const auto sha = pin.at("sha256").get<std::string>();
     const auto folder = root / ".local/toolchains/e2fs-helpers" / sha;
 
-#ifdef _WIN32
-    const auto helper = folder / (name + ".exe");
-#else
-    const auto helper = folder / name;
-#endif
+    const auto helper = folder / (name + std::string(os::executable_suffix));
     const auto pinned = [&](const std::filesystem::path &file) {
         return std::filesystem::is_regular_file(std::filesystem::symlink_status(file)) &&
                std::filesystem::hard_link_count(file) == 1 && sha256_file(file) == sha;

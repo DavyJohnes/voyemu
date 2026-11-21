@@ -10,14 +10,6 @@
 #include <map>
 #include <regex>
 #include <set>
-#ifdef _WIN32
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <windows.h>
-#else
-#include <stdio.h>
-#endif
 namespace voyemu {
 namespace {
 bool old_v1_signature(std::string name) {

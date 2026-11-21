@@ -5,6 +5,7 @@
 #include "error.hpp"
 #include "interruption.hpp"
 #include "java_runtime.hpp"
+#include "java_toolchain_identity.hpp"
 #include "ordinary_path.hpp"
 #include "os/fs.hpp"
 #include "owner_lock.hpp"
@@ -19,14 +20,6 @@
 #include <regex>
 #include <set>
 #include <thread>
-#ifdef _WIN32
-#include <windows.h>
-#else
-#include "os/stat_time.hpp"
-#include <stdio.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#endif
 namespace voyemu {
 namespace {
 constexpr Check need{"JAVA_TOOLCHAIN"};
@@ -72,52 +65,10 @@ std::string hash(const std::filesystem::path &p, std::uint64_t maximum = 256ULL 
 }
 
 // Shared SDK/library inputs are immutable by exact SHA pin, not exclusive mutable cache files.
-Json immutable_input_identity(const std::filesystem::path &path) {
+Json input_identity(const std::filesystem::path &path) {
     ordinary(path);
-#ifdef _WIN32
-    const auto file = CreateFileW(path.c_str(), GENERIC_READ,
-                                  FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr,
-                                  OPEN_EXISTING, FILE_FLAG_OPEN_REPARSE_POINT, nullptr);
-    need(file != INVALID_HANDLE_VALUE, "immutable input open failed");
-    BY_HANDLE_FILE_INFORMATION info{};
-    FILE_BASIC_INFO basic{};
-    const bool valid =
-            GetFileInformationByHandle(file, &info) &&
-            GetFileInformationByHandleEx(file, FileBasicInfo, &basic, sizeof basic) &&
-            info.nNumberOfLinks > 0 &&
-            !(info.dwFileAttributes & (FILE_ATTRIBUTE_REPARSE_POINT | FILE_ATTRIBUTE_DIRECTORY));
-    CloseHandle(file);
-    need(valid, "ordinary immutable input required");
 
-    return {{"volume", info.dwVolumeSerialNumber},
-            {"index_high", info.nFileIndexHigh},
-            {"index_low", info.nFileIndexLow},
-            {"links", info.nNumberOfLinks},
-            {"attributes", info.dwFileAttributes},
-            {"size_high", info.nFileSizeHigh},
-            {"size_low", info.nFileSizeLow},
-            {"mtime_high", info.ftLastWriteTime.dwHighDateTime},
-            {"mtime_low", info.ftLastWriteTime.dwLowDateTime},
-            {"change_time", basic.ChangeTime.QuadPart}};
-#else
-    struct stat info{};
-    // An installed system JDK is root-owned and not writable by anyone else.
-    need(!::lstat(path.c_str(), &info) && S_ISREG(info.st_mode) &&
-                 (info.st_uid == ::geteuid() || (info.st_uid == 0 && !(info.st_mode & 0022))) &&
-                 info.st_nlink > 0,
-         "owned ordinary immutable input required");
-
-    return {{"device", info.st_dev},
-            {"inode", info.st_ino},
-            {"owner", info.st_uid},
-            {"mode", info.st_mode},
-            {"links", info.st_nlink},
-            {"size", info.st_size},
-            {"mtime_seconds", os::modified_time(info).tv_sec},
-            {"mtime_ns", os::modified_time(info).tv_nsec},
-            {"ctime_seconds", os::changed_time(info).tv_sec},
-            {"ctime_ns", os::changed_time(info).tv_nsec}};
-#endif
+    return immutable_input_identity(path);
 }
 
 void write(const std::filesystem::path &p, const std::string &data) {
@@ -450,7 +401,7 @@ std::string java_toolchain_input_sha256(const std::filesystem::path &p, std::uin
     ordinary(p);
     need(std::filesystem::is_regular_file(p) && std::filesystem::file_size(p) <= maximum,
          "bounded file required");
-    const auto epoch = immutable_input_identity(p);
+    const auto epoch = input_identity(p);
     auto result = sha256_file(p);
 
     if (before_verify) {
@@ -458,7 +409,7 @@ std::string java_toolchain_input_sha256(const std::filesystem::path &p, std::uin
     }
 
     ordinary(p);
-    need(immutable_input_identity(p) == epoch, "file changed during hashing");
+    need(input_identity(p) == epoch, "file changed during hashing");
 
     return result;
 }
