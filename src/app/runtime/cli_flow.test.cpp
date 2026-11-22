@@ -1260,32 +1260,41 @@ int main(int argc, char **argv) try {
                 if (!api_first_bind) {
                     // The USB drive reaches the SDK process over its QMP channel and the guest
                     // reports the mounted volume; unplugging removes the device and the volume.
-                    const auto usb = [&](const char *op) {
+                    const auto operation = [&](const char *op,
+                                               const Json &arguments = Json::object()) {
                         const auto path = root / ".local/build/canonical-api-usb.json";
-                        write_private_json(path, {{"schema", 1},
-                                                  {"request_id", random_token()},
-                                                  {"op", op},
-                                                  {"profile", qinggan09_profile()},
-                                                  {"machine", qinggan09_profile()},
-                                                  {"session", response.at("result").at("session")},
-                                                  {"timeout_ms", 10000}});
+                        Json request{{"schema", 1},
+                                     {"request_id", random_token()},
+                                     {"op", op},
+                                     {"profile", qinggan09_profile()},
+                                     {"machine", qinggan09_profile()},
+                                     {"session", response.at("result").at("session")},
+                                     {"timeout_ms", 10000}};
+                        request.update(arguments);
+                        write_private_json(path, request);
                         const auto result = run({"test", "--request", path.string()});
                         require(result.exit_code == 0,
                                 std::string(op) + " failed: " + result.output);
 
                         return Json::parse(result.output).at("result");
                     };
-                    const auto plugged = usb("multimedia.usb.attach");
+                    const auto revision = operation("session.status").at("revision");
+                    const auto ready = operation("session.wait", {{"predicate", "android.delivery"},
+                                                                  {"revision", revision}});
+                    require(ready.at("ready") == true,
+                            "Android must acknowledge the session before the volume test: " +
+                                    ready.dump());
+                    const auto plugged = operation("multimedia.usb.attach");
                     require(plugged.at("attached") == true && plugged.at("changed") == true &&
                                     plugged.at("volume") ==
                                             Json{{"uuid", "2026-1122"}, {"state", "mounted"}},
                             "USB drive attach did not mount the guest volume: " + plugged.dump());
-                    require(usb("multimedia.usb.attach").at("changed") == false,
+                    require(operation("multimedia.usb.attach").at("changed") == false,
                             "a second attach changed the port");
                     require(json({"status"}).at("deliveries").at("android").at("usb_drive") ==
                                     Json{{"attached", true}},
                             "session status lacks the plugged drive");
-                    const auto unplugged = usb("multimedia.usb.detach");
+                    const auto unplugged = operation("multimedia.usb.detach");
                     require(unplugged.at("attached") == false && unplugged.at("changed") == true &&
                                     unplugged.at("volume").is_null(),
                             "USB drive detach left the guest volume: " + unplugged.dump());
