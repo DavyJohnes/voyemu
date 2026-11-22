@@ -319,6 +319,30 @@
     "path": "/system/priv-app/Camera-release-signed/Camera-release-signed.apk"
    }
   },
+  "UserCenter": {
+   "file": "usercenter.apk",
+   "sha256": "6e334bb290269cde3cb35fb3cc5a38d5c38da4f61188af63e055c1cc675ad61d",
+   "source": {
+    "path": "/system/priv-app/Login-release-signed/Login-release-signed.apk"
+   },
+   "bytes": 31274120,
+   "acquisition": {
+    "image": "system",
+    "path": "/system/priv-app/Login-release-signed/Login-release-signed.apk"
+   }
+  },
+  "Driving": {
+   "file": "driving.apk",
+   "sha256": "e4f8ba68b57b9ce2c2e9e7d2dd880909e084e1d72a0c9cd5fda1dc6738a06995",
+   "source": {
+    "path": "/system/priv-app/Driving-release-signed/Driving-release-signed.apk"
+   },
+   "bytes": 12856657,
+   "acquisition": {
+    "image": "system",
+    "path": "/system/priv-app/Driving-release-signed/Driving-release-signed.apk"
+   }
+  },
   "BluetoothPhone": {
    "file": "bluetoothphone.apk",
    "bytes": 16097424,
@@ -4047,6 +4071,24 @@
    ],
    "sign": "platform"
   },
+  "UserCenter": {
+   "type": "apk",
+   "input": "original:UserCenter",
+   "uses": [
+    "component:qg-runtime"
+   ],
+   "steps": [
+    "usercenter-network/usercenter-network.json",
+    "add-qg-runtime.json"
+   ],
+   "sign": "platform"
+  },
+  "Driving": {
+   "type": "apk",
+   "input": "original:Driving",
+   "steps": [],
+   "sign": "platform"
+  },
   "BluetoothPhone": {
    "type": "apk",
    "input": "original:BluetoothPhone",
@@ -4616,6 +4658,14 @@
   },
   {
    "artifact": "patched:Ivoka",
+   "type": "apk"
+  },
+  {
+   "artifact": "patched:UserCenter",
+   "type": "apk"
+  },
+  {
+   "artifact": "patched:Driving",
    "type": "apk"
   },
   {

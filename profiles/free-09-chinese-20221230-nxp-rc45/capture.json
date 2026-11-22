@@ -96,6 +96,20 @@
    }
   },
   {
+   "name": "UserCenter",
+   "file": "usercenter.apk",
+   "source": {
+    "path": "/system/priv-app/Login-release-signed/Login-release-signed.apk"
+   }
+  },
+  {
+   "name": "Driving",
+   "file": "driving.apk",
+   "source": {
+    "path": "/system/priv-app/Driving-release-signed/Driving-release-signed.apk"
+   }
+  },
+  {
    "name": "BluetoothPhone",
    "file": "bluetoothphone.apk",
    "source": {

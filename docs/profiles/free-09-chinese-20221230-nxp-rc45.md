@@ -27,3 +27,5 @@ Import the pinned firmware archive `update.zip` from a local path; `fetch` extra
 The machine has no cluster, so `start` runs only the multimedia, see [launch and sessions](../how/launch.md).
 
 The tiles HiCar, Bill and FreeBaike open the OEM applications of the firmware unchanged; without the cloud services, the phone or the network of the vehicle they show their own login, connection or error screens.
+
+The UserCenter tile and the DrivingInfo tile of the second screen open the OEM account application `com.qinggan.app.login` and the OEM driving information application `com.qinggan.app.driving`; the account application sees the network of the machine as the vehicle network, as in Free 6.0.3.
