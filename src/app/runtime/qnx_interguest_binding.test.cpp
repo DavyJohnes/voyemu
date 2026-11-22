@@ -171,7 +171,8 @@ int main() try {
         write_private_json(file, Json{{"schema", 1}, {"services", Json::array()}});
         auto pinned = passion();
         pinned["someip_gateway"] = {{"file", file.string()}, {"sha256", sha256_file(file)}};
-        assert(qnx_someip_gateway(pinned)->at("schema") == 1);
+        const auto gateway = qnx_someip_gateway(pinned);
+        assert(gateway && gateway->at("schema") == 1);
         auto changed = pinned;
         changed["someip_gateway"]["sha256"] = std::string(64, '0');
         rejects([&] {
