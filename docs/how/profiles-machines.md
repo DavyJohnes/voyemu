@@ -25,7 +25,7 @@ The `emulator` field of `profile.json` sets the Android emulator of the machine:
 
 The `wheel` field of `profile.json` names the steering-wheel artwork in `assets` and the Android key routes in `androidRoutes`; `provider` set to `com.voyemu.input.wheel` delivers the wheel to Android through that content provider of the profile instead of the routes.
 
-Shared parts live outside the profiles: `profiles/common/` holds common components, icons and steering-wheel artwork, and `profiles/common-qinggan-09/` and `profiles/common-qinggan-11/` hold the development kernel recipes of each Android generation.
+Shared parts live outside the profiles: `profiles/common/` holds common components, icons and steering-wheel artwork, and `profiles/common-qinggan-09/` and `profiles/common-qinggan-11/` hold the development kernel recipes of each Android generation, `profiles/common-passion/` the Passion variant of the `qinggan-11` recipe.
 
 The `fonts` field of `profile.json` names the fonts of the vehicle that the [window](window.md#fonts) draws with: `primary` for all text and `fallback` for the characters the primary font lacks, each with `regular`, `medium` and `bold`. A font is an OEM input of the profile or a file inside an OEM APK, each with its size and SHA-256.
 

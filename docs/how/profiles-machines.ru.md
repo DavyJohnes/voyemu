@@ -25,7 +25,7 @@
 
 Поле `wheel` в `profile.json` называет графику руля в `assets` и маршруты клавиш Android в `androidRoutes`; значение `com.voyemu.input.wheel` у `provider` передаёт руль в Android через этот поставщик контента профиля вместо маршрутов.
 
-Общие части лежат вне профилей: `profiles/common/` содержит общие компоненты, значки и графику руля, а `profiles/common-qinggan-09/` и `profiles/common-qinggan-11/` — рецепты ядра разработки для каждого поколения Android.
+Общие части лежат вне профилей: `profiles/common/` содержит общие компоненты, значки и графику руля, а `profiles/common-qinggan-09/` и `profiles/common-qinggan-11/` — рецепты ядра разработки для каждого поколения Android, `profiles/common-passion/` — вариант рецепта `qinggan-11` для Passion.
 
 Поле `fonts` в `profile.json` называет шрифты автомобиля, которыми рисует [окно](window.ru.md#шрифты): `primary` для всего текста и `fallback` для символов, которых нет в основном шрифте, каждый с весами `regular`, `medium` и `bold`. Шрифт — оригинал профиля или файл внутри штатного APK, каждый с размером и SHA-256.
 
