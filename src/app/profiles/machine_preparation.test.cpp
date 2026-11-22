@@ -1295,6 +1295,13 @@ static int failure_adb_child(int argc, char **argv) {
         }
 
         if (operation == "shell" && script.find("VOYEMU_ADBD_LIFETIME") != std::string::npos) {
+            if (step == 1 && mode == "root-offline") {
+                std::ofstream(state) << 2;
+                std::cout << "adb: device offline\n";
+
+                return 1;
+            }
+
             if (step == 2 && mode != "root-nochange") {
                 std::ofstream(state) << 3;
                 std::cout << "error: device offline\n";

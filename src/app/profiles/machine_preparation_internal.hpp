@@ -469,7 +469,8 @@ struct Candidate {
             const auto output = trim(result.output);
 
             if (transitioning && !result.timed_out && result.exit_code == 1 &&
-                (output == "error: device offline" || output == "error: closed" ||
+                (output == "error: device offline" || output == "adb: device offline" ||
+                 output == "error: closed" ||
                  output == "error: device '" + adb_binding.serial() + "' not found")) {
                 return std::nullopt;
             }
@@ -478,13 +479,6 @@ struct Candidate {
                 output == "adb: unable to connect for root: closed") {
                 // The SDK client saw the connection close while adbd restarted; the
                 // lifetime loop below remains the sole authority on the outcome.
-                return std::nullopt;
-            }
-
-            if (transitioning && !result.timed_out && result.exit_code == 1 && args.size() == 1 &&
-                args.front() == "root" && output == "adb: device offline") {
-                // The SDK can report offline after delivering root. Confirm the new
-                // serving adbd with the same boot and nonce, without replaying root.
                 return std::nullopt;
             }
 
