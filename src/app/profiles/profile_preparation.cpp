@@ -409,12 +409,15 @@ ProfilePreparationArtifacts prepare_profile_artifacts(const std::filesystem::pat
     inputs.sdk = tools.sdk;
     inputs.platform = tools.platform;
     inputs.platform_sha256 = tools.platform_sha256;
-    inputs.guest_java = install_android_java(root, embedded_toolchain_manifest().at("androidJava"),
-                                             offline,
-                                             android_candidate_reserve_bytes(profile, name));
 
-    if (!inputs.guest_java.empty()) {
-        inputs.guest_java_sha256 = sha256_file(inputs.guest_java);
+    if (jdk.empty()) {
+        inputs.guest_java =
+                install_android_java(root, embedded_toolchain_manifest().at("androidJava"), offline,
+                                     android_candidate_reserve_bytes(profile, name));
+
+        if (!inputs.guest_java.empty()) {
+            inputs.guest_java_sha256 = sha256_file(inputs.guest_java);
+        }
     }
 
     bool extracting = false;
