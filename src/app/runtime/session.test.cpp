@@ -4083,6 +4083,7 @@ static void owned_android_network_recovery_tests() {
         });
         assert(!android.contains("interguest_network") && f.setup_count == 3 && f.nonce_count == 3);
     }
+
     // The OEM EthernetService owns eth0: the report verifies the address and requests no route.
     for (const auto &[report, accepted] : std::vector<std::pair<std::string, bool>>{
                  {"\"local_route_requested\":false,\"interface\":\"eth0\",\"network_ids\":[]",
@@ -4108,6 +4109,7 @@ static void owned_android_network_recovery_tests() {
         assert(!accepted || (android["interguest_network"]["interface"] == "eth0" &&
                              android["interguest_network"]["network_ids"].empty()));
     }
+
     {
         Fixture f;
         f.boot = first;

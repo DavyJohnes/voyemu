@@ -676,16 +676,13 @@ int main(int argc, char **argv) try {
                 specification["qemu"]["args"].push_back(option);
             }
 
-            // The Windows ANGLE names, else the macOS names on every POSIX host.
-            const std::array<const char *, 2> libraries =
-                    os::host_windows
-                            ? std::array<const char *, 2>{"libEGL.dll", "libGLESv2.dll"}
-                            : std::array<const char *, 2>{"libEGL.dylib", "libGLESv2.dylib"};
+            const std::string suffix(os::shared_library_suffix);
+            const std::array<std::string, 2> libraries{"libEGL" + suffix, "libGLESv2" + suffix};
             specification["graphics"] = {
                     {"executable", cli.string()}, {"backend", "voyemu"}, {"angle", angle.string()}};
             specification["pins"].push_back({{"path", cli.string()}, {"sha256", sha256_file(cli)}});
 
-            for (const auto *name : libraries) {
+            for (const auto &name : libraries) {
                 const auto file = angle / name;
                 {
                     std::ofstream out(file);
@@ -1660,9 +1657,23 @@ int main(int argc, char **argv) try {
                                    {"splash", (root / "splash.png").string()},
                                    {"assets", (root / "assets").string()},
                                    {"state", (root / "placement.json").string()}};
+            android["frontend"]["fonts"] = (root / "fonts").string();
+            const auto primary = (root / "display0.zip").string(),
+                       secondary = (root / "display1.zip").string();
+            android["frontend"]["startup"] = Json::array({primary, secondary});
             write_private_json(launch_directory / "android-launch.json", android);
             const auto native = presentation_probe(native_background);
             const auto &arguments = native.at("arguments");
+            const auto startup_argument = [](const Json &args, const char *key) {
+                const auto flag = std::find(args.begin(), args.end(), Json(key));
+                require(flag != args.end() && std::next(flag) != args.end(),
+                        "missing frontend startup argument");
+
+                return *std::next(flag);
+            };
+            require(startup_argument(arguments, "--startup0") == "black" &&
+                            startup_argument(arguments, "--startup1") == "black",
+                    "direct power-on replayed the unlock animations");
 
             if (native_background) {
                 require(std::find(arguments.begin(), arguments.end(), Json("--background")) !=
@@ -1712,9 +1723,9 @@ int main(int argc, char **argv) try {
                 const auto passion_native = presentation_probe(true);
                 const auto &passion_args = passion_native.at("arguments");
                 const auto &passion_sdk = passion_native.at("sdk");
-            require(startup_argument(passion_args, "--startup0") == primary &&
-                            startup_argument(passion_args, "--startup1") == secondary,
-                    "native presentation dropped another platform's startup animations");
+                require(startup_argument(passion_args, "--startup0") == primary &&
+                                startup_argument(passion_args, "--startup1") == secondary,
+                        "native presentation dropped another platform's startup animations");
                 require(std::find(passion_args.begin(), passion_args.end(), Json("--assets")) !=
                                         passion_args.end() &&
                                 std::find(passion_args.begin(), passion_args.end(),
@@ -2188,7 +2199,7 @@ int main(int argc, char **argv) try {
                 "missing resume allocated a session, supervisor or SDK guest");
         require(!std::filesystem::exists(saved_scenario_path.parent_path()),
                 "missing resume created saved state directory");
-        const auto saved_scenario = apply_patch(initial_state(),
+        const auto saved_scenario = apply_patch(initial_state(VehicleCatalog::qinggan09),
                                                 {{"speed", 80}, {"gear", 2}, {"tail_gate", 1}});
 
         // The identity backpressure fixture holds the framed startup transport of Windows.
@@ -3408,19 +3419,28 @@ int main(int argc, char **argv) try {
             return 0;
         }
 
+        // The USB controller and its QMP channel follow the board arguments of the host.
+        require(sdk_args.size() >= 4 && sdk_args.at(sdk_args.size() - 4) == "-device" &&
+                        sdk_args.at(sdk_args.size() - 3) == "usb-ehci,id=voyemu-usb" &&
+                        sdk_args.at(sdk_args.size() - 2) == "-qmp" &&
+                        sdk_args.back().get<std::string>().ends_with(",server=on,wait=off"),
+                "SDK launch lacks the USB controller and its QMP channel");
+        require(std::count(sdk_args.begin(), sdk_args.end(), Json("-qemu")) == 1,
+                "SDK launch has more than one QEMU boundary");
+
         // Only the Windows SDK launch appends the owned QEMU machine arguments.
         if (os::host_windows) {
             const auto trusted_tail = android_sdk_machine_arguments(true);
-            require(sdk_args.size() >= trusted_tail.size() &&
+            require(sdk_args.size() >= trusted_tail.size() + 4 &&
                             std::equal(trusted_tail.begin(), trusted_tail.end(),
                                        sdk_args.end() -
-                                               static_cast<std::ptrdiff_t>(trusted_tail.size()),
+                                               static_cast<std::ptrdiff_t>(trusted_tail.size() + 4),
                                        [](const std::string &expected, const Json &actual) {
                                            return actual == Json(expected);
                                        }),
                     "Windows ARM64 launch omitted the owned virt/TCG/ICount tail");
         } else {
-            require(std::find(sdk_args.begin(), sdk_args.end(), Json("-qemu")) == sdk_args.end(),
+            require(sdk_args.at(sdk_args.size() - 5) == "-qemu",
                     "Mac launch acquired Windows QEMU board arguments");
         }
 

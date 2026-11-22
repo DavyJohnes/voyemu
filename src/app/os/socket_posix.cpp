@@ -38,6 +38,7 @@ SocketHandle open_stream_socket(int family) {
 
 SocketHandle open_unix_listener(std::string_view path, int backlog) {
     sockaddr_un address{};
+
     address.sun_family = AF_UNIX;
 
     if (path.empty() || path.size() >= sizeof(address.sun_path)) {
@@ -54,6 +55,7 @@ SocketHandle open_unix_listener(std::string_view path, int backlog) {
     if (!bind_socket(socket, reinterpret_cast<const sockaddr *>(&address), sizeof(address)) ||
         !listen_socket(socket, backlog)) {
         close_socket(socket);
+
         return no_socket;
     }
 

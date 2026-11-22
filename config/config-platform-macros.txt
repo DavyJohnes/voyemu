@@ -21,5 +21,4 @@ src/app/profiles/profile_build.cpp later: data-out and profile-sweep branches pe
 src/app/profiles/profile_build.test.cpp later: data-out and profile-sweep branches pending
 src/app/profiles/profile_build_finalize.cpp later: data-out and profile-sweep branches pending
 src/app/profiles/profile_build_internal.hpp later: data-out and profile-sweep branches pending
-src/app/runtime/cli_flow.test.cpp group 10 runtime: interguest link, media, providers and sessions
 src/app/runtime/media_discovery.hpp group 10 runtime: the Wine path translation of the Windows build

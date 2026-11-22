@@ -45,11 +45,13 @@ int main() try {
     if (voyemu::os::platform_name == "macOS") {
         assert(entries.size() == 9);
         assert(entries[6].component == "nghttp2" &&
-               entries[7].component == "Android Debug Bridge (AOSP)" && entries[8].component == "SDL3");
+               entries[7].component == "Android Debug Bridge (AOSP)" &&
+               entries[8].component == "SDL3");
     } else {
         assert(entries.size() == 10);
         assert(entries[6].component == "curl" && entries[7].component == "nghttp2" &&
-               entries[8].component == "Android Debug Bridge (AOSP)" && entries[9].component == "SDL3");
+               entries[8].component == "Android Debug Bridge (AOSP)" &&
+               entries[9].component == "SDL3");
     }
 
     // SDL3 carries the notices of the third-party code it compiles into the static library.

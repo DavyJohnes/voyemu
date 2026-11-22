@@ -101,8 +101,9 @@ int main() try {
         auto passion_mcu = passion;
         passion_mcu["presentation_adapter"] = passion_presentation_contract("test-passion", true);
         passion_mcu["mcu_property_adapter"] = passion_mcu_capability();
-        check(multimedia(passion_mcu) == std::set<std::string>{concept_field(VehicleCatalog::passion,
-                                                                             VehicleConcept::charge)} &&
+        check(multimedia(passion_mcu) ==
+                              std::set<std::string>{concept_field(VehicleCatalog::passion,
+                                                                  VehicleConcept::charge)} &&
                       catalog_field(VehicleCatalog::passion,
                                     "PowerSysInfo.Notify_f_EnergyInform.EnergyInform.SOC"),
               "Passion with its MCU property receives the SOC signal");

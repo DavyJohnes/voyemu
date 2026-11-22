@@ -50,8 +50,8 @@ static std::ofstream user_owned_file(const std::filesystem::path &path) {
 
 const std::string &qinggan11_wheel_profile() {
     static const auto id = [] {
-        const auto profiles =
-                embedded_profile_names(ProfilePlatform::qinggan11, ProfileBoard::sa8155);
+        const auto profiles = embedded_profile_names(ProfilePlatform::qinggan11,
+                                                     ProfileBoard::sa8155);
         const auto profile = std::find_if(profiles.begin(), profiles.end(),
                                           qinggan11_wheel_provider_profile);
         assert(profile != profiles.end());
