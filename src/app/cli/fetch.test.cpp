@@ -842,8 +842,8 @@ int main(int argc, char **argv) {
                 embedded_profile_names(ProfilePlatform::qinggan09, ProfileBoard::sa8155).at(0);
         const auto qinggan09_inputs =
                 original_input_plan(embedded_profile(qinggan09).at("definition"));
-        check(qinggan09_inputs.size() == 105,
-              "first vehicle declares 105 exact required Android input files");
+        check(qinggan09_inputs.size() == 116,
+              "first vehicle declares 116 exact Android inputs with the stock launcher apps");
 
         for (const auto &[role, name] :
              {std::pair{"FontRobotoRegular", "Roboto-Regular.ttf"},
