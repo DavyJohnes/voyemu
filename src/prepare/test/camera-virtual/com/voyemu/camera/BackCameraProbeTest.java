@@ -48,7 +48,8 @@ public class BackCameraProbeTest {
         CameraManager m = new CameraManager();
         AppMain.context.service = m;
         check(!BackCameraProbe.isSupported() && BackCameraProbe.defaultType(0) == 0);
-        check(BackCameraProbe.localEntry(1) == 1);
+        CameraSetting.getInstance().type = -1;
+        check(BackCameraProbe.dvrEntry(1) == 1 && CameraSetting.getInstance().type == -1);
         m.cameras.put("0", camera(0, true));
         m.cameras.put("1", camera(1, false));
         check(!BackCameraProbe.isSupported());
@@ -60,11 +61,15 @@ public class BackCameraProbeTest {
                         && emptyOutput.isEmpty());
         m.cameras.get("1").map.jpeg = true;
         check(BackCameraProbe.isSupported() && BackCameraProbe.defaultType(0) == 2);
-        check(BackCameraProbe.localEntry(1) == 0);
+        CameraSetting.getInstance().type = 0;
 
         for (int entry : new int[] {-1, 0, 2, 3, 4}) {
-            check(BackCameraProbe.localEntry(entry) == entry);
+            check(
+                    BackCameraProbe.dvrEntry(entry) == entry
+                            && CameraSetting.getInstance().type == 0);
         }
+
+        check(BackCameraProbe.dvrEntry(1) == 1 && CameraSetting.getInstance().type == 2);
 
         CameraSetting.getInstance().type = 0;
         check(BackCameraProbe.selectId("0").equals("0"));

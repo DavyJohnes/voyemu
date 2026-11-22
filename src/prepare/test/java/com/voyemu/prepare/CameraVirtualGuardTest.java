@@ -91,7 +91,7 @@ public final class CameraVirtualGuardTest {
                                     && !calls(m, "selectId")
                                     && !calls(m, "preferredQuality")
                                     && !calls(m, "defaultType")
-                                    && !calls(m, "localEntry"),
+                                    && !calls(m, "dvrEntry"),
                             "RED OEM method already adapted");
                 }
             }
@@ -221,7 +221,7 @@ public final class CameraVirtualGuardTest {
             }
         }
 
-        check(init != null && calls(init, "localEntry"), "GREEN DVR entry adaptation missing");
+        check(init != null && calls(init, "dvrEntry"), "GREEN DVR entry adaptation missing");
         var ops = new ArrayList<Instruction>();
 
         for (var i : init.getImplementation().getInstructions()) {
@@ -241,7 +241,7 @@ public final class CameraVirtualGuardTest {
                         && ops.get(i + 3) instanceof ReferenceInstruction hook
                         && hook.getReference()
                                 .toString()
-                                .equals("Lcom/voyemu/camera/BackCameraProbe;->localEntry(I)I")) {
+                                .equals("Lcom/voyemu/camera/BackCameraProbe;->dvrEntry(I)I")) {
                     check(
                             ops.get(i + 2).getOpcode() == org.jf.dexlib2.Opcode.MOVE_RESULT
                                     && ((OneRegisterInstruction) ops.get(i + 2)).getRegisterA() == 6
@@ -260,7 +260,7 @@ public final class CameraVirtualGuardTest {
             }
         }
 
-        check(entry, "exact getIntExtra → localEntry → mInType path missing");
+        check(entry, "exact getIntExtra → dvrEntry → mInType path missing");
     }
 
     static void checkRejectedScopes(Map<String, Object> constants, Path apk, byte[] raw)

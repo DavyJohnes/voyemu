@@ -11,4 +11,8 @@ public class CameraSetting {
     public int getCameraType() {
         return type;
     }
+
+    public void setCameraType(int value) {
+        type = value;
+    }
 }

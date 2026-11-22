@@ -211,7 +211,7 @@ final class CameraVirtualGuard {
                         0,
                         0,
                         0,
-                        new ImmutableMethodReference(HELPER, "localEntry", List.of("I"), "I")));
+                        new ImmutableMethodReference(HELPER, "dvrEntry", List.of("I"), "I")));
         b.addInstruction(entry + 1, new BuilderInstruction11x(Opcode.MOVE_RESULT, 6));
         b.addInstruction(
                 entry + 2,

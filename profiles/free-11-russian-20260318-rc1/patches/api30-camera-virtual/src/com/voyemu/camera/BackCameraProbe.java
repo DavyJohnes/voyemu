@@ -119,8 +119,23 @@ public final class BackCameraProbe {
         return filtered;
     }
 
-    public static int localEntry(int entry) {
-        return entry == 1 && isSupported() ? 0 : entry;
+    /** The DVR entry stays the OEM DVR view; the actual virtual BACK camera is its DVR camera. */
+    public static int dvrEntry(int entry) {
+        if (entry != 1 || !isSupported()) {
+            return entry;
+        }
+
+        try {
+            Class<?> setting = Class.forName("com.qinggan.camera.common.CameraSetting");
+            Object instance = setting.getMethod("getInstance").invoke(null);
+            setting.getMethod("setCameraType", int.class).invoke(instance, 2);
+        } catch (Exception e) {
+            // checkstyle-allow IllegalCatch: reflection failure keeps the current camera type of
+            // the OEM DVR view
+            Log.e("BackCameraProbe", "DVR camera type unavailable", e);
+        }
+
+        return entry;
     }
 
     public static int defaultType(int original) {
