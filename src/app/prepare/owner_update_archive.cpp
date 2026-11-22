@@ -53,10 +53,13 @@ Json directory_identity(const std::filesystem::path &path) {
     ordinary(path);
     const auto owned = os::owned_file_object(path, true);
     need(owned.opened, "directory identity open failed");
-    need(owned.object.has_value(),
-         os::host_windows ? "ordinary directory required" : "owned directory required");
 
-    return {{"volume", owned.object->volume}, {"index", owned.object->index}};
+    if (owned.object.has_value()) {
+        return {{"volume", owned.object->volume}, {"index", owned.object->index}};
+    }
+
+    throw VoyemuError(need.code, os::host_windows ? "ordinary directory required"
+                                                  : "owned directory required");
 }
 
 struct Member {
