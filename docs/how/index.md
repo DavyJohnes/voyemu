@@ -15,6 +15,7 @@ This section explains the concepts behind Voyemu: what a profile and a machine a
 - [Guests and the interguest link](guests.md) — the Android and QNX guests and how they talk.
 - [Embedded ADB](embedded-adb.md) — how the supervisor reaches the Android guest.
 - [Vehicle model and CAN](vehicle.md) — simulated vehicle values and CAN observations.
+- [Camera and DVR](camera.md) — the Camera and DVR tiles with a virtual camera.
 - [The window](window.md) — screens, steering wheel and vehicle controls.
 
 ## Automation and diagnostics

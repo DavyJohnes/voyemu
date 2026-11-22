@@ -29,3 +29,5 @@ The Russian firmware Free Sport+ 2026-03-18 RC1 on Android 11. The profile takes
 The firmware fingerprint is `qti/msmnile_gvmq/msmnile_gvmq:11/RQ3A.211001.001/47:user`, security patch 2022-10-05. The snapshot carries no rescue partition, so the OEM theme and the Dueros navigation application of the Chinese profiles are not part of this profile.
 
 The machine has no cluster, so `start` runs only the multimedia, see [launch and sessions](../how/launch.md). The cluster can be added once the QNX images are captured from a vehicle with `voyemu fetch free-11-russian-20260318-rc1 --source=adb --serial SERIAL` and their pins are contributed, see [contributing](../../CONTRIBUTING.md).
+
+The Camera tile opens the ordinary camera and the DVR tile the OEM DVR view, both with a virtual camera, see [camera and DVR](../how/camera.md).
