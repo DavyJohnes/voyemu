@@ -32,6 +32,7 @@
     "factory_display_client.c",
     "generated.c",
     "gl_batch.c",
+    "hab_socket_qnx.c",
     "helper_dispatch.h",
     "ign_observe.c",
     "input_wake.h",

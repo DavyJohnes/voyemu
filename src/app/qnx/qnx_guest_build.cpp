@@ -349,8 +349,19 @@ Json build_qnx_guest_recipe(const std::filesystem::path &root, const std::filesy
         copy_source("qnx-pl011-console.S");
     }
 
+    // The HAB channel core is shared with the multimedia libuhab of the same platform.
+    const auto common = root / "profiles/common/components/hab-socket/src/hab_socket.c";
+
     if (passion) {
         copy_source("qnx-passion-ifs2-copy.S");
+        need(!std::filesystem::is_symlink(common) && std::filesystem::is_regular_file(common) &&
+                     std::filesystem::file_size(common) <= 1024 * 1024 &&
+                     source_names.insert("hab_socket.c").second,
+             "QNX_GUEST_SOURCE_BOUNDS");
+        const auto pin = sha256_file(common);
+        std::filesystem::copy_file(common, work / "src/hab_socket.c");
+        need(sha256_file(work / "src/hab_socket.c") == pin, "QNX_GUEST_SOURCE_CHANGED");
+        sources["hab_socket.c"] = pin;
     }
 
     if (qinggan11) {
@@ -612,7 +623,8 @@ Json build_qnx_guest_recipe(const std::filesystem::path &root, const std::filesy
          "QNX_GUEST_SLOT_CAPACITY");
 
     for (auto at = sources.begin(); at != sources.end(); ++at) {
-        need(sha256_file(source / at.key()) == at.value().get<std::string>(),
+        need(sha256_file(at.key() == "hab_socket.c" ? common : source / at.key()) ==
+                     at.value().get<std::string>(),
              "QNX_GUEST_SOURCE_CHANGED");
     }
 
