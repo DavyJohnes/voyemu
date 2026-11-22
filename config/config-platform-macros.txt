@@ -158,7 +158,6 @@ src/app/runtime/session.hpp group 10 runtime: interguest link, media, providers 
 src/app/runtime/session_posix.cpp group 10 runtime: interguest link, media, providers and sessions
 src/app/runtime/session.test.cpp group 10 runtime: interguest link, media, providers and sessions
 src/app/runtime/ui_observer_diagnostics.test.cpp group 10 runtime: interguest link, media, providers and sessions
-src/app/ui/cluster_font.test.cpp group 7 graphics, platform and ui: frame transport and native windows
 src/app/ui/cluster_ui.test.cpp group 7 graphics, platform and ui: frame transport and native windows
 src/app/ui/licenses.test.cpp group 7 graphics, platform and ui: frame transport and native windows
 src/guest/qnx/qnx-runtime.test.cpp group 9 qnx: checkpoint, storage, update and shutdown

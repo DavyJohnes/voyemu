@@ -39,7 +39,7 @@ indent_style = unset
 max_line_length = unset
 
 # Byte-pinned license texts and OEM fixtures.
-[{src/licenses/**,src/app/prepare/testdata/**}]
+[{src/licenses/**,src/app/prepare/testdata/**,src/app/ui/testdata/fonts/*-OFL.txt}]
 insert_final_newline = unset
 trim_trailing_whitespace = unset
 
