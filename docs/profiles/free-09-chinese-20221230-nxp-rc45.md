@@ -10,7 +10,7 @@ The Chinese Free firmware RC45 of 30 December 2022 for the multimedia board on N
 | Emulator memory | 4096 MiB |
 | Cluster | None |
 | Steering wheel | `free-2021` with the button routes of this profile |
-| Development kernel | None |
+| Development kernel | `qinggan-09` |
 
 ## OEM inputs
 
