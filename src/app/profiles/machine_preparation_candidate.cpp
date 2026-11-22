@@ -1061,7 +1061,8 @@ void configure(Candidate &c, const Json &profile, std::vector<Installed> &instal
 
 void start_qinggan11_secondary_service(
         const std::function<std::string(const std::vector<std::string> &, int)> &shell,
-        const std::function<void(const std::function<bool()> &, int, const std::string &)> &wait) {
+        const std::function<void(const std::function<bool()> &, int, const std::string &)> &wait,
+        const std::function<void()> &activate_multidisplay) {
     constexpr int activity_probe_deadline_ms = 30000;
     constexpr int service_dispatch_deadline_ms = 30000;
 
@@ -1081,6 +1082,9 @@ void start_qinggan11_secondary_service(
     need(dispatch.starts_with("Starting service: Intent {") &&
                  dispatch.find("Error:") == std::string::npos,
          "secondary screen service dispatch rejected: " + dispatch.substr(0, 1024));
+    // The SDK receiver can block ActivityManager service dispatch when it starts first.
+    // The bootstrap waits for the SDK display after its start request has been accepted.
+    activate_multidisplay();
 }
 
 void wake_displays(Candidate &c, const Json &profile) {
@@ -1097,10 +1101,17 @@ void wake_displays(Candidate &c, const Json &profile) {
     need(c.shell({"pm", "list", "packages", "com.android.emulator.multidisplay"})
                          .find("package:com.android.emulator.multidisplay") != std::string::npos,
          "multidisplay provider missing");
-    c.identity();
-    android_candidate_start_multidisplay(c.process, c.adb, c.stage, c.port, c.remaining(30000),
-                                         &c.adb_binding, &c.adb_server);
-    c.identity();
+    const bool bootstrap_first = original_navi_requested(profile);
+    const auto activate_multidisplay = [&] {
+        c.identity();
+        android_candidate_start_multidisplay(c.process, c.adb, c.stage, c.port, c.remaining(30000),
+                                             &c.adb_binding, &c.adb_server);
+        c.identity();
+    };
+
+    if (!bootstrap_first) {
+        activate_multidisplay();
+    }
 
     if (record_declares(profile, ProfilePlatform::passion, ProfileBoard::sa8155)) {
         c.wait(
@@ -1116,14 +1127,15 @@ void wake_displays(Candidate &c, const Json &profile) {
     need(std::ranges::find(packages, "package:com.voyemu") != packages.end(),
          "bootstrap service missing");
 
-    if (original_navi_requested(profile)) {
+    if (bootstrap_first) {
         start_qinggan11_secondary_service(
                 [&](const auto &command, int timeout) {
                     return c.shell(command, timeout);
                 },
                 [&](const auto &ready, int timeout, const auto &message) {
                     c.wait(ready, timeout, message);
-                });
+                },
+                activate_multidisplay);
     } else {
         c.shell({"am", "startservice", "-n", "com.voyemu/com.voyemu.output.SecondScreenService"});
     }

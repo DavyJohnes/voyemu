@@ -177,7 +177,7 @@ void verify_candidate_rich_ui() {
     check_shell(false, true, true);
 
     for (unsigned variant = 0; variant < 4; ++variant) {
-        unsigned probes = 0, dispatches = 0;
+        unsigned probes = 0, dispatches = 0, broadcasts = 0;
         bool failed = false;
         try {
             machine_preparation_detail::start_qinggan11_secondary_service(
@@ -203,7 +203,7 @@ void verify_candidate_rich_ui() {
                               std::vector<std::string>{
                                       "am", "startservice", "-n",
                                       "com.voyemu/com.voyemu.output.SecondScreenService"});
-                        check(timeout == 30000);
+                        check(timeout == 30000 && broadcasts == 0);
 
                         if (variant == 2) {
                             throw VoyemuError("MACHINE_PREPARATION", "host command timed out");
@@ -220,6 +220,10 @@ void verify_candidate_rich_ui() {
                         if (!ready() && !ready()) {
                             throw VoyemuError("MACHINE_PREPARATION", "readiness timed out");
                         }
+                    },
+                    [&] {
+                        check(variant == 0 && probes == 2 && dispatches == 1);
+                        ++broadcasts;
                     });
         } catch (const VoyemuError &) {
             failed = true;
@@ -227,6 +231,7 @@ void verify_candidate_rich_ui() {
 
         check(failed == (variant != 0));
         check(probes == (variant < 2 ? 2 : 1) && dispatches == (variant == 1 ? 0 : 1));
+        check(broadcasts == (variant == 0 ? 1 : 0));
     }
 
     const auto request = android_candidate_ui_request(12000);

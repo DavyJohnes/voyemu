@@ -725,7 +725,8 @@ void configure_boot_properties(Candidate &c, const Json &profile,
 void configure(Candidate &c, const Json &profile, std::vector<Installed> &installed);
 void start_qinggan11_secondary_service(
         const std::function<std::string(const std::vector<std::string> &, int)> &shell,
-        const std::function<void(const std::function<bool()> &, int, const std::string &)> &wait);
+        const std::function<void(const std::function<bool()> &, int, const std::string &)> &wait,
+        const std::function<void()> &activate_multidisplay);
 void wake_displays(Candidate &c, const Json &profile);
 void persisted(Candidate &c, const Json &profile, const std::vector<Installed> &installed);
 void record_cold_check(Json &checks, const std::string &id, const std::string &actual,
