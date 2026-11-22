@@ -240,30 +240,6 @@ qm_export_screen() {
     echo 'QC1 FAIL screen-export-timeout'
     return 1
 }
-# The vehicle model holds ignition off while the OEM startup sequence plays: powermgr enters its
-# animation state only from power_off on IVI animation-ready (the OEM test event 58) with ignition
-# off, driver door closed and key in the car. The host switches ignition on at this request, after
-# the gauge emergence and within the 6000 ms powermgr animation timer, so the cluster ends in
-# operation instead of standby_on.
-qm_startup() {
-    qm_startup_wait=0
-    while [ "$qm_startup_wait" -lt 40 ] && ! /bin/grep -q ' anim .*onProjectLoaded()-->end' "$1"; do
-        /bin/sleep 0.5
-        qm_startup_wait=$((qm_startup_wait+1))
-    done
-    if ! qm_bounded animation-ready /usr/bin/test_powFakeMsg test_evt 58 1 power; then
-        echo 'QIP STARTUP ignition reason=animation-ready-failed'
-        return 0
-    fi
-    qm_startup_reason=animation-limit
-    qm_startup_wait=0
-    while [ "$qm_startup_wait" -lt 8 ]; do
-        if /bin/grep -q ' gaug .*check_open() call' "$1"; then qm_startup_reason=gauge-check; break; fi
-        /bin/sleep 0.5
-        qm_startup_wait=$((qm_startup_wait+1))
-    done
-    echo "QIP STARTUP ignition reason=$qm_startup_reason"
-}
 qm_observer_ram_check() {
     qm_bounded observer-padded-copy /bin/dd if=/proc/boot/bin/qditest of=/log/mcd-observer-padded.so bs=16928 count=1 || return 1
     qm_observer_hash=$(/bin/openssl dgst -sha256 /log/mcd-observer-padded.so)
@@ -388,10 +364,6 @@ echo "QIP HMI startup-alive=$qm_hmi"
 for qm_service in "$qm_mcd" "$qm_rpcd" "$qm_theme" "$qm_hmi" "$qm_ivcd"; do
     if kill -0 "$qm_service" 2>/dev/null; then echo "QIP SERVICE alive=$qm_service"; else wait "$qm_service"; echo "QIP SERVICE exit=$? pid=$qm_service"; fi
 done
-# OEM startup animation: loaded before powermgr enters its animation state.
-QGFX_MCD_TRACE=1 QGFX_MCD_OBSERVE=1 LD_PRELOAD=/proc/boot/bin/Snapdragon.rgb /usr/bin/animation -config=/usr/share/theme/application_animation.cfg &
-qm_animation=$!
-qm_wait_window "$qm_animation" ANIMATION 60
 QGFX_MCD_TRACE=1 QGFX_MCD_OBSERVE=1 LD_PRELOAD=/proc/boot/bin/Snapdragon.rgb /usr/bin/themebg -config=/usr/share/theme/application_themebg.cfg &
 qm_background=$!
 QGFX_MCD_TRACE=1 QGFX_GL_BATCH=1 QGFX_UNIFORM_PREFETCH=1 QGFX_LANGUAGE_RELAY=1 QGFX_THEME_RELAY=1 LD_PRELOAD=/proc/boot/bin/Snapdragon.rgb /usr/bin/point -config=/usr/share/theme/application_point.cfg &
@@ -404,7 +376,6 @@ qm_gauge=$!
 qm_export_screen &
 qm_export=$!
 if ! qm_wait_window "$qm_gauge" GAUGE 120; then echo 'QIP FAIL gauge-window'; kill "$qm_export" 2>/dev/null; exit 1; fi
-qm_startup /log/dlt-ascii.log
 qm_observer_ram_check || exit 1
 /bin/grep -E 'Gauge:|ign=|IGN|set status|state=|status=|SCREEN|screen|theme.*ready' /log/dlt-ascii.log > /log/dlt-state.log
 qm_bounded dlt-state /usr/bin/tail -40 /log/dlt-state.log
@@ -429,7 +400,7 @@ echo "QC1 SCREENSHOT exit=$?"
 kill "$qm_gauge" 2>/dev/null
 wait "$qm_gauge"
 echo "QMC GAUGE exit=$?"
-for qm_service in "$qm_background" "$qm_point" "$qm_light" "$qm_ivcd" "$qm_hmi" "$qm_pps" "$qm_dlt" "$qm_monitor" "$qm_sysmgr" "$qm_setting" "$qm_power" "$qm_mcd" "$qm_rpcd" "$qm_theme" "$qm_hmi" "$qm_ivcd" "$qm_animation"; do kill "$qm_service" 2>/dev/null; wait "$qm_service"; done
+for qm_service in "$qm_background" "$qm_point" "$qm_light" "$qm_ivcd" "$qm_hmi" "$qm_pps" "$qm_dlt" "$qm_monitor" "$qm_sysmgr" "$qm_setting" "$qm_power" "$qm_mcd" "$qm_rpcd" "$qm_theme" "$qm_hmi" "$qm_ivcd"; do kill "$qm_service" 2>/dev/null; wait "$qm_service"; done
 echo 'QIP DONE'
 echo 'QMC DONE'
 exit 0

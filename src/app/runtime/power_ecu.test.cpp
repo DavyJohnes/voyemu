@@ -70,25 +70,8 @@ int main() try {
     check(apply(power.request(state, State::ready)) == "applied" && raw(state, "ready_lamp") == 1,
           "READY in N");
 
-    // The cold start of a cluster holds READY at ACC and restores it.
-    const auto hold = power.startup(state, false, "cluster_cold_start");
-    check(apply(hold) == "applied" && power.state() == State::acc && raw(state, "ign") == 0 &&
-                  raw(state, "ready_lamp") == 0 && PowerEcu::android_acc(power.state()) == 2 &&
-                  hold.receipt.at("reason") == "cluster_cold_start",
-          "startup holds at ACC");
-    check(apply(power.startup(state, true, "runtime_gauge-check")) == "applied" &&
-                  power.state() == State::ready && raw(state, "ign") == 1 &&
-                  raw(state, "ready_lamp") == 1,
-          "startup restores READY");
-    check(apply(power.request(state, State::off)) == "applied" &&
-                  power.startup(state, false, "cluster_cold_start").patch.empty() &&
-                  power.state() == State::off,
-          "an OFF vehicle has no startup hold");
-    check(power.startup(state, true, "cluster_closed").patch.empty() && power.state() == State::off,
-          "a release without a hold keeps the state");
-
     // Direct writes of the power fields stay for firmware tests; the state follows them.
-    state = apply_patch(state, {{"ign", 1}});
+    state = apply_patch(state, {{"ign", 1}, {"ready_lamp", 0}});
     power.observe(state);
     check(power.state() == State::on, "raw ign selects ON");
     state = apply_patch(state, {{"ign", 0}});
@@ -118,7 +101,7 @@ int main() try {
     car = apply_patch(car, concept_patch(VehicleCatalog::passion, VehicleConcept::gear, 3));
     check(passion.request(car, State::ready).receipt.at("reason") == "gear-not-park-or-neutral",
           "Passion READY needs P or N");
-    std::cout << "power ECU: states, fields, rules, cold start and raw writes PASS\n";
+    std::cout << "power ECU: states, fields, rules and raw writes PASS\n";
 
     return 0;
 } catch (const std::exception &error) {

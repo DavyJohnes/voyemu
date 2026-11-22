@@ -232,23 +232,6 @@ void Session::apply_adas_outcome(AdasOutcome outcome) {
     deliveries_["adas_ecu"] = std::move(outcome.receipt);
 }
 
-// The startup sequence is a transition of the power state: ON or READY waits at ACC.
-void Session::apply_startup_ignition(const std::optional<StartupIgnition::Change> &change) {
-    if (!change) {
-        return;
-    }
-
-    const auto on = concept_patch(state_catalog(model_.state()), VehicleConcept::ignition, 1);
-    apply_power_outcome(power_.startup(model_.state(), change->values == on, change->reason));
-    const auto ignition = concept_value(model_.state(), VehicleConcept::ignition);
-    const Json receipt{{"ign", ignition ? Json(*ignition) : Json()},
-                       {"reason", change->reason},
-                       {"pending", startup_ignition_.pending()},
-                       {"revision", model_.state().at("sequence")}};
-    deliveries_["startup_ignition"] = receipt;
-    logging::write(logging::Level::info, "vehicle", "startup.ignition", receipt);
-}
-
 void Session::apply_power_outcome(PowerEcu::Outcome outcome) {
     auto before = model_.state().at("sequence");
 

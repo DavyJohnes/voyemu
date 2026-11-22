@@ -7,7 +7,7 @@ file(MAKE_DIRECTORY "${work}/build")
 set(runner "${CMAKE_CURRENT_LIST_DIR}/wine-tests.cmake")
 # The executable selection is an input fixture, not inferred from the implementation source.
 set(programs model phone_control host_payload android_engine windows_startup
-    qnx_runtime_layout qnx_mcu_projection startup_ignition machine_host_ports android_port_lease
+    qnx_runtime_layout qnx_mcu_projection machine_host_ports android_port_lease
     zip_inventory zip_archive apk_identity apk_dex apk_digest manifest_xml window_layout
     wheel_geometry wheel_column ui_localization texture_pixels frame_transport)
 foreach(name IN LISTS programs)

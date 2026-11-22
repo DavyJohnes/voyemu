@@ -174,10 +174,10 @@ esac
 
     // Nested IFS utilities mount at /proc/boot; the host sleep remains at /bin.
     constexpr std::array<std::pair<std::string_view, unsigned>, 13> utilities{
-            {{"/bin/sleep", 15},
+            {{"/bin/sleep", 13},
              {"/bin/cat", 9},
              {"/bin/dd", 2},
-             {"/bin/grep", 10},
+             {"/bin/grep", 8},
              {"/bin/ls", 8},
              {"/bin/openssl", 3},
              {"/bin/chmod", 1},
@@ -289,16 +289,6 @@ qm_qnet=$!
 /usr/sbin/qconn >&2 &
 qm_qconn=$!
 )QNET");
-    // The A11 powermgr numbers IVI animation-ready 60; the A9 one numbers it 58.
-    const std::string ready = "test_powFakeMsg test_evt 58 1 power";
-    const auto ready_at = output.find(ready);
-
-    if (ready_at == std::string::npos || output.find(ready, ready_at + 1) != std::string::npos) {
-        throw VoyemuError("QNX_QINGGAN11_RUNTIME_ANIMATION_READY",
-                          "OEM image differs from the expected layout");
-    }
-
-    output.replace(ready_at, ready.size(), "test_powFakeMsg test_evt 60 1 power");
 
     return output;
 }

@@ -503,7 +503,6 @@ void Session::attach_cluster(const Json &specification, std::optional<unsigned> 
 
 void Session::attach_cluster(const Json &input, std::optional<unsigned> seconds,
                              bool explicit_cold_boot) {
-    const bool reset = std::exchange(cluster_reset_, false);
     auto specification = input;
 
     if (machine_start_ && !machine_program_.empty() && specification.contains("graphics")) {
@@ -747,13 +746,6 @@ void Session::attach_cluster(const Json &input, std::optional<unsigned> seconds,
             {"omitted_ram_loaders", qnx_checkpoint_.omitted_loaders},
             {"omitted_ram_loader_bytes", qnx_checkpoint_.omitted_loader_bytes}};
 
-    // A cluster reset keeps the ignition of the running vehicle.
-    if (!qnx_checkpoint_.resume && !reset &&
-        StartupIgnition::applies(
-                cluster_boot_spec_.value("hardware_adapter", std::string("sa8155-qinggan09")))) {
-        apply_startup_ignition(startup_ignition_.begin(model_.state(), qnx_started_));
-    }
-
     start_qnx_frame_grpc();
 }
 
@@ -790,7 +782,6 @@ void Session::poll_qnx() {
             }
 
             if (!seconds || std::chrono::steady_clock::now() < deadline) {
-                cluster_reset_ = true;
                 attach_cluster(specification, seconds, true);
 
                 if (seconds) {
@@ -834,10 +825,7 @@ void Session::poll_qnx() {
                         {"host_elapsed_ms", std::chrono::duration_cast<std::chrono::milliseconds>(
                                                     std::chrono::steady_clock::now() - qnx_started_)
                                                     .count()}});
-        apply_startup_ignition(startup_ignition_.marker(marker, std::chrono::steady_clock::now()));
     }
-
-    apply_startup_ignition(startup_ignition_.expire(std::chrono::steady_clock::now()));
 
     for (std::size_t i = 0; i < graphics_.size();) {
         if (graphics_[i].alive()) {
@@ -1026,7 +1014,6 @@ void Session::poll_qnx() {
                                .count();
         logging::write(logging::Level::info, "qnx", "guest.startup",
                        {{"marker", marker}, {"host_elapsed_ms", elapsed}});
-        apply_startup_ignition(startup_ignition_.marker(marker, std::chrono::steady_clock::now()));
     }
 
     static const std::regex ready(
@@ -1204,7 +1191,6 @@ void Session::poll_qnx() {
 
         deliveries_["qnx"]["status"] = "graphics_running";
         deliveries_["qnx"]["producers"] = producers_;
-        apply_startup_ignition(startup_ignition_.graphics(std::chrono::steady_clock::now()));
     }
 
     if (!ui_executable_.empty() && !ui_.pid() && !producers_.empty()) {
@@ -1483,7 +1469,6 @@ void Session::tick_inputs() {
 
 void Session::close_cluster(bool stopping_all, std::string reason) {
     if (cluster_requested_) {
-        apply_startup_ignition(startup_ignition_.finish());
         logging::write(logging::Level::info, "qnx", "cluster.close",
                        {{"reason", stopping_all ? "session_stop" : reason},
                         {"bounded", cluster_seconds_.has_value()},

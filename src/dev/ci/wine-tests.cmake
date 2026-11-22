@@ -11,7 +11,7 @@ if(EXISTS "${work}")
     message(FATAL_ERROR "A fresh Wine test directory is required: ${work}")
 endif()
 set(tests phone_control host_payload android_engine windows_startup
-    qnx_runtime_layout qnx_mcu_projection startup_ignition machine_host_ports android_port_lease
+    qnx_runtime_layout qnx_mcu_projection machine_host_ports android_port_lease
     zip_inventory zip_archive apk_identity apk_dex apk_digest manifest_xml window_layout
     wheel_geometry wheel_column ui_localization texture_pixels frame_transport)
 set(programs ${tests} model voyemu)

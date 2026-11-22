@@ -1300,11 +1300,10 @@ struct SessionPersistenceFixture {
                 return terminal.model_.state().at("raw_oem").at("ign").get<unsigned>();
             };
             assert(ignition() == 1);
+            const auto started_state = terminal.model_.state();
             terminal.attach_cluster(spec, std::nullopt, true);
             assert(terminal.cluster_generation_ == 2 && std::filesystem::exists(ram));
-            // A cluster power-on starts the A9 vehicle with ignition off until the runtime asks.
-            assert(ignition() == 0 && terminal.startup_ignition_.pending() &&
-                   terminal.deliveries_["startup_ignition"]["reason"] == "cluster_cold_start");
+            assert(terminal.model_.state() == started_state);
             wait([&] {
                 return !terminal.qnx_.alive();
             });
@@ -1314,16 +1313,9 @@ struct SessionPersistenceFixture {
             assert(readback == "guest-data");
             terminal.close_cluster(false, "qemu_exit");
             assert(terminal.cluster_finalized_ && !std::filesystem::exists(ram));
-            // A cluster that closes before the request restores ignition.
-            assert(ignition() == 1 && !terminal.startup_ignition_.pending() &&
-                   terminal.deliveries_["startup_ignition"]["reason"] == "cluster_closed");
-            // A cluster reset keeps the ignition of the running vehicle and plays no sequence.
-            const auto revision = terminal.model_.state().at("sequence");
-            terminal.cluster_reset_ = true;
+            assert(terminal.model_.state() == started_state);
             terminal.attach_cluster(spec, std::nullopt, true);
-            assert(terminal.cluster_generation_ == 3 && ignition() == 1 &&
-                   !terminal.cluster_reset_ && !terminal.startup_ignition_.pending() &&
-                   terminal.model_.state().at("sequence") == revision);
+            assert(terminal.cluster_generation_ == 3 && terminal.model_.state() == started_state);
             wait([&] {
                 return !terminal.qnx_.alive();
             });

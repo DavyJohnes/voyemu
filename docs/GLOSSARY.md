@@ -69,7 +69,7 @@ The single terminology reference for Voyemu docs, README, CHANGELOG, SECURITY an
 | warm reboot | A guest reboot that keeps the session and its ownership; `mode: warm` of `multimedia.reboot` | warm restart |
 | checkpoint | Saved guest RAM that a start can restore instead of a cold boot; the Russian docs say «снимок RAM». For Android it is the emulator RAM that the supervisor saves when a session stops. For QNX it is the RAM with its QEMU state; only a start without the interguest link and persistent storage restores it, so prepared machines cold-boot QNX, and the `checkpoint.selected` log event records the choice and its reason | RAM snapshot |
 | acceptance | Checking a guest scenario on a running machine; host tests do not replace it | — |
-| QNX startup script | The shell script `qnx-runtime.sh` that preparation installs into the QNX guest; it sends the animation-ready signal and asks the session to switch the ignition on | cluster runtime |
+| QNX startup script | The shell script `qnx-runtime.sh` that preparation installs into the QNX guest; it starts the guest services and graphics applications | cluster runtime |
 
 ## Prose
 

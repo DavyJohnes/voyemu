@@ -81,38 +81,11 @@ public:
             result.receipt.update({{"outcome", "rejected"}, {"reason", reason}});
         } else {
             state_ = target;
-            held_.reset();
             result.patch = fields(state);
             result.receipt["outcome"] = "applied";
         }
 
         result.receipt.update({{"state", name(state_)}, {"changed_fields", result.patch}});
-
-        return result;
-    }
-
-    // The cold start of a cluster holds ON or READY at ACC until the startup releases it.
-    Outcome startup(const Json &state, bool ignition, const std::string &reason) {
-        const auto previous = state_;
-
-        if (!ignition && state_ >= State::on) {
-            held_ = state_;
-            state_ = State::acc;
-        } else if (ignition && held_) {
-            state_ = *held_;
-            held_.reset();
-        }
-
-        Outcome result;
-        result.patch = fields(state);
-        result.receipt = {{"consumer", "voyemu.power-ecu"},
-                          {"policy_id", "voyemu-own-power-v1"},
-                          {"requested", ignition ? "startup-release" : "startup-hold"},
-                          {"reason", reason},
-                          {"previous", name(previous)},
-                          {"state", name(state_)},
-                          {"outcome", "applied"},
-                          {"changed_fields", result.patch}};
 
         return result;
     }
@@ -142,6 +115,5 @@ private:
     }
 
     State state_ = State::acc;
-    std::optional<State> held_;
 };
 } // namespace voyemu

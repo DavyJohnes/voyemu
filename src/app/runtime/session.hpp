@@ -12,7 +12,6 @@
 #include "qnx_serial_lines.hpp"
 #include "qnx_serial_ready.hpp"
 #include "source_registry.hpp"
-#include "startup_ignition.hpp"
 #include "windows_startup.hpp"
 #ifdef _WIN32
 #include "android_embedded_adb.hpp"
@@ -333,7 +332,6 @@ private:
     std::uint64_t test_can_generation_ = 0;
     std::mutex test_stop_mutex_;
     void apply_adas_outcome(AdasOutcome outcome);
-    void apply_startup_ignition(const std::optional<StartupIgnition::Change> &change);
     void apply_power_outcome(PowerEcu::Outcome outcome);
     // The am startservice extra that carries the multimedia ACC of the power state.
     std::vector<std::string> android_power_extra() const;
@@ -409,10 +407,7 @@ private:
     VehicleModel model_;
     EventQueue events_;
     AdasEcu adas_;
-    StartupIgnition startup_ignition_;
     PowerEcu power_;
-    // A cluster reset keeps the vehicle ignition on, so the next attach plays no startup sequence.
-    bool cluster_reset_ = false;
     BodyEcu body_;
     Json deliveries_, android_spec_, cluster_spec_, frontend_spec_, runtime_record_;
     std::function<Json(const Json &)> media_input_;

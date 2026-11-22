@@ -43,7 +43,7 @@ The power state of the vehicle is one of `off`, `acc`, `on` and `ready`, and a c
 
 ## Ignition at cluster start
 
-On the Free 6.0.3, 6.11.1 and 7.3.1 profiles a cold boot of the cluster with the session, with `cluster.power` or with the cluster power button of the window turns the vehicle on as the driver does: before QNX starts the [power state](#power-state) `on` or `ready` waits at `acc`: the model sets `ign` to 0, and after the OEM startup sequence of the cluster, at the request of the QNX startup script, the state returns, see [GuestQnx](guests.md#guestqnx). `vehicle.get` and the window show both values. Without the request the session switches `ign` back to 1 by the guest timeline: at once when the cluster frames start without any marker of the QNX startup script, 5 seconds after the script sends the animation-ready signal, 25 seconds after the gauge window, 90 seconds after the first frames, 300 seconds after the last marker while no frames appear, or when the cluster stops; with the TCG engine, which runs the guest slower, every interval except the 5 seconds grows by the same factor. `vehicle.get` names the reason in `deliveries.startup_ignition`. A value of `ign` or `power` that a client writes meanwhile stays and ends the sequence, and a model that starts with `ign` at 0 keeps it. `cluster.reboot`, the restart button and a reboot of QNX itself keep `ign` as it is.
+Starting or restarting the cluster keeps the configured ignition and [power state](#power-state). A client can change them explicitly. The QNX guest receives the current model through MCU delivery. See [GuestQnx](guests.md#guestqnx).
 
 ## Delivery to the guests
 

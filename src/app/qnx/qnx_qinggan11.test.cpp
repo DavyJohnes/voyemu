@@ -213,10 +213,10 @@ esac
                                          "\n" + old + "\n" + copy + "\n",
                           hash(64, 'a');
         const std::array<std::pair<std::string_view, unsigned>, 13> utilities{
-                {{"/bin/sleep", 15},
+                {{"/bin/sleep", 13},
                  {"/bin/cat", 9},
                  {"/bin/dd", 2},
-                 {"/bin/grep", 10},
+                 {"/bin/grep", 8},
                  {"/bin/ls", 8},
                  {"/bin/openssl", 3},
                  {"/bin/chmod", 1},
@@ -235,28 +235,9 @@ esac
             }
         }
 
-        const std::string animation_ready =
-                "qm_bounded animation-ready /usr/bin/test_powFakeMsg test_evt 58 1 power\n";
         runtime +=
-                "/usr/bin/dlt-daemon -c /log/dlt-owned.conf > /log/dlt-ascii.log 2>&1 &\nqm_bounded dlt-ready qm_wait_dlt || exit 1\n" +
-                animation_ready;
+                "/usr/bin/dlt-daemon -c /log/dlt-owned.conf > /log/dlt-ascii.log 2>&1 &\nqm_bounded dlt-ready qm_wait_dlt || exit 1\n";
         const auto selected = prepare_qnx_qinggan11_runtime(runtime, hash);
-
-        if (selected.find(
-                    "qm_bounded animation-ready /usr/bin/test_powFakeMsg test_evt 60 1 power\n") ==
-                    std::string::npos ||
-            selected.find("test_evt 58") != std::string::npos) {
-            throw std::runtime_error("A11 IVI animation-ready event");
-        }
-
-        rejects([&] {
-            auto missing = runtime;
-            missing.erase(missing.find(animation_ready), animation_ready.size());
-            prepare_qnx_qinggan11_runtime(missing, hash);
-        });
-        rejects([&] {
-            prepare_qnx_qinggan11_runtime(runtime + animation_ready, hash);
-        });
 
         if (selected.find("qm_source_capture=1") == std::string::npos ||
             selected.find(old) != std::string::npos ||
@@ -506,9 +487,7 @@ esac
                 adapted.find(dlt_report) == std::string::npos ||
                 adapted.find(socket_provider + "/usr/sbin/random -t >&2 &\n") ==
                         std::string::npos ||
-                adapted.find("test_powFakeMsg get_info") != std::string::npos ||
-                adapted.find("test_powFakeMsg test_evt 0 ") != std::string::npos ||
-                adapted.find("test_powFakeMsg test_evt 60 1 power") == std::string::npos ||
+                adapted.find("test_powFakeMsg") != std::string::npos ||
                 adapted.find("VOYEMU_QNX_INITIAL_NATIVE_DELAY") != std::string::npos) {
                 throw std::runtime_error("actual Free namespace and network runtime snapshot");
             }

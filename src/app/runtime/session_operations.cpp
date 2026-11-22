@@ -273,15 +273,7 @@ Json Session::handle(const Json &operation) {
                 throw VoyemuError("VEHICLE_POWER", "power alone with off, acc, on or ready");
             }
 
-            auto outcome = power_.request(model_.state(), *target);
-
-            if (outcome.receipt.at("outcome") == "applied") {
-                startup_ignition_.observe_patch(
-                        concept_patch(state_catalog(model_.state()), VehicleConcept::ignition,
-                                      *target >= PowerEcu::State::on ? 1 : 0));
-            }
-
-            apply_power_outcome(std::move(outcome));
+            apply_power_outcome(power_.request(model_.state(), *target));
             reply = snapshot();
         } else if (op == "patch") {
             if ((passion_presentation(android_spec_) && !passion_mcu_available(android_spec_)) ||
@@ -300,7 +292,6 @@ Json Session::handle(const Json &operation) {
             }
 
             auto before = model_.state().at("sequence");
-            startup_ignition_.observe_patch(values);
             model_.patch(values);
             power_.observe(model_.state());
             write_private_json(directory_ / "vehicle-state.json", model_.state(),
@@ -458,7 +449,6 @@ Json Session::handle(const Json &operation) {
             }
 
             if (enabled && !cluster_requested_) {
-                cluster_reset_ = op == "cluster_restart";
                 attach_cluster(cluster_spec_, cluster_seconds_, true);
             }
 

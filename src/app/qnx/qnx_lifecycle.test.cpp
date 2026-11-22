@@ -125,6 +125,8 @@ int main(int argc, char **argv) try {
             auto first =
                     cycle.handle({{"op", "cluster_power"}, {"session_id", id}, {"enabled", true}});
             require(first["ok"] == true, "configured disabled cluster did not start");
+            require(first["state"] == configured["state"],
+                    "starting QNX changed the vehicle state");
             require(first["deliveries"]["qnx"]["quickboot"]["reason"] == "explicit_cold_boot",
                     "manual initial power on did not request cold boot");
             const auto first_token = frame_token(first, 1);
@@ -156,6 +158,7 @@ int main(int argc, char **argv) try {
                     cycle.handle({{"op", "cluster_power"}, {"session_id", id}, {"enabled", false}});
             require(off["ok"] == true && off["deliveries"]["qnx"]["status"] == "off",
                     "power off failed");
+            require(off["state"] == logical, "stopping QNX changed the vehicle state");
             require(!std::filesystem::exists(discovery) &&
                             !off["deliveries"]["qnx"].contains("frame_grpc"),
                     "powered-off QNX retained frame endpoint discovery");
@@ -168,25 +171,16 @@ int main(int argc, char **argv) try {
             require(std::filesystem::exists(directory / "cluster-history/1/frame.bgra") &&
                             !std::filesystem::exists(directory / "frame.bgra"),
                     "old frame was not preserved away from the new producer");
+            require(on["state"] == logical, "powering QNX on changed the vehicle state");
+            const auto parked =
+                    cycle.handle({{"op", "patch"}, {"session_id", id}, {"values", {{"ign", 0}}}});
+            require(parked["ok"] == true && parked["state"]["raw_oem"]["ign"] == 0,
+                    "explicit ignition off did not apply");
             auto restarted = cycle.handle({{"op", "cluster_restart"}, {"session_id", id}});
             require(restarted["ok"] == true && restarted["deliveries"]["qnx"]["generation"] == 3,
                     "restart reused stale generation");
-            // Closing the cluster ends the startup sequence of its cold start: the READY power
-            // state held at ACC returns with ign, ready_lamp and the charging battery voltage, the
-            // reset keeps it, and no other value of the scenario changes.
-            auto scenario = logical;
-            scenario["raw_oem"]["ign"] = 1;
-            scenario["raw_oem"]["ready_lamp"] = 1;
-            scenario["raw_oem"]["ic_bat_voltage"] = 1380;
-            scenario["sequence"] = restarted["state"]["sequence"];
-            scenario["updated_utc"] = restarted["state"]["updated_utc"];
-            require(restarted["deliveries"]["startup_ignition"] ==
-                                    Json({{"ign", 1},
-                                          {"pending", false},
-                                          {"reason", "cluster_closed"},
-                                          {"revision", restarted["state"]["sequence"]}}) &&
-                            restarted["state"] == scenario &&
-                            read_private_json(directory / "vehicle-state.json") == scenario,
+            require(restarted["state"] == parked["state"] &&
+                            read_private_json(directory / "vehicle-state.json") == parked["state"],
                     "manual QNX restart changed current vehicle scenario");
             const auto third_token = frame_token(restarted, 3);
             require(third_token != second_token && third_token != first_token,

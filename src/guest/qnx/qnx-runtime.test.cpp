@@ -276,78 +276,6 @@ static void mcd_tests(const std::string &original, const fs::path &temp, const f
             << "MCD actual Bash/socket predicates, mocked owner/sleep, coalesced8+final, default parity PASS; guest evidence unverified\n";
 }
 
-static void startup_tests(const std::string &original, const fs::path &temp, const fs::path &self,
-                          const fs::path &record) {
-    const auto start = original.find("qm_startup() {"),
-               end = original.find("qm_observer_ram_check() {", start);
-
-    assert(start != std::string::npos && end != std::string::npos);
-    const auto function = original.substr(start, end - start);
-    const auto log = temp / "dlt-ascii.log", script = temp / "startup-test.sh";
-    const std::string loaded = "1970/01/01 00:00:07.344094 73400 024 ECU1 anim anim log error V 1 "
-                               "[file=engine.cpp,line=95 onProjectLoaded()-->end ]\n",
-                      check = "1970/01/01 00:00:09.001000 90010 101 ECU1 gaug gaug log error V 1 "
-                              "[file=themeAction_super.cpp,line=40 check_open() call ]\n",
-                      gauge_loaded =
-                              "1970/01/01 00:00:07.400000 74000 030 ECU1 gaug gaug log error V 1 "
-                              "[file=gauge.cpp,line=700 onProjectLoaded()-->end timerStamp:1, "
-                              "timecost:2, timestamp_all:3 ]\n";
-    // The log starts with `initial`; each fake sleep may append one line from `appended` by index.
-    auto invoke = [&](const std::string &initial, unsigned ready_code,
-                      const std::vector<std::pair<unsigned, std::string>> &appended) {
-        write(log, initial);
-        std::string appends;
-
-        for (const auto &[at, line] : appended) {
-            appends += "if builtin [ \"$qm_test_sleeps\" = " + std::to_string(at) +
-                       " ]; then builtin printf '%s' '" + line + "' >> '" + log.string() +
-                       "'; fi; ";
-        }
-
-        write(script,
-              function +
-                      "function /bin/grep { command grep \"$@\"; }\nqm_test_sleeps=0\nfunction /bin/sleep { "
-                      "qm_test_sleeps=$((qm_test_sleeps+1)); " +
-                      appends +
-                      "}\nfunction qm_bounded { echo \"BOUNDED sleeps=$qm_test_sleeps "
-                      "$*\"; return " +
-                      std::to_string(ready_code) + "; }\nqm_startup '" + log.string() +
-                      "'\necho \"RC=$? SLEEPS=$qm_test_sleeps\"\n");
-
-        return run(script, {}, "", self, record);
-    };
-    const std::string ready = "animation-ready /usr/bin/test_powFakeMsg test_evt 58 1 power\n";
-
-    // The animation application loads after two polls; the gauge reaches its check after three
-    // more, so ignition follows the gauge emergence.
-    const auto checked = invoke(gauge_loaded, 0, {{2, loaded}, {5, check}});
-    assert(checked.code == 0 &&
-           checked.output == "BOUNDED sleeps=2 " + ready +
-                                     "QIP STARTUP ignition reason=gauge-check\nRC=0 SLEEPS=5\n");
-
-    // Without a gauge check ignition comes after eight polls, inside the 6000 ms OEM timer.
-    const auto limited = invoke(loaded, 0, {});
-    assert(limited.code == 0 &&
-           limited.output ==
-                   "BOUNDED sleeps=0 " + ready +
-                           "QIP STARTUP ignition reason=animation-limit\nRC=0 SLEEPS=8\n");
-
-    // An animation application that never loads delays animation-ready by forty polls only.
-    const auto unloaded = invoke(gauge_loaded, 0, {});
-    assert(unloaded.code == 0 &&
-           unloaded.output ==
-                   "BOUNDED sleeps=40 " + ready +
-                           "QIP STARTUP ignition reason=animation-limit\nRC=0 SLEEPS=48\n");
-
-    // A failed animation-ready request asks for ignition at once.
-    const auto failed = invoke(loaded, 124, {{1, check}});
-    assert(failed.code == 0 &&
-           failed.output ==
-                   "BOUNDED sleeps=0 " + ready +
-                           "QIP STARTUP ignition reason=animation-ready-failed\nRC=0 SLEEPS=0\n");
-    std::cout << "startup ignition request: animation load, gauge check, limit, failure PASS\n";
-}
-
 static void driver_tests(const std::string &original, const fs::path &temp, const fs::path &self,
                          const fs::path &record, bool default_only) {
     const auto begin = original.find("qm_wait_ram_driver() {"),
@@ -542,7 +470,6 @@ int main(int argc, char **argv) try {
            fail.output.find("QMC CHILD exit=files code=7") != std::string::npos);
     driver_tests(original, temp, self, record, false);
     mcd_tests(original, temp, self, record, false);
-    startup_tests(original, temp, self, record);
     std::cout
             << "actual /bin/bash: reserved entry/default/native argv/error rc/direct-child cleanup PASS\n";
     fs::remove_all(temp);

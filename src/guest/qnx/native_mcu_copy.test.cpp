@@ -458,8 +458,7 @@ int main() try {
     native_async_poll();
     assert(mcu_args.size() == count);
 
-    // The adapter forwards the model ignition into the OEM frame: off during the cold start of
-    // the cluster, on after the startup sequence, over the OEM value of the dummy frame.
+    // The adapter forwards the model ignition over the OEM value of the dummy frame.
     for (const unsigned ignition : {0U, 1U, 0U}) {
         reset();
         async_mode = false;
