@@ -28,6 +28,10 @@ bool socket_connecting() {
     return errno == EINPROGRESS;
 }
 
+bool socket_reset() {
+    return errno == ECONNRESET;
+}
+
 SocketHandle open_stream_socket(int family) {
     return ::socket(family, SOCK_STREAM, 0);
 }
@@ -151,6 +155,15 @@ long long receive_socket(SocketHandle socket, char *data, std::size_t size) {
 
 bool listen_socket(SocketHandle socket, int backlog) {
     return ::listen(static_cast<int>(socket), backlog) == 0;
+}
+
+bool shutdown_socket(SocketHandle socket, bool receiving) {
+    return ::shutdown(static_cast<int>(socket), receiving ? SHUT_RDWR : SHUT_WR) == 0;
+}
+
+bool set_socket_buffer(SocketHandle socket, bool sending, int bytes) {
+    return ::setsockopt(static_cast<int>(socket), SOL_SOCKET, sending ? SO_SNDBUF : SO_RCVBUF,
+                        &bytes, sizeof bytes) == 0;
 }
 
 bool reuse_address(SocketHandle socket) {

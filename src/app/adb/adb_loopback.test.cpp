@@ -3,24 +3,11 @@
 #endif
 #include "adb_host.hpp"
 #include "adb_loopback.hpp"
+#include "adb_loopback_test_host.hpp"
+#include "os/platform.hpp"
+#include "os/process.hpp"
+#include "os/socket.hpp"
 #include "transport.h"
-#ifdef _WIN32
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#else
-#ifdef __APPLE__
-#include <malloc/malloc.h>
-#else
-#include <malloc.h>
-#endif
-#include <arpa/inet.h>
-#include <fcntl.h>
-#include <poll.h>
-#include <pthread.h>
-#include <signal.h>
-#include <sys/socket.h>
-#include <unistd.h>
-#endif
 #include <algorithm>
 #include <array>
 #include <atomic>
@@ -92,47 +79,14 @@ static uint32_t sum(const Bytes &b) {
     return n;
 }
 
-#ifdef _WIN32
-using SocketHandle = SOCKET;
-using PollFd = WSAPOLLFD;
-constexpr SocketHandle invalid_socket = INVALID_SOCKET;
-#else
-using SocketHandle = int;
-using PollFd = pollfd;
-constexpr SocketHandle invalid_socket = -1;
-#endif
+using voyemu::os::SocketHandle;
+constexpr SocketHandle invalid_socket = voyemu::os::no_socket;
 // Small peer receive buffers create write backpressure. Linux keeps a sub-MSS window closed and
 // probes it on a backoff timer, which would also delay the FIN behind the queued data.
-#ifdef __linux__
-constexpr int backpressure_receive_buffer = 1 << 17;
-#else
-constexpr int backpressure_receive_buffer = 1024;
-#endif
-
-static int set_option(SocketHandle fd, int name, int value) {
-#ifdef _WIN32
-    return setsockopt(fd, SOL_SOCKET, name, reinterpret_cast<const char *>(&value), sizeof(value));
-#else
-    return setsockopt(fd, SOL_SOCKET, name, &value, sizeof(value));
-#endif
-}
+constexpr int backpressure_receive_buffer = voyemu::os::platform_name == "Linux" ? 1 << 17 : 1024;
 
 static bool retryable_socket_error() {
-#ifdef _WIN32
-    auto error = WSAGetLastError();
-
-    return error == WSAEINTR || error == WSAEWOULDBLOCK;
-#else
-    return errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK;
-#endif
-}
-
-static bool reset_socket_error() {
-#ifdef _WIN32
-    return WSAGetLastError() == WSAECONNRESET;
-#else
-    return errno == ECONNRESET;
-#endif
+    return voyemu::os::socket_interrupted() || voyemu::os::socket_would_block();
 }
 
 struct Socket {
@@ -169,40 +123,34 @@ struct Socket {
             return;
         }
 
-#ifdef _WIN32
-        closesocket(fd);
-#else
-        ::close(fd);
-#endif
+        voyemu::os::close_socket(fd);
         fd = invalid_socket;
     }
 
     void configure() const {
-#ifdef _WIN32
-        u_long mode = 1;
-        require(ioctlsocket(fd, FIONBIO, &mode) == 0, "test socket flags failed");
-#else
-        require(fcntl(fd, F_SETFL, O_NONBLOCK) == 0 && fcntl(fd, F_SETFD, FD_CLOEXEC) == 0,
-                "test socket flags failed");
-#ifdef SO_NOSIGPIPE
-        require(set_option(fd, SO_NOSIGPIPE, 1) == 0, "test no-SIGPIPE failed");
-#endif
-#endif
+        require(voyemu::os::make_private_socket(fd), "test socket flags failed");
     }
 
-    bool ready(short events, int milliseconds) const {
-        PollFd p{fd, events, 0};
+    // Whether the socket becomes writable, or readable when writing is unset, within
+    // milliseconds; a pending socket error also counts as ready.
+    bool ready(bool writing, int milliseconds) const {
         int n;
-#ifdef _WIN32
-        n = WSAPoll(&p, 1, milliseconds);
-#else
-        do {
-            n = poll(&p, 1, milliseconds);
-        } while (n < 0 && errno == EINTR);
-#endif
-        require(n >= 0, "peer poll failed");
 
-        return n > 0;
+        do {
+            n = voyemu::os::wait_socket(fd, writing, milliseconds * 1000LL);
+        } while (n == -1 && voyemu::os::socket_interrupted());
+
+        require(n != -1, "peer poll failed");
+
+        return n != 0;
+    }
+
+    bool readable(int milliseconds) const {
+        return ready(false, milliseconds);
+    }
+
+    bool writable(int milliseconds) const {
+        return ready(true, milliseconds);
     }
 
     void send(const Bytes &b, bool fragmented = false) const {
@@ -212,14 +160,14 @@ struct Socket {
         while (offset < b.size()) {
             require(Clock::now() < deadline, "peer write timed out");
 
-            if (!ready(POLLOUT, 100)) {
+            if (!writable(100)) {
                 continue;
             }
 
             auto count = fragmented ? std::min<size_t>(offset % 7 + 1, b.size() - offset)
                                     : b.size() - offset;
-            auto n = ::send(fd, reinterpret_cast<const char *>(b.data() + offset),
-                            static_cast<int>(count), 0);
+            auto n = voyemu::os::send_socket(fd, reinterpret_cast<const char *>(b.data() + offset),
+                                             count);
 
             if (n < 0 && retryable_socket_error()) {
                 continue;
@@ -242,12 +190,12 @@ struct Socket {
         while (offset < count) {
             require(Clock::now() < deadline, "peer read timed out");
 
-            if (!ready(POLLIN, 100)) {
+            if (!readable(100)) {
                 continue;
             }
 
-            auto n = recv(fd, reinterpret_cast<char *>(b.data() + offset),
-                          static_cast<int>(count - offset), 0);
+            auto n = voyemu::os::receive_socket(fd, reinterpret_cast<char *>(b.data() + offset),
+                                                count - offset);
 
             if (n < 0 && retryable_socket_error()) {
                 continue;
@@ -265,13 +213,13 @@ struct Socket {
         std::array<uint8_t, 4096> b{};
 
         while (Clock::now() < deadline) {
-            if (!ready(POLLIN, 50)) {
+            if (!readable(50)) {
                 continue;
             }
 
-            auto n = recv(fd, reinterpret_cast<char *>(b.data()), static_cast<int>(b.size()), 0);
+            auto n = voyemu::os::receive_socket(fd, reinterpret_cast<char *>(b.data()), b.size());
 
-            if (n == 0 || (n < 0 && reset_socket_error())) {
+            if (n == 0 || (n < 0 && voyemu::os::socket_reset())) {
                 return;
             }
 
@@ -287,23 +235,19 @@ struct Socket {
 };
 
 static Socket listener(uint16_t port) {
-    Socket s(::socket(AF_INET, SOCK_STREAM, 0));
+    Socket s(voyemu::os::open_stream_socket(AF_INET));
 
-    if (!s.valid()) {
+    if (!s.valid() || !voyemu::os::exclusive_address(s.fd)) {
         return {};
     }
 
-#ifdef _WIN32
-    if (set_option(s.fd, SO_EXCLUSIVEADDRUSE, 1) != 0) {
-        return {};
-    }
-#endif
     sockaddr_in a{};
     a.sin_family = AF_INET;
     a.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
     a.sin_port = htons(port);
 
-    if (bind(s.fd, reinterpret_cast<sockaddr *>(&a), sizeof(a)) || listen(s.fd, 4)) {
+    if (!voyemu::os::bind_socket(s.fd, reinterpret_cast<sockaddr *>(&a), sizeof(a)) ||
+        !voyemu::os::listen_socket(s.fd, 4)) {
         return {};
     }
 
@@ -318,11 +262,7 @@ struct Endpoints {
 
     Endpoints() {
         // Known incorrect mappings must also reach only listeners owned by this test.
-#ifdef _WIN32
-        auto process = GetCurrentProcessId();
-#else
-        auto process = getpid();
-#endif
+        auto process = static_cast<std::uint64_t>(voyemu::os::current_process());
 
         for (unsigned i = 0; i < 10000; ++i) {
             auto n = static_cast<uint16_t>(16000 + 2 * ((process + i) % 10000));
@@ -344,19 +284,21 @@ struct Endpoints {
     }
 
     Socket accept() const {
-        require(raw.ready(POLLIN, 5000), "native host did not connect to raw N+1 endpoint");
+        require(raw.readable(5000), "native host did not connect to raw N+1 endpoint");
         sockaddr_in a{};
-        socklen_t size = sizeof(a);
-        Socket s(::accept(raw.fd, reinterpret_cast<sockaddr *>(&a), &size));
-        require(s.valid() && a.sin_addr.s_addr == htonl(INADDR_LOOPBACK), "non-loopback peer");
+        voyemu::os::SocketLength size = sizeof(a);
+        Socket s(voyemu::os::accept_socket(raw.fd));
+        require(s.valid() && voyemu::os::peer_name(s.fd, reinterpret_cast<sockaddr *>(&a), &size) &&
+                        a.sin_addr.s_addr == htonl(INADDR_LOOPBACK),
+                "non-loopback peer");
         s.configure();
 
         return s;
     }
 
     void traps() const {
-        require(!console_trap.ready(POLLIN, 0), "host connected to console N");
-        require(!server_trap.ready(POLLIN, 0), "host connected to smart socket N+20000");
+        require(!console_trap.readable(0), "host connected to console N");
+        require(!server_trap.readable(0), "host connected to smart socket N+20000");
     }
 
     std::string serial() const {
@@ -776,13 +718,13 @@ static void fenced_ownership() {
     require(adb_host_attach_owned_emulator(h.value, target.console, fence, &permission) ==
                     ADB_STATUS_OK,
             "fenced attach failed");
-    require(!target.raw.ready(POLLIN, 300), "fence admitted an unowned endpoint");
+    require(!target.raw.readable(300), "fence admitted an unowned endpoint");
     permission = Permission::Once;
     auto rejected = target.accept();
-    require(rejected.ready(POLLIN, 1500), "post-connect fence did not close the endpoint");
+    require(rejected.readable(1500), "post-connect fence did not close the endpoint");
     char byte{};
-    const auto count = recv(rejected.fd, &byte, 1, 0);
-    require(count == 0 || (count < 0 && reset_socket_error()),
+    const auto count = voyemu::os::receive_socket(rejected.fd, &byte, 1);
+    require(count == 0 || (count < 0 && voyemu::os::socket_reset()),
             "ADB bytes escaped the post-connect fence");
     permission = Permission::Allowed;
     auto first = target.accept();
@@ -791,11 +733,11 @@ static void fenced_ownership() {
     permission = Permission::Denied;
     require(adb_host_detach_emulator(h.value) == ADB_STATUS_OK, "fenced detach failed");
     first.expect_closed();
-    require(!target.raw.ready(POLLIN, 300), "detached connector reopened the endpoint");
+    require(!target.raw.readable(300), "detached connector reopened the endpoint");
     require(adb_host_attach_owned_emulator(h.value, other.console, fence, &permission) ==
                     ADB_STATUS_INVALID,
             "detached connector accepted a different endpoint");
-    require(!other.raw.ready(POLLIN, 0), "connector opened a different endpoint");
+    require(!other.raw.readable(0), "connector opened a different endpoint");
     permission = Permission::Allowed;
     require(adb_host_attach_owned_emulator(h.value, target.console, fence, &permission) ==
                     ADB_STATUS_OK,
@@ -835,7 +777,7 @@ static void selection() {
             "immutable target replacement did not return INVALID");
     auto s = e.accept();
     online(h, s);
-    require(!other.raw.ready(POLLIN, 0), "different target connected");
+    require(!other.raw.readable(0), "different target connected");
     uint64_t id = 0;
     std::string wrong = "emulator-" + std::to_string(e.console + 2), command = "x";
     require(adb_host_open(h.value, view(wrong), h.generation, 1, view(command), 1000, &id) ==
@@ -923,7 +865,7 @@ static void upload() {
 
         success(result, input, {}, 7);
     } catch (...) {
-        shutdown(s.fd, SHUT_RDWR);
+        voyemu::os::shutdown_socket(s.fd, true);
 
         if (peer.joinable()) {
             peer.join();
@@ -967,7 +909,7 @@ static void unauthorized() {
     require(adb_host_open(h.value, view(h.serial), h.generation, 1, view(command), 1000, &id) ==
                     ADB_STATUS_UNAUTHORIZED,
             "unauthorized transport accepted stream");
-    require(!s.ready(POLLIN, 100), "keyless AUTH emitted data or service request");
+    require(!s.readable(100), "keyless AUTH emitted data or service request");
 }
 
 static void missing_shell() {
@@ -982,7 +924,7 @@ static void missing_shell() {
     require(adb_host_open(h.value, view(h.serial), h.generation, 1, view(command), 1000, &id) ==
                     ADB_STATUS_UNSUPPORTED,
             "missing shell_v2 ignored");
-    require(!s.ready(POLLIN, 100), "unsupported shell sent A_OPEN");
+    require(!s.readable(100), "unsupported shell sent A_OPEN");
 }
 
 static void malformed(const std::string &name) {
@@ -1025,7 +967,7 @@ static void malformed(const std::string &name) {
     s.send(p);
 
     if (name == "truncated-header" || name == "truncated-payload") {
-        require(shutdown(s.fd, SHUT_WR) == 0, "peer EOF failed");
+        require(voyemu::os::shutdown_socket(s.fd, false), "peer EOF failed");
     }
 
     s.expect_closed(name == "packet-deadline" ? 6500 : 1500);
@@ -1071,7 +1013,7 @@ static void shutdown_io(const std::string &name) {
     auto s = e.accept();
 
     if (name == "shutdown-write") {
-        require(set_option(s.fd, SO_RCVBUF, backpressure_receive_buffer) == 0,
+        require(voyemu::os::set_socket_buffer(s.fd, false, backpressure_receive_buffer),
                 "peer receive bound failed");
         online(h, s);
         auto stream = begin(h, s, "blocked-writer");
@@ -1128,10 +1070,8 @@ static void checksums() {
     success(h.wait({stream.operation}).at(stream.operation), bytes("checked"));
 }
 
-#ifndef _WIN32
 bool adb_host_test_bound_stream_socket(AdbHost *, uint64_t);
 size_t adb_host_test_queued_stream_input(AdbHost *, uint64_t);
-#endif
 static void on_loop(std::function<void()> function);
 
 static void controls() {
@@ -1262,36 +1202,38 @@ static void controls() {
         return stream;
     };
     const auto blocked = exhaust_credit();
-#ifndef _WIN32
-    // The macOS Unix socketpair reliably short-writes. Wine's TCP pair can
-    // accept even the full negotiated packet despite the small test buffers.
-    on_loop([&] {
-        require(adb_host_test_bound_stream_socket(h.value, blocked.operation),
-                "sync test socket limit failed");
-    });
-    s.send(packet(wrte, blocked.remote, blocked.local, Bytes(max_payload, 0x88)));
-    std::size_t queued = 0;
-    const auto partial_deadline = Clock::now() + 1s;
 
-    do {
+    // The macOS Unix socketpair reliably short-writes. Wine's TCP pair can accept even the full
+    // negotiated packet despite the small test buffers, so Windows skips the partial write.
+    if (!voyemu::os::host_windows) {
         on_loop([&] {
-            queued = adb_host_test_queued_stream_input(h.value, blocked.operation);
+            require(adb_host_test_bound_stream_socket(h.value, blocked.operation),
+                    "sync test socket limit failed");
         });
+        s.send(packet(wrte, blocked.remote, blocked.local, Bytes(max_payload, 0x88)));
+        std::size_t queued = 0;
+        const auto partial_deadline = Clock::now() + 1s;
 
-        if (queued > 0 && queued < max_payload) {
-            break;
-        }
+        do {
+            on_loop([&] {
+                queued = adb_host_test_queued_stream_input(h.value, blocked.operation);
+            });
 
-        std::this_thread::sleep_for(5ms);
-    } while (Clock::now() < partial_deadline);
+            if (queued > 0 && queued < max_payload) {
+                break;
+            }
 
-    require(queued > 0 && queued < max_payload,
-            "test socket did not partially accept the legacy WRTE: queued=" +
-                    std::to_string(queued) +
-                    ", peer readable=" + std::to_string(s.ready(POLLIN, 0)));
-    require(!s.ready(POLLIN, 100),
-            "legacy WRTE acknowledged before the blocked socket accepted its payload");
-#endif
+            std::this_thread::sleep_for(5ms);
+        } while (Clock::now() < partial_deadline);
+
+        require(queued > 0 && queued < max_payload,
+                "test socket did not partially accept the legacy WRTE: queued=" +
+                        std::to_string(queued) +
+                        ", peer readable=" + std::to_string(s.readable(0)));
+        require(!s.readable(100),
+                "legacy WRTE acknowledged before the blocked socket accepted its payload");
+    }
+
     require(adb_host_cancel(h.value, blocked.operation) == ADB_STATUS_OK,
             "credit-starved sync cancel failed");
     require(read_packet(s).command == clse, "credit-starved sync did not close");
@@ -1327,7 +1269,7 @@ static void transport_io(bool deadline_test) {
 
     require(connection != nullptr, "direct owned connection failed");
     auto s = e.accept();
-    require(set_option(s.fd, SO_RCVBUF, backpressure_receive_buffer) == 0,
+    require(voyemu::os::set_socket_buffer(s.fd, false, backpressure_receive_buffer),
             "direct peer receive bound failed");
     std::atomic<unsigned> completed{0};
     std::atomic<bool> finished{false}, write_result{true}, read_result{true};
@@ -1384,9 +1326,6 @@ static void transport_io(bool deadline_test) {
     e.traps();
 }
 
-#ifndef _WIN32
-static void noop_signal(int) {}
-
 static void packet_eintr_deadline() {
     Endpoints e;
     std::atomic<bool> stopping{false};
@@ -1395,88 +1334,30 @@ static void packet_eintr_deadline() {
     require(connection != nullptr, "EINTR owned connection failed");
     auto s = e.accept();
     s.send({static_cast<uint8_t>(cnxn)});
-    struct Handler {
-        struct sigaction previous{};
-        bool installed = false;
-
-        Handler() {
-            struct sigaction action{};
-            action.sa_handler = noop_signal;
-            action.sa_flags = 0;
-            sigemptyset(&action.sa_mask);
-            require(sigaction(SIGUSR1, &action, &previous) == 0,
-                    "SIGUSR1 handler installation failed");
-            installed = true;
-        }
-
-        ~Handler() {
-            if (installed) {
-                sigaction(SIGUSR1, &previous, nullptr);
-            }
-        }
-
-        void restore() {
-            require(sigaction(SIGUSR1, &previous, nullptr) == 0,
-                    "SIGUSR1 handler restoration failed");
-            installed = false;
-        }
-    } handler;
-    std::atomic<bool> finished{false}, read_result{true};
-    std::atomic<int> mask_status{0};
+    std::atomic<bool> read_result{true};
     std::atomic<int64_t> elapsed{0};
-    auto start = Clock::now();
-    std::thread reader([&] {
-        sigset_t signal_set, previous;
-        sigemptyset(&signal_set);
-        sigaddset(&signal_set, SIGUSR1);
-        mask_status = pthread_sigmask(SIG_UNBLOCK, &signal_set, &previous);
-        auto read_start = Clock::now();
-        apacket p;
-        read_result = connection->Read(&p);
-        elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - read_start)
-                          .count();
-
-        if (mask_status == 0) {
-            mask_status = pthread_sigmask(SIG_SETMASK, &previous, nullptr);
-        }
-
-        finished = true;
-    });
-    unsigned requests = 0;
-    int signal_error = 0;
-
-    while (!finished && Clock::now() - start < 6200ms) {
-        auto status = pthread_kill(reader.native_handle(), SIGUSR1);
-
-        if (status != 0 && !(status == ESRCH && finished)) {
-            signal_error = status;
-            break;
-        }
-
-        if (status == 0) {
-            requests++;
-        }
-
-        std::this_thread::sleep_for(20ms);
-    }
-
-    while (!finished && Clock::now() - start < 6700ms) {
-        std::this_thread::sleep_for(10ms);
-    }
-
-    bool forced_close = !finished;
-    connection->Close();
-    reader.join();
-    handler.restore();
+    auto call = interrupted_call(
+            [&] {
+                auto read_start = Clock::now();
+                apacket p;
+                read_result = connection->Read(&p);
+                elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() -
+                                                                                read_start)
+                                  .count();
+            },
+            [&] {
+                connection->Close();
+            });
+    bool forced_close = !call.finished;
     std::printf("packet EINTR read elapsed_ms=%lld signal_requests=%u forced_close=%d\n",
-                static_cast<long long>(elapsed.load()), requests, forced_close);
-    require(signal_error == 0 && mask_status == 0 && requests >= 20, "targeted EINTR setup failed");
+                static_cast<long long>(elapsed.load()), call.signals, forced_close);
+    require(call.signal_error == 0 && call.mask_error == 0 && call.signals >= 20,
+            "targeted EINTR setup failed");
     require(!forced_close && !read_result && elapsed >= 4000 && elapsed < 5800,
             "EINTR delayed absolute packet deadline");
     s.expect_closed();
     e.traps();
 }
-#endif
 
 static void on_loop(std::function<void()> function) {
     auto promise = std::make_shared<std::promise<void>>();
@@ -1625,23 +1506,6 @@ static void packet_backlog() {
             "native packet admission exceeded 4MiB/64 packets or did not recover");
 }
 
-#ifndef _WIN32
-#ifdef __APPLE__
-static size_t allocated_bytes() {
-    malloc_statistics_t statistics{};
-
-    malloc_zone_statistics(nullptr, &statistics);
-
-    return statistics.size_in_use;
-}
-#else
-static size_t allocated_bytes() {
-    const auto statistics = mallinfo2();
-
-    return statistics.uordblks + statistics.hblkhd;
-}
-#endif
-
 static void malformed_ack_leak() {
     Endpoints e;
     Host h;
@@ -1659,7 +1523,7 @@ static void malformed_ack_leak() {
     require(warm_packet.command == wrte, "ACK warmup did not reach peer");
     s.send(packet(okay, stream.remote, stream.local));
     on_loop([] {});
-    auto before = allocated_bytes();
+    auto before = heap_bytes_in_use();
     Bytes bad_payload(64 * 1024, 0x65);
 
     for (unsigned i = 0; i < 32; ++i) {
@@ -1673,7 +1537,7 @@ static void malformed_ack_leak() {
     require(marker.command == clse && marker.first == 0 && marker.second == 9000,
             "final valid ACK processing marker missing");
     on_loop([] {});
-    auto after = allocated_bytes();
+    auto after = heap_bytes_in_use();
     size_t retained = after > before ? after - before : 0;
     require(adb_host_cancel(h.value, stream.operation) == ADB_STATUS_OK,
             "ACK allocation stream cleanup failed");
@@ -1683,7 +1547,6 @@ static void malformed_ack_leak() {
     require(retained < 1024 * 1024, "malformed ACK packets retain payload allocations");
     e.traps();
 }
-#endif
 
 static void device_event_budget() {
     constexpr size_t budget = 4096;
@@ -1800,17 +1663,12 @@ static void device_event_budget() {
     e.traps();
 }
 
-#ifndef _WIN32
 static std::pair<Socket, Socket> local_pair() {
-    int descriptors[2];
-
-    require(socketpair(AF_UNIX, SOCK_STREAM, 0, descriptors) == 0, "owned local socketpair failed");
-    Socket a(descriptors[0]), b(descriptors[1]);
+    auto [first, second] = local_socket_pair();
+    Socket a(first), b(second);
     a.configure();
     b.configure();
-    int size = 1024;
-    require(setsockopt(a.fd, SOL_SOCKET, SO_SNDBUF, &size, sizeof(size)) == 0,
-            "owned local send buffer failed");
+    require(voyemu::os::set_socket_buffer(a.fd, true, 1024), "owned local send buffer failed");
 
     return {std::move(a), std::move(b)};
 }
@@ -1823,9 +1681,10 @@ static void socket_backlog() {
     std::array<uint8_t, 4096> preload{};
 
     for (;;) {
-        auto n = ::send(tiny.first.fd, preload.data(), preload.size(), 0);
+        auto n = voyemu::os::send_socket(
+                tiny.first.fd, reinterpret_cast<const char *>(preload.data()), preload.size());
 
-        if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+        if (n < 0 && voyemu::os::socket_would_block()) {
             break;
         }
 
@@ -1835,8 +1694,8 @@ static void socket_backlog() {
     on_loop([&] {
         atransport transport(kTransportLocal, kCsOffline);
         auto create = [&](Socket &socket) {
-            auto *local = create_local_socket(unique_fd(socket.fd));
-            socket.fd = -1;
+            auto *local = create_local_socket(unique_fd(static_cast<int>(socket.fd)));
+            socket.fd = invalid_socket;
             local->transport = &transport;
 
             return local;
@@ -1929,7 +1788,7 @@ static void socket_backlog() {
                     survived && actual == bytes("alive"),
             "local socket aggregate exceeded byte/block bound or closed unrelated stream");
 }
-#endif
+
 bool adb_host_test_event_replacement(AdbHost *);
 bool adb_host_test_pending_device_retry(AdbHost *);
 bool adb_host_test_control_overflow(AdbHost *, uint64_t);
@@ -2002,7 +1861,7 @@ static void reboot_generation() {
     require(!result.exit_code && !result.timed_out, "accepted reboot failed");
     // Keep the old TCP peer open after the service CLSE. The host must retire it.
     first.expect_closed();
-    require(!endpoints.raw.ready(POLLIN, 350), "reboot reconnect ignored ownership fence");
+    require(!endpoints.raw.readable(350), "reboot reconnect ignored ownership fence");
     require(client.run({"wait-for-device"}, 100, 128, {}, stale).timed_out,
             "retired generation stayed ready");
     owned = true;
@@ -2012,7 +1871,7 @@ static void reboot_generation() {
             "fresh transport not online");
     require(client.run({"reboot"}, 1000, 128, {}, stale).exit_code != 0,
             "stale reboot lease admitted");
-    require(!second.ready(POLLIN, 100), "stale reboot opened a service on the new transport");
+    require(!second.readable(100), "stale reboot opened a service on the new transport");
 
     const auto current = client.lease();
     auto rejected = std::async(std::launch::async, [&] {
@@ -2036,7 +1895,7 @@ static void reboot_generation() {
     require(error_result.exit_code != 0 && !error_result.timed_out &&
                     error_result.output == std::string(failure.begin(), failure.end()),
             "reboot error response lost");
-    require(!endpoints.raw.ready(POLLIN, 350), "rejected reboot advanced transport");
+    require(!endpoints.raw.readable(350), "rejected reboot advanced transport");
     auto probe = std::async(std::launch::async, [&] {
         return client.run({"shell", "probe"}, 1000, 128, {}, current);
     });
@@ -2082,21 +1941,13 @@ static void control_overflow_terminal() {
 
 int main(int argc, char **argv) {
     try {
-#ifdef _WIN32
-        WSADATA winsock{};
-        require(WSAStartup(MAKEWORD(2, 2), &winsock) == 0, "test WinSock initialization failed");
-        struct WinsockCleanup {
-            ~WinsockCleanup() {
-                WSACleanup();
-            }
-        } cleanup;
-        require(argc == 2, "usage: loopback CASE");
-#else
-        require(argc == 3, "usage: loopback CASE OWNED_FIXTURE_DIRECTORY");
-#ifndef SO_NOSIGPIPE
-        signal(SIGPIPE, SIG_IGN);
-#endif
-#endif
+        voyemu::os::SocketLibrary sockets;
+        require(sockets.error() == 0, "test socket library initialization failed");
+        // POSIX runs each case through adb_test.cmake, which also passes its owned fixture
+        // directory.
+        require(argc == (voyemu::os::host_windows ? 2 : 3),
+                voyemu::os::host_windows ? "usage: loopback CASE"
+                                         : "usage: loopback CASE OWNED_FIXTURE_DIRECTORY");
         std::string name = argv[1];
         adb_host_set_log_callback(nullptr);
 
@@ -2108,16 +1959,13 @@ int main(int argc, char **argv) {
             upload();
         } else if (name == "cancel-isolation") {
             cancel();
-        }
-#ifndef _WIN32
-        else if (name == "packet-eintr-deadline") {
+        } else if (name == "packet-eintr-deadline") {
             packet_eintr_deadline();
         } else if (name == "malformed-ack-leak") {
             malformed_ack_leak();
         } else if (name == "socket-backlog-bound") {
             socket_backlog();
         }
-#endif
 #ifdef VOYEMU_ADB_ADAPTER_TEST
         else if (name == "reboot-generation") {
             reboot_generation();

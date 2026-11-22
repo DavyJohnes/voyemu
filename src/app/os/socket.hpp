@@ -57,6 +57,8 @@ unsigned socket_error();
 bool socket_interrupted();
 bool socket_would_block();
 bool socket_connecting();
+// Whether the last socket call failed because the peer reset the connection.
+bool socket_reset();
 // A stream socket of family; no_socket on failure.
 SocketHandle open_stream_socket(int family);
 // Binds and listens on a Unix-domain path on POSIX. Returns no_socket on failure or on Windows.
@@ -100,6 +102,10 @@ int pending_socket_error(SocketHandle socket);
 long long send_socket(SocketHandle socket, const char *data, std::size_t size);
 long long receive_socket(SocketHandle socket, char *data, std::size_t size);
 bool listen_socket(SocketHandle socket, int backlog);
+// Ends the sending direction of socket, and its receiving direction too when receiving is set.
+bool shutdown_socket(SocketHandle socket, bool receiving);
+// Sets the kernel send buffer of socket to bytes, or its receive buffer when sending is unset.
+bool set_socket_buffer(SocketHandle socket, bool sending, int bytes);
 // Lets the bind reuse an address in TIME_WAIT where the host needs it; Windows needs no option.
 bool reuse_address(SocketHandle socket);
 // Binds only this socket to its address, excluding other sockets of the host where it supports

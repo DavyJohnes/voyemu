@@ -104,6 +104,10 @@ bool socket_connecting() {
     return WSAGetLastError() == WSAEWOULDBLOCK;
 }
 
+bool socket_reset() {
+    return WSAGetLastError() == WSAECONNRESET;
+}
+
 SocketHandle open_stream_socket(int family) {
     const SOCKET socket = ::socket(family, SOCK_STREAM, IPPROTO_TCP);
 
@@ -195,6 +199,15 @@ long long receive_socket(SocketHandle socket, char *data, std::size_t size) {
 
 bool listen_socket(SocketHandle socket, int backlog) {
     return ::listen(native(socket), backlog) == 0;
+}
+
+bool shutdown_socket(SocketHandle socket, bool receiving) {
+    return ::shutdown(native(socket), receiving ? SD_BOTH : SD_SEND) == 0;
+}
+
+bool set_socket_buffer(SocketHandle socket, bool sending, int bytes) {
+    return ::setsockopt(native(socket), SOL_SOCKET, sending ? SO_SNDBUF : SO_RCVBUF,
+                        reinterpret_cast<const char *>(&bytes), sizeof(bytes)) == 0;
 }
 
 bool reuse_address(SocketHandle) {

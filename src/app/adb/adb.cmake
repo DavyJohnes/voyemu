@@ -88,9 +88,14 @@ endif()
 
 if(BUILD_TESTING)
     add_executable(voyemu_embedded_adb_loopback_test "${voyemu_adb_root}/adb_loopback.test.cpp"
-        "${voyemu_adb_root}/adb_host.test.cpp")
+        "${voyemu_adb_root}/adb_loopback_${voyemu_host_backend}.test.cpp" "${voyemu_adb_root}/adb_host.test.cpp")
+    if(APPLE)
+        target_sources(voyemu_embedded_adb_loopback_test PRIVATE "${voyemu_adb_root}/adb_loopback_macos.test.cpp")
+    elseif(NOT WIN32)
+        target_sources(voyemu_embedded_adb_loopback_test PRIVATE "${voyemu_adb_root}/adb_loopback_linux.test.cpp")
+    endif()
     voyemu_configure_embedded_adb(voyemu_embedded_adb_loopback_test)
-    target_link_libraries(voyemu_embedded_adb_loopback_test PRIVATE voyemu_embedded_adb)
+    target_link_libraries(voyemu_embedded_adb_loopback_test PRIVATE voyemu_embedded_adb voyemu_core)
     set(voyemu_adb_cases target-selection shell-stream upload-eof cancel-isolation
         auth-unauthorized missing-shell-v2 malformed-magic malformed-size
         malformed-checksum truncated-header truncated-payload stls reconnect-generation
@@ -100,7 +105,6 @@ if(BUILD_TESTING)
         shutdown-device-retry control-overflow-terminal)
     if(TARGET voyemu_core)
         target_compile_definitions(voyemu_embedded_adb_loopback_test PRIVATE VOYEMU_ADB_ADAPTER_TEST)
-        target_link_libraries(voyemu_embedded_adb_loopback_test PRIVATE voyemu_core)
         list(APPEND voyemu_adb_cases reboot-generation)
     endif()
     if(NOT WIN32)

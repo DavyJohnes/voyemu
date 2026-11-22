@@ -1,7 +1,6 @@
 # Files outside src/app/os/ that still test a platform macro, checked by
 # src/dev/checks/CheckPlatformMacros.java: "path reason", one line each. Remove a line when its file
 # moves its platform code to an os/ backend; each reason names the group of its area.
-src/app/adb/adb_loopback.test.cpp group 4 adb and api: sockets, files and admission
 src/app/cli/fetch.cpp later: data-out and profile-sweep branches pending
 src/app/cli/fetch.test.cpp later: data-out and profile-sweep branches pending
 src/app/cli/fetch_segmented.cpp later: data-out and profile-sweep branches pending
