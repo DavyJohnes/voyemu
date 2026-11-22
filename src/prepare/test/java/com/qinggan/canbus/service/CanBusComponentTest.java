@@ -479,6 +479,33 @@ public final class CanBusComponentTest {
         }
     }
 
+    /** The OEM DVR view request and its forwarded touch are kept, journaled and acknowledged. */
+    static void dvrSignals(DongfengCanBusComponentImpl component, Observer observer) {
+        long journal = component.state().journal().latest();
+
+        component.setVehicleState(VehicleState.DVR_DISPLAY_REQ, 1);
+        Bundle touch = new Bundle();
+        touch.putInt(VehicleState.DVR_TOUCH_MOTION.name(), 1);
+        touch.putInt(VehicleState.DVR_COORDINATE_X.name(), 640);
+        touch.putInt(VehicleState.DVR_COORDINATE_Y.name(), 360);
+        check(
+                component.setVehicleAndAirConditionBundleState(null, touch) == 1,
+                "DVR touch not acknowledged");
+        check(
+                component.getVehicleState(VehicleState.DVR_DISPLAY_REQ) == 1
+                        && component.getVehicleState(VehicleState.DVR_TOUCH_MOTION) == 1
+                        && component.getVehicleState(VehicleState.DVR_COORDINATE_X) == 640
+                        && component.getVehicleState(VehicleState.DVR_COORDINATE_Y) == 360,
+                "DVR signals not kept");
+        check(component.state().journal().latest() > journal, "DVR signals not journaled");
+        Handler.drain();
+        check(
+                observer.count("onVehicleStateSettingResponse DVR_DISPLAY_REQ true") == 1
+                        && observer.count("onVehicleStateChanged DVR_COORDINATE_X 640") == 1,
+                "DVR signals not acknowledged");
+        observer.take();
+    }
+
     /** Reads open no model socket, send no command and add no journal event. */
     static void readsOnly(DongfengCanBusComponentImpl component) {
         CanBusState state = component.state();
@@ -565,6 +592,7 @@ public final class CanBusComponentTest {
         vehicleInput(component, observer);
         unfilledSignals(component, observer);
         settings(component, observer);
+        dvrSignals(component, observer);
         ipkEntries(component);
         transport(component);
         component.updatePhoneInfo(new PhoneInfo());

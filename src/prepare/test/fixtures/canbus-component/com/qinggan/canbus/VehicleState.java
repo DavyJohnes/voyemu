@@ -1,6 +1,6 @@
 package com.qinggan.canbus;
 
-/** The VehicleState constants the component uses; PW and FEV keep their OEM numbers. */
+/** The VehicleState constants the component uses; PW, FEV and DVR keep their OEM numbers. */
 public enum VehicleState {
     HUM_VSP_FUNCTION_SW(665),
     IVI_SOC_MODESET(957),
@@ -20,7 +20,11 @@ public enum VehicleState {
     FRONT_SEAT_MASS_INTEN_LEFT(14),
     FRONT_SEAT_MASS_INTEN_RIGHT(15),
     FRONT_SEAT_MASS_SWITCH_LEFT(16),
-    FRONT_SEAT_MASS_SWITCH_RIGHT(17);
+    FRONT_SEAT_MASS_SWITCH_RIGHT(17),
+    DVR_DISPLAY_REQ(752),
+    DVR_TOUCH_MOTION(753),
+    DVR_COORDINATE_X(754),
+    DVR_COORDINATE_Y(755);
     private final int value;
 
     VehicleState(int value) {
