@@ -588,7 +588,8 @@ int main() {
                 }
                 rejects([&] {
                     android_short_wheel_pair_command(nonce, std::string(32, 'a'), "invalid", down,
-                                                     up, 150, AndroidShortWheelContract::qinggan09, nonce);
+                                                     up, 150, AndroidShortWheelContract::qinggan09,
+                                                     nonce);
                 });
             }
             // Android R56 has no printf builtin. Count actual external utility calls;

@@ -46,6 +46,7 @@ std::vector<std::uint8_t> someip(std::uint16_t service, std::uint16_t method, st
                                  std::uint16_t session, std::uint8_t interface, std::uint8_t type,
                                  std::uint8_t code, std::span<const std::uint8_t> payload) {
     std::vector<std::uint8_t> out;
+
     put(out, service, 2);
     put(out, method, 2);
     put(out, 8 + payload.size(), 4);
@@ -488,6 +489,7 @@ void SomeipGateway::offer(unsigned vlan, std::size_t index, const Address &desti
                           std::uint16_t port, bool unicast) {
     const auto &service = contract_.services[index];
     std::vector<std::uint8_t> entry{0x01, 0, 0, 0x10};
+
     put(entry, service.id, 2);
     put(entry, service.instance, 2);
     entry.push_back(service.major);
@@ -505,6 +507,7 @@ void SomeipGateway::send_sd(unsigned vlan, const Address &destination, std::uint
                             std::span<const std::uint8_t> entries,
                             std::span<const std::uint8_t> options, bool unicast) {
     std::vector<std::uint8_t> body{static_cast<std::uint8_t>(0x80 | (unicast ? 0x40 : 0)), 0, 0, 0};
+
     put(body, entries.size(), 4);
     body.insert(body.end(), entries.begin(), entries.end());
     put(body, options.size(), 4);

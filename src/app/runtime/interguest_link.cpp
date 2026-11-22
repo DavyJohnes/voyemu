@@ -775,6 +775,7 @@ InterguestLink::Status InterguestLink::status() const {
 void InterguestLink::attach_gateway(const Json &contract) {
     auto gateway = std::make_unique<SomeipGateway>(someip_contract(contract));
     std::lock_guard lock(impl_->mutex);
+
     impl_->gateway = std::move(gateway);
 }
 

@@ -45,6 +45,7 @@ Bytes ethernet(unsigned vlan, std::uint16_t type, const Bytes &payload, bool bro
 Bytes udp(const std::array<std::uint8_t, 4> &to, std::uint16_t source_port, std::uint16_t port,
           const Bytes &message) {
     Bytes ip{0x45, 0};
+
     put(ip, 28 + message.size(), 2);
     ip.insert(ip.end(), {0, 0, 0x40, 0, 1, 17, 0, 0});
     ip.insert(ip.end(), guest_ip.begin(), guest_ip.end());
@@ -61,6 +62,7 @@ Bytes udp(const std::array<std::uint8_t, 4> &to, std::uint16_t source_port, std:
 // The guest's someipd: an SD message from 172.16.112.30:30490.
 Bytes sd(const std::array<std::uint8_t, 4> &to, const Bytes &entries, const Bytes &options) {
     Bytes body{0xc0, 0, 0, 0};
+
     put(body, entries.size(), 4);
     body.insert(body.end(), entries.begin(), entries.end());
     put(body, options.size(), 4);
@@ -78,6 +80,7 @@ Bytes sd(const std::array<std::uint8_t, 4> &to, const Bytes &entries, const Byte
 // A SOME/IP REQUEST from the guest's client 0x1234, session 0x42, port 50101.
 Bytes request(std::uint16_t service, std::uint16_t method) {
     Bytes message;
+
     put(message, service, 2);
     put(message, method, 2);
     put(message, 8, 4);
@@ -91,6 +94,7 @@ Bytes request(std::uint16_t service, std::uint16_t method) {
 Bytes entry(std::uint8_t type, std::uint16_t service, std::uint32_t ttl, std::uint16_t group,
             unsigned options) {
     Bytes out{type, 0, 0, static_cast<std::uint8_t>(options << 4)};
+
     put(out, service, 2);
     put(out, 1, 2);
     out.push_back(1);
@@ -138,6 +142,7 @@ int main() try {
                        77},
                       {"Unrelated", 1}}}};
     };
+
     assert(someip_contract(someip_contract_json(contract)).services.size() == 2);
     SomeipGateway gateway(contract);
     auto now = SomeipGateway::Clock::now();

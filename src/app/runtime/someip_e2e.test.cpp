@@ -29,6 +29,7 @@ std::vector<std::uint8_t> payload(std::size_t size) {
 
 int main() try {
     const std::string check = "123456789";
+
     assert(someip_crc64({reinterpret_cast<const std::uint8_t *>(check.data()), check.size()}) ==
            0x995dc9bbdf1939faULL);
     // Expected bytes come from the cluster's own E2E_P07Protect machine code run on these inputs.

@@ -16,6 +16,7 @@ inline Json qnx_interguest_contract() {
 // eth0 172.30.100.3; the SOME/IP VLANs run on the same link.
 inline Json qnx_passion_interguest_contract() {
     auto contract = qnx_interguest_contract();
+
     contract["address"] = "172.30.100.1";
     contract["peer_address"] = "172.30.100.3";
 

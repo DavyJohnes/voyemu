@@ -20,6 +20,7 @@
 #endif
 #else
 #include "interguest_network.c"
+
 #include "hab_socket_qnx.c"
 #include "passion_helper_dispatch.h"
 #endif

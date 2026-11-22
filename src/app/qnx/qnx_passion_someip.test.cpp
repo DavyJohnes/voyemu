@@ -20,6 +20,7 @@ void put(std::string &out, std::size_t at, std::uint64_t value, unsigned bytes) 
 // the three values, Get_f_Lonely one byte.
 std::string elf(std::string_view vlan, unsigned other_kind = 0) {
     std::string out(0x2000, '\0');
+
     out.replace(0, 4,
                 "\x7f"
                 "ELF");
@@ -55,6 +56,7 @@ std::string elf(std::string_view vlan, unsigned other_kind = 0) {
     put(out, 0x138, 0x94000000 | ((-6) & 0x3ffffff), 4);
     put(out, 0x13c, 0xd65f03c0, 4);
     put(out, 0x200, 0x2000, 2);
+
     for (const std::size_t record : {0x240, 0x2c0}) {
         put(out, record, 1, 4);
         put(out, record + 4, 0x2000, 2);
@@ -63,6 +65,7 @@ std::string elf(std::string_view vlan, unsigned other_kind = 0) {
         put(out, record + 0x2c, 1, 2);
         put(out, record + 0x34, record == 0x240 ? 0x8001 : 0x8002, 2);
     }
+
     out.replace(0x280, vlan.size(), vlan);
     // Descriptors: kind at 0, type name at 8, size in the high word at 16, members at 32.
     auto record = [&](std::size_t at, unsigned kind, unsigned bytes) {
@@ -145,6 +148,7 @@ std::string elf(std::string_view vlan, unsigned other_kind = 0) {
 // id 5 into w8, moves it to w0 and calls <service>_request_send through a PLT stub.
 std::string android_elf(std::string_view service, std::uint16_t id) {
     std::string out(0x2000, '\0');
+
     out.replace(0, 4,
                 "\x7f"
                 "ELF");
@@ -214,6 +218,7 @@ std::string android_elf(std::string_view service, std::uint16_t id) {
     }
 
     out.replace(0x1000, strings.size(), strings);
+
     // Members of both descriptors: Door_members (symbol 7); the jump slot: request_send (8).
     for (std::size_t i = 0; i < 2; ++i) {
         put(out, 0xa80 + 24 * i, i ? 0xd20 : 0x820, 8);
@@ -259,6 +264,7 @@ template <class Function> void rejects(Function action) {
 
 const SomeipEvent &event(const Json &contract, std::string_view name) {
     static SomeipContract parsed;
+
     parsed = someip_contract(contract);
 
     for (const auto &item : parsed.services.front().events) {
@@ -285,6 +291,7 @@ int main() try {
           {"name":"8155QNX.VehicleDrivingInfo.Notify_f_VehicleDrivingInform.V.VehicleSpeed","len":4}]}]}]})");
     const auto contract = qnx_passion_someip_contract(elf("VLAN12"), table);
     const auto parsed = someip_contract(contract);
+
     assert(parsed.services.size() == 1);
     const auto &service = parsed.services.front();
     assert(service.name == "VehicleDrivingInfo" && service.vlan == 12 && service.id == 0x2000 &&
