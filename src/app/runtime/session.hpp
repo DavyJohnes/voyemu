@@ -249,6 +249,9 @@ void configure_owned_android_network(
         std::vector<AndroidNetworkArtifact> &pending,
         const std::function<ProcessResult(const std::vector<std::string> &, int)> &run,
         const std::function<std::string()> &nonce);
+Json verify_boot_local_android_network(
+        const std::string &boot,
+        const std::function<ProcessResult(const std::vector<std::string> &, int)> &run);
 void validate_app_launch(const std::string &package, const std::string &screen,
                          const std::string &boot_id);
 Json launch_android_app(

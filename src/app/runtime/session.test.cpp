@@ -4316,6 +4316,72 @@ static void control_server_concurrency() {
     }
 }
 
+static void boot_local_android_network_tests() {
+    const std::string boot = "12345678-1234-4abc-8abc-1234567890ab";
+    const std::string next = "12345678-1234-4abc-8abc-1234567890ac";
+
+    using Command = std::vector<std::string>;
+    const Command fence = {"shell", "cat", "/proc/sys/kernel/random/boot_id"};
+    const Command links = {
+            "shell",
+            R"SH(for file in /sys/class/net/*/address; do interface=${file%/address}; interface=${interface##*/}; IFS= read -r mac < "$file" || continue; printf '%s %s\n' "$interface" "$mac"; done)SH"};
+    const Command address = {"shell", "ip", "-o", "-4", "addr", "show", "dev", "eth1"};
+    const Command network = {"shell", "ip", "-4", "route", "show", "table", "98"};
+    const Command system = {"shell", "ip", "-4", "route", "show", "table", "99"};
+    const Command all = {"shell", "ip", "-4", "route", "show", "table", "all"};
+    const std::vector<std::pair<Command, ProcessResult>> good = {
+            {fence, {0, boot + "\n", false}},
+            {links,
+             {0,
+              "eth0 52:54:00:76:6f:20\n"
+              "eth1 52:54:00:76:6f:21\n",
+              false}},
+            {address, {0, "3: eth1 inet 172.16.100.21/24 scope global eth1\n", false}},
+            {network, {0, "172.16.100.0/24 dev eth1 scope link\n", false}},
+            {system, {0, "172.16.100.0/24 dev eth1 scope link\n", false}},
+            {all, {0, "default via 10.0.2.2 dev wlan0 table 1003\n", false}},
+            {fence, {0, boot + "\n", false}}};
+    auto verify = [&](const auto &rows) {
+        std::size_t offset = 0;
+
+        return verify_boot_local_android_network(boot, [&](const auto &command, int timeout) {
+            assert(offset < rows.size() && command == rows[offset].first && timeout == 1500);
+
+            return rows[offset++].second;
+        });
+    };
+
+    const auto proof = verify(good);
+    assert(proof.at("boot_id") == boot && proof.at("interface") == "eth1" &&
+           proof.at("legacy_route_tables") == Json::array({98, 99}));
+
+    const std::vector<std::pair<std::size_t, ProcessResult>> invalid = {
+            {1,
+             {0,
+              "eth1 52:54:00:76:6f:21\n"
+              "eth2 52:54:00:76:6f:21\n",
+              false}},
+            {2, {0, "3: eth1 inet 172.16.100.21/32 scope global eth1\n", false}},
+            {3, {0, "", true}},
+            {4, {0, "172.16.100.0/24 dev eth10 scope link\n", false}},
+            {5, {0, "default via 172.16.100.22 dev eth1 table 1004\n", false}},
+            {6, {0, next + "\n", false}}};
+
+    for (const auto &[index, wrong] : invalid) {
+        auto rows = good;
+        rows[index].second = wrong;
+        bool rejected = false;
+
+        try {
+            (void)verify(rows);
+        } catch (const VoyemuError &) {
+            rejected = true;
+        }
+
+        assert(rejected);
+    }
+}
+
 static void owned_android_network_recovery_tests() {
     const std::string first = "11111111-1111-4111-8111-111111111111",
                       second = "22222222-2222-4222-8222-222222222222", payload = "source-dex",
@@ -5365,6 +5431,7 @@ int main(int argc, char **argv) try {
     android_nonce_authority();
     observer_metadata_after_exchanged_shutdown();
     owned_adbd_bootstrap_tests();
+    boot_local_android_network_tests();
     owned_android_network_recovery_tests();
     control_server_stop_reply();
     control_server_early_busy_reply();

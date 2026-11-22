@@ -1,5 +1,8 @@
 #include "error.hpp"
+#include "profile_catalog.hpp"
 #include "session_internal.hpp"
+
+#include <sstream>
 
 namespace voyemu {
 using namespace session_detail;
@@ -845,6 +848,146 @@ void configure_owned_android_network(
     android["interguest_network"] = std::move(result);
 }
 
+Json verify_boot_local_android_network(
+        const std::string &boot,
+        const std::function<ProcessResult(const std::vector<std::string> &, int)> &run) {
+    if (!android_boot_id_valid(boot)) {
+        throw VoyemuError("INTERGUEST_ANDROID", "valid boot identity required");
+    }
+
+    auto read = [&](std::vector<std::string> args) {
+        const auto result = run(args, 1500);
+
+        if (result.exit_code || result.timed_out || result.output.size() > 64 * 1024) {
+            std::string command;
+
+            for (const auto &argument : args) {
+                if (!command.empty()) {
+                    command += ' ';
+                }
+
+                command += argument;
+            }
+
+            auto details = result.output.substr(0, 256);
+
+            for (char &c : details) {
+                if (c < 32 || c >= 127) {
+                    c = ' ';
+                }
+            }
+
+            throw VoyemuError("INTERGUEST_ANDROID",
+                              "boot-local network readback failed: " + command +
+                                      " (exit=" + std::to_string(result.exit_code) +
+                                      ", timed_out=" + (result.timed_out ? "true" : "false") +
+                                      "): " + details);
+        }
+
+        return result.output;
+    };
+    auto fence = [&] {
+        const auto actual = read({"shell", "cat", "/proc/sys/kernel/random/boot_id"});
+
+        if (actual.substr(0, actual.find_first_of("\r\n")) != boot) {
+            throw VoyemuError("ANDROID_IDENTITY_MISMATCH",
+                              "guest rebooted during network readback");
+        }
+    };
+    auto rows = [](const std::string &output) {
+        std::istringstream lines(output);
+        std::vector<std::vector<std::string>> result;
+
+        for (std::string line; std::getline(lines, line);) {
+            std::istringstream words(line);
+            std::vector<std::string> row;
+
+            for (std::string word; words >> word;) {
+                row.push_back(std::move(word));
+            }
+
+            if (!row.empty()) {
+                result.push_back(std::move(row));
+            }
+        }
+
+        return result;
+    };
+    auto has_field = [](const auto &row, std::string_view key, std::string_view value) {
+        for (std::size_t i = 0; i + 1 < row.size(); ++i) {
+            if (row[i] == key && row[i + 1] == value) {
+                return true;
+            }
+        }
+
+        return false;
+    };
+
+    fence();
+    std::string interface_name;
+
+    const auto hardware = read(
+            {"shell",
+             R"SH(for file in /sys/class/net/*/address; do interface=${file%/address}; interface=${interface##*/}; IFS= read -r mac < "$file" || continue; printf '%s %s\n' "$interface" "$mac"; done)SH"});
+
+    for (const auto &link : rows(hardware)) {
+        if (link.size() != 2 || link[1] != "52:54:00:76:6f:21") {
+            continue;
+        }
+
+        if (!interface_name.empty() ||
+            !std::regex_match(link[0], std::regex("[A-Za-z0-9_.-]{1,15}"))) {
+            throw VoyemuError("INTERGUEST_ANDROID", "ambiguous boot-local Ethernet interface");
+        }
+
+        interface_name = link[0];
+    }
+
+    if (interface_name.empty()) {
+        throw VoyemuError("INTERGUEST_ANDROID", "boot-local Ethernet interface absent");
+    }
+
+    const auto addresses =
+            rows(read({"shell", "ip", "-o", "-4", "addr", "show", "dev", interface_name}));
+
+    if (std::ranges::none_of(addresses, [&](const auto &row) {
+            return row.size() >= 4 && row[1] == interface_name && row[2] == "inet" &&
+                   row[3] == "172.16.100.21/24";
+        })) {
+        throw VoyemuError("INTERGUEST_ANDROID", "boot-local Ethernet address not configured");
+    }
+
+    for (auto table : {"98", "99"}) {
+        const auto routes = rows(read({"shell", "ip", "-4", "route", "show", "table", table}));
+
+        if (std::ranges::none_of(routes, [&](const auto &row) {
+                return row.front() == "172.16.100.0/24" && has_field(row, "dev", interface_name) &&
+                       std::ranges::find(row, "via") == row.end();
+            })) {
+            throw VoyemuError("INTERGUEST_ANDROID",
+                              "boot-local Ethernet route not installed in table " +
+                                      std::string(table));
+        }
+    }
+
+    const auto routes = rows(read({"shell", "ip", "-4", "route", "show", "table", "all"}));
+
+    if (std::ranges::any_of(routes, [&](const auto &row) {
+            return row.front() == "default" && has_field(row, "dev", interface_name);
+        })) {
+        throw VoyemuError("INTERGUEST_ANDROID", "isolated Ethernet acquired a default route");
+    }
+
+    fence();
+
+    return {{"boot_id", boot},
+            {"source", "system-server-route-readback"},
+            {"interface", interface_name},
+            {"address", "172.16.100.21"},
+            {"prefix", 24},
+            {"legacy_route_tables", Json::array({98, 99})}};
+}
+
 void Session::configure_android_interguest_network() {
     if (!android_spec_.contains("interguest_network")) {
         return;
@@ -854,6 +997,38 @@ void Session::configure_android_interguest_network() {
 
     if (!android_transport_ready_) {
         throw VoyemuError("INTERGUEST_ANDROID", "root transport not ready");
+    }
+
+    if (android_spec_.value("api", 0) == 30 &&
+        record_declares(android_spec_, ProfilePlatform::qinggan11, ProfileBoard::sa8155)) {
+        auto &delivery = deliveries_["android"];
+        const auto boot = android_transport_boot_;
+        const auto previous = delivery.value("interguest_network", Json::object());
+
+        if (previous.value("boot_id", std::string{}) == boot &&
+            previous.value("source", std::string{}) == "system-server-route-readback") {
+            return;
+        }
+
+        try {
+            auto proof = verify_boot_local_android_network(boot,
+                                                           [&](const auto &args, int timeout) {
+                                                               return adb(args, timeout);
+                                                           });
+            delivery["interguest_network"] = std::move(proof);
+            delivery.erase("interguest_network_boot_readback_failure");
+            retire_android_network_failure(delivery, "recovered");
+
+            return;
+        } catch (const VoyemuError &error) {
+            if (error.code() == "ANDROID_IDENTITY_MISMATCH") {
+                delivery.erase("interguest_network");
+                throw;
+            }
+
+            delivery["interguest_network_boot_readback_failure"] = {{"boot_id", boot},
+                                                                    {"reason", error.what()}};
+        }
     }
 
     const auto definition = android_spec_.value("ui_observer", Json::object());
@@ -895,8 +1070,15 @@ void Session::configure_android_interguest_network() {
         const auto failure = std::current_exception();
         try {
             if (deliveries_["android"].contains("interguest_network_failure")) {
+                auto failure_record = deliveries_["android"]["interguest_network_failure"];
+
+                if (deliveries_["android"].contains("interguest_network_boot_readback_failure")) {
+                    failure_record["boot_local_readback"] =
+                            deliveries_["android"].at("interguest_network_boot_readback_failure");
+                }
+
                 write_private_json(directory_ / "interguest-network-command-error.json",
-                                   deliveries_["android"]["interguest_network_failure"]);
+                                   failure_record);
             }
         } catch (...) { /* Ignored: diagnostics cannot replace the setup error. */
         }
