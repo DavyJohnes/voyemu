@@ -122,6 +122,27 @@
       }
     },
     {
+      "name": "VOYAH_SceneMode",
+      "file": "VOYAH_SceneMode.apk",
+      "source": {
+        "package": "com.voyah.scenemode"
+      }
+    },
+    {
+      "name": "MonzaDVR",
+      "file": "MonzaDVR.apk",
+      "source": {
+        "package": "com.mega.dvr"
+      }
+    },
+    {
+      "name": "LY_Gallery",
+      "file": "LY_Gallery.apk",
+      "source": {
+        "package": "com.voyah.gallery"
+      }
+    },
+    {
       "name": "screen-control-screen0_off_change",
       "file": "screen0_off_change.csv",
       "source": {

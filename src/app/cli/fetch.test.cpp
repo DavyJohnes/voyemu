@@ -34,7 +34,7 @@ static void number(std::string &data, unsigned at, std::uint64_t value, unsigned
     }
 }
 
-static std::string filesystem_fixture() {
+static std::string filesystem_fixture(bool vendor = false) {
     std::string data(16384, '\0');
 
     number(data, 1024, 16);
@@ -76,7 +76,14 @@ static std::string filesystem_fixture() {
     };
     entry(5120, 2, 12, ".");
     entry(5132, 2, 12, "..");
-    entry(5144, 3, 1000, "system");
+
+    if (vendor) {
+        entry(5144, 7, 12, "app");
+        entry(5156, 4, 988, "native");
+    } else {
+        entry(5144, 3, 1000, "system");
+    }
+
     entry(6144, 3, 12, ".");
     entry(6156, 2, 12, "..");
     entry(6168, 4, 12, "own");
@@ -1035,7 +1042,12 @@ int main(int argc, char **argv) {
         const auto raw = filesystem_fixture(), first = raw.substr(0, 4096),
                    second = raw.substr(4096);
         const auto tgz = root / "owner.tgz", zip = root / "owner.zip";
-        archive_fixture(tgz, {{"ota/second", second}, {"ota/qnx", "raw"}, {"ota/first", first}},
+        const auto vendor = filesystem_fixture(true);
+        archive_fixture(tgz,
+                        {{"ota/second", second},
+                         {"ota/qnx", "raw"},
+                         {"ota/first", first},
+                         {"ota/vendor", vendor}},
                         false);
         archive_fixture(zip, {{"update.tgz", contents(tgz)}}, true);
         const Json owner = {{"bytes", std::filesystem::file_size(zip)},
@@ -1095,7 +1107,7 @@ int main(int argc, char **argv) {
                 {"source", {{"package", "com.voyah.car"}}},
                 {"acquisition", {{"image", "vendor"}, {"path", "/vendor/app/LY_Car/LY_Car.apk"}}}};
 
-        for (unsigned mode = 0; mode < 8; ++mode) {
+        for (unsigned mode = 0; mode < 9; ++mode) {
             auto requested = vendor_definition;
 
             if (mode == 0) {
@@ -1112,7 +1124,8 @@ int main(int argc, char **argv) {
             }
 
             if (mode == 3) {
-                requested["original"]["LY_Car"]["source"]["package"] = "foreign.package";
+                requested["original"]["LY_Car"]["source"] = {
+                        {"path", "/vendor/app/LY_Car/LY_Car.apk"}};
             }
 
             if (mode == 4) {
@@ -1127,7 +1140,7 @@ int main(int argc, char **argv) {
                 requested["acquisition"].erase("qnxOriginals");
             }
 
-            // A vendor library is declared by its own path, never by a package.
+            // A vendor library is declared by its own path.
             if (mode == 7) {
                 requested["original"]["MessageCenterRpc"] = {
                         {"file", "message-center/libmrpc.so"},
@@ -1136,6 +1149,11 @@ int main(int argc, char **argv) {
                         {"source", {{"package", "com.voyah.car"}}},
                         {"acquisition",
                          {{"image", "vendor"}, {"path", "/vendor/lib64/libmrpc.so"}}}};
+            }
+
+            if (mode == 8) {
+                requested["original"]["LY_Car"]["acquisition"]["path"] =
+                        "/vendor/app/LY_Other/LY_Car.apk";
             }
 
             write_private_json(root / "profiles" / passion / "profile.json", requested);
@@ -1148,8 +1166,41 @@ int main(int argc, char **argv) {
             }
 
             check(denied && !std::filesystem::exists(root / ".local/profiles" / passion),
-                  "finite vendor acquisition rejects wrong API, unknown partition, traversal, package, image pin, platform, undeclared QNX originals and a vendor library without its path without publication");
+                  "finite vendor acquisition rejects foreign application directories, libraries without their path and other invalid inputs before publication");
         }
+
+        auto vendor_apps = vendor_definition;
+        vendor_apps["acquisition"]["vendor"] = {
+                {"bytes", vendor.size()},
+                {"sha256", sha256_bytes(vendor)},
+                {"segments", Json::array({{{"member", "ota/vendor"},
+                                           {"offset", 0u},
+                                           {"bytes", vendor.size()},
+                                           {"sha256", sha256_bytes(vendor)}}})}};
+        vendor_apps["original"].erase("LY_Car");
+        vendor_apps["original"]["LY_Multimedia"] = {
+                {"file", "LY_Multimedia.apk"},
+                {"bytes", 5u},
+                {"sha256", sha256_bytes("music")},
+                {"source", {{"package", "com.voyah.multimedia"}}},
+                {"acquisition",
+                 {{"image", "vendor"}, {"path", "/vendor/app/LY_Multimedia/LY_Multimedia.apk"}}}};
+        vendor_apps["original"]["Native"] = {
+                {"file", "native"},
+                {"bytes", 6u},
+                {"sha256", sha256_bytes("native")},
+                {"source", {{"path", "/vendor/native"}}},
+                {"acquisition", {{"image", "vendor"}, {"path", "/vendor/native"}}}};
+        const auto vendor_profile = root / "profiles/test-passion-vendor";
+        write_private_json(vendor_profile / "profile.json", vendor_apps);
+        write_private_json(vendor_profile / "profile-qnx.json", qnx);
+        const auto vendor_observed = import_owner_profile_inputs(root, "test-passion-vendor", zip,
+                                                                 0);
+        const auto vendor_destination = root / ".local/profiles/test-passion-vendor/originals";
+        check(vendor_observed.at("originals").at("verified") == true &&
+                      contents(vendor_destination / "LY_Multimedia.apk") == "music" &&
+                      contents(vendor_destination / "native") == "native",
+              "vendor library and launcher APK batches publish one verified acquisition");
 
         auto media_definition = local;
         media_definition["platform"] = "passion";

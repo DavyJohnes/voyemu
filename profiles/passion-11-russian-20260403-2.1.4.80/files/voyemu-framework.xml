@@ -41,4 +41,7 @@
     <privapp-permissions package="com.voyemu.passion.phone">
         <permission name="android.permission.MODIFY_PHONE_STATE" />
     </privapp-permissions>
+    <privapp-permissions package="com.mega.dvr">
+        <permission name="android.permission.DUMP" />
+    </privapp-permissions>
 </permissions>

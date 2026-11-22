@@ -12,8 +12,9 @@ set(ROOT_TESTS
     KeyManagerRecipeTest OriginalNaviIdentityRecipesTest SettingsVoiceCloneRecipeTest
     StockStatusBarRecipeTest InputsTest ManifestLibrariesTest NxpMediaLibraryTest
     NxpSettingsLibraryTest PassionBluetoothRoleRecipeTest PassionDiagnosticsRecipeTest
-    PassionMusicDayDrawableRecipeTest PassionMusicForegroundRecipeTest PassionSidebarRecipeTest
-    PassionStatusBarRecipeTest PassionSystemExtReceiptTest PassionVehicleAnimationRecipeTest
+    PassionLauncherAppsRecipeTest PassionMusicDayDrawableRecipeTest PassionMusicForegroundRecipeTest
+    PassionSidebarRecipeTest PassionStatusBarRecipeTest PassionSystemExtReceiptTest
+    PassionVehicleAnimationRecipeTest
     PreparationMainTest QnxFileClientTest QnxOriginalsTest SigningIntermediateTest SourceEditsTest
     VehicleCaptureTest Api30BootstrapTest ActivationPublisherTest RecipeCoverageTest SecondDonorApkTest)
 # Classes that take no arguments and read the repository from the working directory.

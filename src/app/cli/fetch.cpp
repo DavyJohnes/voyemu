@@ -603,7 +603,7 @@ Json fetch_update(const std::filesystem::path &root, std::string_view profile,
 
     const auto acquisition_sha = acquisition_identity(definition, qnx);
     const auto screen_roles = passion_screen_control_roles(definition);
-    std::vector<std::string> paths, vendor_paths, media_paths;
+    std::vector<std::string> paths, vendor_paths, vendor_apps, media_paths;
     std::set<std::string> selected;
 
     for (const auto &input : inputs) {
@@ -612,19 +612,22 @@ Json fetch_update(const std::filesystem::path &root, std::string_view profile,
         const auto path = source.at("path").get<std::string>();
         const bool vendor = source.at("image") == "vendor";
 
+        const bool vehicle = input.name == "LY_Car";
+        const bool application = vendor && (vehicle || path.starts_with("/vendor/app/"));
+
         if (vendor) {
-            // LY_Car and the OEM message center service with its vendor libraries.
-            const bool vehicle = input.name == "LY_Car";
+            const auto origin = item.value("source", Json::object());
 
             if (profile_platform(definition) != ProfilePlatform::passion ||
                 definition.at("android").at("package") !=
                         "system-images;android-30;default;arm64-v8a" ||
                 !acquisition.contains("vendor") ||
-                (vehicle &&
-                 (input.file != "LY_Car.apk" ||
-                  item.value("source", Json::object()) != Json{{"package", "com.voyah.car"}} ||
-                  path != "/vendor/app/LY_Car/LY_Car.apk")) ||
-                (!vehicle && item.value("source", Json::object()) != Json{{"path", path}})) {
+                (application &&
+                 (input.package.empty() || origin != Json{{"package", input.package}} ||
+                  input.file != input.name + ".apk" ||
+                  path != "/vendor/app/" + input.name + "/" + input.file ||
+                  (vehicle && input.package != "com.voyah.car"))) ||
+                (!application && origin != Json{{"path", path}})) {
                 throw VoyemuError("FETCH_UPDATE", "exact Passion vendor role required");
             }
         }
@@ -635,7 +638,8 @@ Json fetch_update(const std::filesystem::path &root, std::string_view profile,
             throw VoyemuError("FETCH_UPDATE", "exact system/vendor original path/extent required");
         }
 
-        (vendor                                       ? vendor_paths
+        (application && !vehicle                      ? vendor_apps
+         : vendor                                     ? vendor_paths
          : passion_media_role(definition, input.name) ? media_paths
                                                       : paths)
                 .push_back(path);
@@ -1261,6 +1265,24 @@ Json fetch_update(const std::filesystem::path &root, std::string_view profile,
     ensure_private_directory(pending / "originals");
     std::filesystem::rename(imported / "qnx", pending / "qnx");
 
+    const auto merge_extraction = [](Json &receipt, const std::filesystem::path &directory,
+                                     const Json &extra,
+                                     const std::filesystem::path &extra_directory) {
+        for (auto it = extra.at("files").begin(); it != extra.at("files").end(); ++it) {
+            if (receipt.at("files").contains(it.key())) {
+                throw VoyemuError("FETCH_UPDATE", "duplicate extraction path");
+            }
+
+            const auto target = directory / it.key();
+            ensure_private_directory(target.parent_path());
+            std::filesystem::rename(extra_directory / it.key(), target);
+            receipt["files"][it.key()] = it.value();
+        }
+
+        receipt["bytes"] = receipt.at("bytes").get<std::uint64_t>() +
+                           extra.at("bytes").get<std::uint64_t>();
+    };
+
     // The finite three-app media group has its own bounded extraction; retain the 512 MiB per-call
     // ceiling.
     if (!media_paths.empty()) {
@@ -1270,20 +1292,7 @@ Json fetch_update(const std::filesystem::path &root, std::string_view profile,
                 media_paths, media_extracted, reserve);
         auto combined = read_private_json(extracted / "receipt.json", 256 * 1024);
 
-        for (auto it = media_receipt.at("files").begin(); it != media_receipt.at("files").end();
-             ++it) {
-            if (combined.at("files").contains(it.key())) {
-                throw VoyemuError("FETCH_UPDATE", "duplicate media extraction path");
-            }
-
-            const auto target = extracted / it.key();
-            ensure_private_directory(target.parent_path());
-            std::filesystem::rename(media_extracted / it.key(), target);
-            combined["files"][it.key()] = it.value();
-        }
-
-        combined["bytes"] = combined.at("bytes").get<std::uint64_t>() +
-                            media_receipt.at("bytes").get<std::uint64_t>();
+        merge_extraction(combined, extracted, media_receipt, media_extracted);
         write_private_json(extracted / "receipt.json", combined);
     }
 
@@ -1291,15 +1300,27 @@ Json fetch_update(const std::filesystem::path &root, std::string_view profile,
                      {{"count", std::to_string(paths.size() + media_paths.size())}});
     const auto vendor_extracted = stage / "vendor-extracted";
 
-    if (!vendor_paths.empty()) {
+    if (!vendor_paths.empty() || !vendor_apps.empty()) {
         const auto imported_vendor = stage / "vendor-archive";
         meter = unpacking("vendor", acquisition.at("vendor").at("bytes").get<std::uint64_t>());
         import_owner_update_system(archive, owner, acquisition.at("vendor"), imported_vendor,
                                    reserve, advance);
-        const auto vendor_receipt = extract_pinned_ext4_files(
-                imported_vendor / "system.img", pinned_sha(acquisition.at("vendor").at("sha256")),
-                vendor_paths, vendor_extracted, reserve, "vendor");
-        progress::report("fetch_extracted", {{"count", std::to_string(vendor_paths.size())}});
+        const auto vendor_image = imported_vendor / "system.img";
+        const auto vendor_pin = pinned_sha(acquisition.at("vendor").at("sha256"));
+        auto vendor_receipt = extract_pinned_ext4_files(
+                vendor_image, vendor_pin, vendor_paths.empty() ? vendor_apps : vendor_paths,
+                vendor_extracted, reserve, "vendor");
+
+        if (!vendor_paths.empty() && !vendor_apps.empty()) {
+            // The OEM vendor libraries and launcher APKs have independent 512 MiB batches.
+            const auto apps_extracted = stage / "vendor-apps-extracted";
+            const auto apps_receipt = extract_pinned_ext4_files(
+                    vendor_image, vendor_pin, vendor_apps, apps_extracted, reserve, "vendor");
+            merge_extraction(vendor_receipt, vendor_extracted, apps_receipt, apps_extracted);
+        }
+
+        progress::report("fetch_extracted",
+                         {{"count", std::to_string(vendor_paths.size() + vendor_apps.size())}});
         auto combined = read_private_json(extracted / "receipt.json", 256 * 1024);
         combined["vendor"] = vendor_receipt;
 

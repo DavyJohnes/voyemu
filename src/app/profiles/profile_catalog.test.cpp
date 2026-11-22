@@ -624,7 +624,7 @@ int main(int argc, char **argv) {
                                    {"view-observation", "components/view-observation"},
                                    {"statusbar-overlay", "components/statusbar-overlay"},
                                    {"hab-socket", "components/hab-socket"}} &&
-                      passion.at("patches").size() == 19 && passion.at("install").size() == 172,
+                      passion.at("patches").size() == 22 && passion.at("install").size() == 175,
               "H53 finite developer graph must contain only its named OEM, display and synthetic phone adapters");
         const auto &passion_install = passion.at("install");
         check(std::count(passion_install.begin(), passion_install.end(),
@@ -957,7 +957,7 @@ int main(int argc, char **argv) {
               "Passion retains persisted global policies alongside the pinned stock SystemUI window guard");
         check(passion.at("configure").at("disabled") == Json::array({"com.android.provision"}),
               "H53 must disable only the actual clean API30 competing Provision HOME");
-        check(passion.at("compatibility").at("privapp_whitelist").at("packages").size() == 6 &&
+        check(passion.at("compatibility").at("privapp_whitelist").at("packages").size() == 7 &&
                       passion.at("compatibility")
                                       .at("privapp_whitelist")
                                       .at("packages")
@@ -970,6 +970,11 @@ int main(int argc, char **argv) {
                               .at("packages")
                               .at("com.voyemu.passion.phone") == phone_grants,
               "Passion synthetic Telecom has only its approved MODIFY_PHONE_STATE privileged grant");
+        check(passion.at("compatibility")
+                              .at("privapp_whitelist")
+                              .at("packages")
+                              .at("com.mega.dvr") == Json::array({"android.permission.DUMP"}),
+              "Passion Drive recorder has only its requested DUMP privileged grant");
 
         for (const auto *role : {"LY_Video", "LY_Camera"}) {
             check(passion.at("patches").at(role).at("steps") ==
@@ -1192,6 +1197,30 @@ int main(int argc, char **argv) {
         check(uncaptured == std::set<std::string>{"MessageCenterHidl", "MessageCenterRpc",
                                                   "MessageCenterService"},
               "H53 capture omits only the OTA message center inputs");
+
+        for (const auto &role : std::vector<std::array<std::string, 6>>{
+                     {"VOYAH_SceneMode", "com.voyah.scenemode", "vendor",
+                      "/vendor/app/VOYAH_SceneMode/VOYAH_SceneMode.apk", "framework-libraries.json",
+                      "/system/app/VOYAH_SceneMode/VOYAH_SceneMode.apk"},
+                     {"MonzaDVR", "com.mega.dvr", "system",
+                      "/system/priv-app/MonzaDVR/MonzaDVR.apk",
+                      "passion-api30-media-libraries.json",
+                      "/system/priv-app/MonzaDVR/MonzaDVR.apk"},
+                     {"LY_Gallery", "com.voyah.gallery", "vendor",
+                      "/vendor/app/LY_Gallery/LY_Gallery.apk", "passion-api30-media-libraries.json",
+                      "/system/app/LY_Gallery/LY_Gallery.apk"}}) {
+            const auto &original = passion.at("original").at(role[0]);
+            check(original.at("source").at("package") == role[1] &&
+                          original.at("acquisition").at("image") == role[2] &&
+                          original.at("acquisition").at("path") == role[3] &&
+                          passion.at("patches").at(role[0]).at("steps").at(0) == role[4] &&
+                          std::count(passion.at("install").begin(), passion.at("install").end(),
+                                     Json{{"artifact", "patched:" + role[0]},
+                                          {"type", "file"},
+                                          {"target", role[5]},
+                                          {"mode", "0644"}}) == 1,
+                  "H53 Scenes, Drive recorder and Photos install the owner launcher tiles");
+        }
 
         for (const auto &role : std::vector<std::array<std::string, 4>>{
                      {"LY_Multimedia", "com.voyah.multimedia",

@@ -293,6 +293,42 @@
         "path": "/system/priv-app/LY_AVM/LY_AVM.apk"
       }
     },
+    "VOYAH_SceneMode": {
+      "file": "VOYAH_SceneMode.apk",
+      "bytes": 62548774,
+      "sha256": "65c0f11403d89ae104349f59bbab73e461735fe9c93ede6077842f0cc7425f22",
+      "source": {
+        "package": "com.voyah.scenemode"
+      },
+      "acquisition": {
+        "image": "vendor",
+        "path": "/vendor/app/VOYAH_SceneMode/VOYAH_SceneMode.apk"
+      }
+    },
+    "MonzaDVR": {
+      "file": "MonzaDVR.apk",
+      "bytes": 49338695,
+      "sha256": "09f3c93858cd49ab65884d115787322149e4d2a5861cb7cf314f1f6726f05294",
+      "source": {
+        "package": "com.mega.dvr"
+      },
+      "acquisition": {
+        "image": "system",
+        "path": "/system/priv-app/MonzaDVR/MonzaDVR.apk"
+      }
+    },
+    "LY_Gallery": {
+      "file": "LY_Gallery.apk",
+      "bytes": 192130628,
+      "sha256": "27b3c2323a6e2f230e99608268b694be2c30e143d806bc671dfb0702b51a7689",
+      "source": {
+        "package": "com.voyah.gallery"
+      },
+      "acquisition": {
+        "image": "vendor",
+        "path": "/vendor/app/LY_Gallery/LY_Gallery.apk"
+      }
+    },
     "screen-control-screen0_off_change": {
       "file": "screen0_off_change.csv",
       "bytes": 6111,
@@ -2083,6 +2119,27 @@
         "passion-api30-avm-nexus.json"
       ]
     },
+    "VOYAH_SceneMode": {
+      "input": "original:VOYAH_SceneMode",
+      "type": "apk",
+      "steps": [
+        "framework-libraries.json"
+      ]
+    },
+    "MonzaDVR": {
+      "input": "original:MonzaDVR",
+      "type": "apk",
+      "steps": [
+        "passion-api30-media-libraries.json"
+      ]
+    },
+    "LY_Gallery": {
+      "input": "original:LY_Gallery",
+      "type": "apk",
+      "steps": [
+        "passion-api30-media-libraries.json"
+      ]
+    },
     "CarSettings": {
       "input": "original:CarSettings",
       "type": "apk",
@@ -2400,6 +2457,24 @@
       "artifact": "patched:LY_AVM",
       "type": "file",
       "target": "/system/priv-app/LY_AVM/LY_AVM.apk",
+      "mode": "0644"
+    },
+    {
+      "artifact": "patched:VOYAH_SceneMode",
+      "type": "file",
+      "target": "/system/app/VOYAH_SceneMode/VOYAH_SceneMode.apk",
+      "mode": "0644"
+    },
+    {
+      "artifact": "patched:MonzaDVR",
+      "type": "file",
+      "target": "/system/priv-app/MonzaDVR/MonzaDVR.apk",
+      "mode": "0644"
+    },
+    {
+      "artifact": "patched:LY_Gallery",
+      "type": "file",
+      "target": "/system/app/LY_Gallery/LY_Gallery.apk",
       "mode": "0644"
     },
     {
@@ -3553,9 +3628,12 @@
           "android.permission.OVERRIDE_WIFI_CONFIG",
           "android.permission.REBOOT",
           "android.permission.WRITE_SECURE_SETTINGS"
+        ],
+        "com.mega.dvr": [
+          "android.permission.DUMP"
         ]
       },
-      "scope": "exact25 manifest-requested privileged permissions: existing24 plus one synthetic Telecom requirement; no enforcement change"
+      "scope": "exact26 manifest-requested privileged permissions: existing25 plus one Drive recorder requirement; no enforcement change"
     }
   },
   "files": {
