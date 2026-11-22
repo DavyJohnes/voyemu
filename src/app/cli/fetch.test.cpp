@@ -868,8 +868,26 @@ int main(int argc, char **argv) {
               "closed package and per-file tree source plan");
         const auto qinggan09 =
                 embedded_profile_names(ProfilePlatform::qinggan09, ProfileBoard::sa8155).at(0);
-        check(original_input_plan(embedded_profile(qinggan09).at("definition")).size() == 100,
-              "first vehicle declares 100 exact required Android input files");
+        const auto qinggan09_inputs =
+                original_input_plan(embedded_profile(qinggan09).at("definition"));
+        check(qinggan09_inputs.size() == 105,
+              "first vehicle declares 105 exact required Android input files");
+
+        for (const auto &[role, name] :
+             {std::pair{"FontRobotoRegular", "Roboto-Regular.ttf"},
+              std::pair{"FontRobotoMedium", "Roboto-Medium.ttf"},
+              std::pair{"FontRobotoBold", "Roboto-Bold.ttf"},
+              std::pair{"FontDfpRegular", "HuaKangJinGangHei-Regular-2.ttf"},
+              std::pair{"FontDfpSemibold", "DFPKingGothicGB-Semibold-2.ttf"}}) {
+            check(std::count_if(qinggan09_inputs.begin(), qinggan09_inputs.end(),
+                                [&](const auto &input) {
+                                    return input.name == role &&
+                                           input.file == std::string("fonts/") + name &&
+                                           input.remote == std::string("/system/fonts/") + name &&
+                                           input.package.empty();
+                                }) == 1,
+                  "first vehicle imports each required OEM font from its exact system path");
+        }
 
         for (unsigned mode = 0; mode < 6; ++mode) {
             auto bad = definition;
