@@ -1077,7 +1077,7 @@ int main(int argc, char **argv) {
 
         const auto metadata = profile_patch_metadata(root, qinggan09_profile());
 
-        if (metadata.size() != 44 || !metadata.contains("systemservice-network.json")) {
+        if (metadata.size() != 45 || !metadata.contains("systemservice-network.json")) {
             throw std::runtime_error("JSON recipe coverage differs");
         }
 

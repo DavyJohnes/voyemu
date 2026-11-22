@@ -139,6 +139,20 @@
       }
     },
     {
+      "name": "Gallery",
+      "file": "Gallery.apk",
+      "source": {
+        "package": "com.qinggan.app.gallery"
+      }
+    },
+    {
+      "name": "Video",
+      "file": "Video.apk",
+      "source": {
+        "package": "com.qinggan.app.video"
+      }
+    },
+    {
       "name": "BluetoothPhone",
       "file": "BluetoothPhone.apk",
       "source": {

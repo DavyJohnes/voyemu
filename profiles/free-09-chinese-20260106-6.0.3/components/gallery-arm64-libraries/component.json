@@ -1,0 +1,94 @@
+{
+  "type": "native-library-archive",
+  "minSdk": 28,
+  "output": "gallery-arm64.zip",
+  "externalSources": {
+    "ijk.aar": {
+      "kind": "archive",
+      "format": "aar",
+      "url": "https://repo.maven.apache.org/maven2/xyz/doikki/android/dkplayer/player-ijk/3.3.7/player-ijk-3.3.7.aar",
+      "sha256": "36306493fb1037e76a4fd36c088ad4ee1872465b8bfd1d05ad297974a945b411",
+      "bytes": 14753321
+    },
+    "fmmr.aar": {
+      "kind": "archive",
+      "format": "aar",
+      "url": "https://repo.maven.apache.org/maven2/com/github/wseemann/FFmpegMediaMetadataRetriever-native-arm64-v8a/1.0.16/FFmpegMediaMetadataRetriever-native-arm64-v8a-1.0.16.aar",
+      "sha256": "dcbda007c35b496b3aa243bbdc27113feb8a9e4e2949927f61d39abe1e19e3fd",
+      "bytes": 5761118
+    }
+  },
+  "libraries": {
+    "lib/arm64-v8a/libijkffmpeg.so": {
+      "archive": "ijk.aar",
+      "entry": "jni/arm64-v8a/libijkffmpeg.so",
+      "sha256": "4a8f36dee25d0d84094a595aec9ac0d0322c78be74748f30501ea705b24d5019",
+      "bytes": 5619008
+    },
+    "lib/arm64-v8a/libijkplayer.so": {
+      "archive": "ijk.aar",
+      "entry": "jni/arm64-v8a/libijkplayer.so",
+      "sha256": "9e29ce5dbaf7b2b888c77027a337b6c6cd66f382b3650d827292b3eff0c1534c",
+      "bytes": 418392
+    },
+    "lib/arm64-v8a/libijksdl.so": {
+      "archive": "ijk.aar",
+      "entry": "jni/arm64-v8a/libijksdl.so",
+      "sha256": "94268f8db4e08712d7060ce84cf48d52dc35d4dccceccd7cbac964c0ae7dda83",
+      "bytes": 481352
+    },
+    "lib/arm64-v8a/libavcodec.so": {
+      "archive": "fmmr.aar",
+      "entry": "jni/arm64-v8a/libavcodec.so",
+      "sha256": "96e6d55842b6c6ec0d29e80cbbb577e2b1dedac5dad1e5694d38b16e7feeffc9",
+      "bytes": 6513680
+    },
+    "lib/arm64-v8a/libavformat.so": {
+      "archive": "fmmr.aar",
+      "entry": "jni/arm64-v8a/libavformat.so",
+      "sha256": "fac2cf935f5e7bf1d5658a24aa871f9300de2a832cbbc9ceb11b9f8f261bac9a",
+      "bytes": 1187520
+    },
+    "lib/arm64-v8a/libavutil.so": {
+      "archive": "fmmr.aar",
+      "entry": "jni/arm64-v8a/libavutil.so",
+      "sha256": "f1c054f13d895b534c18d9f27bc24af2e3d5d6204bc8f5c2621154a7af2fb44c",
+      "bytes": 285016
+    },
+    "lib/arm64-v8a/libcrypto.so": {
+      "archive": "fmmr.aar",
+      "entry": "jni/arm64-v8a/libcrypto.so",
+      "sha256": "51d754da3e6e78271875b9704093c7de6f94aa03696b007cc8c35dfdeea766ea",
+      "bytes": 2363056
+    },
+    "lib/arm64-v8a/libffmpeg_mediametadataretriever_jni.so": {
+      "archive": "fmmr.aar",
+      "entry": "jni/arm64-v8a/libffmpeg_mediametadataretriever_jni.so",
+      "sha256": "5d5cfe6e79672c1d41e6928b7f97f8fc8fd738cf8bae4fa9c684189511ed6b43",
+      "bytes": 51536
+    },
+    "lib/arm64-v8a/libssl.so": {
+      "archive": "fmmr.aar",
+      "entry": "jni/arm64-v8a/libssl.so",
+      "sha256": "81eadaf08032fa12c3bb20480493f88046c504f88b684bae2e53e201db3c0c0c",
+      "bytes": 503408
+    },
+    "lib/arm64-v8a/libswscale.so": {
+      "archive": "fmmr.aar",
+      "entry": "jni/arm64-v8a/libswscale.so",
+      "sha256": "af96bf88dd3c08019bc7420d85aca1e71224a1e86990df2268b145c589051fdf",
+      "bytes": 264024
+    }
+  },
+  "provenance": {
+    "distributionLegalClosure": false,
+    "coordinates": [
+      "Doikki player-ijk3.3.7",
+      "FMMR native-arm64-v8a1.0.16"
+    ],
+    "sourceCommits": [
+      "2e4754645f4b2245400736b0abdfd6885ec4aa24",
+      "97e0241fdf6c2e228ff91f7b4cf20d0887302172"
+    ]
+  }
+}

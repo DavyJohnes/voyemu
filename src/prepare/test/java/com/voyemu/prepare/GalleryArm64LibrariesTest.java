@@ -132,7 +132,7 @@ public final class GalleryArm64LibrariesTest {
             Path component,
             Path source)
             throws Exception {
-        reject(() -> GalleryArm64Libraries.context(28, "arm64-v8a"));
+        reject(() -> GalleryArm64Libraries.context(29, "arm64-v8a"));
         reject(() -> GalleryArm64Libraries.context(30, "armeabi-v7a"));
         reject(() ->
                 GalleryArm64Libraries.add(

@@ -19,7 +19,7 @@ final class GalleryArm64Libraries {
     }
 
     static void context(int api, String abi) {
-        need(api == 30 && abi.equals("arm64-v8a"));
+        need((api == 28 || api == 30) && abi.equals("arm64-v8a"));
     }
 
     static boolean validUrl(String value) {
@@ -51,7 +51,7 @@ final class GalleryArm64Libraries {
                                                 "libraries",
                                                 "provenance"))
                         && d.get("type").equals("native-library-archive")
-                        && Json.integer(d, "minSdk") == 30
+                        && (Json.integer(d, "minSdk") == 28 || Json.integer(d, "minSdk") == 30)
                         && Json.str(d, "output").matches("[a-z]+-arm64\\.zip"));
         var external = Json.obj(d, "externalSources");
         need(
@@ -131,6 +131,7 @@ final class GalleryArm64Libraries {
 
     static Path build(int api, String abi, Path source, Path dir) throws Exception {
         context(api, abi);
+        need(Json.integer(definition(source), "minSdk") == api);
         var entries = selected(source);
         Path output = Storage.confined(dir, Json.str(definition(source), "output"));
         need(!Files.exists(output));

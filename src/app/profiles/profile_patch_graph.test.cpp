@@ -49,7 +49,7 @@ int main(int argc, char **argv) {
             }
         }
 
-        check(source_steps.size() == 44 && source_steps.contains("systemservice-network.json"),
+        check(source_steps.size() == 45 && source_steps.contains("systemservice-network.json"),
               "profile steps omitted");
         std::set<std::string> planned_steps;
 

@@ -72,7 +72,7 @@ public final class OemArm64LibrariesTest {
                         Files.createLink(source.resolve(archive), archives.resolve(archive));
                     }
 
-                    check(root, source, work, recipe, data, name, component, original);
+                    check(root, source, recipe, data, name, original);
                     checked++;
                 }
             }
@@ -82,25 +82,23 @@ public final class OemArm64LibrariesTest {
         System.out.println("GREEN " + checked + " OEM APKs with ARM64 library archives PASS");
     }
 
+    // SOURCE holds the component descriptor and its archives; its parent is the work directory.
     static void check(
             Path root,
             Path source,
-            Path out,
             Path recipe,
             Map<String, Object> data,
             String name,
-            String component,
             Path original)
             throws Exception {
+        Path out = source.getParent();
         var patch = Json.obj(Json.obj(data, "patches"), name);
         var steps = Json.list(patch.get("steps"));
         need(steps.size() == 1);
         String step = (String) steps.get(0);
-        var constants =
-                Json.obj(
-                        Json.object(
-                                Json.parse(Files.readString(recipe.resolve("patches/" + step)))),
-                        "constants");
+        var metadata = Json.object(Json.parse(Files.readString(recipe.resolve("patches/" + step))));
+        var constants = Json.obj(metadata, "constants");
+        int api = Math.toIntExact(Json.integer(metadata, "api"));
         var baseline = NativeCore.entries(original);
         baseline.keySet().removeIf(DexOperations::signatureEntry);
         var expected = GalleryArm64Libraries.selected(source);
@@ -113,10 +111,10 @@ public final class OemArm64LibrariesTest {
                                 expected.keySet().stream()
                                         .map(n -> n.replace("lib/arm64-v8a/", "lib/armeabi-v7a/"))
                                         .toList()));
-        Path archive = GalleryArm64Libraries.build(30, "arm64-v8a", source, out);
+        Path archive = GalleryArm64Libraries.build(api, "arm64-v8a", source, out);
         var patched =
                 GalleryArm64Libraries.add(
-                        constants, 30, "arm64-v8a", original, baseline, archive, source);
+                        constants, api, "arm64-v8a", original, baseline, archive, source);
         need(patched.size() == baseline.size() + expected.size());
 
         for (var e : baseline.entrySet()) {
@@ -127,8 +125,8 @@ public final class OemArm64LibrariesTest {
                 GalleryArm64Libraries.same(
                         baseline,
                         GalleryArm64Libraries.remove(
-                                constants, 30, "arm64-v8a", original, patched, archive, source)));
-        Path produced = build(root, source, out, recipe, data, name, component, step);
+                                constants, api, "arm64-v8a", original, patched, archive, source)));
+        Path produced = build(root, source, recipe, data, name, step);
         var producedEntries = NativeCore.entries(produced);
         producedEntries.keySet().removeIf(DexOperations::signatureEntry);
         need(GalleryArm64Libraries.same(patched, producedEntries));
@@ -145,15 +143,12 @@ public final class OemArm64LibrariesTest {
 
     // Builds the patched APK through Artifacts from the declarations of the profile.
     static Path build(
-            Path root,
-            Path source,
-            Path out,
-            Path recipe,
-            Map<String, Object> data,
-            String name,
-            String component,
-            String step)
+            Path root, Path source, Path recipe, Map<String, Object> data, String name, String step)
             throws Exception {
+        Path out = source.getParent();
+        String component =
+                ((String) Json.list(Json.obj(Json.obj(data, "patches"), name).get("uses")).get(0))
+                        .substring("component:".length());
         Path privateCache = out.resolve("cache");
         Files.createDirectories(privateCache.resolve("sources"));
         var descriptor =

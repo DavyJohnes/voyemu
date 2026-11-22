@@ -505,6 +505,30 @@
         "path": "/system/priv-app/Camera-release-signed/Camera-release-signed.apk"
       }
     },
+    "Gallery": {
+      "file": "Gallery.apk",
+      "sha256": "fd7bac2a8bf073b3bece966e18bcf8dbd9475d872ae61983c0e1a995d83c0f16",
+      "source": {
+        "package": "com.qinggan.app.gallery"
+      },
+      "bytes": 39841583,
+      "acquisition": {
+        "image": "system",
+        "path": "/system/priv-app/Gallery-release-signed/Gallery-release-signed.apk"
+      }
+    },
+    "Video": {
+      "file": "Video.apk",
+      "sha256": "5ae0fceac5f8c795e4f061f0e27693d1e567b94c3b93fbe316c745874d9a68df",
+      "source": {
+        "package": "com.qinggan.app.video"
+      },
+      "bytes": 78224626,
+      "acquisition": {
+        "image": "system",
+        "path": "/system/priv-app/Video-release-signed/Video-release-signed.apk"
+      }
+    },
     "BluetoothPhone": {
       "file": "BluetoothPhone.apk",
       "sha256": "d5a7417be79e2e4bfd70e643df85ae76e1a8a15332a345f126ccc5781f5ba8a3",
@@ -698,7 +722,7 @@
     "bootstrap": "components/bootstrap",
     "statusbar-overlay": "components/statusbar-overlay",
     "messagecenter-provider": "components/messagecenter-provider",
-    "video-provider": "components/video-provider",
+    "gallery-arm64-libraries": "components/gallery-arm64-libraries",
     "voiceclone-provider": "components/voiceclone-provider",
     "usersettingtracking-provider": "components/usersettingtracking-provider",
     "analytics-service": "components/analytics-service",
@@ -1051,6 +1075,28 @@
       ],
       "sign": "platform"
     },
+    "Gallery": {
+      "type": "apk",
+      "input": "original:Gallery",
+      "uses": [
+        "component:gallery-arm64-libraries"
+      ],
+      "steps": [
+        "api28-gallery-arm64.json"
+      ],
+      "sign": "platform"
+    },
+    "Video": {
+      "type": "apk",
+      "input": "original:Video",
+      "uses": [
+        "component:gallery-arm64-libraries"
+      ],
+      "steps": [
+        "api28-gallery-arm64.json"
+      ],
+      "sign": "platform"
+    },
     "BluetoothPhone": {
       "type": "apk",
       "input": "original:BluetoothPhone",
@@ -1236,10 +1282,6 @@
     },
     {
       "artifact": "component:messagecenter-provider",
-      "type": "apk"
-    },
-    {
-      "artifact": "component:video-provider",
       "type": "apk"
     },
     {
@@ -1445,6 +1487,14 @@
     },
     {
       "artifact": "patched:Camera",
+      "type": "apk"
+    },
+    {
+      "artifact": "patched:Gallery",
+      "type": "apk"
+    },
+    {
+      "artifact": "patched:Video",
       "type": "apk"
     },
     {

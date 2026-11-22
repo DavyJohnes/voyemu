@@ -655,6 +655,7 @@ final class Recipes {
             case "media-runtime.json" -> media(metadata, target);
             case "api28-usb-player.json" -> RecipesQinggan09.usbPlayer(metadata, constants, target);
             case "camera-capabilities.json" -> CameraRecipe.apply(target);
+            case "api28-gallery-arm64.json" -> target.guardGalleryArm64(true);
             case "systemservice-framework.json" -> RecipesQinggan09.systemServiceFramework(target);
             default -> literalCalls(name, metadata, target);
         }
