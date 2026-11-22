@@ -13,8 +13,10 @@
 #include <stdexcept>
 #include <string>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/un.h>
 #include <thread>
+#include <unistd.h>
 #include <vector>
 
 namespace {

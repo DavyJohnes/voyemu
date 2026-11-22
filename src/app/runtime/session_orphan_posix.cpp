@@ -13,6 +13,7 @@
 #include <sys/stat.h>
 #include <sys/un.h>
 #include <thread>
+#include <unistd.h>
 
 // The stop of a POSIX session whose supervisor exited before its SDK; a Windows job ends with
 // its supervisor.
