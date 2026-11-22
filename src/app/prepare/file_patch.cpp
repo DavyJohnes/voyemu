@@ -442,7 +442,7 @@ std::vector<std::string> prepare_file_patches(std::span<const PinnedFilePatch> p
                             "391829e0167f44415e54ba64692ad410b1398b16263869beb22e427130eae766" ||
                     patch.patched_dependency != "passion-services" ||
                     patch.dependency_sha256 !=
-                            "ca7207fdf6cf5b9e7755e33f6bc7eb800eccaedd962f66d30cb5ea195f8597b3") {
+                            "2779bd1603edb26a28dbadfeacc7d1f4e7f4261a08b2526008e6b6d8b9b068e2") {
                     throw VoyemuError("FILE_PATCH_DEPENDENCY",
                                       "exact Passion CIL/mapping/hash provenance required");
                 }

@@ -400,6 +400,650 @@
       "source": {
         "path": "/vendor/lib64/libPS_DM_DeviceManager-client.so"
       }
+    },
+    {
+      "name": "VhalService",
+      "file": "vhal/android.hardware.automotive.vehicle@2.0-mega-service",
+      "source": {
+        "path": "/vendor/bin/hw/android.hardware.automotive.vehicle@2.0-mega-service"
+      }
+    },
+    {
+      "name": "VhalInit",
+      "file": "vhal/android.hardware.automotive.vehicle@2.0-mega-service.rc",
+      "source": {
+        "path": "/vendor/etc/init/android.hardware.automotive.vehicle@2.0-mega-service.rc"
+      }
+    },
+    {
+      "name": "vhal-carwatchdog_aidl_interface-V2-ndk_platform.so",
+      "file": "vhal/carwatchdog_aidl_interface-V2-ndk_platform.so",
+      "source": {
+        "path": "/vendor/lib64/carwatchdog_aidl_interface-V2-ndk_platform.so"
+      }
+    },
+    {
+      "name": "vhal-libACUCrashInfo-client.so",
+      "file": "vhal/libACUCrashInfo-client.so",
+      "source": {
+        "path": "/vendor/lib64/libACUCrashInfo-client.so"
+      }
+    },
+    {
+      "name": "vhal-libADASHMIService_Android-server.so",
+      "file": "vhal/libADASHMIService_Android-server.so",
+      "source": {
+        "path": "/vendor/lib64/libADASHMIService_Android-server.so"
+      }
+    },
+    {
+      "name": "vhal-libADASMotionPlan-client.so",
+      "file": "vhal/libADASMotionPlan-client.so",
+      "source": {
+        "path": "/vendor/lib64/libADASMotionPlan-client.so"
+      }
+    },
+    {
+      "name": "vhal-libAirQuaSet-client.so",
+      "file": "vhal/libAirQuaSet-client.so",
+      "source": {
+        "path": "/vendor/lib64/libAirQuaSet-client.so"
+      }
+    },
+    {
+      "name": "vhal-libAirSuspSysInfo-client.so",
+      "file": "vhal/libAirSuspSysInfo-client.so",
+      "source": {
+        "path": "/vendor/lib64/libAirSuspSysInfo-client.so"
+      }
+    },
+    {
+      "name": "vhal-libAlarmController-client.so",
+      "file": "vhal/libAlarmController-client.so",
+      "source": {
+        "path": "/vendor/lib64/libAlarmController-client.so"
+      }
+    },
+    {
+      "name": "vhal-libAndroidGeneralService-server.so",
+      "file": "vhal/libAndroidGeneralService-server.so",
+      "source": {
+        "path": "/vendor/lib64/libAndroidGeneralService-server.so"
+      }
+    },
+    {
+      "name": "vhal-libApaRpaManager-client.so",
+      "file": "vhal/libApaRpaManager-client.so",
+      "source": {
+        "path": "/vendor/lib64/libApaRpaManager-client.so"
+      }
+    },
+    {
+      "name": "vhal-libAssidDrvgMgr-client.so",
+      "file": "vhal/libAssidDrvgMgr-client.so",
+      "source": {
+        "path": "/vendor/lib64/libAssidDrvgMgr-client.so"
+      }
+    },
+    {
+      "name": "vhal-libAvmManager-client.so",
+      "file": "vhal/libAvmManager-client.so",
+      "source": {
+        "path": "/vendor/lib64/libAvmManager-client.so"
+      }
+    },
+    {
+      "name": "vhal-libBO_SA_FDD_FCap-client.so",
+      "file": "vhal/libBO_SA_FDD_FCap-client.so",
+      "source": {
+        "path": "/vendor/lib64/libBO_SA_FDD_FCap-client.so"
+      }
+    },
+    {
+      "name": "vhal-libBO_SA_FDD_RainLightSolar-client.so",
+      "file": "vhal/libBO_SA_FDD_RainLightSolar-client.so",
+      "source": {
+        "path": "/vendor/lib64/libBO_SA_FDD_RainLightSolar-client.so"
+      }
+    },
+    {
+      "name": "vhal-libBluetoothPhone-server.so",
+      "file": "vhal/libBluetoothPhone-server.so",
+      "source": {
+        "path": "/vendor/lib64/libBluetoothPhone-server.so"
+      }
+    },
+    {
+      "name": "vhal-libCameraService-server.so",
+      "file": "vhal/libCameraService-server.so",
+      "source": {
+        "path": "/vendor/lib64/libCameraService-server.so"
+      }
+    },
+    {
+      "name": "vhal-libChassisSysInfo-client.so",
+      "file": "vhal/libChassisSysInfo-client.so",
+      "source": {
+        "path": "/vendor/lib64/libChassisSysInfo-client.so"
+      }
+    },
+    {
+      "name": "vhal-libDoorStsService-client.so",
+      "file": "vhal/libDoorStsService-client.so",
+      "source": {
+        "path": "/vendor/lib64/libDoorStsService-client.so"
+      }
+    },
+    {
+      "name": "vhal-libElectricTail-client.so",
+      "file": "vhal/libElectricTail-client.so",
+      "source": {
+        "path": "/vendor/lib64/libElectricTail-client.so"
+      }
+    },
+    {
+      "name": "vhal-libFCMSet-client.so",
+      "file": "vhal/libFCMSet-client.so",
+      "source": {
+        "path": "/vendor/lib64/libFCMSet-client.so"
+      }
+    },
+    {
+      "name": "vhal-libFLSeatService-client.so",
+      "file": "vhal/libFLSeatService-client.so",
+      "source": {
+        "path": "/vendor/lib64/libFLSeatService-client.so"
+      }
+    },
+    {
+      "name": "vhal-libFRSeatService-client.so",
+      "file": "vhal/libFRSeatService-client.so",
+      "source": {
+        "path": "/vendor/lib64/libFRSeatService-client.so"
+      }
+    },
+    {
+      "name": "vhal-libFogLampsService-client.so",
+      "file": "vhal/libFogLampsService-client.so",
+      "source": {
+        "path": "/vendor/lib64/libFogLampsService-client.so"
+      }
+    },
+    {
+      "name": "vhal-libFroEleAirOutSet-client.so",
+      "file": "vhal/libFroEleAirOutSet-client.so",
+      "source": {
+        "path": "/vendor/lib64/libFroEleAirOutSet-client.so"
+      }
+    },
+    {
+      "name": "vhal-libFrontACSet-client.so",
+      "file": "vhal/libFrontACSet-client.so",
+      "source": {
+        "path": "/vendor/lib64/libFrontACSet-client.so"
+      }
+    },
+    {
+      "name": "vhal-libFrontCabinVisualReco-client.so",
+      "file": "vhal/libFrontCabinVisualReco-client.so",
+      "source": {
+        "path": "/vendor/lib64/libFrontCabinVisualReco-client.so"
+      }
+    },
+    {
+      "name": "vhal-libFrontLeftACSet-client.so",
+      "file": "vhal/libFrontLeftACSet-client.so",
+      "source": {
+        "path": "/vendor/lib64/libFrontLeftACSet-client.so"
+      }
+    },
+    {
+      "name": "vhal-libFrontRigACSet-client.so",
+      "file": "vhal/libFrontRigACSet-client.so",
+      "source": {
+        "path": "/vendor/lib64/libFrontRigACSet-client.so"
+      }
+    },
+    {
+      "name": "vhal-libGeneralACSet-client.so",
+      "file": "vhal/libGeneralACSet-client.so",
+      "source": {
+        "path": "/vendor/lib64/libGeneralACSet-client.so"
+      }
+    },
+    {
+      "name": "vhal-libGestureRecognition-client.so",
+      "file": "vhal/libGestureRecognition-client.so",
+      "source": {
+        "path": "/vendor/lib64/libGestureRecognition-client.so"
+      }
+    },
+    {
+      "name": "vhal-libHMI_SA_FDD_InformationControlSwitch-client.so",
+      "file": "vhal/libHMI_SA_FDD_InformationControlSwitch-client.so",
+      "source": {
+        "path": "/vendor/lib64/libHMI_SA_FDD_InformationControlSwitch-client.so"
+      }
+    },
+    {
+      "name": "vhal-libHeadUpDisplay-server.so",
+      "file": "vhal/libHeadUpDisplay-server.so",
+      "source": {
+        "path": "/vendor/lib64/libHeadUpDisplay-server.so"
+      }
+    },
+    {
+      "name": "vhal-libHighBeamService-client.so",
+      "file": "vhal/libHighBeamService-client.so",
+      "source": {
+        "path": "/vendor/lib64/libHighBeamService-client.so"
+      }
+    },
+    {
+      "name": "vhal-libIMUSensorData-client.so",
+      "file": "vhal/libIMUSensorData-client.so",
+      "source": {
+        "path": "/vendor/lib64/libIMUSensorData-client.so"
+      }
+    },
+    {
+      "name": "vhal-libKeyController-client.so",
+      "file": "vhal/libKeyController-client.so",
+      "source": {
+        "path": "/vendor/lib64/libKeyController-client.so"
+      }
+    },
+    {
+      "name": "vhal-libLSDManager-client.so",
+      "file": "vhal/libLSDManager-client.so",
+      "source": {
+        "path": "/vendor/lib64/libLSDManager-client.so"
+      }
+    },
+    {
+      "name": "vhal-libLightModeService-client.so",
+      "file": "vhal/libLightModeService-client.so",
+      "source": {
+        "path": "/vendor/lib64/libLightModeService-client.so"
+      }
+    },
+    {
+      "name": "vhal-libLightSettingService-client.so",
+      "file": "vhal/libLightSettingService-client.so",
+      "source": {
+        "path": "/vendor/lib64/libLightSettingService-client.so"
+      }
+    },
+    {
+      "name": "vhal-libLockCtrlService-client.so",
+      "file": "vhal/libLockCtrlService-client.so",
+      "source": {
+        "path": "/vendor/lib64/libLockCtrlService-client.so"
+      }
+    },
+    {
+      "name": "vhal-libLockSettingService-client.so",
+      "file": "vhal/libLockSettingService-client.so",
+      "source": {
+        "path": "/vendor/lib64/libLockSettingService-client.so"
+      }
+    },
+    {
+      "name": "vhal-libLowBeamService-client.so",
+      "file": "vhal/libLowBeamService-client.so",
+      "source": {
+        "path": "/vendor/lib64/libLowBeamService-client.so"
+      }
+    },
+    {
+      "name": "vhal-libMebManager-client.so",
+      "file": "vhal/libMebManager-client.so",
+      "source": {
+        "path": "/vendor/lib64/libMebManager-client.so"
+      }
+    },
+    {
+      "name": "vhal-libMirrorController-client.so",
+      "file": "vhal/libMirrorController-client.so",
+      "source": {
+        "path": "/vendor/lib64/libMirrorController-client.so"
+      }
+    },
+    {
+      "name": "vhal-libMusicPlayCtrl-server.so",
+      "file": "vhal/libMusicPlayCtrl-server.so",
+      "source": {
+        "path": "/vendor/lib64/libMusicPlayCtrl-server.so"
+      }
+    },
+    {
+      "name": "vhal-libNaviService-server.so",
+      "file": "vhal/libNaviService-server.so",
+      "source": {
+        "path": "/vendor/lib64/libNaviService-server.so"
+      }
+    },
+    {
+      "name": "vhal-libNightVisionService-client.so",
+      "file": "vhal/libNightVisionService-client.so",
+      "source": {
+        "path": "/vendor/lib64/libNightVisionService-client.so"
+      }
+    },
+    {
+      "name": "vhal-libPOTCtrl-client.so",
+      "file": "vhal/libPOTCtrl-client.so",
+      "source": {
+        "path": "/vendor/lib64/libPOTCtrl-client.so"
+      }
+    },
+    {
+      "name": "vhal-libParkingSysInfo-client.so",
+      "file": "vhal/libParkingSysInfo-client.so",
+      "source": {
+        "path": "/vendor/lib64/libParkingSysInfo-client.so"
+      }
+    },
+    {
+      "name": "vhal-libPdcManager-client.so",
+      "file": "vhal/libPdcManager-client.so",
+      "source": {
+        "path": "/vendor/lib64/libPdcManager-client.so"
+      }
+    },
+    {
+      "name": "vhal-libPositionLampService-client.so",
+      "file": "vhal/libPositionLampService-client.so",
+      "source": {
+        "path": "/vendor/lib64/libPositionLampService-client.so"
+      }
+    },
+    {
+      "name": "vhal-libPowerSysInfo-client.so",
+      "file": "vhal/libPowerSysInfo-client.so",
+      "source": {
+        "path": "/vendor/lib64/libPowerSysInfo-client.so"
+      }
+    },
+    {
+      "name": "vhal-libPrivacySwitchService-client.so",
+      "file": "vhal/libPrivacySwitchService-client.so",
+      "source": {
+        "path": "/vendor/lib64/libPrivacySwitchService-client.so"
+      }
+    },
+    {
+      "name": "vhal-libQNXGeneralService-client.so",
+      "file": "vhal/libQNXGeneralService-client.so",
+      "source": {
+        "path": "/vendor/lib64/libQNXGeneralService-client.so"
+      }
+    },
+    {
+      "name": "vhal-libRDAManager-client.so",
+      "file": "vhal/libRDAManager-client.so",
+      "source": {
+        "path": "/vendor/lib64/libRDAManager-client.so"
+      }
+    },
+    {
+      "name": "vhal-libRLEleAirOutSet-client.so",
+      "file": "vhal/libRLEleAirOutSet-client.so",
+      "source": {
+        "path": "/vendor/lib64/libRLEleAirOutSet-client.so"
+      }
+    },
+    {
+      "name": "vhal-libRREleAirOutSet-client.so",
+      "file": "vhal/libRREleAirOutSet-client.so",
+      "source": {
+        "path": "/vendor/lib64/libRREleAirOutSet-client.so"
+      }
+    },
+    {
+      "name": "vhal-libRadio-server.so",
+      "file": "vhal/libRadio-server.so",
+      "source": {
+        "path": "/vendor/lib64/libRadio-server.so"
+      }
+    },
+    {
+      "name": "vhal-libRearACSet-client.so",
+      "file": "vhal/libRearACSet-client.so",
+      "source": {
+        "path": "/vendor/lib64/libRearACSet-client.so"
+      }
+    },
+    {
+      "name": "vhal-libRearCabinVisualReco-client.so",
+      "file": "vhal/libRearCabinVisualReco-client.so",
+      "source": {
+        "path": "/vendor/lib64/libRearCabinVisualReco-client.so"
+      }
+    },
+    {
+      "name": "vhal-libRearLeftACSet-client.so",
+      "file": "vhal/libRearLeftACSet-client.so",
+      "source": {
+        "path": "/vendor/lib64/libRearLeftACSet-client.so"
+      }
+    },
+    {
+      "name": "vhal-libRearRigACSet-client.so",
+      "file": "vhal/libRearRigACSet-client.so",
+      "source": {
+        "path": "/vendor/lib64/libRearRigACSet-client.so"
+      }
+    },
+    {
+      "name": "vhal-libSRLSeatService-client.so",
+      "file": "vhal/libSRLSeatService-client.so",
+      "source": {
+        "path": "/vendor/lib64/libSRLSeatService-client.so"
+      }
+    },
+    {
+      "name": "vhal-libSRRSeatService-client.so",
+      "file": "vhal/libSRRSeatService-client.so",
+      "source": {
+        "path": "/vendor/lib64/libSRRSeatService-client.so"
+      }
+    },
+    {
+      "name": "vhal-libSceneData-client.so",
+      "file": "vhal/libSceneData-client.so",
+      "source": {
+        "path": "/vendor/lib64/libSceneData-client.so"
+      }
+    },
+    {
+      "name": "vhal-libSeatBeltDetection-client.so",
+      "file": "vhal/libSeatBeltDetection-client.so",
+      "source": {
+        "path": "/vendor/lib64/libSeatBeltDetection-client.so"
+      }
+    },
+    {
+      "name": "vhal-libSteeringSysInfo-client.so",
+      "file": "vhal/libSteeringSysInfo-client.so",
+      "source": {
+        "path": "/vendor/lib64/libSteeringSysInfo-client.so"
+      }
+    },
+    {
+      "name": "vhal-libSteerringWheelCtrl-client.so",
+      "file": "vhal/libSteerringWheelCtrl-client.so",
+      "source": {
+        "path": "/vendor/lib64/libSteerringWheelCtrl-client.so"
+      }
+    },
+    {
+      "name": "vhal-libSunShadeSet-client.so",
+      "file": "vhal/libSunShadeSet-client.so",
+      "source": {
+        "path": "/vendor/lib64/libSunShadeSet-client.so"
+      }
+    },
+    {
+      "name": "vhal-libTpmsService-client.so",
+      "file": "vhal/libTpmsService-client.so",
+      "source": {
+        "path": "/vendor/lib64/libTpmsService-client.so"
+      }
+    },
+    {
+      "name": "vhal-libTurnLampService-client.so",
+      "file": "vhal/libTurnLampService-client.so",
+      "source": {
+        "path": "/vendor/lib64/libTurnLampService-client.so"
+      }
+    },
+    {
+      "name": "vhal-libVI_MN_VehicleModeManager-client.so",
+      "file": "vhal/libVI_MN_VehicleModeManager-client.so",
+      "source": {
+        "path": "/vendor/lib64/libVI_MN_VehicleModeManager-client.so"
+      }
+    },
+    {
+      "name": "vhal-libVI_VC_AccessAuth_S32G-client.so",
+      "file": "vhal/libVI_VC_AccessAuth_S32G-client.so",
+      "source": {
+        "path": "/vendor/lib64/libVI_VC_AccessAuth_S32G-client.so"
+      }
+    },
+    {
+      "name": "vhal-libVI_VC_ECALLControl-client.so",
+      "file": "vhal/libVI_VC_ECALLControl-client.so",
+      "source": {
+        "path": "/vendor/lib64/libVI_VC_ECALLControl-client.so"
+      }
+    },
+    {
+      "name": "vhal-libVI_VC_V2XController-client.so",
+      "file": "vhal/libVI_VC_V2XController-client.so",
+      "source": {
+        "path": "/vendor/lib64/libVI_VC_V2XController-client.so"
+      }
+    },
+    {
+      "name": "vhal-libVI_VO_TboxDeviceInfo-client.so",
+      "file": "vhal/libVI_VO_TboxDeviceInfo-client.so",
+      "source": {
+        "path": "/vendor/lib64/libVI_VO_TboxDeviceInfo-client.so"
+      }
+    },
+    {
+      "name": "vhal-libVI_VO_TboxNetworkInfo-client.so",
+      "file": "vhal/libVI_VO_TboxNetworkInfo-client.so",
+      "source": {
+        "path": "/vendor/lib64/libVI_VO_TboxNetworkInfo-client.so"
+      }
+    },
+    {
+      "name": "vhal-libVI_VO_TimeManagement-client.so",
+      "file": "vhal/libVI_VO_TimeManagement-client.so",
+      "source": {
+        "path": "/vendor/lib64/libVI_VO_TimeManagement-client.so"
+      }
+    },
+    {
+      "name": "vhal-libVehicleACSet-client.so",
+      "file": "vhal/libVehicleACSet-client.so",
+      "source": {
+        "path": "/vendor/lib64/libVehicleACSet-client.so"
+      }
+    },
+    {
+      "name": "vhal-libVehicleDrivingInfo-client.so",
+      "file": "vhal/libVehicleDrivingInfo-client.so",
+      "source": {
+        "path": "/vendor/lib64/libVehicleDrivingInfo-client.so"
+      }
+    },
+    {
+      "name": "vhal-libVideoPlayCtrl-server.so",
+      "file": "vhal/libVideoPlayCtrl-server.so",
+      "source": {
+        "path": "/vendor/lib64/libVideoPlayCtrl-server.so"
+      }
+    },
+    {
+      "name": "vhal-libWcmService-client.so",
+      "file": "vhal/libWcmService-client.so",
+      "source": {
+        "path": "/vendor/lib64/libWcmService-client.so"
+      }
+    },
+    {
+      "name": "vhal-libWeatherService-server.so",
+      "file": "vhal/libWeatherService-server.so",
+      "source": {
+        "path": "/vendor/lib64/libWeatherService-server.so"
+      }
+    },
+    {
+      "name": "vhal-libWindowController-client.so",
+      "file": "vhal/libWindowController-client.so",
+      "source": {
+        "path": "/vendor/lib64/libWindowController-client.so"
+      }
+    },
+    {
+      "name": "vhal-libhidltransport.so",
+      "file": "vhal/libhidltransport.so",
+      "source": {
+        "path": "/vendor/lib64/libhidltransport.so"
+      }
+    },
+    {
+      "name": "vhal-libhwbinder.so",
+      "file": "vhal/libhwbinder.so",
+      "source": {
+        "path": "/vendor/lib64/libhwbinder.so"
+      }
+    },
+    {
+      "name": "vhal-libmega_capture.so",
+      "file": "vhal/libmega_capture.so",
+      "source": {
+        "path": "/vendor/lib64/libmega_capture.so"
+      }
+    },
+    {
+      "name": "vhal-libprotobuf-cpp-lite-3.9.1.so",
+      "file": "vhal/libprotobuf-cpp-lite-3.9.1.so",
+      "source": {
+        "path": "/vendor/lib64/libprotobuf-cpp-lite-3.9.1.so"
+      }
+    },
+    {
+      "name": "vhal-libsomeip-common.so",
+      "file": "vhal/libsomeip-common.so",
+      "source": {
+        "path": "/vendor/lib64/libsomeip-common.so"
+      }
+    },
+    {
+      "name": "vhal-libx4serial.so",
+      "file": "vhal/libx4serial.so",
+      "source": {
+        "path": "/vendor/lib64/libx4serial.so"
+      }
+    },
+    {
+      "name": "vhal-libx4someip.so",
+      "file": "vhal/libx4someip.so",
+      "source": {
+        "path": "/vendor/lib64/libx4someip.so"
+      }
+    },
+    {
+      "name": "vhal-vendor.mega.hardware.automotive.vehicle.gladius@2.0.so",
+      "file": "vhal/vendor.mega.hardware.automotive.vehicle.gladius@2.0.so",
+      "source": {
+        "path": "/vendor/lib64/vendor.mega.hardware.automotive.vehicle.gladius@2.0.so"
+      }
     }
   ]
 }

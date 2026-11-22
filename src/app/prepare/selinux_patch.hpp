@@ -98,7 +98,7 @@ inline constexpr std::array<Api30FileRecipe, 8> qinggan11_api30_file_recipes = {
 inline constexpr std::array<Api30FileRecipe, 6> passion_api30_file_recipes = {
         {{"passion-services", "/system/etc/selinux/plat_sepolicy.cil",
           "f6d5316e443b6830d5331e6586cc0fc1df2ea8a59853ae3b0870945990145a17",
-          "ca7207fdf6cf5b9e7755e33f6bc7eb800eccaedd962f66d30cb5ea195f8597b3"},
+          "2779bd1603edb26a28dbadfeacc7d1f4e7f4261a08b2526008e6b6d8b9b068e2"},
          {"passion-service-contexts", "/system/etc/selinux/plat_service_contexts",
           "e4a9f3406dc9c3ff5a03c4b478941e02bede17ee95798bdbce1a31cc33f40959",
           "25c66b18abdb1bf102f5012387d54336c12a67c80e4ab540b90fdb863c1b82b6"},
@@ -110,10 +110,10 @@ inline constexpr std::array<Api30FileRecipe, 6> passion_api30_file_recipes = {
           "2b2ebe82d3b754dc9a00d50de124d7c07ca7c847db91e918d8e1e08778d7ce19"},
          {"passion-file-contexts", "/system/etc/selinux/plat_file_contexts",
           "cf0a4db0a9962781c83e6d1430c23276ebd406c404a54ab2226a1dfa4ac2844c",
-          "123be2de1e3225c8295247744068a2c2d8e1dfaeb8d390ffe59d6e9ff45d2e7a"},
+          "fc78a9776ac31e4bf2d5b93c3ec7b32ddf4095c6e59949494b20bde76e207a2a"},
          {"passion-policy-hash", "/system/etc/selinux/plat_sepolicy_and_mapping.sha256",
           "391829e0167f44415e54ba64692ad410b1398b16263869beb22e427130eae766",
-          "9a92c4b94ed354b962e372241eb78cb31e1920478ee55d1c6f1d2bbeae855216"}}};
+          "5a4b81918614dfe32243876e85dd5cbd6d1a86d6da7ded7950b518383142f7dc"}}};
 
 // The API30 native file recipes of a profile platform; on qinggan11 the original_navi feature of
 // the profile selects the Navi graph.

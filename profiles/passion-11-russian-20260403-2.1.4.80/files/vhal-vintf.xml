@@ -1,0 +1,13 @@
+<!-- The OEM android.hardware.automotive.vehicle@2.0-service.xml fragment with the instance of the
+     OEM mega VHAL only: no default VHAL runs beside it. -->
+<manifest version="1.0" type="device">
+    <hal format="hidl">
+        <name>android.hardware.automotive.vehicle</name>
+        <transport>hwbinder</transport>
+        <version>2.0</version>
+        <interface>
+            <name>IVehicle</name>
+            <instance>mega-instance</instance>
+        </interface>
+    </hal>
+</manifest>
