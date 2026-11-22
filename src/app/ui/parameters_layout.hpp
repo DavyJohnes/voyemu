@@ -389,10 +389,7 @@ struct WheelColumn {
     float choice_cell{}, choice_font{};
     // Hit circles around the glyph centres; neighbours meet halfway across their visible gap.
     float button_hit_radius{};
-    // The screens window toggle in the bottom row, right of the multimedia power button.
-    ParameterRect screens_toggle;
-    // The USB drive toggle in the top row, right of the multimedia restart button.
-    ParameterRect usb_toggle;
+    ParameterRect usb_toggle, screens_toggle;
 };
 
 // The column around the wheel is laid out once at 100 percent and scaled by wheel width / 460.
@@ -400,8 +397,8 @@ struct WheelColumn {
 // The scale and language choices share the gear row of the current form: top, height and caption
 // size; their cell is the segment of every radio, the P/R/N/D radio included. The cluster power
 // glyph starts, and the multimedia power glyph ends, the edge margin of the gear row from the area
-// edges; the multimedia pair mirrors the cluster pair: power below, restart above, the screens
-// window toggle right of power and the USB drive toggle right of restart on their centre lines.
+// edges. Multimedia power sits below restart; USB and additional screens follow restart in the
+// same row.
 // The wheel rectangle at a scale: horizontally where view_layout puts it; vertically the visible
 // bottom of the wheel photos ends 40 physical pixels at 100 percent above the gear row, which ends
 // as far above the bottom of the area. Without a silhouette the rectangle stays centred.
@@ -511,15 +508,16 @@ inline WheelColumn wheel_column(unsigned screen_scale, const WheelInk &left, con
     constexpr float button = 40, gap = 16, word_height = 32, choice_padding = .7f;
     const float visible_width = button * (1 - 2 * side), x = visible_left,
                 box_x = x - button * side;
-    const float pair_right = x + 2 * visible_width + gap;
+    const float button_pitch = visible_width + gap;
+    const float controls_right = x + 3 * visible_width + 2 * gap;
     const float word_width = word_height * wordmark_aspect,
                 word_x = wheel.x + (wheel.width - word_width) / 2;
     const float word_y = (top_edge(word_x, word_x + word_width) - word_height * wordmark_body) / 2;
     const float power_visible = button * (1 - power_top - power_bottom);
     const float margin = parameters_layout(0, 0, 0, 100).edge_margin();
-    // Captions use the gear size; the row starts at the multimedia hit circle and, when short,
-    // shrinks side padding and gaps first. Cells end on whole physical pixels at 100 percent.
-    const float row_left = pair_right + gap / 2, row_right = visible_right, min_gap = 4,
+    // Captions use the gear size. Keep the row clear of the multimedia controls, shrinking side
+    // padding and gaps first. Cells end on whole physical pixels at 100 percent.
+    const float row_left = controls_right + gap / 2, row_right = visible_right, min_gap = 4,
                 fit_padding = ((row_right - row_left - 2 * min_gap) / 6 - widest_choice_label) /
                               (2 * wheel_choice_font),
                 padding = std::clamp(fit_padding, .25f, choice_padding),
@@ -528,7 +526,6 @@ inline WheelColumn wheel_column(unsigned screen_scale, const WheelInk &left, con
     const float language_x = row_right - choice_width,
                 scale_x = (row_left + language_x - choice_width) / 2;
     const float media_y = design.top_height - margin - button * (1 - power_bottom),
-                media_center = media_y + button * (power_top + 1 - power_bottom) / 2,
                 restart_y = media_y + button * power_top - gap - button * (1 - restart_bottom);
     const auto view = view_layout(screen_scale);
     const auto actual = view.wheel;
@@ -552,8 +549,7 @@ inline WheelColumn wheel_column(unsigned screen_scale, const WheelInk &left, con
             cell * k,
             gear_font_size(screen_scale),
             (button * (.5f - side) + gap / 2) * k,
-            scaled({x + visible_width + gap - button * side, media_center - button / 2, button,
-                    button}),
-            scaled({x + visible_width + gap - button * side, restart_y, button, button})};
+            scaled({box_x + button_pitch, restart_y, button, button}),
+            scaled({box_x + 2 * button_pitch, restart_y, button, button})};
 }
 } // namespace voyemu::cluster

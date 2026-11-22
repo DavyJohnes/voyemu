@@ -10,6 +10,7 @@
 #include "wheel_geometry.hpp"
 #include "window_image.hpp"
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <cmath>
 #include <cstdlib>
@@ -875,10 +876,11 @@ void parameter_layout_guards() {
 
         check(column.cluster_restart.y > column.cluster_power.y &&
                       column.media_restart.y < column.media_power.y &&
-                      column.screens_toggle.x > column.media_power.x &&
+                      column.media_restart.x < column.usb_toggle.x &&
+                      column.usb_toggle.x < column.screens_toggle.x &&
                       column.cluster_power.bottom() < view.wheel.bottom() &&
                       column.media_power.y > view.wheel.y,
-              "cluster power stacks above restart at the top; multimedia restart stacks above power at the bottom next to the screens toggle");
+              "multimedia restart stacks above power and is followed by USB and screens");
     }
 
     const auto fifty = parameters_layout(0, 0, 0, canonical_ui_scale);
@@ -1858,8 +1860,18 @@ void choices_between_wheel_and_edge(const std::filesystem::path &assets) {
 
 void wheel_column_controls(const std::filesystem::path &assets) {
     const auto geometry = read_wheel_geometry(assets / "wheel-hotspots.json");
+    std::atomic_bool media_powered{false};
+    std::atomic_uint usb_requests{}, restart_requests{};
     auto transport = [&](const Json &operation) {
         if (operation.at("op") != "status") {
+            if (operation.at("op") == "usb_drive" && operation.at("attached") == true) {
+                ++usb_requests;
+            }
+
+            if (operation.at("op") == "media_restart") {
+                ++restart_requests;
+            }
+
             return Json{{"ok", true}, {"accepted", true}};
         }
 
@@ -1872,7 +1884,10 @@ void wheel_column_controls(const std::filesystem::path &assets) {
                     {"catalog", catalog_json(VehicleCatalog::qinggan09)},
                     {"deliveries",
                      {{"qnx", {{"status", "graphics_running"}, {"lifecycle_supported", true}}},
-                      {"android", {{"powered", false}, {"lifecycle_supported", true}}}}}};
+                      {"android",
+                       {{"powered", media_powered.load()},
+                        {"lifecycle_supported", true},
+                        {"usb_drive", {{"attached", false}}}}}}}};
     };
     const auto previous_language = ui::current_language;
 
@@ -2021,6 +2036,31 @@ void wheel_column_controls(const std::filesystem::path &assets) {
         check(inks("screens_toggle", true) == inks("cluster_restart", false) &&
                       inks("cluster_restart", false).size() == 1,
               "the closed screens toggle takes the inactive ink of the restart glyph");
+        const auto restart_point = center("media_restart"), usb_point = center("usb"),
+                   screens_point = center("screens");
+        check(restart_point.x < usb_point.x && usb_point.x < screens_point.x &&
+                      std::abs(restart_point.y - usb_point.y) < .001f &&
+                      std::abs(usb_point.y - screens_point.y) < .001f,
+              "the drawn multimedia row places USB and screens to the right of restart");
+        media_powered = true;
+        wait(
+                [&] {
+                    return window.client().state().deliveries.at("android").at("powered") == true;
+                },
+                "the wheel column fixture did not update multimedia power");
+        frame(ImVec2(5, 5));
+        click("usb");
+        wait(
+                [&] {
+                    return usb_requests == 1;
+                },
+                "the USB button did not request attachment");
+        check(!window.take_shell_request().screens_window && restart_requests == 0,
+              "the USB button does not activate either neighbour");
+        click("screens");
+        check(window.take_shell_request().screens_window == true && usb_requests == 1 &&
+                      restart_requests == 0,
+              "the screens button opens only the additional screens");
         window.set_screens({});
         frame(ImVec2(5, 5));
         const auto wordmark_idle = inks("wordmark", true);

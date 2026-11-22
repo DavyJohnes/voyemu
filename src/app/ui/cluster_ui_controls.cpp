@@ -1396,76 +1396,40 @@ const char *Window::screens_label() const {
                                         : tr("HUD");
 }
 
-// The screens window toggle beside the multimedia power button: its icon takes the primary ink
-// while the window is open and the inactive ink while it is closed, like the lifecycle glyphs.
-void Window::screens_toggle(const ParameterRect &bounds) {
-    ImGui::SetCursorScreenPos(ImVec2(bounds.x, bounds.y));
-
-    if (ImGui::InvisibleButton("##screens", ImVec2(bounds.width, bounds.height),
-                               ImGuiButtonFlags_NoNavFocus)) {
-        shell_request_.screens_window = !screens_window_;
-    }
-
-    const bool hovered = ImGui::IsItemHovered();
-    record_item("screens", "screens");
-
-    if (!options_.capture_ui.empty()) {
-        inspection_["fields"].back()["selected"] = screens_window_;
-        inspection_["fields"].back()["label"] = screens_label();
-    }
-
-    // The icon keeps its place on the 28-unit grid of the lifecycle glyphs.
-    const auto &icon = vector_artwork(ui::Resource::ScreensIcon);
-    const float unit = bounds.width / 28;
-    artwork(ui::Resource::ScreensIcon,
-            {bounds.x + icon.x * unit, bounds.y + icon.y * unit, icon.width * unit,
-             icon.height * unit},
-            glyph_ink(light_theme_, hovered, screens_window_));
-    ImGui::RenderNavCursor(
-            ImRect(ImVec2(bounds.x, bounds.y), ImVec2(bounds.right(), bounds.bottom())),
-            ImGui::GetItemID());
-}
-
-// The USB drive toggle beside the multimedia restart button: its icon takes the primary ink while
-// the drive is plugged in and the inactive ink while it is out, like the screens toggle. Its hit
-// square keeps to the hit radius of the lifecycle glyphs, so it stays clear of the power circle
-// below the restart button.
-void Window::usb_toggle(const ParameterRect &bounds, float hit_radius) {
-    const auto android = view_.deliveries.value("android", Json::object());
-    const bool attached = android.value("usb_drive", Json::object()).value("attached", false);
-    const bool available = view_.ready && android.value("powered", false) &&
-                           android.contains("usb_drive");
-
+// USB and additional screens use the same icon grid, hit area and ink as each other.
+bool Window::icon_toggle(const char *id, ui::Resource icon_id, const ParameterRect &bounds,
+                         float hit_radius, bool selected, bool available) {
     const ParameterRect hit{bounds.x + bounds.width / 2 - hit_radius,
                             bounds.y + bounds.height / 2 - hit_radius, 2 * hit_radius,
                             2 * hit_radius};
+
+    ImGui::PushID(id);
     ImGui::SetCursorScreenPos(ImVec2(hit.x, hit.y));
     ImGui::BeginDisabled(!available);
-
-    if (ImGui::InvisibleButton("##usb", ImVec2(hit.width, hit.height),
-                               ImGuiButtonFlags_NoNavFocus)) {
-        client_.usb_drive(!attached);
-    }
-
+    const bool pressed = ImGui::InvisibleButton("##toggle", ImVec2(hit.width, hit.height),
+                                                ImGuiButtonFlags_NoNavFocus);
     const bool hovered = ImGui::IsItemHovered();
-    record_item("usb", "usb");
+    record_item(id, id);
 
     if (!options_.capture_ui.empty()) {
-        inspection_["fields"].back()["selected"] = attached;
+        inspection_["fields"].back()["selected"] = selected;
         inspection_["fields"].back()["available"] = available;
     }
 
-    const auto &icon = vector_artwork(ui::Resource::UsbIcon);
+    const auto &icon = vector_artwork(icon_id);
     const float unit = bounds.width / 28;
-    artwork(ui::Resource::UsbIcon,
+    artwork(icon_id,
             {bounds.x + icon.x * unit, bounds.y + icon.y * unit, icon.width * unit,
              icon.height * unit},
-            available      ? glyph_ink(light_theme_, hovered, attached)
+            available      ? glyph_ink(light_theme_, hovered, selected)
             : light_theme_ ? IM_COL32(0, 0, 0, 77)
                            : IM_COL32(255, 255, 255, 77));
     ImGui::RenderNavCursor(ImRect(ImVec2(hit.x, hit.y), ImVec2(hit.right(), hit.bottom())),
                            ImGui::GetItemID());
     ImGui::EndDisabled();
+    ImGui::PopID();
+
+    return pressed;
 }
 
 // All radios share one segment: the widest caption of the gear, scale and language radios.
@@ -1613,6 +1577,29 @@ void Window::wheel_controls() {
     lifecycle("##restart", column.cluster_restart, true, false);
     lifecycle("##media_power", column.media_power, false, true);
     lifecycle("##media_restart", column.media_restart, true, true);
+
+    if (android.value("lifecycle_supported", false)) {
+        const bool attached = android.value("usb_drive", Json::object()).value("attached", false);
+
+        if (icon_toggle("usb", ui::Resource::UsbIcon, column.usb_toggle, column.button_hit_radius,
+                        attached,
+                        view_.ready && android.value("powered", false) &&
+                                android.contains("usb_drive"))) {
+            client_.usb_drive(!attached);
+        }
+    }
+
+    if (!screens_.empty()) {
+        if (icon_toggle("screens", ui::Resource::ScreensIcon, column.screens_toggle,
+                        column.button_hit_radius, screens_window_, true)) {
+            shell_request_.screens_window = !screens_window_;
+        }
+
+        if (!options_.capture_ui.empty()) {
+            inspection_["fields"].back()["label"] = screens_label();
+        }
+    }
+
     const auto percent = ui_scale_percent(screen_scale_);
     const int scale_index = percent == 50 ? 0 : percent == 75 ? 1 : 2;
 
@@ -1626,14 +1613,6 @@ void Window::wheel_controls() {
                                   column.choice_font, languages, language, language_indicator_);
         picked >= 0 && picked != language) {
         shell_request_.language = ui::language_choices[picked];
-    }
-
-    if (!screens_.empty()) {
-        screens_toggle(column.screens_toggle);
-    }
-
-    if (android.value("lifecycle_supported", false)) {
-        usb_toggle(column.usb_toggle, column.button_hit_radius);
     }
 
     if (!options_.capture_ui.empty()) {

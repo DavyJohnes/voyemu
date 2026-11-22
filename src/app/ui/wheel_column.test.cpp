@@ -93,25 +93,27 @@ int main() {
                                      (column.media_restart.bottom() - 40 * restart_bottom),
                              16),
                 "multimedia restart sits 16 points above power, mirroring the cluster pair");
-        require(near(column.screens_toggle.x + 40 * side - (stack_left + glyph), 16) &&
-                        near(column.screens_toggle.width, 40),
-                "the screens toggle sits 16 points right of multimedia power");
-        require(near(column.usb_toggle.x, column.screens_toggle.x) &&
+        require(near(column.usb_toggle.x + 40 * side - (stack_left + glyph), 16) &&
                         near(column.usb_toggle.y, column.media_restart.y) &&
                         near(column.usb_toggle.width, column.media_restart.width),
-                "the USB drive toggle sits right of multimedia restart on its centre line");
-        require(near(column.screens_toggle.x - column.media_power.x,
-                     2 * column.button_hit_radius) &&
+                "the USB drive toggle sits 16 points right of multimedia restart");
+        require(near(column.screens_toggle.x - (column.usb_toggle.x + glyph), 16) &&
+                        near(column.screens_toggle.y, column.usb_toggle.y) &&
+                        near(column.screens_toggle.width, column.usb_toggle.width),
+                "the screens toggle sits 16 points right of USB on the same row");
+        require(near(column.usb_toggle.x - column.media_restart.x, 2 * column.button_hit_radius) &&
+                        near(column.screens_toggle.x - column.usb_toggle.x,
+                             2 * column.button_hit_radius) &&
                         column.cluster_restart.y - column.cluster_power.y >=
                                 2 * column.button_hit_radius &&
                         column.button_hit_radius > 40 * (.5f - side),
                 "hit circles cover each glyph and meet halfway across the visible gap");
-        const float pair_right = column.screens_toggle.x + column.screens_toggle.width / 2 +
-                                 column.button_hit_radius;
-        require(near(column.scale_choice.x - pair_right,
+        const float controls_right = column.screens_toggle.x + column.screens_toggle.width / 2 +
+                                     column.button_hit_radius;
+        require(near(column.scale_choice.x - controls_right,
                      column.language_choice.x - column.scale_choice.right()) &&
-                        column.scale_choice.x > pair_right,
-                "scale choice is centred between the multimedia hit circle and language");
+                        column.scale_choice.x > controls_right,
+                "scale choice is centred between the multimedia controls and language");
         const auto same_row = [](const WheelColumn &c, unsigned scale) {
             const auto gear = gear_radio(parameters_layout(0, 0, 0, scale), c.choice_cell);
 
@@ -131,9 +133,6 @@ int main() {
                              design.top_height - 20),
                 "cluster power starts 40 pixels below the top; multimedia power, the choices and "
                 "the gear radio end 40 pixels above the bottom");
-        require(near(column.screens_toggle.y + 20,
-                     column.media_power.y + 40 * (power_top + 1 - power_bottom) / 2),
-                "the screens toggle shares the centre line of the multimedia power glyph");
         require(near(column.wordmark.x + column.wordmark.width / 2, wheel.x + wheel.width / 2) &&
                         near(column.wordmark.height, 32) &&
                         near(column.wordmark.width, 32 * wordmark_aspect) &&
@@ -158,6 +157,7 @@ int main() {
                             same(scaled.cluster_restart, column.cluster_restart) &&
                             same(scaled.media_power, column.media_power) &&
                             same(scaled.media_restart, column.media_restart) &&
+                            same(scaled.usb_toggle, column.usb_toggle) &&
                             same(scaled.screens_toggle, column.screens_toggle) &&
                             near(scaled.button_hit_radius, column.button_hit_radius * k),
                     "wordmark and buttons at 50 and 75 percent scale with the wheel");

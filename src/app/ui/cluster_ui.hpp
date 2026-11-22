@@ -254,8 +254,8 @@ private:
     int choice(const char *id, const ParameterRect &bounds, float cell, float font,
                std::span<const char *const> labels, int selected, MusicTabIndicator &indicator);
     void artwork(ui::Resource id, const ParameterRect &bounds, std::uint32_t color);
-    void screens_toggle(const ParameterRect &bounds);
-    void usb_toggle(const ParameterRect &bounds, float hit_radius);
+    bool icon_toggle(const char *id, ui::Resource icon_id, const ParameterRect &bounds,
+                     float hit_radius, bool selected, bool available);
     void about();
     void editor();
     void record_item(const std::string &name, const char *kind);
