@@ -53,6 +53,7 @@ The single terminology reference for Voyemu docs, README, CHANGELOG, SECURITY an
 | outcome | The classification of an operation result: `completed`, `not_started` or `unknown` | — |
 | screen role | `primary`, `secondary`, `cluster`, `rear` (the rear-seat screen of Free 6.11.1 and 7.3.1) or `hud` (the second QNX screen of Passion, 1280×720); neither an emulator display number nor a guest display ID | display slot, third screen |
 | screens window | The second host window with the other screens of the vehicle, opened by the control next to the wheel | extra window |
+| USB drive | The virtual USB mass-storage device that is plugged into the multimedia by the control next to the wheel or `multimedia.usb.*` | flash drive |
 | interguest link | The QNET and Ethernet relay between the Android and QNX guests | — |
 | `flush` | The request that the host sends to QNX through the mailbox of the interguest link: QNX syncs and remounts its storage before the host pauses or stops it, then answers with an ACK and a status | — |
 | vehicle model | The host-side simulated vehicle state that `patch` and `vehicle.set` change | — |

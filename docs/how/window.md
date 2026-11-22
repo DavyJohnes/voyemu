@@ -32,6 +32,7 @@ Controls next to the wheel replace a menu:
 - switch the interface language between Chinese, English and Russian;
 - power each guest off and on and restart it;
 - open and close the screens window, on a machine with more screens;
+- plug the [USB drive](usb-drive.md) into the multimedia and unplug it;
 - open About with the release date, the website and the embedded licenses.
 
 The interface language is shared by all machines and remembered; until a language is chosen, the window follows the preferred language of the host. Command output has its own language, see [launch and sessions](launch.md#output-language).

@@ -50,6 +50,7 @@ A `session.wait` result is saved too, but unlike an action a repeated request is
 | Session | `session.start`, `session.attach`, `session.status`, `session.stop`, `session.restart`, `session.wait`, `session.watch.start`, `session.watch.read`, `session.watch.stop`, `session.ui`, `session.screenshot`, `session.logs`, `session.observe` |
 | Multimedia | `multimedia.power`, `multimedia.reboot`, `multimedia.launch`, `multimedia.system` |
 | Phone | `multimedia.phone.configure`, `multimedia.phone.connect`, `multimedia.phone.disconnect`, `multimedia.phone.incoming`, `multimedia.phone.answer`, `multimedia.phone.hangup`, `multimedia.phone.state` |
+| USB drive | `multimedia.usb.attach`, `multimedia.usb.detach` |
 | Cluster | `cluster.power`, `cluster.reboot`, `cluster.system`, `cluster.ipk.history` |
 | Vehicle | `vehicle.fields`, `vehicle.get`, `vehicle.set`, `vehicle.can.get`, `vehicle.can.model`, `vehicle.can.history` |
 | Input | `input.tap`, `input.drag`, `input.gesture`, `input.key.press`, `input.wheel.buttons`, `input.wheel.press`, `input.wheel.release`, `input.voice.trigger` |
@@ -103,6 +104,7 @@ Session operations need a prepared machine with its pinned dependencies; the ava
 | --- | --- | --- |
 | `session.restart`, `multimedia.reboot` | 1..180000 | `180000` |
 | `multimedia.power` | 1..90000 | `90000` |
+| `multimedia.usb.attach`, `multimedia.usb.detach` | 1..25000 | `20000` |
 | `session.ui`, `cluster.system` | 1..30000 | `5000` and `1000` |
 | `session.screenshot`, `vehicle.can.get`, `vehicle.can.model`, `cluster.ipk.history`, `session.logs` with `android`, `anr` or `native` | 1..10000 | `5000` |
 | `vehicle.can.history` | 1..15000 | `5000` |
@@ -186,6 +188,12 @@ Invalid projection fields are omitted. The details contain no arrays or arbitrar
 `multimedia.launch` requires session ownership, `package` and the current `boot_id`; `screen` defaults to `primary`. An optional `component` must belong to an installed package. The operation starts the application with a fixed ActivityManager invocation, without arbitrary shell commands or intents. Command acceptance does not prove that the interface is ready.
 
 The `multimedia.phone` actions `configure`, `connect`, `disconnect`, `incoming`, `answer` and `hangup` require session ownership. `configure` takes a `payload` with a `contacts` array of exactly two synthetic `{name, number}` contacts and an optional `peer_name`. `incoming` takes `payload: {number}`. A number is `+7` followed by ten digits. The other actions take an empty or omitted `payload`. `multimedia.phone.state` reads a phone snapshot without session ownership. Availability depends on the adapter installed on the machine.
+
+## USB drive
+
+`multimedia.usb.attach` plugs the [USB drive](usb-drive.md) into the running multimedia and `multimedia.usb.detach` unplugs it; both require session ownership and take only `timeout_ms`. The result contains `attached`, `changed` (`false` when the drive already was in the requested state), `android_generation` and `volume`. After the port changes, the operation waits up to `timeout_ms` for the guest: `volume` is `{uuid: "2026-1122", state}` with the state of the volume in `vold`, `mounted` once Android has mounted it, and `null` when Android lists no volume of the drive. After an attach, a `volume` that is `null` or not yet `mounted` at the end of the wait means that Android has not finished; the drive stays plugged in.
+
+`USB_DRIVE` means that the port did not change, for example while the multimedia is off; `USB_DRIVE_UNKNOWN` means that the connection to the emulator was lost after the command was sent, and the state of the port is checked with `session.status`, whose `deliveries.android.usb_drive.attached` reports it.
 
 ## Observations
 

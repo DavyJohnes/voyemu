@@ -50,6 +50,7 @@ Voyemu регистрирует до выполнения каждое дейс�
 | Сеанс | `session.start`, `session.attach`, `session.status`, `session.stop`, `session.restart`, `session.wait`, `session.watch.start`, `session.watch.read`, `session.watch.stop`, `session.ui`, `session.screenshot`, `session.logs`, `session.observe` |
 | Мультимедиа | `multimedia.power`, `multimedia.reboot`, `multimedia.launch`, `multimedia.system` |
 | Телефон | `multimedia.phone.configure`, `multimedia.phone.connect`, `multimedia.phone.disconnect`, `multimedia.phone.incoming`, `multimedia.phone.answer`, `multimedia.phone.hangup`, `multimedia.phone.state` |
+| USB-накопитель | `multimedia.usb.attach`, `multimedia.usb.detach` |
 | Приборка | `cluster.power`, `cluster.reboot`, `cluster.system`, `cluster.ipk.history` |
 | Автомобиль | `vehicle.fields`, `vehicle.get`, `vehicle.set`, `vehicle.can.get`, `vehicle.can.model`, `vehicle.can.history` |
 | Ввод | `input.tap`, `input.drag`, `input.gesture`, `input.key.press`, `input.wheel.buttons`, `input.wheel.press`, `input.wheel.release`, `input.voice.trigger` |
@@ -103,6 +104,7 @@ ID узлов действуют только внутри одного `observa
 | --- | --- | --- |
 | `session.restart`, `multimedia.reboot` | 1..180000 | `180000` |
 | `multimedia.power` | 1..90000 | `90000` |
+| `multimedia.usb.attach`, `multimedia.usb.detach` | 1..25000 | `20000` |
 | `session.ui`, `cluster.system` | 1..30000 | `5000` и `1000` |
 | `session.screenshot`, `vehicle.can.get`, `vehicle.can.model`, `cluster.ipk.history`, `session.logs` с `android`, `anr` или `native` | 1..10000 | `5000` |
 | `vehicle.can.history` | 1..15000 | `5000` |
@@ -186,6 +188,12 @@ ID узлов действуют только внутри одного `observa
 `multimedia.launch` требует владения сеансом, `package` и текущего `boot_id`; `screen` по умолчанию — `primary`. Необязательный `component` должен принадлежать установленному пакету. Операция запускает приложение фиксированным вызовом ActivityManager, без произвольных команд оболочки и `Intent`. То, что команда принята, не доказывает, что интерфейс готов.
 
 Действия `configure`, `connect`, `disconnect`, `incoming`, `answer` и `hangup` в пространстве `multimedia.phone` требуют владения сеансом. `configure` принимает `payload` с массивом `contacts` ровно из двух синтетических контактов `{name, number}` и необязательным `peer_name`. `incoming` принимает `payload: {number}`. Номер — `+7` и ещё десять цифр. Остальные действия принимают пустой `payload` или обходятся без него. `multimedia.phone.state` читает снимок телефона без владения сеансом. Доступность зависит от установленного адаптера машины.
+
+## USB-накопитель
+
+`multimedia.usb.attach` подключает [USB-накопитель](usb-drive.ru.md) к работающему мультимедиа, а `multimedia.usb.detach` отключает его; обе операции требуют владения сеансом и принимают только `timeout_ms`. Результат содержит `attached`, `changed` (`false`, если накопитель уже был в запрошенном состоянии), `android_generation` и `volume`. После изменения порта операция ждёт гостя до `timeout_ms`: `volume` — это `{uuid: "2026-1122", state}` с состоянием тома в `vold`, `mounted` после монтирования в Android, или `null`, если Android не показывает том накопителя. Если после подключения `volume` к концу ожидания равен `null` или ещё не `mounted`, Android не закончил; накопитель остаётся подключённым.
+
+`USB_DRIVE` означает, что порт не изменился, например при выключенном мультимедиа; `USB_DRIVE_UNKNOWN` — что связь с эмулятором потеряна после отправки команды, и состояние порта проверяют через `session.status`, где его показывает `deliveries.android.usb_drive.attached`.
 
 ## Наблюдения
 
