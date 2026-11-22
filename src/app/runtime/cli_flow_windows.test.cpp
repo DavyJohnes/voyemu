@@ -108,3 +108,38 @@ ProcessResult fixture_public_cli(const std::filesystem::path &executable,
     return {static_cast<int>(code), read_private_json(slot / "stdout.json", 512 * 1024).dump(),
             false};
 }
+
+bool signal_process(std::int64_t, FixtureSignal) {
+    throw std::logic_error("process signals are a POSIX fixture");
+}
+
+std::optional<std::string> process_start(std::int64_t) {
+    throw std::logic_error("process start identities are a POSIX fixture");
+}
+
+std::vector<std::string> process_arguments(std::int64_t) {
+    throw std::logic_error("process arguments are a POSIX fixture");
+}
+
+bool owner_only_file(const std::filesystem::path &) {
+    throw std::logic_error("file modes are a POSIX fixture");
+}
+
+ProcessExit::ProcessExit(std::int64_t pid)
+    : handle_(reinterpret_cast<std::intptr_t>(
+              OpenProcess(SYNCHRONIZE, FALSE, static_cast<DWORD>(pid)))) {}
+
+ProcessExit::~ProcessExit() {
+    if (handle_) {
+        CloseHandle(reinterpret_cast<HANDLE>(handle_));
+    }
+}
+
+bool ProcessExit::opened() const {
+    return handle_ != 0;
+}
+
+bool ProcessExit::exited_within(std::chrono::milliseconds timeout) const {
+    return WaitForSingleObject(reinterpret_cast<HANDLE>(handle_),
+                               static_cast<DWORD>(timeout.count())) == WAIT_OBJECT_0;
+}

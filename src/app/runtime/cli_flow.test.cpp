@@ -1,12 +1,9 @@
-#ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#include <winsock2.h>
-#include <windows.h>
-#endif
 #include "android_engine.hpp"
 #include "android_port_lease.hpp"
+#include "cli_flow_test_host.hpp"
 #include "machine_path.hpp"
+#include "os/platform.hpp"
+#include "os/process.hpp"
 #include "passion_presentation.hpp"
 #include "profile_catalog.hpp"
 #include "profile_runtime.hpp"
@@ -23,12 +20,6 @@
 #include <sstream>
 #include <stdexcept>
 #include <thread>
-#ifndef _WIN32
-#include "os/process.hpp"
-#include <signal.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#endif
 using namespace voyemu;
 
 // The bundled Android 9 profile on the 8155 board, read from the catalog.
@@ -60,102 +51,6 @@ static bool logged_error(const std::string &output, const std::string &error) {
 
     return std::string(std::istreambuf_iterator<char>(stream), {}).find(error) != std::string::npos;
 }
-
-#ifdef _WIN32
-// Test-only channel separation: structured stderr diagnostics are never response authority.
-static ProcessResult fixture_public_cli(const std::filesystem::path &executable,
-                                        const std::vector<std::string> &arguments,
-                                        const std::filesystem::path &root) {
-    struct Handle {
-        HANDLE value = INVALID_HANDLE_VALUE;
-
-        ~Handle() {
-            if (value && value != INVALID_HANDLE_VALUE) {
-                CloseHandle(value);
-            }
-        }
-    };
-    const auto slot = root / ".local/build" / ("split-cli-" + random_token());
-
-    ensure_private_directory(slot);
-    SECURITY_ATTRIBUTES security{sizeof(security), nullptr, TRUE};
-    Handle output{CreateFileW((slot / "stdout.json").c_str(), GENERIC_WRITE,
-                              FILE_SHARE_READ | FILE_SHARE_DELETE, &security, CREATE_NEW,
-                              FILE_ATTRIBUTE_NORMAL, nullptr)};
-    Handle errors{CreateFileW((slot / "stderr.log").c_str(), GENERIC_WRITE,
-                              FILE_SHARE_READ | FILE_SHARE_DELETE, &security, CREATE_NEW,
-                              FILE_ATTRIBUTE_NORMAL, nullptr)};
-    Handle input{CreateFileW(L"NUL", GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, &security,
-                             OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr)};
-    require(output.value != INVALID_HANDLE_VALUE && errors.value != INVALID_HANDLE_VALUE &&
-                    input.value != INVALID_HANDLE_VALUE,
-            "private CLI channels unavailable");
-    Handle job{CreateJobObjectW(nullptr, nullptr)};
-    JOBOBJECT_EXTENDED_LIMIT_INFORMATION limits{};
-    limits.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
-    require(job.value && SetInformationJobObject(job.value, JobObjectExtendedLimitInformation,
-                                                 &limits, sizeof(limits)),
-            "private CLI job unavailable");
-    std::string command = windows_quote(executable.string());
-
-    for (const auto &argument : arguments) {
-        command += " " + windows_quote(argument);
-    }
-
-    const auto length = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, command.data(),
-                                            static_cast<int>(command.size()), nullptr, 0);
-    require(length > 0, "private CLI command encoding invalid");
-    std::wstring wide(length, L'\0');
-    require(MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, command.data(),
-                                static_cast<int>(command.size()), wide.data(), length) == length,
-            "private CLI command encoding changed");
-    STARTUPINFOW startup{};
-    startup.cb = sizeof(startup);
-    startup.dwFlags = STARTF_USESTDHANDLES;
-    startup.hStdInput = input.value;
-    startup.hStdOutput = output.value;
-    startup.hStdError = errors.value;
-    PROCESS_INFORMATION process{};
-    require(CreateProcessW(executable.c_str(), wide.data(), nullptr, nullptr, TRUE,
-                           CREATE_SUSPENDED | CREATE_NO_WINDOW, nullptr, root.c_str(), &startup,
-                           &process),
-            "private CLI spawn failed");
-    Handle child{process.hProcess}, thread{process.hThread};
-
-    if (!AssignProcessToJobObject(job.value, child.value)) {
-        TerminateProcess(child.value, 126);
-        require(WaitForSingleObject(child.value, 3000) == WAIT_OBJECT_0,
-                "unassigned own CLI cleanup unverified");
-        throw std::runtime_error("private CLI job assignment failed");
-    }
-
-    require(ResumeThread(thread.value) != DWORD(-1), "private CLI resume failed");
-    const auto waited = WaitForSingleObject(child.value, 30000);
-    const bool timeout = waited == WAIT_TIMEOUT;
-
-    if (waited != WAIT_OBJECT_0) {
-        require(TerminateJobObject(job.value, 124) &&
-                        WaitForSingleObject(child.value, 3000) == WAIT_OBJECT_0,
-                "private CLI timeout cleanup unverified");
-        require(timeout, "private CLI wait failed");
-    }
-
-    DWORD code = 0;
-    require(GetExitCodeProcess(child.value, &code) && code != STILL_ACTIVE,
-            "private CLI terminal state unavailable");
-    CloseHandle(output.value);
-    output.value = INVALID_HANDLE_VALUE;
-    CloseHandle(errors.value);
-    errors.value = INVALID_HANDLE_VALUE;
-
-    if (timeout) {
-        return {static_cast<int>(code), {}, true};
-    }
-
-    return {static_cast<int>(code), read_private_json(slot / "stdout.json", 512 * 1024).dump(),
-            false};
-}
-#endif
 
 static std::unique_ptr<Session> attach_fixture_presentation(const std::filesystem::path &root,
                                                             bool attach_frontend, bool background) {
@@ -229,8 +124,9 @@ static int fixture_presentation_probe(const std::filesystem::path &root,
 }
 
 int main(int argc, char **argv) try {
-#ifndef _WIN32
-    if (argc == 4 && std::string_view(argv[1]) == "--session-resource-holder") {
+    // The descendant holder serves the POSIX orphan recovery flow below.
+    if (!os::host_windows && argc == 4 &&
+        std::string_view(argv[1]) == "--session-resource-holder") {
         write_private_json(argv[3], {{"ready", true}});
         const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
 
@@ -243,7 +139,6 @@ int main(int argc, char **argv) try {
 
         return 0;
     }
-#endif
 
     if (argc == 4 && std::string_view(argv[1]) == "--presentation-probe") {
         return fixture_presentation_probe(argv[2], argv[3]);
@@ -272,8 +167,7 @@ int main(int argc, char **argv) try {
                                             std::string(argv[3]) == "--root-restart-unverified");
     const bool root_unverified = root_restart &&
                                  std::string(argv[3]) == "--root-restart-unverified";
-    [[maybe_unused]] const bool orphan_recovery = argc == 4 &&
-                                                  std::string(argv[3]) == "--orphan-recovery";
+    const bool orphan_recovery = argc == 4 && std::string(argv[3]) == "--orphan-recovery";
     const bool clock_service = argc == 4 && std::string(argv[3]) == "--clock-service";
     const bool clock_observation = argc == 4 && std::string(argv[3]) == "--clock-observation";
     const bool canonical_api = argc == 4 && std::string(argv[3]) == "--canonical-api";
@@ -281,8 +175,8 @@ int main(int argc, char **argv) try {
     const bool check_portable = argc == 4 && std::string(argv[3]) == "--check-portable";
     const bool arguments_only = argc == 4 && std::string(argv[3]) == "--arguments-only";
     const bool timings = argc == 4 && std::string(argv[3]) == "--adb-timings";
-    [[maybe_unused]] const bool identity_backpressure =
-            argc == 4 && std::string(argv[3]) == "--identity-backpressure";
+    const bool identity_backpressure = argc == 4 &&
+                                       std::string(argv[3]) == "--identity-backpressure";
     const bool owned_adb_death = argc == 4 && std::string(argv[3]) == "--owned-adb-death";
     const bool latency = argc == 4 && (std::string(argv[3]) == "--quickboot-latency" || timings);
     const bool runtime_paths = argc == 4 && std::string(argv[3]) == "--runtime-paths";
@@ -319,11 +213,7 @@ int main(int argc, char **argv) try {
 
     const auto root = fixture_base / ("voyemu-native-cli-fixture-" + random_token());
     ensure_private_directory(root / ".local/machines");
-#ifdef _WIN32
-    const auto installed_cli = root / "voyemu.exe";
-#else
-    const auto installed_cli = root / "voyemu";
-#endif
+    const auto installed_cli = root / ("voyemu" + std::string(os::executable_suffix));
     std::filesystem::copy_file(cli, installed_cli);
     cli = installed_cli;
     const auto selected_machine = root / "machines" / qinggan09_profile();
@@ -369,14 +259,15 @@ int main(int argc, char **argv) try {
         std::ofstream(root / "direct-engine") << "retained owned engine fixture";
     }
 
-#ifdef __APPLE__
+    // Homebrew installs the CLI on macOS only, so only the macOS default flow goes through PATH.
+    const bool homebrew_flow = os::platform_name == "macOS" && argc == 3;
     const auto linked_bin = root / "linked-bin";
 
-    if (argc == 3) {
+    if (homebrew_flow) {
         ensure_private_directory(linked_bin);
         std::filesystem::create_symlink(cli, linked_bin / "voyemu");
     }
-#endif
+
     auto run = [&](std::vector<std::string> args, int timeout = 30000) {
         const auto command = args.front();
         const bool internal = command == "_start" || command == "test";
@@ -422,15 +313,15 @@ int main(int argc, char **argv) try {
         ProcessSpec spec;
         spec.executable = cli;
         spec.arguments = std::move(args);
-#ifdef __APPLE__
+
         // Homebrew invokes the CLI through PATH from outside its installation directory.
-        if (argc == 3) {
+        if (homebrew_flow) {
             spec.executable = "/bin/sh";
             spec.arguments.insert(spec.arguments.begin(), {"-c", "exec voyemu \"$@\"", "voyemu"});
             spec.environment["PATH"] = linked_bin.string() + ":/usr/bin:/bin";
             spec.directory = root;
         }
-#endif
+
         spec.environment["ADB_TRACE"] = "transport,packets,sockets";
 
         if (boot_trace_value) {
@@ -493,8 +384,8 @@ int main(int argc, char **argv) try {
                        {{"op", "status"}, {"session_id", active.at("session_id")}}, 1000);
     };
     try {
-#ifdef __APPLE__
-        if (argc == 3) {
+        // The standalone copy probe keeps its macOS scope: HOME is the user profile root it checks.
+        if (os::platform_name == "macOS" && argc == 3) {
             const auto portable = root / "portable/voyemu", home = root / "user-home";
             ensure_private_directory(portable.parent_path());
             std::filesystem::copy_file(cli, portable);
@@ -520,7 +411,7 @@ int main(int argc, char **argv) try {
                             explicit_root.output.find("--root is internal") != std::string::npos,
                     "public check accepted internal root override");
         }
-#endif
+
         auto profile = root / "profiles" / qinggan09_profile();
         ensure_private_directory(profile);
         ensure_private_directory(root / "profiles/common/wheels/free-2021");
@@ -755,11 +646,7 @@ int main(int argc, char **argv) try {
         };
         auto bin = root / "fixture-bin";
         ensure_private_directory(bin);
-#ifdef _WIN32
-        auto emulator = bin / "emulator.exe";
-#else
-        auto emulator = bin / "emulator";
-#endif
+        auto emulator = bin / ("emulator" + std::string(os::executable_suffix));
         std::filesystem::copy_file(fixture, emulator);
         write_private_json(qnx_host_bindings_path(root),
                            {{"runtime_sdk", {{"sdk_root", root.string()}}}});
@@ -789,11 +676,11 @@ int main(int argc, char **argv) try {
                 specification["qemu"]["args"].push_back(option);
             }
 
-#ifdef _WIN32
-            const std::array<const char *, 2> libraries{"libEGL.dll", "libGLESv2.dll"};
-#else
-            const std::array<const char *, 2> libraries{"libEGL.dylib", "libGLESv2.dylib"};
-#endif
+            // The Windows ANGLE names, else the macOS names on every POSIX host.
+            const std::array<const char *, 2> libraries =
+                    os::host_windows
+                            ? std::array<const char *, 2>{"libEGL.dll", "libGLESv2.dll"}
+                            : std::array<const char *, 2>{"libEGL.dylib", "libGLESv2.dylib"};
             specification["graphics"] = {
                     {"executable", cli.string()}, {"backend", "voyemu"}, {"angle", angle.string()}};
             specification["pins"].push_back({{"path", cli.string()}, {"sha256", sha256_file(cli)}});
@@ -837,16 +724,19 @@ int main(int argc, char **argv) try {
                 "unprepared profile started the wrong machine: " + other_start.output);
         require(!std::filesystem::exists(configuration / "another-car/sessions"),
                 "rejected profile created a session");
-#ifndef _WIN32
-        const auto linked_configuration = configuration / qinggan09_profile();
-        std::filesystem::rename(linked_configuration, configuration / "fixture-launch-pending");
-        std::filesystem::create_directory_symlink(root, linked_configuration);
-        auto status_without_launch = run({"status"});
-        require(status_without_launch.output.find("PROFILE_LAUNCH") == std::string::npos,
-                "status must remain available when launch configuration is corrupt");
-        std::filesystem::remove(linked_configuration);
-        std::filesystem::rename(configuration / "fixture-launch-pending", linked_configuration);
-#endif
+
+        // Directory symlinks need privileges on Windows, so the corrupt-link case runs on POSIX.
+        if (!os::host_windows) {
+            const auto linked_configuration = configuration / qinggan09_profile();
+            std::filesystem::rename(linked_configuration, configuration / "fixture-launch-pending");
+            std::filesystem::create_directory_symlink(root, linked_configuration);
+            auto status_without_launch = run({"status"});
+            require(status_without_launch.output.find("PROFILE_LAUNCH") == std::string::npos,
+                    "status must remain available when launch configuration is corrupt");
+            std::filesystem::remove(linked_configuration);
+            std::filesystem::rename(configuration / "fixture-launch-pending", linked_configuration);
+        }
+
         write_private_json(selected_machine / "profile.json",
                            read_private_json(profile / "profile.json"));
         fixture_manifest["profile_sha256"] = sha256_file(selected_machine / "profile.json");
@@ -934,13 +824,13 @@ int main(int argc, char **argv) try {
             launch["systemui_adapter"] = {{"component", "com.qinggan.systemui/.SystemUIService"}};
         }
 
-#ifdef _WIN32
-        if (slow_startup) {
+        // The slow startup fixture drives the Windows SDK control over gRPC.
+        if (os::host_windows && slow_startup) {
             launch["sdk_control"] = {{"grpc_port", port + 30000},
                                      {"discovery_root", (root / "fixture-sdk-discovery").string()}};
             launch["args"] = Json::array({"-grpc", std::to_string(port + 30000)});
         }
-#endif
+
         write_private_json(launch_directory / "android-launch.json", launch);
 
         if (!api_first_bind) {
@@ -954,9 +844,9 @@ int main(int argc, char **argv) try {
                                 {"integrity_audited", false}});
         }
 
-#ifndef _WIN32
-        if (reboot_preflight) {
-            require(::setenv("VOYEMU_NATIVE_FIXTURE_ROOT", root.c_str(), 1) == 0,
+        // The in-process reboot preflight covers the POSIX SDK launch of this fixture.
+        if (!os::host_windows && reboot_preflight) {
+            require(os::set_environment_variable("VOYEMU_NATIVE_FIXTURE_ROOT", root.string()),
                     "fixture environment unavailable");
             const auto token = random_token();
             const auto directory = configuration / qinggan09_profile() / "sessions" / token;
@@ -1008,17 +898,19 @@ int main(int argc, char **argv) try {
 
             return 0;
         }
-#endif
+
         auto ready = run({"check"});
         require(ready.exit_code != 0 && ready.output.starts_with("Voyemu:"),
                 "explicit check accepted incomplete portable fixture metadata");
 
         if (api_first_bind || check_portable) {
-#ifdef _WIN32
-            std::filesystem::remove_all(root);
+            // These flows check a POSIX-prepared machine and its Wine alias; Windows skips them.
+            if (os::host_windows) {
+                std::filesystem::remove_all(root);
 
-            return 77;
-#else
+                return 77;
+            }
+
             constexpr auto archive =
                     "86844d2edf6ba7c7f11261f6be3fb37788c985cfcf3b8924cfe9f57a1ccbc0a9";
             const auto sdk = root / ".local/toolchains/native-sdk",
@@ -1328,7 +1220,6 @@ int main(int argc, char **argv) try {
             require(!std::filesystem::exists(configuration / qinggan09_profile() /
                                              "activation.json"),
                     "fresh API fixture unexpectedly has a cached activation");
-#endif
         }
 
         if (canonical_api || api_first_bind) {
@@ -1491,8 +1382,9 @@ int main(int argc, char **argv) try {
             }
         }
 
-#ifndef _WIN32
-        if (runtime_paths) {
+        // Runtime socket paths exist on POSIX only: Windows serves QMP over loopback TCP and
+        // control over named pipes.
+        if (!os::host_windows && runtime_paths) {
             const auto token = random_token();
             const auto directory = configuration / qinggan09_profile() / "sessions" / token;
             Session session(directory, token);
@@ -1534,9 +1426,6 @@ int main(int argc, char **argv) try {
 
             return 0;
         }
-#else
-        (void)runtime_paths;
-#endif
 
         if (boot_trace) {
             require(std::getenv("VOYEMU_ANDROID_BOOT_TRACE") == nullptr,
@@ -1584,11 +1473,13 @@ int main(int argc, char **argv) try {
                         "trace option duplicated");
             }
 
-#ifdef _WIN32
-            const auto qemu = std::find(traced.begin(), traced.end(), Json("-qemu"));
-            require(qemu != traced.end() && std::distance(traced.begin(), qemu) >= 3,
-                    "trace options escaped after QEMU boundary");
-#endif
+            // Only the Windows SDK launch passes QEMU board arguments after -qemu.
+            if (os::host_windows) {
+                const auto qemu = std::find(traced.begin(), traced.end(), Json("-qemu"));
+                require(qemu != traced.end() && std::distance(traced.begin(), qemu) >= 3,
+                        "trace options escaped after QEMU boundary");
+            }
+
             json({"stop"});
             std::filesystem::remove(root / "emulator-arguments.json");
             std::filesystem::remove(root / "emulator-boot-trace.json");
@@ -1616,13 +1507,8 @@ int main(int argc, char **argv) try {
             return 0;
         }
 
-#ifdef _WIN32
-        require(_putenv_s("VOYEMU_NATIVE_FIXTURE_ROOT", root.string().c_str()) == 0,
+        require(os::set_environment_variable("VOYEMU_NATIVE_FIXTURE_ROOT", root.string()),
                 "fixture environment unavailable");
-#else
-        require(::setenv("VOYEMU_NATIVE_FIXTURE_ROOT", root.c_str(), 1) == 0,
-                "fixture environment unavailable");
-#endif
         // A production supervisor owns one Session and embedded ADB host per process.
         auto presentation_probe = [&](bool background) {
             for (const char *name : {"emulator-arguments.json", "frontend-arguments.json",
@@ -1640,7 +1526,6 @@ int main(int argc, char **argv) try {
 
             return read_private_json(root / "presentation-probe.json");
         };
-#ifndef _WIN32
         std::unique_ptr<Session> presentation_session;
         bool presentation_attach = true;
         auto presentation_request = [&](const Json &operation) {
@@ -1665,7 +1550,6 @@ int main(int argc, char **argv) try {
 
             return presentation_session->handle({{"op", "status"}});
         };
-#endif
 
         if (frontend_presentation) {
             auto public_launch = read_private_json(launch_directory / "android-launch.json");
@@ -1692,71 +1576,81 @@ int main(int argc, char **argv) try {
                             headless["deliveries"]["frontend"]["pid"].get<std::int64_t>() > 0 &&
                             headless["deliveries"]["frontend"]["background"] == true,
                     "public A9 background CLI omitted its mandatory cockpit or requested foreground");
-            [[maybe_unused]] const auto background_session =
-                    configuration / qinggan09_profile() / "sessions" /
-                    background_started.at("session_id").get<std::string>();
-#ifdef __APPLE__
-            const auto shown_deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+            const auto background_session = configuration / qinggan09_profile() / "sessions" /
+                                            background_started.at("session_id").get<std::string>();
+            // Only the macOS cockpit writes the media-native proof of its owned surface.
+            const bool media_proof = os::platform_name == "macOS";
 
-            while (!std::filesystem::is_regular_file(background_session /
-                                                     "media-native-proof/splash.png") &&
-                   std::chrono::steady_clock::now() < shown_deadline) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(20));
+            if (media_proof) {
+                const auto shown_deadline = std::chrono::steady_clock::now() +
+                                            std::chrono::seconds(10);
+
+                while (!std::filesystem::is_regular_file(background_session /
+                                                         "media-native-proof/splash.png") &&
+                       std::chrono::steady_clock::now() < shown_deadline) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+                }
+
+                require(std::filesystem::is_regular_file(background_session /
+                                                         "media-native-proof/splash.png"),
+                        "public A9 background cockpit did not render its owned surface");
             }
 
-            require(std::filesystem::is_regular_file(background_session /
-                                                     "media-native-proof/splash.png"),
-                    "public A9 background cockpit did not render its owned surface");
-#endif
             const auto silent = receipt("emulator-arguments.json");
             require(std::find(silent.begin(), silent.end(), Json("-no-audio")) != silent.end(),
                     "public headless CLI enabled audio");
             json({"stop"});
-#ifdef __APPLE__
-            const auto background_proof =
-                    read_private_json(background_session / "media-native-proof/result.json");
-            require(background_proof.at("background") == true &&
-                            background_proof.at("activation_requested") == false &&
-                            background_proof.contains("cluster_ui_inspection"),
-                    "public A9 background cockpit omitted controls or requested activation");
-#endif
-            std::filesystem::remove(root / "emulator-arguments.json");
-            std::filesystem::remove(root / "frontend-arguments.json");
-#ifdef __APPLE__
-            const auto exited_start = json({"start", "--no-cluster", "--background"});
-            const auto exited_status = json({"status"});
-            const auto exited_pid =
-                    exited_status.at("deliveries").at("frontend").at("pid").get<int>();
-            require(exited_pid > 0 &&
-                            exited_status.at("deliveries").at("frontend").at("status") == "started",
-                    "unexpected-exit test has no owned started frontend");
-            require(::kill(exited_pid, SIGTERM) == 0,
-                    "could not close this fixture's owned frontend");
-            const auto exited_directory = configuration / qinggan09_profile() / "sessions" /
-                                          exited_start.at("session_id").get<std::string>();
-            bool exited_clean = false;
-            const auto exited_until = std::chrono::steady_clock::now() + std::chrono::seconds(10);
 
-            while (std::chrono::steady_clock::now() < exited_until) {
-                if (std::filesystem::is_regular_file(exited_directory / "runtime.json") &&
-                    read_private_json(exited_directory / "runtime.json").value("stopped", false) &&
-                    android_port_leasable(port)) {
-                    exited_clean = true;
-                    break;
-                }
-
-                std::this_thread::sleep_for(std::chrono::milliseconds(20));
+            if (media_proof) {
+                const auto background_proof =
+                        read_private_json(background_session / "media-native-proof/result.json");
+                require(background_proof.at("background") == true &&
+                                background_proof.at("activation_requested") == false &&
+                                background_proof.contains("cluster_ui_inspection"),
+                        "public A9 background cockpit omitted controls or requested activation");
             }
 
-            require(exited_clean && tcp_port_free(port) && tcp_port_free(port + 1),
-                    "unexpected frontend exit no longer stopped its owned session");
             std::filesystem::remove(root / "emulator-arguments.json");
-#endif
-#ifdef _WIN32
-            constexpr bool native_background = true;
-#else
-            constexpr bool native_background = false;
-#endif
+            std::filesystem::remove(root / "frontend-arguments.json");
+
+            // The macOS cockpit closes on a termination request like a user closing its window.
+            if (media_proof) {
+                const auto exited_start = json({"start", "--no-cluster", "--background"});
+                const auto exited_status = json({"status"});
+                const auto exited_pid =
+                        exited_status.at("deliveries").at("frontend").at("pid").get<int>();
+                require(exited_pid > 0 &&
+                                exited_status.at("deliveries").at("frontend").at("status") ==
+                                        "started",
+                        "unexpected-exit test has no owned started frontend");
+                require(signal_process(exited_pid, FixtureSignal::terminate),
+                        "could not close this fixture's owned frontend");
+                const auto exited_directory = configuration / qinggan09_profile() / "sessions" /
+                                              exited_start.at("session_id").get<std::string>();
+                bool exited_clean = false;
+                const auto exited_until = std::chrono::steady_clock::now() +
+                                          std::chrono::seconds(10);
+
+                while (std::chrono::steady_clock::now() < exited_until) {
+                    if (std::filesystem::is_regular_file(exited_directory / "runtime.json") &&
+                        read_private_json(exited_directory / "runtime.json")
+                                .value("stopped", false) &&
+                        android_port_leasable(port)) {
+                        exited_clean = true;
+                        break;
+                    }
+
+                    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+                }
+
+                require(exited_clean && tcp_port_free(port) && tcp_port_free(port + 1),
+                        "unexpected frontend exit no longer stopped its owned session");
+                std::filesystem::remove(root / "emulator-arguments.json");
+            }
+
+            // The Windows probe runs the frontend in the background, the POSIX probe in the
+            // foreground.
+            constexpr bool native_background = os::host_windows;
             android["frontend"] = {{"schema", 1},
                                    {"executable", fixture.string()},
                                    {"pins", Json::array({{{"path", fixture.string()},
@@ -1765,112 +1659,105 @@ int main(int argc, char **argv) try {
                                    {"discovery_root", (root / "sdk-running").string()},
                                    {"splash", (root / "splash.png").string()},
                                    {"assets", (root / "assets").string()},
-                                   {"fonts", (root / "fonts").string()},
                                    {"state", (root / "placement.json").string()}};
-            const auto primary = (root / "display0.zip").string(),
-                       secondary = (root / "display1.zip").string();
-            android["frontend"]["startup"] = Json::array({primary, secondary});
             write_private_json(launch_directory / "android-launch.json", android);
             const auto native = presentation_probe(native_background);
             const auto &arguments = native.at("arguments");
-            const auto startup_argument = [](const Json &args, const char *key) {
-                const auto flag = std::find(args.begin(), args.end(), Json(key));
-                require(flag != args.end() && std::next(flag) != args.end(),
-                        "missing frontend startup argument");
 
-                return *std::next(flag);
-            };
-            require(startup_argument(arguments, "--startup0") == "black" &&
-                            startup_argument(arguments, "--startup1") == "black",
-                    "direct power-on replayed the unlock animations");
-#ifdef _WIN32
-            require(std::find(arguments.begin(), arguments.end(), Json("--background")) !=
-                                    arguments.end() &&
-                            native["frontend"]["background"] == true,
-                    "normal Windows frontend must preserve foreground");
-#else
-            require(std::find(arguments.begin(), arguments.end(), Json("--background")) ==
-                                    arguments.end() &&
-                            native["frontend"]["background"] == false,
-                    "Mac native presentation changed");
-#endif
+            if (native_background) {
+                require(std::find(arguments.begin(), arguments.end(), Json("--background")) !=
+                                        arguments.end() &&
+                                native["frontend"]["background"] == true,
+                        "normal Windows frontend must preserve foreground");
+            } else {
+                require(std::find(arguments.begin(), arguments.end(), Json("--background")) ==
+                                        arguments.end() &&
+                                native["frontend"]["background"] == false,
+                        "Mac native presentation changed");
+            }
+
             const auto &audible = native.at("sdk");
             require(std::find(audible.begin(), audible.end(), Json("-no-audio")) == audible.end(),
                     "normal native presentation disabled prepared audio");
-#ifndef _WIN32
-            const auto free_launch = android;
-            android["api"] = 30;
-            android["reference_profile"] = "synthetic-passion";
-            android["platform"] = "passion";
-            android["board"] = "8155";
-            android["home"] = {{"package", "com.voyah.os.carlauncher"},
-                               {"component", passion_home}};
-            android["presentation_adapter"] = passion_presentation_contract("synthetic-passion");
-            android.erase("vehicle_adapter");
-            android.erase("wheel_adapter");
-            android.erase("systemui_adapter");
-            android["frontend"]["cluster_controls"] = false;
-            {
-                std::filesystem::path passion_template = machine / "passion-config-template.ini";
-                std::filesystem::copy_file(config_template, passion_template);
+
+            // The POSIX probe also covers the Passion and Free background presentation.
+            if (!os::host_windows) {
+                const auto free_launch = android;
+                android["api"] = 30;
+                android["reference_profile"] = "synthetic-passion";
+                android["platform"] = "passion";
+                android["board"] = "8155";
+                android["home"] = {{"package", "com.voyah.os.carlauncher"},
+                                   {"component", passion_home}};
+                android["presentation_adapter"] =
+                        passion_presentation_contract("synthetic-passion");
+                android.erase("vehicle_adapter");
+                android.erase("wheel_adapter");
+                android.erase("systemui_adapter");
+                android["frontend"]["cluster_controls"] = false;
                 {
-                    std::ofstream passion_config(passion_template,
-                                                 std::ios::binary | std::ios::app);
-                    passion_config << "hw.camera.back=emulated\nhw.camera.front=none\n";
+                    std::filesystem::path passion_template = machine /
+                                                             "passion-config-template.ini";
+                    std::filesystem::copy_file(config_template, passion_template);
+                    {
+                        std::ofstream passion_config(passion_template,
+                                                     std::ios::binary | std::ios::app);
+                        passion_config << "hw.camera.back=emulated\nhw.camera.front=none\n";
+                    }
+                    android["config_template"] = passion_template.string();
+                    android["pins"].push_back({{"path", passion_template.string()},
+                                               {"sha256", sha256_file(passion_template)}});
                 }
-                android["config_template"] = passion_template.string();
-                android["pins"].push_back({{"path", passion_template.string()},
-                                           {"sha256", sha256_file(passion_template)}});
-            }
-            write_private_json(launch_directory / "android-launch.json", android);
-            const auto passion_native = presentation_probe(true);
-            const auto &passion_args = passion_native.at("arguments");
-            const auto &passion_sdk = passion_native.at("sdk");
+                write_private_json(launch_directory / "android-launch.json", android);
+                const auto passion_native = presentation_probe(true);
+                const auto &passion_args = passion_native.at("arguments");
+                const auto &passion_sdk = passion_native.at("sdk");
             require(startup_argument(passion_args, "--startup0") == primary &&
                             startup_argument(passion_args, "--startup1") == secondary,
                     "native presentation dropped another platform's startup animations");
-            require(std::find(passion_args.begin(), passion_args.end(), Json("--assets")) !=
-                                    passion_args.end() &&
-                            std::find(passion_args.begin(), passion_args.end(),
-                                      Json("--endpoint")) != passion_args.end(),
-                    "legacy false controls flag removed cockpit assets or controller");
-            require(std::find(passion_sdk.begin(), passion_sdk.end(), Json("-no-audio")) ==
-                            passion_sdk.end(),
-                    "Passion background disabled normal prepared audio");
-            require(std::find(passion_args.begin(), passion_args.end(), Json("--background")) !=
-                                    passion_args.end() &&
-                            std::find(passion_args.begin(), passion_args.end(),
-                                      Json("--no-cluster")) != passion_args.end() &&
-                            passion_native["frontend"]["background"] == true,
-                    "Passion background presentation did not retain the native cockpit without focus");
-            android.erase("presentation_adapter");
-            android.erase("reference_profile");
+                require(std::find(passion_args.begin(), passion_args.end(), Json("--assets")) !=
+                                        passion_args.end() &&
+                                std::find(passion_args.begin(), passion_args.end(),
+                                          Json("--endpoint")) != passion_args.end(),
+                        "legacy false controls flag removed cockpit assets or controller");
+                require(std::find(passion_sdk.begin(), passion_sdk.end(), Json("-no-audio")) ==
+                                passion_sdk.end(),
+                        "Passion background disabled normal prepared audio");
+                require(std::find(passion_args.begin(), passion_args.end(), Json("--background")) !=
+                                        passion_args.end() &&
+                                std::find(passion_args.begin(), passion_args.end(),
+                                          Json("--no-cluster")) != passion_args.end() &&
+                                passion_native["frontend"]["background"] == true,
+                        "Passion background presentation did not retain the native cockpit without focus");
+                android.erase("presentation_adapter");
+                android.erase("reference_profile");
 
-            // The Free probe returns to the platform and board of the qinggan09 machine.
-            for (const auto *key : {"platform", "board"}) {
-                if (free_launch.contains(key)) {
-                    android[key] = free_launch.at(key);
-                } else {
-                    android.erase(key);
+                // The Free probe returns to the platform and board of the qinggan09 machine.
+                for (const auto *key : {"platform", "board"}) {
+                    if (free_launch.contains(key)) {
+                        android[key] = free_launch.at(key);
+                    } else {
+                        android.erase(key);
+                    }
                 }
+
+                android["home"] = {
+                        {"package", "com.qinggan.app.launcher"},
+                        {"component",
+                         "com.qinggan.app.launcher/com.qinggan.app.launcher.activity.MainActivity"}};
+                write_private_json(launch_directory / "android-launch.json", android);
+                const auto free_status = presentation_probe(true);
+                const auto &free_args = free_status.at("arguments");
+                const auto &free_sdk = free_status.at("sdk");
+                require(std::find(free_sdk.begin(), free_sdk.end(), Json("-no-audio")) ==
+                                free_sdk.end(),
+                        "Free background disabled normal prepared audio");
+                require(std::find(free_args.begin(), free_args.end(), Json("--background")) !=
+                                        free_args.end() &&
+                                free_status["frontend"]["background"] == true,
+                        "Free background native frontend must preserve focus");
             }
 
-            android["home"] = {
-                    {"package", "com.qinggan.app.launcher"},
-                    {"component",
-                     "com.qinggan.app.launcher/com.qinggan.app.launcher.activity.MainActivity"}};
-            write_private_json(launch_directory / "android-launch.json", android);
-            const auto free_status = presentation_probe(true);
-            const auto &free_args = free_status.at("arguments");
-            const auto &free_sdk = free_status.at("sdk");
-            require(std::find(free_sdk.begin(), free_sdk.end(), Json("-no-audio")) ==
-                            free_sdk.end(),
-                    "Free background disabled normal prepared audio");
-            require(std::find(free_args.begin(), free_args.end(), Json("--background")) !=
-                                    free_args.end() &&
-                            free_status["frontend"]["background"] == true,
-                    "Free background native frontend must preserve focus");
-#endif
             std::filesystem::remove_all(root);
             std::cout
                     << "Session native presentation and headless automation audio contracts passed\n";
@@ -1878,8 +1765,8 @@ int main(int argc, char **argv) try {
             return 0;
         }
 
-#ifndef _WIN32
-        if (cluster_lifecycle || frontend_lifecycle || startup_cancel) {
+        // The lifecycle cluster child serves QMP on a runtime Unix socket, which Windows lacks.
+        if (!os::host_windows && (cluster_lifecycle || frontend_lifecycle || startup_cancel)) {
             write_cluster_fixture(
                     {{"schema", 1},
                      {"pins", Json::array({{{"path", fixture.string()},
@@ -2190,26 +2077,24 @@ int main(int argc, char **argv) try {
 
             return 0;
         }
-#else
-        (void)cluster_lifecycle;
-        (void)frontend_lifecycle;
-        (void)startup_cancel;
-#endif
 
         if (control_latency) {
             std::string endpoint = "${RUNTIME}/${TOKEN}-qmp.sock";
             Json qmp = endpoint;
-#ifdef _WIN32
-            unsigned qmp_port = port + 30000;
 
-            while (qmp_port < 65535 && !tcp_port_free(qmp_port)) {
-                ++qmp_port;
+            // Windows serves QMP over loopback TCP instead of a runtime Unix socket.
+            if (os::host_windows) {
+                unsigned qmp_port = port + 30000;
+
+                while (qmp_port < 65535 && !tcp_port_free(qmp_port)) {
+                    ++qmp_port;
+                }
+
+                require(tcp_port_free(qmp_port), "no isolated fixture QMP port available");
+                endpoint = "tcp:127.0.0.1:" + std::to_string(qmp_port);
+                qmp = {{"host", "127.0.0.1"}, {"port", qmp_port}};
             }
 
-            require(tcp_port_free(qmp_port), "no isolated fixture QMP port available");
-            endpoint = "tcp:127.0.0.1:" + std::to_string(qmp_port);
-            qmp = {{"host", "127.0.0.1"}, {"port", qmp_port}};
-#endif
             // This idle host child exercises control publication, not a QMP server or guest.
             write_cluster_fixture({{"schema", 1},
                                    {"pins", Json::array({{{"path", fixture.string()},
@@ -2284,13 +2169,9 @@ int main(int argc, char **argv) try {
                                 std::filesystem::file_type::regular &&
                         std::filesystem::file_size(launch_lock) == 0,
                 "startup admission lock is not an ordinary empty file");
-#ifndef _WIN32
-        struct stat launch_lock_status{};
-        require(::lstat(launch_lock.c_str(), &launch_lock_status) == 0 &&
-                        launch_lock_status.st_uid == ::geteuid() &&
-                        (launch_lock_status.st_mode & 0777) == 0600,
+        // Windows has no POSIX owner and mode; its private files are checked on their handles.
+        require(os::host_windows || owner_only_file(launch_lock),
                 "startup admission lock owner or mode differs");
-#endif
         auto after_resume = fixture_files();
         const auto launch_lock_key = launch_lock.lexically_relative(root).generic_string();
 
@@ -2307,22 +2188,21 @@ int main(int argc, char **argv) try {
                 "missing resume allocated a session, supervisor or SDK guest");
         require(!std::filesystem::exists(saved_scenario_path.parent_path()),
                 "missing resume created saved state directory");
-        const auto saved_scenario = apply_patch(initial_state(VehicleCatalog::qinggan09),
+        const auto saved_scenario = apply_patch(initial_state(),
                                                 {{"speed", 80}, {"gear", 2}, {"tail_gate", 1}});
-#ifdef _WIN32
-        if (identity_backpressure) {
+
+        // The identity backpressure fixture holds the framed startup transport of Windows.
+        if (os::host_windows && identity_backpressure) {
             ensure_private_directory(root / "identity-probe-clients");
             write_private_json(root / "identity-bootstrap-hold",
                                {{"phase", 1}, {"released", false}});
         }
-#endif
-#ifdef _WIN32
+
+        require(os::host_windows || !slow_startup, "slow Windows startup fixture requires Windows");
+
         if (slow_startup) {
             write_private_json(root / "slow-startup-guest.json", {{"milliseconds", 1800}});
         }
-#else
-        require(!slow_startup, "slow Windows startup fixture requires Windows");
-#endif
 
         if (boot_observation) {
             std::ofstream(root / "boot-id-fail-once") << "one guarded boot observation failure\n";
@@ -2409,7 +2289,9 @@ int main(int argc, char **argv) try {
         auto first_directory = configuration / qinggan09_profile() / "sessions" / first_id;
 
         if (root_restart) {
-#ifdef _WIN32
+            // The root restart fixture observes the raw root submit of the Windows startup
+            // transport.
+            require(os::host_windows, "root restart fixture requires Windows");
             bool observed = false;
             Json android;
             const auto until = std::chrono::steady_clock::now() + std::chrono::seconds(25);
@@ -2514,13 +2396,11 @@ int main(int argc, char **argv) try {
                     << root.string() << '\n';
 
             return 0;
-#else
-            throw std::runtime_error("root restart fixture requires Windows");
-#endif
         }
 
         if (clock_service) {
-#ifdef _WIN32
+            // The clock fixtures observe the clock transaction of the Windows startup transport.
+            require(os::host_windows, "clock service fixture requires Windows");
             bool ready = false;
             const auto until = std::chrono::steady_clock::now() + std::chrono::seconds(30);
 
@@ -2549,13 +2429,10 @@ int main(int argc, char **argv) try {
             std::cout << "Absent alarm service retained degraded readiness without a write\n";
 
             return 0;
-#else
-            throw std::runtime_error("clock service fixture requires Windows");
-#endif
         }
 
         if (clock_observation) {
-#ifdef _WIN32
+            require(os::host_windows, "clock observation fixture requires Windows");
             bool ready = false;
             const auto until = std::chrono::steady_clock::now() + std::chrono::seconds(45);
 
@@ -2666,9 +2543,6 @@ int main(int argc, char **argv) try {
                     << root.string() << '\n';
 
             return 0;
-#else
-            throw std::runtime_error("clock observation fixture requires Windows");
-#endif
         }
 
         if (slow_startup) {
@@ -2783,14 +2657,16 @@ int main(int argc, char **argv) try {
                 const auto path = root / ".local/build" / ("slow-api-" + random_token() + ".json");
                 ensure_private_directory(path.parent_path());
                 write_private_json(path, input);
+                // Windows keeps the response apart from structured stderr diagnostics through the
+                // split-channel fixture.
                 const auto result = [&] {
-#ifdef _WIN32
-                    return fixture_public_cli(
-                            cli, {"test", "--request", path.string(), "--root", root.string()},
-                            root);
-#else
+                    if (os::host_windows) {
+                        return fixture_public_cli(
+                                cli, {"test", "--request", path.string(), "--root", root.string()},
+                                root);
+                    }
+
                     return run({"test", "--request", path.string()}, 30000);
-#endif
                 }();
                 require(!result.timed_out &&
                                 (expect_success ? result.exit_code == 0 : result.exit_code != 0),
@@ -3096,58 +2972,64 @@ int main(int argc, char **argv) try {
             unsigned failed = 0, success = 0, labeled = 0;
             std::istringstream lines(contents);
             std::string line;
-#ifndef _WIN32
             constexpr unsigned boot_bytes = 37;
-#endif
 
             while (std::getline(lines, line)) {
                 const auto record = Json::parse(line);
                 const auto message = record.value("message", std::string{});
                 const auto &fields = record.at("fields");
-#ifdef _WIN32
-                if (message != "startup.action" ||
-                    fields.at("phase") != static_cast<unsigned>(WindowsStartupPhase::identity)) {
+
+                // Windows observes the boot through framed identity actions of its startup
+                // transport, POSIX through guarded ADB boot observations.
+                if (os::host_windows) {
+                    if (message != "startup.action" ||
+                        fields.at("phase") !=
+                                static_cast<unsigned>(WindowsStartupPhase::identity)) {
+                        continue;
+                    }
+
+                    if (fields.at("stage") == "launched") {
+                        ++labeled;
+                        continue;
+                    }
+
+                    require(fields.at("stage") == "stream_terminal" &&
+                                    fields.at("host_owner_verified") == true &&
+                                    fields.at("retained_terminal") == true,
+                            "framed boot observation lacked retained host proof");
+                    const std::set<std::string> expected{"stage",
+                                                         "phase",
+                                                         "sdk_pid",
+                                                         "generation",
+                                                         "elapsed_ms",
+                                                         "exit_code",
+                                                         "timed_out",
+                                                         "output_bytes",
+                                                         "host_owner_verified",
+                                                         "retained_terminal"};
+                    require(fields.size() == expected.size(), "framed boot scalar schema changed");
+
+                    for (const auto &[key, value] : fields.items()) {
+                        (void)value;
+                        require(expected.contains(key),
+                                "framed boot observation leaked payload field");
+                    }
+
+                    if (fields.at("exit_code") == 7) {
+                        require(fields.at("output_bytes") == 0 && fields.at("timed_out") == false,
+                                "failed framed boot outcome changed");
+                        ++failed;
+                    } else {
+                        require(fields.at("exit_code") == 0 &&
+                                        fields.at("output_bytes").get<std::size_t>() > 38 &&
+                                        fields.at("timed_out") == false,
+                                "complete framed boot response missing");
+                        ++success;
+                    }
+
                     continue;
                 }
 
-                if (fields.at("stage") == "launched") {
-                    ++labeled;
-                    continue;
-                }
-
-                require(fields.at("stage") == "stream_terminal" &&
-                                fields.at("host_owner_verified") == true &&
-                                fields.at("retained_terminal") == true,
-                        "framed boot observation lacked retained host proof");
-                const std::set<std::string> expected{"stage",
-                                                     "phase",
-                                                     "sdk_pid",
-                                                     "generation",
-                                                     "elapsed_ms",
-                                                     "exit_code",
-                                                     "timed_out",
-                                                     "output_bytes",
-                                                     "host_owner_verified",
-                                                     "retained_terminal"};
-                require(fields.size() == expected.size(), "framed boot scalar schema changed");
-
-                for (const auto &[key, value] : fields.items()) {
-                    (void)value;
-                    require(expected.contains(key), "framed boot observation leaked payload field");
-                }
-
-                if (fields.at("exit_code") == 7) {
-                    require(fields.at("output_bytes") == 0 && fields.at("timed_out") == false,
-                            "failed framed boot outcome changed");
-                    ++failed;
-                } else {
-                    require(fields.at("exit_code") == 0 &&
-                                    fields.at("output_bytes").get<std::size_t>() > 38 &&
-                                    fields.at("timed_out") == false,
-                            "complete framed boot response missing");
-                    ++success;
-                }
-#else
                 if (message == "adb.completed" && fields.at("operation") == "shell.boot_id") {
                     ++labeled;
                 }
@@ -3189,7 +3071,6 @@ int main(int argc, char **argv) try {
                             "successful boot observation lost verified ownership");
                     ++success;
                 }
-#endif
             }
 
             require(failed == 1 && success > 0 && labeled >= failed + success,
@@ -3201,8 +3082,8 @@ int main(int argc, char **argv) try {
             return 0;
         }
 
-#ifdef _WIN32
-        if (identity_backpressure) {
+        // The identity backpressure fixture holds the framed startup transport of Windows.
+        if (os::host_windows && identity_backpressure) {
             unsigned phase = 1;
             auto count = [&] {
                 std::set<std::uint64_t> operations;
@@ -3390,7 +3271,7 @@ int main(int argc, char **argv) try {
 
             return 0;
         }
-#endif
+
         // start acknowledges the supervisor, so the asynchronous SDK receipt may arrive later.
         const auto args_deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
 
@@ -3422,32 +3303,31 @@ int main(int argc, char **argv) try {
                         processes.at("adbd_port") == port + 1 && !processes.contains("adb_pid") &&
                         processes.at("generation").get<unsigned>() == 1,
                 "early owned SDK process and adbd port metadata missing before guest readiness");
-#ifndef _WIN32
-        if (orphan_recovery) {
+
+        // The orphan recovery fixture identifies supervisors by their POSIX process start and
+        // arguments.
+        if (!os::host_windows && orphan_recovery) {
             const auto supervisor = process_owner.at("creator_pid").get<std::int64_t>();
-            const auto start = os::process_start_identity(supervisor);
-            const auto arguments = os::process_arguments(supervisor);
+            const auto start = process_start(supervisor);
+            const auto arguments = process_arguments(supervisor);
             require(start &&
                             std::find(arguments.begin(), arguments.end(),
                                       first_directory.string()) != arguments.end() &&
-                            os::process_start_identity(supervisor) == start,
+                            process_start(supervisor) == start,
                     "orphan fixture supervisor identity differs");
-            require(::kill(static_cast<pid_t>(supervisor), SIGKILL) == 0,
+            require(signal_process(supervisor, FixtureSignal::kill),
                     "orphan fixture supervisor kill failed");
             const auto until = std::chrono::steady_clock::now() + std::chrono::seconds(5);
 
-            while (os::process_start_identity(supervisor) == start &&
-                   std::chrono::steady_clock::now() < until) {
+            while (process_start(supervisor) == start && std::chrono::steady_clock::now() < until) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(10));
             }
 
-            require(os::process_start_identity(supervisor) != start,
-                    "orphan fixture supervisor remains");
+            require(process_start(supervisor) != start, "orphan fixture supervisor remains");
             const auto terminal = json({"stop"});
             require(terminal.value("stopped", false) &&
                             !std::filesystem::exists(active.at("endpoint").get<std::string>()) &&
-                            !os::process_start_identity(
-                                    processes.at("sdk_pid").get<std::int64_t>()),
+                            !process_start(processes.at("sdk_pid").get<std::int64_t>()),
                     "ordinary orphan stop retained SDK or endpoint");
             require(terminal.at("deliveries").at("qnx") == active.at("deliveries").at("qnx"),
                     "Android-only orphan stop changed an unstarted QNX delivery");
@@ -3470,7 +3350,7 @@ int main(int argc, char **argv) try {
                                         next.at("session_id").get<std::string>();
             const auto next_owner = read_private_json(next_directory / "session-owner.json");
             const auto next_supervisor = next_owner.at("creator_pid").get<std::int64_t>();
-            const auto next_start = os::process_start_identity(next_supervisor);
+            const auto next_start = process_start(next_supervisor);
             const auto gate = root / "descendant-release.json",
                        ready = root / "descendant-ready.json";
             ProcessSpec descendant;
@@ -3493,12 +3373,12 @@ int main(int argc, char **argv) try {
                 try {
                     const auto until = std::chrono::steady_clock::now() + std::chrono::seconds(10);
 
-                    while (os::process_start_identity(next_supervisor) == next_start &&
+                    while (process_start(next_supervisor) == next_start &&
                            std::chrono::steady_clock::now() < until) {
                         std::this_thread::sleep_for(std::chrono::milliseconds(10));
                     }
 
-                    require(os::process_start_identity(next_supervisor) != next_start,
+                    require(process_start(next_supervisor) != next_start,
                             "next supervisor did not release its lifetime");
                     write_private_json(gate, {{"release", true}});
                 } catch (...) {
@@ -3527,29 +3407,22 @@ int main(int argc, char **argv) try {
 
             return 0;
         }
-#endif
-        // The USB controller and its QMP channel follow the board arguments of the host.
-        require(sdk_args.size() >= 4 && sdk_args.at(sdk_args.size() - 4) == "-device" &&
-                        sdk_args.at(sdk_args.size() - 3) == "usb-ehci,id=voyemu-usb" &&
-                        sdk_args.at(sdk_args.size() - 2) == "-qmp" &&
-                        sdk_args.back().get<std::string>().ends_with(",server=on,wait=off"),
-                "SDK launch lacks the USB controller and its QMP channel");
-        require(std::count(sdk_args.begin(), sdk_args.end(), Json("-qemu")) == 1,
-                "SDK launch has more than one QEMU boundary");
-#ifdef _WIN32
-        const auto trusted_tail = android_sdk_machine_arguments(true);
-        require(sdk_args.size() >= trusted_tail.size() + 4 &&
-                        std::equal(trusted_tail.begin(), trusted_tail.end(),
-                                   sdk_args.end() -
-                                           static_cast<std::ptrdiff_t>(trusted_tail.size() + 4),
-                                   [](const std::string &expected, const Json &actual) {
-                                       return actual == Json(expected);
-                                   }),
-                "Windows ARM64 launch omitted the owned virt/TCG/ICount tail");
-#else
-        require(sdk_args.at(sdk_args.size() - 5) == "-qemu",
-                "Mac launch acquired Windows QEMU board arguments");
-#endif
+
+        // Only the Windows SDK launch appends the owned QEMU machine arguments.
+        if (os::host_windows) {
+            const auto trusted_tail = android_sdk_machine_arguments(true);
+            require(sdk_args.size() >= trusted_tail.size() &&
+                            std::equal(trusted_tail.begin(), trusted_tail.end(),
+                                       sdk_args.end() -
+                                               static_cast<std::ptrdiff_t>(trusted_tail.size()),
+                                       [](const std::string &expected, const Json &actual) {
+                                           return actual == Json(expected);
+                                       }),
+                    "Windows ARM64 launch omitted the owned virt/TCG/ICount tail");
+        } else {
+            require(std::find(sdk_args.begin(), sdk_args.end(), Json("-qemu")) == sdk_args.end(),
+                    "Mac launch acquired Windows QEMU board arguments");
+        }
 
         if (!gpu_mode.empty()) {
             auto option = std::find(sdk_args.begin(), sdk_args.end(), Json("-gpu"));
@@ -3603,18 +3476,20 @@ int main(int argc, char **argv) try {
                                 "config.ini") != prepared_config_sha256,
                 "SDK config mutation reached prepared input or fixture did not mutate config");
         require_disks();
-#ifndef _WIN32
-        auto owner = read_private_json(first_directory / "session-owner.json", 4096);
-        auto supervisor_pid = owner.at("creator_pid").get<int>();
-        require(owner.at("session_id") == first_id && supervisor_pid > 1,
-                "signal regression requires the exact own fixture supervisor");
-        require(::kill(supervisor_pid, SIGPIPE) == 0,
-                "own supervisor SIGPIPE regression could not deliver signal");
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
-        auto survived = json({"status"});
-        require(survived.at("session_id") == first_id && !survived.value("stopped", true),
-                "SIGPIPE killed the native supervisor or replaced its epoch");
-#endif
+
+        // SIGPIPE exists on POSIX only.
+        if (!os::host_windows) {
+            auto owner = read_private_json(first_directory / "session-owner.json", 4096);
+            auto supervisor_pid = owner.at("creator_pid").get<int>();
+            require(owner.at("session_id") == first_id && supervisor_pid > 1,
+                    "signal regression requires the exact own fixture supervisor");
+            require(signal_process(supervisor_pid, FixtureSignal::broken_pipe),
+                    "own supervisor SIGPIPE regression could not deliver signal");
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            auto survived = json({"status"});
+            require(survived.at("session_id") == first_id && !survived.value("stopped", true),
+                    "SIGPIPE killed the native supervisor or replaced its epoch");
+        }
 
         auto press = request(active.at("endpoint").get<std::string>(), {{"op", "wheel"},
                                                                         {"session_id", first_id},
@@ -3730,12 +3605,14 @@ int main(int argc, char **argv) try {
         }
 
         if (control_latency) {
-#ifdef _WIN32
-            const auto supervisor_pid = process_owner.at("creator_pid").get<DWORD>();
-            std::unique_ptr<void, decltype(&CloseHandle)> supervisor(
-                    OpenProcess(SYNCHRONIZE, FALSE, supervisor_pid), &CloseHandle);
-            require(bool(supervisor), "open own control fixture supervisor");
-#endif
+            // Windows keeps the supervisor files open until its process exits, so the flow waits
+            // for it.
+            std::optional<ProcessExit> supervisor;
+
+            if (os::host_windows) {
+                supervisor.emplace(process_owner.at("creator_pid").get<std::int64_t>());
+                require(supervisor->opened(), "open own control fixture supervisor");
+            }
 
             const auto endpoint = active.at("endpoint").get<std::string>();
             auto rpc = [&](Json value) {
@@ -3890,10 +3767,8 @@ int main(int argc, char **argv) try {
                     "concurrent lifecycle did not cleanly stop owned Android");
             require(read_private_json(root / "held-input.json").empty(),
                     "concurrent wheel phases left held input");
-#ifdef _WIN32
-            require(WaitForSingleObject(supervisor.get(), 5000) == WAIT_OBJECT_0,
+            require(!supervisor || supervisor->exited_within(std::chrono::milliseconds(5000)),
                     "control fixture supervisor did not release its files");
-#endif
             std::filesystem::remove_all(root);
             std::cout
                     << "bounded ADB leaves input/status/wheel responsive; captured state and lifecycle remain guarded\n";
@@ -3948,14 +3823,11 @@ int main(int argc, char **argv) try {
             const auto revision = changed["state"]["sequence"];
             bool applied = false;
             Json last_status = changed, publication_samples = Json::array();
-#ifdef _WIN32
             // Windows uses a framed readiness transaction around the protected receipt. Its
             // three-second maintenance interval is still much longer than this full publication
             // budget.
-            constexpr auto delivery_budget = std::chrono::milliseconds(1500);
-#else
-            constexpr auto delivery_budget = std::chrono::milliseconds(500);
-#endif
+            constexpr auto delivery_budget = std::chrono::milliseconds(os::host_windows ? 1500
+                                                                                        : 500);
 
             while (std::chrono::steady_clock::now() - started < delivery_budget) {
                 last_status = request(endpoint, {{"op", "status"}, {"session_id", first_id}});
@@ -4116,8 +3988,8 @@ int main(int argc, char **argv) try {
                     "clean checkpoint not persisted after owned process exit");
         }
 
-#ifndef _WIN32
-        if (unowned) {
+        // The unowned restore models the detached SDK launcher of POSIX hosts.
+        if (!os::host_windows && unowned) {
             write_private_json(root / "clock-state.json", {{"offset_ms", -3600000}});
             require(!std::filesystem::exists(root / "clock-set-receipt.json"),
                     "fresh unowned fixture unexpectedly corrected time");
@@ -4181,7 +4053,7 @@ int main(int argc, char **argv) try {
 
             return 0;
         }
-#endif
+
         const auto captured_vehicle_state =
                 state_restore ? read_private_json(root / "full-input.json") : Json::object();
 
@@ -4234,21 +4106,14 @@ int main(int argc, char **argv) try {
         require(second_id != first_id, "immediate restart reused stopped epoch");
 
         if (latency) {
-#ifdef _WIN32
-            // A retained sequence crosses several owned ADB fences before reaching the
+            // On Windows a retained sequence crosses several owned ADB fences before reaching the
             // state provider. It must still complete within one maintenance interval.
-            constexpr int readiness_ms = 3000;
-            constexpr int recovery_ms = 10000;
-            constexpr int debug_readiness_ms = 10000;
-            constexpr auto pending_receipt = "submitted_unverified";
-            constexpr int boot_before_receipt = 0;
-#else
-            constexpr int readiness_ms = 1200;
-            constexpr int recovery_ms = 5000;
-            constexpr int debug_readiness_ms = 5000;
-            constexpr auto pending_receipt = "awaiting_state_receipt";
-            constexpr int boot_before_receipt = 1;
-#endif
+            constexpr int readiness_ms = os::host_windows ? 3000 : 1200;
+            constexpr int recovery_ms = os::host_windows ? 10000 : 5000;
+            constexpr int debug_readiness_ms = os::host_windows ? 10000 : 5000;
+            constexpr auto pending_receipt = os::host_windows ? "submitted_unverified"
+                                                              : "awaiting_state_receipt";
+            constexpr int boot_before_receipt = os::host_windows ? 0 : 1;
             auto status = [&] {
                 return request(second.at("endpoint").get<std::string>(),
                                {{"op", "status"}, {"session_id", second_id}}, 10000);
@@ -4323,15 +4188,8 @@ int main(int argc, char **argv) try {
                                                .starts_with("ANDROID_IDENTITY_MISMATCH") &&
                                        !android.contains("wheel_bootstrap") &&
                                        !android.value("guest_acknowledged", false);
-                            }
-#ifdef _WIN32
-                            ,
-                            5000
-#else
-                            ,
-                            1200
-#endif
-                            ),
+                            },
+                            os::host_windows ? 5000 : 1200),
                     "startup retry accepted stale identity or exceeded bounded recovery");
             require(read_private_json(root / "provider-session.json")["session_id"] == first_id,
                     "stale identity replaced the protected control credential");
@@ -4354,13 +4212,9 @@ int main(int argc, char **argv) try {
                             readiness_ms),
                     "fresh bootstrap skipped or stale full-state publication was accepted");
             auto bootstrap_probes = read_private_json(root / "bootstrap-probes.json");
-#ifdef _WIN32
-            constexpr int expected_bootstrap_identity_pairs = 9;
-#else
-            // Outer identity + two boot-observation identities + two already-root bootstrap fences
-            // + four clock fences.
-            constexpr int expected_bootstrap_identity_pairs = 1 + 2 + 2 + 4;
-#endif
+            // POSIX: outer identity + two boot-observation identities + two already-root bootstrap
+            // fences + four clock fences; Windows counts the identities of its framed startup.
+            constexpr int expected_bootstrap_identity_pairs = os::host_windows ? 9 : 1 + 2 + 2 + 4;
             require(bootstrap_probes.value("token", 0) == expected_bootstrap_identity_pairs &&
                             bootstrap_probes.value("name", 0) == expected_bootstrap_identity_pairs,
                     "API2 bootstrap ownership/boot fences exceeded the bounded observation count");
@@ -4374,12 +4228,12 @@ int main(int argc, char **argv) try {
                             [&](const Json &value) {
                                 const auto &android = value["deliveries"]["android"];
 
-#ifdef _WIN32
-                                return android.value("status", std::string{}) ==
-                                               "protected_state_verified" &&
-#else
-                                return android.value("guest_acknowledged", false) &&
-#endif
+                                // Windows verifies the protected state before the guest
+                                // acknowledgement.
+                                return (os::host_windows
+                                                ? android.value("status", std::string{}) ==
+                                                          "protected_state_verified"
+                                                : android.value("guest_acknowledged", false)) &&
                                        android.value("sequence", 0u) == latest_sequence &&
                                        !android.contains("displays");
                             },
@@ -4392,35 +4246,39 @@ int main(int argc, char **argv) try {
                             },
                             readiness_ms),
                     "secondary display did not receive fast readiness retries");
-#ifndef _WIN32
-            require(read_private_json(root / "readiness-probes.json").value("theme", 0) == 2,
+            // The theme probe count belongs to the POSIX readiness pass.
+            require(os::host_windows ||
+                            read_private_json(root / "readiness-probes.json").value("theme", 0) ==
+                                    2,
                     "fast readiness repeated steady-state Binder theme polling");
-#endif
             require(read_private_json(root / "readiness-probes.json").value("wake", 0) == 1,
                     "pending readiness repeated successful display activation");
             std::filesystem::remove(root / "display-hold");
-#ifdef __APPLE__
-            require(wait(
-                            [&](const Json &value) {
-                                return read_private_json(root / "readiness-probes.json")
-                                                       .value("resize", 0) == 2 &&
-                                       !value["deliveries"]["android"].contains("displays");
-                            },
-                            readiness_ms),
-                    "late or invalid canvas bypassed readiness guard");
-            write_private_json(
-                    configuration / qinggan09_profile() / "sessions" / second_id /
-                            "media-window.json",
-                    {{"schema", 1},
-                     {"source", "own-window-instrumentation"},
-                     {"bundle_identifier", "com.voyemu.emulator"},
-                     {"backing_scale", 2},
-                     {"content_points", Json::array({1920, 360})},
-                     {"content_subviews",
-                      Json::array({{{"class", "EmuGLViewWithMetal"},
-                                    {"frame_points", Json::array({0, 0, 1920, 360})},
-                                    {"bounds_points", Json::array({0, 0, 1920, 360})}}})}});
-#endif
+
+            // Only the macOS media window publishes its canvas instrumentation.
+            if (os::platform_name == "macOS") {
+                require(wait(
+                                [&](const Json &value) {
+                                    return read_private_json(root / "readiness-probes.json")
+                                                           .value("resize", 0) == 2 &&
+                                           !value["deliveries"]["android"].contains("displays");
+                                },
+                                readiness_ms),
+                        "late or invalid canvas bypassed readiness guard");
+                write_private_json(
+                        configuration / qinggan09_profile() / "sessions" / second_id /
+                                "media-window.json",
+                        {{"schema", 1},
+                         {"source", "own-window-instrumentation"},
+                         {"bundle_identifier", "com.voyemu.emulator"},
+                         {"backing_scale", 2},
+                         {"content_points", Json::array({1920, 360})},
+                         {"content_subviews",
+                          Json::array({{{"class", "EmuGLViewWithMetal"},
+                                        {"frame_points", Json::array({0, 0, 1920, 360})},
+                                        {"bounds_points", Json::array({0, 0, 1920, 360})}}})}});
+            }
+
             require(wait(
                             [&](const Json &value) {
                                 const auto &android = value["deliveries"]["android"];
@@ -4453,14 +4311,17 @@ int main(int argc, char **argv) try {
                             readiness_ms),
                     "display watchdog delayed current vehicle state");
             const auto quiet_probes = read_private_json(root / "readiness-probes.json");
-#ifdef _WIN32
-            require(quiet_probes.value("wake", 0) == ready_probes.value("wake", 0),
-                    "state delivery repeated successful display activation");
-#else
-            require(quiet_probes.value("display", 0) == ready_probes.value("display", 0) &&
-                            quiet_probes.value("window", 0) == ready_probes.value("window", 0),
-                    "state delivery repeated healthy display observations");
-#endif
+
+            // Windows counts display activations, POSIX counts display and window observations.
+            if (os::host_windows) {
+                require(quiet_probes.value("wake", 0) == ready_probes.value("wake", 0),
+                        "state delivery repeated successful display activation");
+            } else {
+                require(quiet_probes.value("display", 0) == ready_probes.value("display", 0) &&
+                                quiet_probes.value("window", 0) == ready_probes.value("window", 0),
+                        "state delivery repeated healthy display observations");
+            }
+
             std::ofstream(root / "allow-recovery") << "one new activation generation";
             std::ofstream(root / "repair-required")
                     << "confirmed secondary display lost after readiness";
@@ -4503,10 +4364,10 @@ int main(int argc, char **argv) try {
                             },
                             recovery_ms + 1000),
                     "bounded display watchdog did not recover lost OEM SystemUI");
-#ifndef _WIN32
-            require(read_private_json(root / "readiness-probes.json").value("boot", 0) == 1,
+            // The boot probe count belongs to the POSIX readiness pass.
+            require(os::host_windows ||
+                            read_private_json(root / "readiness-probes.json").value("boot", 0) == 1,
                     "recovery re-probed immutable epoch boot completion");
-#endif
 
             for (const char *name :
                  {"canvas-hold", "reject-duplicate-activation", "allow-recovery"}) {
@@ -4616,13 +4477,15 @@ int main(int argc, char **argv) try {
                                 "config.ini") != prepared_config_sha256,
                 "restart lost independent SDK config persistence");
 
-#ifndef _WIN32
-        auto leaf_status = request(second.at("endpoint").get<std::string>(),
-                                   {{"op", "status"}, {"session_id", second_id}}, 10000);
-        require(leaf_status["deliveries"]["android"]["wrapper"]["alive"] == quickboot &&
-                        leaf_status["stopped"] == false,
-                "launcher exit was confused with live SDK guest exit");
-#endif
+        // Only the POSIX SDK launch reports its launcher wrapper.
+        if (!os::host_windows) {
+            auto leaf_status = request(second.at("endpoint").get<std::string>(),
+                                       {{"op", "status"}, {"session_id", second_id}}, 10000);
+            require(leaf_status["deliveries"]["android"]["wrapper"]["alive"] == quickboot &&
+                            leaf_status["stopped"] == false,
+                    "launcher exit was confused with live SDK guest exit");
+        }
+
         { std::ofstream(root / "window-exit") << "exit only own compiled fixture\n"; }
         bool terminal = false;
         auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
@@ -4726,10 +4589,7 @@ int main(int argc, char **argv) try {
                                              "status",    "exit_code",  "output_bytes"};
             const std::set<std::string> statuses{"ok", "failed", "timeout", "exception"};
             std::set<std::string> observed;
-            unsigned records = 0, failed = 0;
-#ifdef _WIN32
-            unsigned retained_records = 0;
-#endif
+            unsigned records = 0, failed = 0, retained_records = 0;
             const auto calls = read_private_json(root / "content-requests.json");
 
             for (const auto &entry : std::filesystem::directory_iterator(
@@ -4765,8 +4625,9 @@ int main(int argc, char **argv) try {
                 while (std::getline(lines, line)) {
                     const auto record = Json::parse(line);
 
-#ifdef _WIN32
-                    if (record.value("message", std::string{}) == "startup.action") {
+                    // Windows retains the terminal timings of its framed startup actions.
+                    if (os::host_windows &&
+                        record.value("message", std::string{}) == "startup.action") {
                         const auto &fields = record.at("fields");
 
                         if (fields.value("stage", std::string{}) == "stream_terminal") {
@@ -4800,7 +4661,6 @@ int main(int argc, char **argv) try {
                             ++retained_records;
                         }
                     }
-#endif
 
                     if (record.value("message", std::string{}) != "adb.completed") {
                         continue;
@@ -4842,26 +4702,29 @@ int main(int argc, char **argv) try {
                 }
             }
 
-#ifdef _WIN32
-            require(retained_records > 20,
+            // Windows runs the guest shell calls as retained startup actions, so only its console
+            // calls report adb.completed.
+            require(!os::host_windows || retained_records > 20,
                     "missing terminal timings for retained Windows ADB actions");
+            const auto required_operations =
+                    os::host_windows ? std::vector<std::string>{"emu.avd", "emu.kill"}
+                                     : std::vector<std::string>{
+                                               "shell.getprop", "shell.content",    "shell.dumpsys",
+                                               "shell.cmd",     "shell.am",         "shell.service",
+                                               "emu.avd",       "emu.multidisplay", "emu.kill"};
 
-            for (const char *operation : {"emu.avd", "emu.kill"}) {
-#else
-            for (const char *operation :
-                 {"shell.getprop", "shell.content", "shell.dumpsys", "shell.cmd", "shell.am",
-                  "shell.service", "emu.avd", "emu.multidisplay", "emu.kill"}) {
-#endif
+            for (const auto &operation : required_operations) {
                 require(observed.contains(operation),
                         "compiled fixture did not expose required allowlisted ADB timing");
             }
 
-#ifdef _WIN32
-            require(records > 0, "ADB timings did not include host control calls");
-#else
-            require(records > 20 && failed > 0,
-                    "ADB timings did not cover successful and failed guarded calls");
-#endif
+            if (os::host_windows) {
+                require(records > 0, "ADB timings did not include host control calls");
+            } else {
+                require(records > 20 && failed > 0,
+                        "ADB timings did not cover successful and failed guarded calls");
+            }
+
             std::cout << Json{{"adb_timing_records", records},
                               {"failed_guarded_calls", failed},
                               {"allowed_operations_observed", observed},
