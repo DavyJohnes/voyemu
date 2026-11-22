@@ -546,6 +546,30 @@
         "path": "/vendor/app/Dvr-release-signed/Dvr-release-signed.apk"
       }
     },
+    "UserCenter": {
+      "file": "UserCenter.apk",
+      "sha256": "c1fcb3630db784492188a51abc1e4f28e93a1d5cd52b623d9ab687b5887f9c39",
+      "source": {
+        "package": "com.qinggan.app.login"
+      },
+      "bytes": 41734682,
+      "acquisition": {
+        "image": "system",
+        "path": "/system/priv-app/Login-release-signed/Login-release-signed.apk"
+      }
+    },
+    "Ivoka": {
+      "file": "Ivoka.apk",
+      "sha256": "05faa989d65bb0495196d52926e40dc60c5d6dc81c551f671223eebc340696ad",
+      "source": {
+        "package": "com.qinggan.ivoka"
+      },
+      "bytes": 57181628,
+      "acquisition": {
+        "image": "system",
+        "path": "/system/priv-app/Ivoka-release-signed/Ivoka-release-signed.apk"
+      }
+    },
     "AudioPolicy": {
       "file": "AudioPolicy-release.apk",
       "sha256": "2152a99acdbee41626c6b661fe6509dd2c9487d3cad6a66aad6320bbb00cc039",
@@ -882,6 +906,18 @@
       ],
       "steps": [
         "api30-dvr-arm64.json"
+      ]
+    },
+    "UserCenter": {
+      "type": "apk",
+      "input": "original:UserCenter",
+      "steps": []
+    },
+    "Ivoka": {
+      "type": "apk",
+      "input": "original:Ivoka",
+      "steps": [
+        "framework-libraries.json"
       ]
     },
     "AudioPolicy": {
@@ -1290,6 +1326,14 @@
     {
       "type": "apk",
       "artifact": "patched:Dvr"
+    },
+    {
+      "artifact": "patched:UserCenter",
+      "type": "apk"
+    },
+    {
+      "artifact": "patched:Ivoka",
+      "type": "apk"
     },
     {
       "artifact": "patched:AudioPolicy",

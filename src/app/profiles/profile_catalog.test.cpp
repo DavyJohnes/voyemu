@@ -1271,9 +1271,9 @@ int main(int argc, char **argv) {
         Json qinggan11_capture;
         qinggan11_capture_source >> qinggan11_capture;
         check(qinggan11_capture.at("profile") == qinggan11_id &&
-                      qinggan11_capture.at("android").size() == 34 &&
-                      a11.at("original").size() == 35,
-              "A11 capture retains 34 roles plus the separately acquired Phone original");
+                      qinggan11_capture.at("android").size() == 42 &&
+                      a11.at("original").size() == 43,
+              "A11 capture retains 42 roles plus the separately acquired Phone original");
 
         for (const auto &capture : qinggan11_capture.at("android")) {
             const auto &original = a11.at("original").at(capture.at("name").get<std::string>());
@@ -1582,7 +1582,7 @@ int main(int argc, char **argv) {
                                       "com.qinggan.app.launcher/com.qinggan.secondlauncher.activity.SecondMainActivity"},
                                      {"display", 1}})}),
               "A11 cold acceptance requires both exact OEM HOME activities");
-        check(a11.at("patches").size() == 33 && a11.at("components").size() == 12 &&
+        check(a11.at("patches").size() == 41 && a11.at("components").size() == 13 &&
                       a11.at("components").at("view-observation") ==
                               "components/view-observation" &&
                       a11.at("components").at("oem-power") == "components/oem-power" &&
@@ -1601,11 +1601,11 @@ int main(int argc, char **argv) {
                                     {{"image", "system"},
                                      {"path",
                                       "/system/priv-app/KeyManagerService-release/KeyManagerService-release.apk"}}}} &&
-                      a11.at("original").size() == 35,
+                      a11.at("original").size() == 43,
               "Free wheel must bind actual acquired OEM KeyManager");
         check(a11.at("components").at("wheel-input") == "components/wheel-input" &&
                       a11.at("components").at("wheel-platform") == "components/wheel-platform" &&
-                      a11.at("install").size() == 55 &&
+                      a11.at("install").size() == 63 &&
                       std::count(a11.at("install").begin(), a11.at("install").end(),
                                  Json{{"artifact", "patched:original-navi-framework"},
                                       {"type", "file"},
@@ -2192,10 +2192,10 @@ int main(int argc, char **argv) {
                                                           "api30-camera-virtual.json"})
                                    : (it.key() == "Gallery" || it.key() == "Video")
                                            ? Json::array({"api30-gallery-arm64.json"})
-                                   : it.key() == "Dvr"
-                                           ? Json::array({"api30-dvr-arm64.json"})
+                                   : it.key() == "Dvr" ? Json::array({"api30-dvr-arm64.json"})
                                    : (it.key() == "CloudApp" || it.key() == "WecarFlow" ||
-                                      it.key() == "HiCar" || it.key() == "Bill")
+                                      it.key() == "HiCar" || it.key() == "Bill" ||
+                                      it.key() == "UserCenter")
                                            ? Json::array()
                                    : it.key() == "QGMedia"
                                            ? Json::array({"api30-media-runtime.json",
@@ -2257,7 +2257,7 @@ int main(int argc, char **argv) {
                       recipe.at("calls").at(0).at("operation") == "useLibraries" &&
                       recipe.at("calls").at(0).at("args") ==
                               Json::array({Json::array({"QGAPI", "QGMOD", "QGVehicle"})}) &&
-                      recipe.at("constants").at("original_sha256_allowlist").size() == 7,
+                      recipe.at("constants").at("original_sha256_allowlist").size() == 8,
               "A11 recipe cannot inherit guessed API28 code offsets");
         const auto qinggan09 =
                 embedded_profile_names(ProfilePlatform::qinggan09, ProfileBoard::sa8155).at(0);

@@ -443,6 +443,30 @@
         "path": "/vendor/app/Dvr-release-signed/Dvr-release-signed.apk"
       }
     },
+    "UserCenter": {
+      "file": "UserCenter.apk",
+      "sha256": "004ddb9d8c97e024174808502bdcd1ba262166886ab00210ecde911d6254f0d5",
+      "source": {
+        "package": "com.qinggan.app.login"
+      },
+      "bytes": 41652762,
+      "acquisition": {
+        "image": "system",
+        "path": "/system/priv-app/Login-release-signed/Login-release-signed.apk"
+      }
+    },
+    "Ivoka": {
+      "file": "Ivoka.apk",
+      "sha256": "02d7790bf28999354eb9c97ff0bafa7791038b4d685987289141ac4dcae29cc1",
+      "source": {
+        "package": "com.qinggan.ivoka"
+      },
+      "bytes": 57140668,
+      "acquisition": {
+        "image": "system",
+        "path": "/system/priv-app/Ivoka-release-signed/Ivoka-release-signed.apk"
+      }
+    },
     "AudioPolicy": {
       "file": "AudioPolicy-release.apk",
       "sha256": "83fe6f4fd7a02135fb84e02ef8298cefa42365e970f0760a3b90a60de9582aac",
@@ -932,6 +956,14 @@
       "artifact": "patched:Dvr"
     },
     {
+      "artifact": "patched:UserCenter",
+      "type": "apk"
+    },
+    {
+      "artifact": "patched:Ivoka",
+      "type": "apk"
+    },
+    {
       "artifact": "patched:Hiboard",
       "type": "apk",
       "target": "/system/priv-app/Hiboard-release-signed/Hiboard-release-signed.apk",
@@ -1286,6 +1318,18 @@
       ],
       "steps": [
         "api30-dvr-arm64.json"
+      ]
+    },
+    "UserCenter": {
+      "type": "apk",
+      "input": "original:UserCenter",
+      "steps": []
+    },
+    "Ivoka": {
+      "type": "apk",
+      "input": "original:Ivoka",
+      "steps": [
+        "api30-framework-libraries.json"
       ]
     },
     "Hiboard": {

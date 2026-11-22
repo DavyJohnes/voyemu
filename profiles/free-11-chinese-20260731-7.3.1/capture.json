@@ -186,6 +186,20 @@
       }
     },
     {
+      "name": "UserCenter",
+      "file": "UserCenter.apk",
+      "source": {
+        "package": "com.qinggan.app.login"
+      }
+    },
+    {
+      "name": "Ivoka",
+      "file": "Ivoka.apk",
+      "source": {
+        "package": "com.qinggan.ivoka"
+      }
+    },
+    {
       "name": "AudioPolicy",
       "file": "AudioPolicy-release.apk",
       "source": {
