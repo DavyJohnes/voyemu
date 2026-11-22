@@ -4,6 +4,6 @@
   "api": 30,
   "native": true,
   "input_sha256": "cf0a4db0a9962781c83e6d1430c23276ebd406c404a54ab2226a1dfa4ac2844c",
-  "output_sha256": "fc78a9776ac31e4bf2d5b93c3ec7b32ddf4095c6e59949494b20bde76e207a2a",
-  "description": "Exact native Passion API30 file labels: the OEM vendor_file_contexts labels of the OEM network, message center and VHAL files as exact platform paths; original bytes remain unchanged."
+  "output_sha256": "7666f90b4e59f6744335d9ea7fccfabf512a70d0911aef9d56533f13c876811e",
+  "description": "Exact native Passion API30 file labels: the OEM vendor_file_contexts labels of the OEM network, message center and VHAL files and of /log as exact platform paths; original bytes remain unchanged."
 }

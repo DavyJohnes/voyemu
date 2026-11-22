@@ -2349,6 +2349,12 @@
       "mode": "0644"
     },
     {
+      "artifact": "files:oem-log-init",
+      "type": "file",
+      "target": "/system/etc/init/oem-log.rc",
+      "mode": "0644"
+    },
+    {
       "artifact": "patched:LY_Multimedia",
       "type": "file",
       "target": "/system/app/LY_Multimedia/LY_Multimedia.apk",
@@ -3564,6 +3570,9 @@
     },
     "vhal-vintf": {
       "file": "vhal-vintf.xml"
+    },
+    "oem-log-init": {
+      "file": "oem-log.rc"
     }
   },
   "emulator": {

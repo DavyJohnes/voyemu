@@ -4,6 +4,6 @@
   "api": 30,
   "native": true,
   "input_sha256": "391829e0167f44415e54ba64692ad410b1398b16263869beb22e427130eae766",
-  "output_sha256": "5a4b81918614dfe32243876e85dd5cbd6d1a86d6da7ded7950b518383142f7dc",
-  "description": "Exact native Passion API30 service policy: system_app publishes three pinned Binder names, platform_app can only find them; the OEM vendor domains of someipd, config_vlan.sh, the message center and the VHAL follow, with TCP for the Voyemu libuhab; original bytes remain unchanged."
+  "output_sha256": "aa150c95b8e4f51d3c648273f1eb36d42d2aad9f7f3860e09648633484550bda",
+  "description": "Exact native Passion API30 service policy: system_app publishes three pinned Binder names, platform_app can only find them; the OEM vendor domains of someipd, config_vlan.sh, the message center and the VHAL and the OEM /log types follow, with TCP for the Voyemu libuhab; original bytes remain unchanged."
 }

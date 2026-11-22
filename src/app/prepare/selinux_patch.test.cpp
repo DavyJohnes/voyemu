@@ -235,12 +235,14 @@ int main(int argc, char **argv) {
                                   std::string::npos &&
                           labels.find("/vendor/bin/oem-eth0\\.sh "
                                       "u:object_r:goldfish_setup_exec:s0\n") != std::string::npos &&
+                          labels.find("\n/log/android(/.*)? u:object_r:android_data_file:s0\n") !=
+                                  std::string::npos &&
                           labels.find("vehicle@2\\.0-mega-service "
                                       "u:object_r:hal_vehicle_default_exec:s0\n") !=
                                   std::string::npos &&
                           denied(profile, 30, "file-contexts", labels) &&
                           denied(profile, 28, "file-contexts", files),
-                  "exact OEM network, message center and VHAL file labels");
+                  "exact OEM network, message center, VHAL and /log file labels");
             const auto own = output.substr(input.size());
             check(own.find("(allow system_app voyemu_car_service (service_manager (add find)))") !=
                                   std::string::npos &&
@@ -259,7 +261,7 @@ int main(int argc, char **argv) {
                           own.find("su ") == std::string::npos,
                   "own service permissions and the OEM vendor domains mapped onto the platform");
             check(apply_passion_selinux_patch(profile, 30, "policy-hash", output + mapping) ==
-                          "9567b22aa76013d38e6d43e1e925d24a276d5bef5d1dc1598cb414efe16fb272\n",
+                          "9a666d2c89e4adbe1d3e46d126ec1c32be94e708150c0e7937d1395b604eaef7\n",
                   "Passion hash binds patched CIL and unchanged mapping");
 
             for (const auto id : {"services", "service-contexts", "policy-hash"}) {

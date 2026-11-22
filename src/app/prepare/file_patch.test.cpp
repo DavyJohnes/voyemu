@@ -597,7 +597,7 @@ int main(int argc, char **argv) {
             const std::string
                     cil_pin = "f6d5316e443b6830d5331e6586cc0fc1df2ea8a59853ae3b0870945990145a17",
                     patched_pin =
-                            "2779bd1603edb26a28dbadfeacc7d1f4e7f4261a08b2526008e6b6d8b9b068e2";
+                            "538c1d01b76918f891eb48f7e1d901f9227276ed2ab4711212844337294fe0e9";
             std::vector<PinnedFilePatch> nodes{
                     {"passion-services", 30, cil, cil_pin, patched_pin},
                     {"passion-service-contexts", 30, contexts,
@@ -611,10 +611,10 @@ int main(int argc, char **argv) {
                      "2b2ebe82d3b754dc9a00d50de124d7c07ca7c847db91e918d8e1e08778d7ce19"},
                     {"passion-file-contexts", 30, files,
                      "cf0a4db0a9962781c83e6d1430c23276ebd406c404a54ab2226a1dfa4ac2844c",
-                     "fc78a9776ac31e4bf2d5b93c3ec7b32ddf4095c6e59949494b20bde76e207a2a"},
+                     "7666f90b4e59f6744335d9ea7fccfabf512a70d0911aef9d56533f13c876811e"},
                     {"passion-policy-hash", 30, hash,
                      "391829e0167f44415e54ba64692ad410b1398b16263869beb22e427130eae766",
-                     "5a4b81918614dfe32243876e85dd5cbd6d1a86d6da7ded7950b518383142f7dc",
+                     "aa150c95b8e4f51d3c648273f1eb36d42d2aad9f7f3860e09648633484550bda",
                      PinnedFileDependency{
                              mapping,
                              "c14ab911584595a94e6783600371fed23cec1d56b8001383584a3192d028eb60"},
@@ -627,7 +627,7 @@ int main(int argc, char **argv) {
             const auto output = prepare_file_patches(nodes);
             check(output.size() == 6 &&
                           output[5] ==
-                                  "9567b22aa76013d38e6d43e1e925d24a276d5bef5d1dc1598cb414efe16fb272\n",
+                                  "9a666d2c89e4adbe1d3e46d126ec1c32be94e708150c0e7937d1395b604eaef7\n",
                   "actual API30 native graph derives correct combined hash");
 
             for (unsigned variant = 0; variant < 18; ++variant) {

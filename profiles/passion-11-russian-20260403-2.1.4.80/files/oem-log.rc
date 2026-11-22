@@ -1,0 +1,11 @@
+# The vehicle mounts its log partition on /log (OEM fstab.qcom); the emulator has none, so /log is a
+# directory of the root file system bound to /data/vendor/log and labelled as in the vehicle.
+on post-fs-data
+    mount ext4 /dev/root / remount rw
+    mkdir /log 0755 root root
+    mount ext4 /dev/root / remount ro
+    mkdir /data/vendor/log 0755 root root
+    mount none /data/vendor/log /log bind
+    restorecon_recursive /log
+    # From the OEM /system/etc/init/logmgr.rc; someipd.sh logs to /log/android.
+    mkdir /log/android 0774 root system
