@@ -8,5 +8,6 @@ namespace voyemu {
 // resource records. A font is a declared original or a pinned entry of an original APK; a declared
 // corrected identity runs the Cyrillic repair of preparation.
 Json export_portable_fonts(const std::filesystem::path &root, const Json &definition,
-                           std::string_view profile, const std::filesystem::path &seed);
+                           std::string_view profile, const std::filesystem::path &seed,
+                           const std::filesystem::path &jdk = {});
 } // namespace voyemu

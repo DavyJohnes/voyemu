@@ -474,12 +474,10 @@ struct MachineStage {
 
 // Exports the Android-side parts of a new machine from the accepted candidate into stage and
 // records them in runtime.
-static void export_android_machine_parts(const std::filesystem::path &root,
-                                         std::string_view profile, const Json &definition,
-                                         const Json &candidate,
-                                         const std::filesystem::path &android,
-                                         const MachineStage &machine,
-                                         const std::string &profile_pin, Json &runtime) {
+static void export_android_machine_parts(
+        const std::filesystem::path &root, std::string_view profile, const Json &definition,
+        const Json &candidate, const std::filesystem::path &android, const MachineStage &machine,
+        const std::string &profile_pin, const std::filesystem::path &jdk, Json &runtime) {
     const auto &stage = machine.stage;
 
     export_built_owned_package(root, profile, candidate, android, stage, runtime,
@@ -509,13 +507,14 @@ static void export_android_machine_parts(const std::filesystem::path &root,
     }
 
     runtime["resources"] = export_portable_resources(root, definition, profile, stage);
-    runtime["resources"].update(export_portable_fonts(root, definition, profile, stage));
+    runtime["resources"].update(export_portable_fonts(root, definition, profile, stage, jdk));
 }
 
 Json finalize_profile_build(const std::filesystem::path &root, std::string_view profile,
                             const MachineIdentity &machine, const std::filesystem::path &android,
                             const std::filesystem::path &qnx_file, const std::string &qnx_pin,
-                            bool reuse_qnx, const std::filesystem::path &reuse_qnx_source) {
+                            bool reuse_qnx, const std::filesystem::path &reuse_qnx_source,
+                            const std::filesystem::path &jdk) {
     const auto artifact_lease = candidate_artifact_reader(root, android);
 
     if (std::filesystem::exists(build_target(root, profile, machine)) &&
@@ -604,7 +603,7 @@ Json finalize_profile_build(const std::filesystem::path &root, std::string_view 
                     {"qnx", {{"guest_arch", "aarch64"}, {"images", qnx_images}}}};
     qnx_runtime_metadata(runtime["qnx"], layout);
     export_android_machine_parts(root, profile, definition, candidate, android, built, profile_pin,
-                                 runtime);
+                                 jdk, runtime);
 
     if (!reused_qnx.is_null()) {
         write_private_json(stage / "build-provenance.json", {{"schema", 1}, {"qnx", reused_qnx}});
@@ -640,7 +639,8 @@ Json finalize_profile_build(const std::filesystem::path &root, std::string_view 
 Json finalize_android_profile_build(const std::filesystem::path &root, std::string_view profile,
                                     const MachineIdentity &machine,
                                     const std::filesystem::path &android,
-                                    const std::string &receipt_pin) {
+                                    const std::string &receipt_pin,
+                                    const std::filesystem::path &jdk) {
     const auto artifact_lease = candidate_artifact_reader(root, android);
 
     if (std::filesystem::exists(build_target(root, profile, machine)) &&
@@ -690,7 +690,7 @@ Json finalize_android_profile_build(const std::filesystem::path &root, std::stri
                       {"base_archive_sha256", candidate.at("clean_base_archive_sha256")},
                       {"images", images}}}};
     export_android_machine_parts(root, profile, definition, candidate, android, built, profile_pin,
-                                 runtime);
+                                 jdk, runtime);
     write_private_json(stage / "runtime.json", runtime);
     need(hash(profile_file, 1 << 20) == authoring_pin && hash(receipt, 1 << 20) == receipt_pin,
          "finalization inputs changed");

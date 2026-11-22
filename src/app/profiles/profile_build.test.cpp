@@ -3530,13 +3530,15 @@ int main(int argc, char **argv) {
             return 0;
         }
 
-        if (argc == 7 && std::string_view(argv[1]) == "--finalize-reused-qnx") {
+        if ((argc == 7 || argc == 8) && std::string_view(argv[1]) == "--finalize-reused-qnx") {
             const auto root = std::filesystem::canonical(argv[2]);
             std::cout << finalize_profile_build(root, qnx_reuse_profile,
                                                 machine_identity(qnx_reuse_profile, ""),
                                                 std::filesystem::canonical(argv[3]),
                                                 std::filesystem::canonical(argv[4]), argv[5], true,
-                                                std::filesystem::canonical(argv[6]))
+                                                std::filesystem::canonical(argv[6]),
+                                                argc == 8 ? std::filesystem::canonical(argv[7])
+                                                          : std::filesystem::path{})
                                  .dump()
                       << '\n';
 

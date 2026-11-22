@@ -109,6 +109,14 @@ int main(int argc, char **argv) try {
           "a profile without fonts exports none");
 
     auto changed = definition;
+    changed["fonts"]["primary"]["regular"]["corrected"] = {{"bytes", latin.size()},
+                                                           {"sha256", sha256_bytes(latin)}};
+    check(failure([&] {
+              (void)export_portable_fonts(root, changed, profile, seed, "relative-jdk");
+          }).starts_with("JAVA_TOOLCHAIN: configured JDK must be absolute"),
+          "corrected fonts validate the explicitly selected JDK");
+
+    changed = definition;
     changed["fonts"]["fallback"]["bold"]["sha256"] = std::string(64, 'a');
     std::filesystem::remove_all(seed / "ui/fonts");
     check(!failure([&] {

@@ -928,7 +928,7 @@ Json build_profile(const std::filesystem::path &root, std::string_view profile,
         return release_build_generation(root,
                                         finalize_profile_build(root, profile, machine, candidate,
                                                                reuse_qnx, reuse_qnx_pin, true,
-                                                               reuse_qnx_source),
+                                                               reuse_qnx_source, jdk),
                                         candidate);
     }
 
@@ -944,7 +944,7 @@ Json build_profile(const std::filesystem::path &root, std::string_view profile,
                 root,
                 finalize_android_profile_build(
                         root, profile, machine, candidate,
-                        android.at("candidate_receipt_sha256").get<std::string>()),
+                        android.at("candidate_receipt_sha256").get<std::string>(), jdk),
                 candidate);
     }
 
@@ -1069,7 +1069,7 @@ Json build_profile(const std::filesystem::path &root, std::string_view profile,
     return release_build_generation(
             root,
             finalize_profile_build(root, profile, machine, candidate, accepted / "acceptance.json",
-                                   hash(accepted / "acceptance.json", 1 << 20)),
+                                   hash(accepted / "acceptance.json", 1 << 20), false, {}, jdk),
             candidate, qnx_source, accepted);
 }
 

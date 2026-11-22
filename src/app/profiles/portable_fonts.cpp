@@ -8,6 +8,7 @@
 #include "zip_archive.hpp"
 #include <fstream>
 #include <map>
+#include <optional>
 #include <set>
 
 namespace voyemu {
@@ -73,12 +74,12 @@ std::string source_font(const std::filesystem::path &root, const Json &definitio
 // The DFP King Gothic GB Regular and Semibold originals space their Russian letters out; Java
 // preparation writes the one corrected font of each.
 std::string corrected_font(const std::filesystem::path &root, const std::string &source,
-                           const Json &corrected, const std::filesystem::path &stage) {
-    const auto tools = ensure_java_preparation_tools(root, {}, true);
-    const auto classpath = java_preparation_classpath(root, tools.runtime);
-    const auto java = tools.runtime.jdk / "bin" / ("java" + std::string(os::executable_suffix));
+                           const Json &corrected, const std::filesystem::path &stage,
+                           const JavaPreparationRuntime &runtime) {
+    const auto classpath = java_preparation_classpath(root, runtime);
+    const auto java = runtime.jdk / "bin" / ("java" + std::string(os::executable_suffix));
 
-    need(sha256_file(java) == tools.runtime.java_sha256, "installed JDK changed");
+    need(sha256_file(java) == runtime.java_sha256, "installed JDK changed");
     const auto input = stage / "input.ttf", output = stage / "output.ttf";
     std::filesystem::remove(input);
     std::filesystem::remove(output);
@@ -112,7 +113,8 @@ std::string corrected_font(const std::filesystem::path &root, const std::string 
 } // namespace
 
 Json export_portable_fonts(const std::filesystem::path &root, const Json &definition,
-                           std::string_view profile, const std::filesystem::path &seed) {
+                           std::string_view profile, const std::filesystem::path &seed,
+                           const std::filesystem::path &jdk) {
     Json resources = Json::object();
 
     if (!definition.contains("fonts")) {
@@ -126,6 +128,7 @@ Json export_portable_fonts(const std::filesystem::path &root, const Json &defini
     const auto stage = seed / "ui/fonts/.stage";
     ensure_private_directory(stage);
     std::map<std::string, std::string> sources;
+    std::optional<JavaPreparationRuntime> runtime;
 
     for (const auto *role : {"primary", "fallback"}) {
         const auto &weights = fonts.at(role);
@@ -143,7 +146,11 @@ Json export_portable_fonts(const std::filesystem::path &root, const Json &defini
                 auto data = source_font(root, definition, profile, font);
 
                 if (font.contains("corrected")) {
-                    data = corrected_font(root, data, font.at("corrected"), stage);
+                    if (!runtime) {
+                        runtime = ensure_java_preparation_tools(root, jdk, true).runtime;
+                    }
+
+                    data = corrected_font(root, data, font.at("corrected"), stage, *runtime);
                 }
 
                 found = sources.emplace(key, std::move(data)).first;

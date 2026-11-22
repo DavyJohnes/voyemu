@@ -52,7 +52,8 @@ Json finalize_profile_build(const std::filesystem::path &root, std::string_view 
                             const std::filesystem::path &android_candidate,
                             const std::filesystem::path &qnx_acceptance,
                             const std::string &qnx_acceptance_sha256, bool reuse_qnx = false,
-                            const std::filesystem::path &reuse_qnx_source = {});
+                            const std::filesystem::path &reuse_qnx_source = {},
+                            const std::filesystem::path &jdk = {});
 // Publisher garbage collection of closed candidate VM working disks after successful publication.
 void purge_android_candidate_working_disks(const std::filesystem::path &root,
                                            const std::filesystem::path &android_candidate,
@@ -69,7 +70,8 @@ Json release_build_generation(const std::filesystem::path &root, Json publicatio
 Json finalize_android_profile_build(const std::filesystem::path &root, std::string_view profile,
                                     const MachineIdentity &machine,
                                     const std::filesystem::path &android_candidate,
-                                    const std::string &candidate_receipt_sha256);
+                                    const std::string &candidate_receipt_sha256,
+                                    const std::filesystem::path &jdk = {});
 // Exact stopped source candidate validation of a system_upgrade profile; exports only its system
 // image descriptor.
 Json validate_profile_android_system_candidate(const std::filesystem::path &root,
