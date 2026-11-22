@@ -275,8 +275,7 @@ int main(int argc, char **argv) {
             const auto profile = voyemu::read_private_json(entry.path() / "profile.json",
                                                            1024 * 1024);
             const auto fresh = voyemu::select_vehicle_startup(
-                    voyemu::VehicleStartup::fresh,
-                    voyemu::vehicle_catalog(profile.at("platform").get<std::string>()),
+                    voyemu::VehicleStartup::fresh, voyemu::profile_vehicle_catalog(profile),
                     profile.at("initial_state"), nullptr);
             assert(fresh.at("raw_oem").at("aeb_sts") == 1);
             ++adapter_profiles;

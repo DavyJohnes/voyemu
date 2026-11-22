@@ -60,14 +60,20 @@ int main(int argc, char **argv) try {
                 root / ".local/machines/.hidden/sessions/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", output);
     });
     auto seed = qnx_capture_initial_state(
-            Json{{"initial_state", {{"gear", 0}, {"speed", 0}, {"aeb_sts", 1}}}});
+            Json{{"platform", "qinggan09"},
+                 {"initial_state", {{"gear", 0}, {"speed", 0}, {"aeb_sts", 1}}}});
     assert(seed["raw_oem"]["aeb_sts"] == 1 && seed["raw_oem"]["soc"] == 55 &&
            seed["raw_oem"]["speed10x"] == 0);
     rejects([&] {
-        qnx_capture_initial_state(Json{{"initial_state", {{"speed", 1}}}});
+        qnx_capture_initial_state(
+                Json{{"platform", "qinggan09"}, {"initial_state", {{"speed", 1}}}});
     });
     rejects([&] {
-        qnx_capture_initial_state(Json{{"initial_state", {{"gear", 3}}}});
+        qnx_capture_initial_state(
+                Json{{"platform", "qinggan09"}, {"initial_state", {{"gear", 3}}}});
+    });
+    rejects([&] {
+        qnx_capture_initial_state(Json{{"initial_state", {{"gear", 0}, {"speed", 0}}}});
     });
     frames::Frame frame;
     frame.bgra.assign(frames::pixel_bytes, std::byte{0});
