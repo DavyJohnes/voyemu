@@ -4471,7 +4471,7 @@ static void owned_android_network_recovery_tests() {
     const std::string first = "11111111-1111-4111-8111-111111111111",
                       second = "22222222-2222-4222-8222-222222222222", payload = "source-dex",
                       pin = sha256_bytes(payload);
-    const Json inputs{{"dex_sha256", pin}, {"network", {{"schema", 1}}}};
+    const Json inputs{{"dex_sha256", pin}, {"network", qnx_passion_interguest_contract()}};
     struct Artifact {
         std::string inode = "1234", hash;
         bool symlink = false;
@@ -4595,7 +4595,7 @@ static void owned_android_network_recovery_tests() {
                 return {0, "", false};
             }
 
-            assert(script.find("com.voyemu.api.NetworkSetup") != std::string::npos);
+            assert(script.find("com.voyemu.api.NetworkSetup 172.30.100.3") != std::string::npos);
             ++setup_count;
 
             if (reboot_setup) {
@@ -4607,7 +4607,7 @@ static void owned_android_network_recovery_tests() {
             }
 
             return {0,
-                    "VOYEMU_NETWORK_V1 {\"schema\":1,\"ok\":true,\"address\":\"172.16.100.21\",\"prefix\":24,\"local_route_requested\":true,\"interface\":\"eth1\",\"network_ids\":[65000]}\n",
+                    "VOYEMU_NETWORK_V1 {\"schema\":1,\"ok\":true,\"address\":\"172.30.100.3\",\"prefix\":24,\"local_route_requested\":true,\"interface\":\"eth1\",\"network_ids\":[65000]}\n",
                     false};
         }
 

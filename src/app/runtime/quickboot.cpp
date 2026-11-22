@@ -205,7 +205,7 @@ Json android_quickboot_key(const Json &specification) {
 
     if (specification.contains("interguest_network")) {
         validate_qnx_interguest_contract(specification.at("interguest_network"));
-        key["network_topology"] = qnx_interguest_contract();
+        key["network_topology"] = specification.at("interguest_network");
         key["interguest_nic"] = "virtio-net-pci-v1";
     }
 

@@ -12,6 +12,16 @@ inline Json qnx_interguest_contract() {
             {"qconn_port", 8000}};
 }
 
+// Passion uses the addresses of its car: the cluster bridge 172.30.100.1 (emac0) and the multimedia
+// eth0 172.30.100.3; the SOME/IP VLANs run on the same link.
+inline Json qnx_passion_interguest_contract() {
+    auto contract = qnx_interguest_contract();
+    contract["address"] = "172.30.100.1";
+    contract["peer_address"] = "172.30.100.3";
+
+    return contract;
+}
+
 // Explicit geometry for the Passion diagnostic runtime; not a portable adapter acceptance.
 inline Json qnx_passion_interguest_ram_contract() {
     return {{"schema", 1},
@@ -32,8 +42,8 @@ inline void validate_android_network_contract(const Json &contract) {
 }
 
 inline void validate_qnx_interguest_contract(const Json &contract) {
-    if (contract != qnx_interguest_contract() || !contract.at("schema").is_number_integer() ||
-        !contract.at("prefix").is_number_integer() ||
+    if ((contract != qnx_interguest_contract() && contract != qnx_passion_interguest_contract()) ||
+        !contract.at("schema").is_number_integer() || !contract.at("prefix").is_number_integer() ||
         !contract.at("qconn_port").is_number_integer()) {
         throw VoyemuError("INTERGUEST_CONTRACT", "unsupported Ethernet transport");
     }

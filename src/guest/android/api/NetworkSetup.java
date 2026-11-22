@@ -6,11 +6,12 @@ import java.net.InetAddress;
 import java.util.Collections;
 import java.util.List;
 
-/** Fixed Ethernet setup; Binder acknowledgements request routes, they do not prove reachability. */
+/**
+ * Fixed Ethernet setup with the multimedia address of the profile's interguest contract; Binder
+ * acknowledgements request routes, they do not prove reachability.
+ */
 public final class NetworkSetup {
-    static final String MAC = "52:54:00:76:6f:21",
-            ADDRESS = "172.16.100.21",
-            SUBNET = "172.16.100.0/24";
+    static final String MAC = "52:54:00:76:6f:21";
     static final int NETWORK_ID = 65000;
 
     interface Manager {
@@ -26,11 +27,12 @@ public final class NetworkSetup {
     }
 
     static final class Result {
-        final String iface;
+        final String iface, address;
         final List<Integer> networks;
 
-        Result(String iface, List<Integer> networks) {
+        Result(String iface, String address, List<Integer> networks) {
             this.iface = iface;
+            this.address = address;
             this.networks = networks;
         }
 
@@ -38,14 +40,21 @@ public final class NetworkSetup {
             return "{\"schema\":1,\"ok\":true,\"interface\":\""
                     + iface
                     + "\",\"address\":\""
-                    + ADDRESS
+                    + address
                     + "\",\"prefix\":24,\"local_route_requested\":true,\"network_ids\":"
                     + networks
                     + "}";
         }
     }
 
-    static Result apply(Manager manager) throws Exception {
+    /** A private IPv4 address of a /24 link, as the interguest contract names it. */
+    static boolean address(String value) {
+        return value.matches(
+                        "(10|172\\.(1[6-9]|2[0-9]|3[01])|192\\.168)(\\.(25[0-5]|2[0-4][0-9]|1?[0-9]?[0-9])){2,3}")
+                && value.chars().filter(c -> c == '.').count() == 3;
+    }
+
+    static Result apply(Manager manager, String address) throws Exception {
         String selected = null;
         String[] names = manager.interfaces();
 
@@ -83,7 +92,7 @@ public final class NetworkSetup {
             throw new IllegalStateException("interface_changed");
         }
 
-        return new Result(selected, Collections.singletonList(NETWORK_ID));
+        return new Result(selected, address, Collections.singletonList(NETWORK_ID));
     }
 
     static Method legacyCreate(Class<?> type) {
@@ -97,8 +106,11 @@ public final class NetworkSetup {
     private static final class BinderManager implements Manager {
         final Class<?> api, binder, link, config, route;
         final Object manager;
+        final String address, subnet;
 
-        BinderManager() throws Exception {
+        BinderManager(String address) throws Exception {
+            this.address = address;
+            subnet = address.substring(0, address.lastIndexOf('.')) + ".0/24";
             binder = Class.forName("android.os.IBinder");
             api = Class.forName("android.os.INetworkManagementService");
             manager = service("network_management", "android.os.INetworkManagementService");
@@ -140,7 +152,7 @@ public final class NetworkSetup {
         Object connected(String iface) throws Exception {
             return route.getConstructor(link, InetAddress.class, String.class)
                     .newInstance(
-                            link.getConstructor(String.class).newInstance(SUBNET), null, iface);
+                            link.getConstructor(String.class).newInstance(subnet), null, iface);
         }
 
         @Override
@@ -161,7 +173,7 @@ public final class NetworkSetup {
 
             Object value = configuration(iface);
             config.getMethod("setLinkAddress", link)
-                    .invoke(value, link.getConstructor(String.class).newInstance(ADDRESS + "/24"));
+                    .invoke(value, link.getConstructor(String.class).newInstance(address + "/24"));
             config.getMethod("setInterfaceUp").invoke(value);
             api.getMethod("setInterfaceConfig", String.class, config).invoke(manager, iface, value);
         }
@@ -175,7 +187,7 @@ public final class NetworkSetup {
                             (String) config.getMethod("getHardwareAddress").invoke(value))
                     && Boolean.TRUE.equals(config.getMethod("isUp").invoke(value))
                     && address != null
-                    && ADDRESS.equals(
+                    && address.equals(
                             ((InetAddress) link.getMethod("getAddress").invoke(address))
                                     .getHostAddress())
                     && Integer.valueOf(24)
@@ -282,7 +294,7 @@ public final class NetworkSetup {
 
     static int run(String[] args) {
         try {
-            if (args.length != 0) {
+            if (args.length != 1 || !address(args[0])) {
                 throw new IllegalArgumentException("arguments_rejected");
             }
 
@@ -298,7 +310,8 @@ public final class NetworkSetup {
                 throw new IllegalStateException("enforcing_required");
             }
 
-            System.out.println("VOYEMU_NETWORK_V1 " + apply(new BinderManager()).json());
+            System.out.println(
+                    "VOYEMU_NETWORK_V1 " + apply(new BinderManager(args[0]), args[0]).json());
 
             return 0;
         } catch (Exception failure) {

@@ -593,6 +593,13 @@ void configure_owned_android_network(
         retire_android_network_failure(android, "superseded_by_boot");
     }
 
+    // The multimedia address of the profile's interguest contract.
+    const auto address = inputs.at("network").at("peer_address").get<std::string>();
+
+    if (!std::regex_match(address, std::regex("[0-9]{1,3}(\\.[0-9]{1,3}){3}"))) {
+        throw VoyemuError("INTERGUEST_ANDROID", "invalid contract address");
+    }
+
     const auto previous = android.value("interguest_network", Json::object());
 
     if (previous.value("boot_id", std::string{}) != boot ||
@@ -788,7 +795,8 @@ void configure_owned_android_network(
                 call({"shell",
                       "CLASSPATH=" + android_shell_quote(leaf) + " /system/bin/toybox timeout " +
                               std::to_string(guest_seconds) +
-                              " /system/bin/app_process /system/bin com.voyemu.api.NetworkSetup"});
+                              " /system/bin/app_process /system/bin com.voyemu.api.NetworkSetup " +
+                              address});
         constexpr std::string_view marker = "VOYEMU_NETWORK_V1 ";
         const auto start = output.find(marker);
 
@@ -802,8 +810,7 @@ void configure_owned_android_network(
                 output.substr(begin, finish == std::string::npos ? finish : finish - begin));
 
         if (!result.is_object() || result.size() != 7 || result.value("schema", 0) != 1 ||
-            !result.value("ok", false) ||
-            result.value("address", std::string{}) != "172.16.100.21" ||
+            !result.value("ok", false) || result.value("address", std::string{}) != address ||
             result.value("prefix", 0) != 24 || !result.value("local_route_requested", false) ||
             !result.at("interface").is_string() ||
             !std::regex_match(result.at("interface").get<std::string>(),

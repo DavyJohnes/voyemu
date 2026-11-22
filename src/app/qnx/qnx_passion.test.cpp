@@ -45,9 +45,9 @@ void network_script() {
             "}\nstatic_arp_config()\n{\n    log_launch \"arp\"\n    arp -s 172.16.112.10 "
             "02:DF:53:00:00:00\n    arp -s 172.16.112.40 02:DF:53:00:00:04\n}\n"
             "start_config_vlan\n";
-    const auto script = qnx_passion_network_script(oem, "172.16.100.22");
+    const auto script = qnx_passion_network_script(oem, "172.30.100.1");
     need(script.starts_with(
-                 "ifconfig tap0 create up || return 1\nifconfig tap0 172.16.100.22 "
+                 "ifconfig tap0 create up || return 1\nifconfig tap0 172.30.100.1 "
                  "netmask 255.255.255.0 up || return 1\nifconfig vlan4 create || return 1\n") &&
          script.find("ifconfig vlan12 vlan 12 vlanif tap0 || return 1\n") != script.npos &&
          script.find("arp -s 172.16.112.10 02:DF:53:00:00:00 || echo 'QPC NETWORK arp -s "
@@ -59,7 +59,7 @@ void network_script() {
         auto bad = oem;
         bad.replace(bad.find(before), before.size(), after);
         rejects([&] {
-            qnx_passion_network_script(bad, "172.16.100.22");
+            qnx_passion_network_script(bad, "172.30.100.1");
         });
     };
     change("    ifconfig vlan14 create\n", "");

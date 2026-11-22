@@ -57,7 +57,7 @@ public final class NetworkSetupTest {
 
     static void reject(Fake fake, String reason) throws Exception {
         try {
-            NetworkSetup.apply(fake);
+            NetworkSetup.apply(fake, "172.30.100.3");
             throw new AssertionError("accepted " + reason);
         } catch (IllegalStateException expected) {
             check(reason.equals(expected.getMessage()));
@@ -69,14 +69,14 @@ public final class NetworkSetupTest {
         check(NetworkSetup.legacyCreate(ModernApi.class) == null);
         check(NetworkSetup.legacyCreate(LegacyApi.class).getParameterTypes()[1] == String.class);
         Fake fake = new Fake();
-        NetworkSetup.Result result = NetworkSetup.apply(fake);
+        NetworkSetup.Result result = NetworkSetup.apply(fake, "172.30.100.3");
         check("eth1".equals(result.iface));
         check(result.networks.equals(Arrays.asList(65000)));
         check(fake.calls.equals(Arrays.asList("configure:eth1", "fixed-routes:eth1")));
         check(
                 result.json().contains("\"local_route_requested\":true")
                         && !result.json().contains("\"local_route\":")
-                        && result.json().contains("\"address\":\"172.16.100.21\"")
+                        && result.json().contains("\"address\":\"172.30.100.3\"")
                         && result.json().contains("\"network_ids\":[65000]"));
         fake = new Fake();
         fake.names = new String[] {"wlan0"};
@@ -96,7 +96,17 @@ public final class NetworkSetupTest {
         fake = new Fake();
         fake.failRoute = true;
         reject(fake, "denied");
-        check(NetworkSetup.run(new String[] {"172.16.100.1"}) == 2);
+        // The address comes from the contract: one private IPv4 address, nothing else.
+        check(NetworkSetup.address("172.16.100.21") && NetworkSetup.address("172.30.100.3"));
+        check(
+                !NetworkSetup.address("8.8.8.8")
+                        && !NetworkSetup.address("172.30.100")
+                        && !NetworkSetup.address("172.30.100.300")
+                        && !NetworkSetup.address("10.0.0.1.2"));
+        check(
+                NetworkSetup.run(new String[0]) == 2
+                        && NetworkSetup.run(new String[] {"8.8.8.8"}) == 2);
+        check(NetworkSetup.run(new String[] {"172.30.100.3", "x"}) == 2);
         System.out.println(
                 "Fixed NIC identity, fixed private network, scoped route ownership and fail-closed"
                         + " readbacks passed");

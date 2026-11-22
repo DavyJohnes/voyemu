@@ -170,6 +170,12 @@ int main() try {
     assert(network_key != android_quickboot_key(spec) &&
            network_key.at("network_topology") == qnx_interguest_contract() &&
            network_key.at("interguest_nic") == "virtio-net-pci-v1");
+    // The Passion contract with its car addresses is a different topology.
+    auto car_network_spec = spec;
+    car_network_spec["interguest_network"] = qnx_passion_interguest_contract();
+    const auto car_network_key = android_quickboot_key(car_network_spec);
+    assert(car_network_key != network_key &&
+           car_network_key.at("network_topology") == qnx_passion_interguest_contract());
     auto invalid_network = network_spec;
     invalid_network["interguest_network"]["port"] = 12345;
     bool rejected_network = false;

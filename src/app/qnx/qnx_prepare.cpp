@@ -947,7 +947,7 @@ Json prepare_qnx_passion_developer_images(const std::filesystem::path &root,
     validate_qnx_passion_runtime(runtime);
     const auto network = qnx_passion_network_script(
             read_qnx6_file(files.at("system_la.img"), originals[2].sha, "scripts/startup.sh"),
-            qnx_interguest_contract().at("address").get<std::string>());
+            qnx_passion_interguest_contract().at("address").get<std::string>());
     // The vehicle gateway contract: the cluster's SOME/IP clients and the service table the Passion
     // catalogue is generated from.
     const auto service_table =
@@ -1187,7 +1187,7 @@ Json prepare_qnx_passion_developer_images(const std::filesystem::path &root,
             {"guest_build", guest},
             {"images", images},
             {"hardware_adapter", qnx_profile_adapter(config)},
-            {"interguest_network", qnx_interguest_contract()},
+            {"interguest_network", qnx_passion_interguest_contract()},
             {"memory_mib", 11713},
             {"runtime_sha256", sha256_bytes(runtime)},
             {"network_script_sha256", sha256_bytes(network)},
