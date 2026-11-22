@@ -5,10 +5,6 @@
 namespace voyemu {
 using namespace session_detail;
 namespace session_detail {
-const std::array<std::string, 2> angle_libraries{"libEGL" + std::string(os::shared_library_suffix),
-                                                 "libGLESv2" +
-                                                         std::string(os::shared_library_suffix)};
-
 int cluster_ui_timeout(const Json &operation) {
     if (!operation.contains("timeout_ms")) {
         return 250;
@@ -152,9 +148,10 @@ void validate_pins(const Json &specification, bool machine_start) {
         require(specification["graphics"], "executable");
         auto angle =
                 std::filesystem::path(specification["graphics"].at("angle").get<std::string>());
+        const std::string suffix(os::shared_library_suffix);
 
-        for (auto library : angle_libraries) {
-            if (!pinned.contains((angle / library).string())) {
+        for (const auto *library : {"libEGL", "libGLESv2"}) {
+            if (!pinned.contains((angle / (library + suffix)).string())) {
                 throw VoyemuError("LAUNCH_PIN", "ANGLE library is not pinned");
             }
         }

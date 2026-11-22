@@ -146,8 +146,6 @@ std::unique_ptr<QmpStream> qmp_connect(const Json &endpoint, int timeout_ms);
 // The QMP endpoint of the SDK process of a session: a private socket of the session on macOS and
 // Linux, the first free loopback port after the ADB port on Windows.
 Json android_qmp_endpoint(const std::string &session_id, unsigned console_port);
-// The ANGLE libraries that a graphics launch must pin.
-extern const std::array<std::string, 2> angle_libraries;
 // Platform parts of Android and QNX storage and of the stop budgets; session_posix.cpp and
 // session_windows.cpp define them.
 bool android_windows_renderer(const Json &specification, bool diagnostic_native);
