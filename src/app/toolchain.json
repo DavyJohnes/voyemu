@@ -274,8 +274,8 @@
         "release": 8
     },
     "javaHelper": {
-        "url": "https://github.com/voyemu/voyemu-deps/releases/download/java-helper-9369aa71/java-helper.zip",
-        "sha256": "255d71d2049f64adba3f048b32f2609eda962ac155a5d2c5b408787892dbbe9a"
+        "url": "https://github.com/voyemu/voyemu-deps/releases/download/java-helper-4e0f9281/java-helper.zip",
+        "sha256": "fb5773271cefa4a4a87885328eca89f0bf4362944ef860e113912c87ba049ecb"
     },
     "javaRuntime": {
         "version": "25.0.5+8",
