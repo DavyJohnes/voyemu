@@ -116,9 +116,15 @@ int main() try {
                        std::mutex wait_mutex;
                        std::condition_variable wait_cv;
                        std::unique_lock wait_lock(wait_mutex);
-                       wait_cv.wait_until(wait_lock,
-                                          std::chrono::steady_clock::time_point(
-                                                  std::chrono::milliseconds(after.load())));
+
+                       // A wait can return early, by a spurious wakeup or a coarse host timer, so
+                       // the sample waits until the clock reaches the deadline.
+                       while (SourceCoordinator::now_ms() < after.load()) {
+                           wait_cv.wait_until(wait_lock,
+                                              std::chrono::steady_clock::time_point(
+                                                      std::chrono::milliseconds(after.load())));
+                       }
+
                        SourceSample sample{"ready",          "can-service",
                                            "boot",           "3",
                                            Json{{"raw", 5}}, {},

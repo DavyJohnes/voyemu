@@ -222,6 +222,7 @@ int main() {
 
         auto boot = definition;
         boot["id"] = profile;
+        boot["platform"] = "qinggan11";
         boot["android"]["package"] = "system-images;android-30;default;arm64-v8a";
         boot["components"]["view-observation"] = "components/view-observation";
         api30_framework_boot::verify(boot);
@@ -514,7 +515,7 @@ int main() {
             }
 
             if (mode == 5) {
-                bad["id"] = "foreign";
+                bad["platform"] = "passion";
             }
 
             if (mode == 6) {

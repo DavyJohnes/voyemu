@@ -2836,6 +2836,10 @@ static void qnx_reuse_checks(const std::filesystem::path &stage) {
     // Existing-machine upgrades must reject an old full QNX profile epoch before Android
     // publication.
     definition["id"] = id;
+    definition["platform"] = "qinggan11";
+    definition["board"] = "8155";
+    definition["features"]["system_upgrade"] = true;
+    definition["wheel"] = {{"provider", "com.voyemu.input.wheel"}};
     definition["components"] = {{"view-observation", "components/view-observation"}};
     definition["install"] = Json::array({{{"artifact", "component:view-observation"},
                                           {"type", "file"},

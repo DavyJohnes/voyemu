@@ -5479,10 +5479,16 @@ int main(int argc, char **argv) {
                         check(denied, "611 invalid nonce must be rejected");
                     }
                     {
+                        // An owned run names a bundled profile: the one on the NXP board.
+                        auto bundled_nxp = nxp_definition;
+                        bundled_nxp["id"] = embedded_profile_names(ProfilePlatform::qinggan09,
+                                                                   ProfileBoard::nxp)
+                                                    .at(0);
+
                         const Json nxp_audio = {
                                 {"schema", 1},
                                 {"route", "wav"},
-                                {"profile", "test-nxp"},
+                                {"profile", bundled_nxp.at("id")},
                                 {"nonce", std::string(32, 'b')},
                                 {"directory",
                                  std::filesystem::canonical(activation_directory).string()}};
@@ -5490,7 +5496,7 @@ int main(int argc, char **argv) {
                         const auto nxp_scoped = portable_android_launch(
                                 app, PortableRuntimeHostBindings{}, seed30 / "android", clean30,
                                 bound30 / "config-template.ini", "nxp-scoped-wav", Json::array(),
-                                nxp_definition, audio_diagnostic_activation(activation_directory));
+                                bundled_nxp, audio_diagnostic_activation(activation_directory));
                         check(nxp_scoped.at("diagnostic_audio") == "wav" &&
                                       nxp_scoped.at("api") == 28,
                               "NXP scoped WAV must preserve its API28 runtime");
