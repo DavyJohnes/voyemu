@@ -16,15 +16,19 @@ public final class OemArm64LibrariesTest {
         }
     }
 
-    /** Arguments: project root, directory of the pinned AARs by archive name, output, proposal. */
+    /** Arguments: project root, output directory. */
     public static void main(String[] args) throws Exception {
-        Path root = Path.of(args[0]), archives = Path.of(args[1]), out = Path.of(args[2]);
-        Path proposal = Path.of(args[3]);
+        Path root = Path.of(args[0]), out = Path.of(args[1]);
+        Path archives = root.resolve(".local/toolchains/downloads/sources");
         int checked = 0;
+
+        if (!OemStockApksTest.hasSigningInputs(root)) {
+            System.exit(77);
+        }
 
         Files.createDirectories(out);
 
-        try (var entries = Files.list(proposal.resolve("profiles"))) {
+        try (var entries = Files.list(root.resolve("profiles"))) {
             for (Path recipe : entries.sorted().toList()) {
                 Path definition = recipe.resolve("profile.json");
 
@@ -58,28 +62,50 @@ public final class OemArm64LibrariesTest {
 
                     need(FilesSupport.hash(original).equals(Json.str(spec, "sha256")));
                     String component = use.substring("component:".length());
-                    Path work = out.resolve(id + "-" + name);
-                    Path source = work.resolve("source");
-                    Files.createDirectories(source);
                     Path descriptor = recipe.resolve("components/" + component + "/component.json");
-                    Files.copy(descriptor, source.resolve("component.json"));
+                    Path source = out.resolve(id + "-" + name).resolve("source");
 
-                    for (String archive :
-                            Json.obj(
-                                            Json.object(Json.parse(Files.readString(descriptor))),
-                                            "externalSources")
-                                    .keySet()) {
-                        Files.createLink(source.resolve(archive), archives.resolve(archive));
+                    if (stageInputs(descriptor, archives, source)) {
+                        check(root, source, recipe, data, name, original);
+                        checked++;
+                    } else {
+                        System.out.println("SKIP " + id + " " + name + ": pinned AAR absent");
                     }
-
-                    check(root, source, recipe, data, name, original);
-                    checked++;
                 }
             }
         }
 
-        need(checked > 0);
+        if (checked == 0) {
+            System.exit(77);
+        }
+
         System.out.println("GREEN " + checked + " OEM APKs with ARM64 library archives PASS");
+    }
+
+    static boolean stageInputs(Path descriptor, Path archives, Path source) throws Exception {
+        var external =
+                Json.obj(Json.object(Json.parse(Files.readString(descriptor))), "externalSources");
+        var cached = new java.util.LinkedHashMap<String, Path>();
+
+        for (var entry : external.entrySet()) {
+            var pin = Json.object(entry.getValue());
+            Path archive = archives.resolve(Json.str(pin, "sha256"));
+
+            if (Files.notExists(archive)) {
+                return false;
+            }
+
+            cached.put(entry.getKey(), archive);
+        }
+
+        Files.createDirectories(source);
+        Files.copy(descriptor, source.resolve("component.json"));
+
+        for (var archive : cached.entrySet()) {
+            Files.copy(archive.getValue(), source.resolve(archive.getKey()));
+        }
+
+        return true;
     }
 
     // SOURCE holds the component descriptor and its archives; its parent is the work directory.
@@ -94,6 +120,7 @@ public final class OemArm64LibrariesTest {
         Path out = source.getParent();
         var patch = Json.obj(Json.obj(data, "patches"), name);
         var steps = Json.list(patch.get("steps"));
+
         need(steps.size() == 1);
         String step = (String) steps.get(0);
         var metadata = Json.object(Json.parse(Files.readString(recipe.resolve("patches/" + step))));
@@ -150,6 +177,7 @@ public final class OemArm64LibrariesTest {
                 ((String) Json.list(Json.obj(Json.obj(data, "patches"), name).get("uses")).get(0))
                         .substring("component:".length());
         Path privateCache = out.resolve("cache");
+
         Files.createDirectories(privateCache.resolve("sources"));
         var descriptor =
                 Json.object(Json.parse(Files.readString(source.resolve("component.json"))));

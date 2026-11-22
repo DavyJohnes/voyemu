@@ -51,6 +51,7 @@ final class Recipes {
                     "media-card-music-fix.json",
                     "media-runtime.json",
                     "api28-usb-player.json",
+                    "api28-gallery-arm64.json",
                     "music-arm64-libs.json",
                     "navi-consent/navi-consent.json",
                     "navi-gles-msaa.json",

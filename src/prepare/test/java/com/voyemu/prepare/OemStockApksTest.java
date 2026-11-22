@@ -13,14 +13,18 @@ public final class OemStockApksTest {
         }
     }
 
-    /** Arguments: project root, output, proposal. */
+    /** Arguments: project root, output directory. */
     public static void main(String[] args) throws Exception {
-        Path root = Path.of(args[0]), out = Path.of(args[1]), proposal = Path.of(args[2]);
+        Path root = Path.of(args[0]), out = Path.of(args[1]);
         int checked = 0;
+
+        if (!hasSigningInputs(root)) {
+            System.exit(77);
+        }
 
         Files.createDirectories(out);
 
-        try (var entries = Files.list(proposal.resolve("profiles"))) {
+        try (var entries = Files.list(root.resolve("profiles"))) {
             for (Path recipe : entries.sorted().toList()) {
                 Path definition = recipe.resolve("profile.json");
 
@@ -82,8 +86,30 @@ public final class OemStockApksTest {
             }
         }
 
-        need(checked > 0);
+        if (checked == 0) {
+            System.exit(77);
+        }
+
         System.out.println("GREEN " + checked + " stock OEM APKs PASS");
+    }
+
+    static boolean hasSigningInputs(Path root) throws Exception {
+        var config =
+                Json.object(Json.parse(Files.readString(root.resolve("src/app/toolchain.json"))));
+        var signing = Json.obj(Json.obj(config, "signing"), "platform");
+        Path cache = root.resolve(".local/toolchains/downloads/native");
+
+        for (String artifact : List.of("key", "cert")) {
+            var pin = Json.obj(signing, artifact);
+
+            if (Files.notExists(cache.resolve(Json.str(pin, "sha256") + ".blob"))) {
+                System.out.println("SKIP platform signing " + artifact + " absent");
+
+                return false;
+            }
+        }
+
+        return true;
     }
 
     // Builds patched:NAME through Artifacts from the declarations of the profile.

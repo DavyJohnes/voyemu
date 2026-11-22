@@ -620,7 +620,7 @@ if(BUILD_TESTING)
     voyemu_add_test(check_profile_ids LABELS host TIMEOUT 120 COMMAND "${voyemu_jdk}/bin/java" "${voyemu_project_root}/src/dev/checks/test/CheckProfileIdsTest.java" "${voyemu_project_root}/src/dev/checks/CheckProfileIds.java" "${voyemu_project_root}/.local/build/tmp/check-profile-ids")
     # The platform macro checker runs on synthetic trees; lint runs it on src/.
     voyemu_add_test(check_platform_macros LABELS host TIMEOUT 120 COMMAND "${voyemu_jdk}/bin/java" "${voyemu_project_root}/src/dev/checks/test/CheckPlatformMacrosTest.java" "${voyemu_project_root}/src/dev/checks/CheckPlatformMacros.java" "${voyemu_project_root}/.local/build/tmp/check-platform-macros")
-    foreach(GROUP qinggan09 qinggan11_611 qinggan11_731 passion)
+    foreach(GROUP qinggan09 qinggan11_611 qinggan11_731 passion launcher_apps)
         voyemu_add_test(prepare_java_oem_${GROUP} LABELS oem deps TIMEOUT 3600 COMMAND ${CMAKE_COMMAND} -DGROUP=${GROUP} "-DEXT4_IMAGE=$<TARGET_FILE:ext4_image_test>" -P "${CMAKE_CURRENT_SOURCE_DIR}/../prepare/test/java/oem/run.cmake")
     endforeach()
     voyemu_add_test(prepare_java_oem_qinggan11_settings LABELS oem deps TIMEOUT 240 COMMAND ${CMAKE_COMMAND} -P "${CMAKE_CURRENT_SOURCE_DIR}/../prepare/test/java/oem/settings.cmake")

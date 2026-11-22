@@ -79,6 +79,9 @@ set(CASES_qinggan11_731
     "InterguestStartupGuardTest ANDROID:${F731}/system/system/framework/services.jar"
     "SecondaryNavigationGuardTest ANDROID:${F731}/system/system/framework/services.jar NEW"
     "StartupVolumeGuardTest ${F731} ANDROID:${F731}/system/system/framework/services.jar NEW")
+set(CASES_launcher_apps
+    "OemArm64LibrariesTest ROOT WORK"
+    "OemStockApksTest ROOT WORK")
 set(CASES_passion
     "GuestChainPreflightTest ROOT WORK NEEDS:${PASSION}"
     "PassionAmbientLightGuardTest ROOT NEW NEEDS:${PASSION}"
