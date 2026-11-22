@@ -705,6 +705,7 @@ void verify_candidate_storage() {
     auto qinggan11 = passion;
     qinggan11["id"] = "test-qinggan11";
     qinggan11["platform"] = "qinggan11";
+    qinggan11["android"]["offline_selinux_labels"] = "qinggan11-can-early-v1";
     const auto qinggan11_budget = android_candidate_build_budget(qinggan11, 3ULL << 30, 1ULL << 30);
     check(qinggan11_budget.reserve_bytes == 8ULL << 30 &&
           qinggan11_budget.peak_extra_bytes ==
@@ -5448,9 +5449,9 @@ int main(int argc, char **argv) {
 #endif
         }
 
-        for (const auto *field : {"id", "components", "install"}) {
+        for (const auto *field : {"platform", "components", "install"}) {
             auto wrong_boot = acquired_api30;
-            wrong_boot[field] = field == std::string("id")           ? Json("other")
+            wrong_boot[field] = field == std::string("platform")     ? Json("qinggan09")
                                 : field == std::string("components") ? Json::object()
                                                                      : Json::array();
             bool refused = false;

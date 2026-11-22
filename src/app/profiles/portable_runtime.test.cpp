@@ -5338,7 +5338,7 @@ int main(int argc, char **argv) {
                     auto bad = partial;
 
                     if (mode == 0) {
-                        bad["wheel_capability"]["profile"] = "foreign";
+                        bad["wheel_capability"]["profile"] = "../foreign";
                     }
 
                     if (mode == 1) {

@@ -228,8 +228,7 @@ static void artifact_resume_checks(const std::filesystem::path &root, bool equip
         ensure_private_directory(file.parent_path());
         std::ofstream(file, std::ios::binary) << bytes;
     };
-    const std::string profile = equipment ? "free-09-chinese-20260106-6.0.3"
-                                          : "artifact-resume-fixture";
+    const std::string profile = equipment ? "test-qinggan09" : "artifact-resume-fixture";
     const auto definition = root / "profiles" / profile / "profile.json";
 
     put(definition, "{\"schema\":1}\n");
@@ -238,6 +237,8 @@ static void artifact_resume_checks(const std::filesystem::path &root, bool equip
         write_private_json(
                 definition,
                 {{"schema", 1},
+                 {"platform", "qinggan09"},
+                 {"board", "8155"},
                  {"android", {{"package", "system-images;android-28;default;arm64-v8a"}}},
                  {"files",
                   {{"hybrid-nvram",
@@ -1159,13 +1160,14 @@ static void media_origin_checks(const std::filesystem::path &root) {
         ensure_private_directory(file.parent_path());
         std::ofstream(file, std::ios::binary) << text;
     };
-    write_private_json(
-            definition,
-            {{"schema", 1},
-             {"platform", "qinggan11"},
-             {"board", "8155"},
-             {"features", {{"system_upgrade", true}}},
-             {"patches", {{"QGMedia", {{"steps", Json::array({"api30-usb-player.json"})}}}}}});
+    write_private_json(definition,
+                       {{"schema", 1},
+                        {"platform", "qinggan11"},
+                        {"board", "8155"},
+                        {"features", {{"system_upgrade", true}}},
+                        {"patches",
+                         {{"QGMedia", {{"steps", Json::array({"api30-usb-player.json"})}}},
+                          {"Navi", {{"steps", Json::array({"api30-navi-vin.json"})}}}}}});
     put(apk, "cold source QGMedia APK");
     const auto sha = sha256_file(apk);
     const Json artifact = {
@@ -2916,6 +2918,7 @@ static void system_upgrade_candidate_checks(const std::filesystem::path &stage) 
             {"platform", "qinggan11"},
             {"board", "8155"},
             {"features", {{"system_upgrade", true}}},
+            {"wheel", {{"provider", "com.voyemu.input.wheel"}}},
             {"android",
              {{"package", "system-images;android-30;default;arm64-v8a"},
               {"revision", "1"},
@@ -3099,7 +3102,7 @@ static void system_upgrade_candidate_checks(const std::filesystem::path &stage) 
             auto bad = source;
 
             if (mode == 0) {
-                bad["id"] = "passion-alias";
+                bad["platform"] = "qinggan09";
             }
 
             if (mode == 1) {

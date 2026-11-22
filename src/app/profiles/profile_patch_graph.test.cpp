@@ -213,10 +213,10 @@ int main(int argc, char **argv) {
         check(simulator_supported(plan_profile_patch_graph(root, wrapper)),
               "explicit A9 simulator recipe must be supported");
         auto bad = candidate;
-        bad["capture"]["referenceProfile"] = "other";
+        bad["board"] = "nxp";
         write_private_json(wrapper_directory / "profile.json", bad);
         check(!simulator_supported(plan_profile_patch_graph(root, wrapper)),
-              "wrong family accepted");
+              "A9 simulator recipe accepted on a foreign board");
         bad = candidate;
         bad["android"]["package"] = "system-images;android-29;default;arm64-v8a";
         write_private_json(wrapper_directory / "profile.json", bad);
