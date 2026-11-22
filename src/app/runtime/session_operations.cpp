@@ -257,6 +257,50 @@ Json Session::handle(const Json &operation) {
                     true, received + std::chrono::milliseconds(cluster_ui_timeout(operation)));
         } else if (op == "phone_control") {
             reply = phone_control(operation);
+        } else if (op == "usb_drive" || op == "test_usb_drive") {
+            const bool api = op == "test_usb_drive";
+
+            if (api && (!operation.contains("session_id") || !operation.contains("ownership_id"))) {
+                throw VoyemuError("TEST_OWNERSHIP", "USB drive requires explicit owned session");
+            }
+
+            if (!operation.contains("attached") || !operation.at("attached").is_boolean()) {
+                throw VoyemuError("TEST_ARGUMENT", "USB drive requires attached");
+            }
+
+            const bool attached = operation.at("attached").get<bool>();
+            reply = usb_drive(attached);
+
+            if (api) {
+                // The guest mounts or forgets the volume on its own; between probes the state lock
+                // stays free for the window and other clients.
+                const auto deadline =
+                        received + std::chrono::milliseconds(operation.value("timeout_ms", 20000));
+                const auto generation = android_generation_;
+                auto state = usb_drive_volume_state();
+
+                while ((attached ? state != "mounted" : state.has_value()) &&
+                       std::chrono::steady_clock::now() + std::chrono::milliseconds(250) <
+                               deadline) {
+                    lock.unlock();
+                    std::this_thread::sleep_for(std::chrono::milliseconds(250));
+                    lock.lock();
+
+                    if (android_generation_ != generation || !android_powered_) {
+                        throw VoyemuError("USB_DRIVE_UNKNOWN",
+                                          "multimedia restarted while the volume was awaited");
+                    }
+
+                    state = usb_drive_volume_state();
+                }
+
+                reply["ok"] = true;
+                reply["session_id"] = session_id_;
+                reply["volume"] = state ? Json{{"uuid", usb_drive_volume_uuid}, {"state", *state}}
+                                        : Json(nullptr);
+            } else {
+                reply = snapshot();
+            }
         } else if (op == "patch" && operation.at("values").is_object() &&
                    operation.at("values").contains("power")) {
             if ((passion_presentation(android_spec_) && !passion_mcu_available(android_spec_)) ||

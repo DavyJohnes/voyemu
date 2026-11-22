@@ -365,6 +365,14 @@ private:
     void deliver_android_short_pair(const WheelEvent &down, const WheelEvent &up, int hold_ms,
                                     bool &submitted);
     Json phone_control(const Json &operation);
+    // Plugs the USB drive into the multimedia guest or unplugs it; the receipt reports whether
+    // the port changed.
+    Json usb_drive(bool attached);
+    void plug_usb_drive(bool attached);
+    // The state of the guest volume of the drive in vold; empty without a volume or transport.
+    std::optional<std::string> usb_drive_volume_state();
+    Json android_qmp_;
+    bool usb_drive_attached_ = false;
     std::string phone_control_boot_;
     std::uint64_t phone_control_sequence_ = 0;
     std::int64_t phone_provider_pid_ = 0;

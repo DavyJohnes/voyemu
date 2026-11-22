@@ -7,9 +7,11 @@
 #include <csignal>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <fstream>
 #include <iostream>
 #include <mutex>
+#include <optional>
 #include <sstream>
 #include <thread>
 #ifdef _WIN32
@@ -21,6 +23,7 @@
 #include <fcntl.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <unistd.h>
 #endif
 #include "runtime_fixture_media.hpp"
@@ -621,6 +624,15 @@ int fixture_main(int argc, char **argv) {
                 return 0;
             }
 
+            if (argc == 7 && std::string(argv[3]) == "shell" && std::string(argv[4]) == "sm" &&
+                std::string(argv[5]) == "list-volumes" && std::string(argv[6]) == "public") {
+                if (std::filesystem::exists(root / "usb-drive-attached")) {
+                    std::cout << "public:8,1 mounted 2026-1122\n";
+                }
+
+                return 0;
+            }
+
             if (argc == 5 && std::string(argv[3]) == "shell" &&
                 std::string(argv[4]) == "getenforce") {
                 std::cout << "Enforcing\n";
@@ -1185,7 +1197,7 @@ int fixture_main(int argc, char **argv) {
             return 0;
         }
 
-        std::string avd, token;
+        std::string avd, token, qmp;
         unsigned port = 0, grpc = 0;
         bool engine = argc > 1 && std::string(argv[1]) == "--owned-engine";
 
@@ -1198,6 +1210,8 @@ int fixture_main(int argc, char **argv) {
                 port = static_cast<unsigned>(std::stoul(argv[++i]));
             } else if (arg == "-grpc" && i + 1 < argc) {
                 grpc = static_cast<unsigned>(std::stoul(argv[++i]));
+            } else if (arg == "-qmp" && i + 1 < argc) {
+                qmp = argv[++i];
             } else if (arg == "-prop" && i + 1 < argc) {
                 std::string property = argv[++i];
 
@@ -1325,6 +1339,10 @@ int fixture_main(int argc, char **argv) {
                 }
             }
 
+            if (!qmp.empty()) {
+                leaf.arguments.insert(leaf.arguments.end(), {"-qmp", qmp});
+            }
+
             leaf.output = root / "engine.log";
             auto child = voyemu::ChildProcess::launch(leaf);
             child.detach();
@@ -1388,6 +1406,108 @@ int fixture_main(int argc, char **argv) {
             return socket;
         };
         fixture_wire::Socket console(listen(port)), adb_listener(listen(port + 1));
+        // The QMP channel of the SDK process: the USB drive hotplug commands of the session
+        // change the usb-storage state that `sm list-volumes public` of the guest reports.
+        std::optional<fixture_wire::Socket> qmp_listener;
+
+        if (qmp.starts_with("tcp:127.0.0.1:")) {
+            qmp_listener.emplace(listen(static_cast<unsigned>(std::stoul(qmp.substr(14)))));
+        }
+
+#ifndef _WIN32
+        if (qmp.starts_with("unix:")) {
+            const auto path = qmp.substr(5, qmp.find(',') - 5);
+            sockaddr_un address{};
+            address.sun_family = AF_UNIX;
+
+            if (path.size() >= sizeof address.sun_path) {
+                throw voyemu::VoyemuError("FIXTURE", "fixture QMP path too long");
+            }
+
+            std::memcpy(address.sun_path, path.c_str(), path.size() + 1);
+            qmp_listener.emplace(::socket(AF_UNIX, SOCK_STREAM, 0));
+
+            if (qmp_listener->fd < 0 ||
+                ::bind(qmp_listener->fd, reinterpret_cast<sockaddr *>(&address), sizeof address) ||
+                ::listen(qmp_listener->fd, 4)) {
+                throw voyemu::VoyemuError("FIXTURE", "fixture QMP listener failed");
+            }
+
+            fixture_wire::nonblocking(qmp_listener->fd);
+        }
+#endif
+
+        if (!qmp.empty() && !qmp_listener) {
+            throw voyemu::VoyemuError("FIXTURE", "fixture QMP endpoint unsupported");
+        }
+
+        std::mutex qmp_mutex;
+        bool usb_block = false;
+        const auto usb_marker = root / "usb-drive-attached";
+        std::filesystem::remove(usb_marker);
+        auto qmp_client = [&](const fixture_wire::Peer &peer) {
+            peer.write("{\"QMP\":{\"version\":{\"qemu\":{\"micro\":0,\"minor\":12,\"major\":2}},"
+                       "\"capabilities\":[]}}\r\n");
+
+            for (;;) {
+                const auto message = voyemu::Json::parse(peer.line());
+                const auto command = message.at("execute").get<std::string>();
+                const auto arguments = message.value("arguments", voyemu::Json::object());
+                voyemu::Json reply{{"return", voyemu::Json::object()}};
+                std::string event;
+                std::lock_guard lock(qmp_mutex);
+                auto log = std::filesystem::exists(root / "qmp-commands.json")
+                                   ? voyemu::read_private_json(root / "qmp-commands.json")
+                                   : voyemu::Json::array();
+                log.push_back(message);
+                voyemu::write_private_json(root / "qmp-commands.json", log);
+                const auto error = [&](const char *description) {
+                    reply = {{"error", {{"class", "GenericError"}, {"desc", description}}}};
+                };
+
+                if (command == "human-monitor-command") {
+                    const auto line = arguments.at("command-line").get<std::string>();
+
+                    if (line.starts_with(
+                                "drive_add 0 \"if=none,id=voyemu-usb-drive,format=raw,file=")) {
+                        reply["return"] = usb_block
+                                                  ? "Duplicate ID 'voyemu-usb-drive' for drive\r\n"
+                                                  : "OK\r\n";
+                        usb_block = true;
+                    } else if (line == "drive_del voyemu-usb-drive") {
+                        reply["return"] = "";
+                        usb_block = false;
+                    } else {
+                        error("unsupported monitor command");
+                    }
+                } else if (command == "device_add") {
+                    if (!usb_block || std::filesystem::exists(usb_marker) ||
+                        arguments.value("driver", std::string{}) != "usb-storage" ||
+                        arguments.value("bus", std::string{}) != "voyemu-usb.0") {
+                        error("usb-storage device rejected");
+                    } else {
+                        std::ofstream(usb_marker) << "attached\n";
+                    }
+                } else if (command == "device_del") {
+                    if (!std::filesystem::exists(usb_marker) ||
+                        arguments.value("id", std::string{}) != "voyemu-usb-stick") {
+                        reply = {{"error",
+                                  {{"class", "DeviceNotFound"},
+                                   {"desc", "Device 'voyemu-usb-stick' not found"}}}};
+                    } else {
+                        std::filesystem::remove(usb_marker);
+                        usb_block = false;
+                        event = "{\"event\":\"DEVICE_DELETED\",\"data\":{\"device\":"
+                                "\"voyemu-usb-stick\",\"path\":\"/machine/peripheral/voyemu-usb-"
+                                "stick\"},\"timestamp\":{\"seconds\":1,\"microseconds\":0}}\r\n";
+                    }
+                } else if (command != "qmp_capabilities") {
+                    reply = {{"error", {{"class", "CommandNotFound"}, {"desc", command}}}};
+                }
+
+                peer.write(reply.dump() + "\r\n" + event);
+            }
+        };
         const char *home = std::getenv("ANDROID_EMULATOR_HOME");
 
         if (!home) {
@@ -1576,11 +1696,15 @@ int fixture_main(int argc, char **argv) {
                 });
             };
             std::optional<fixture_wire::Clients> adb_clients(std::in_place);
-            fixture_wire::Clients console_clients;
+            fixture_wire::Clients console_clients, qmp_clients;
 
             while (!stopped && !std::filesystem::exists(root / "window-exit") &&
                    !std::filesystem::exists(root / ("emu-kill-" + std::to_string(pid)))) {
                 console_clients.accept(console.fd, console_client);
+
+                if (qmp_listener) {
+                    qmp_clients.accept(qmp_listener->fd, qmp_client);
+                }
 
                 if (!adb_clients) {
                     for (unsigned i = 0; i < 64; ++i) {
@@ -1617,6 +1741,15 @@ int fixture_main(int argc, char **argv) {
                                     {"cause", stopped ? "owned-stop" : "fixture-window-exit"}});
         console.close();
         adb_listener.close();
+
+        if (qmp_listener) {
+            qmp_listener->close();
+
+            if (qmp.starts_with("unix:")) {
+                std::filesystem::remove(qmp.substr(5, qmp.find(',') - 5));
+            }
+        }
+
 #ifdef _WIN32
         sdk_media.reset();
         WSACleanup();

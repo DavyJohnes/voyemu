@@ -480,6 +480,21 @@ void Session::attach_android(const Json &input, bool explicit_cold_boot) {
     const auto machine_arguments = android_sdk_machine_arguments(os::host_windows,
                                                                  diagnostic_native);
     spec.arguments.insert(spec.arguments.end(), machine_arguments.begin(), machine_arguments.end());
+    {
+        // Every generation starts with an empty USB port; a stale socket of a lost SDK process
+        // would make QEMU fail to bind its QMP channel.
+        android_qmp_ = android_qmp_endpoint(session_id_, port);
+        usb_drive_attached_ = false;
+
+        if (android_qmp_.is_string()) {
+            std::filesystem::remove(android_qmp_.get<std::string>());
+        }
+
+        const bool boundary = std::find(spec.arguments.begin(), spec.arguments.end(), "-qemu") !=
+                              spec.arguments.end();
+        const auto usb_arguments = android_usb_arguments(boundary, android_qmp_);
+        spec.arguments.insert(spec.arguments.end(), usb_arguments.begin(), usb_arguments.end());
+    }
 
     if (specification.contains("interguest_network")) {
         if (!interguest_link_) {
@@ -563,7 +578,8 @@ void Session::attach_android(const Json &input, bool explicit_cold_boot) {
             {"quickboot",
              {{"mode", android_resume_ ? "restore_requested" : "cold"},
               {"reason", explicit_cold_boot ? "explicit_cold_boot" : checkpoint.reason},
-              {"checkpoint_saved", false}}}};
+              {"checkpoint_saved", false}}},
+            {"usb_drive", {{"attached", false}}}};
     deliveries_["android"]["pid_namespace"] = android_.pid_namespace();
     deliveries_["android"]["owned_adb"] = android_spec_.at("owned_adb");
 
@@ -968,9 +984,23 @@ void Session::stop_android(std::unique_lock<std::recursive_mutex> &state, bool s
         }
 
         guest_synced = true;
+        // A checkpoint holds the device state, so a plugged drive would leave it unloadable by
+        // the next session; after the sync above the drive leaves like a pulled stick.
+        bool usb_drive_released = !usb_drive_attached_;
 
-        if (save_checkpoint && owned_shutdown && inputs_released && frontend_releases_verified_ &&
-            android_possible_pressed_.empty() && wheel_provisioned_ && android_quickboot_) {
+        if (!usb_drive_released) {
+            try {
+                plug_usb_drive(false);
+                usb_drive_released = true;
+            } catch (const std::exception &error) {
+                logging::write(logging::Level::error, "android", "usb.release_failed",
+                               {{"error", error.what()}});
+            }
+        }
+
+        if (save_checkpoint && usb_drive_released && owned_shutdown && inputs_released &&
+            frontend_releases_verified_ && android_possible_pressed_.empty() &&
+            wheel_provisioned_ && android_quickboot_) {
             // The checkpoint is an optimization. A failed save is recorded and the owned
             // shutdown below still proceeds, exactly as an ineligible checkpoint does.
             try {

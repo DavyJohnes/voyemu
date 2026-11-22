@@ -201,7 +201,9 @@ Json android_quickboot_key(const Json &specification) {
              {"wheel_protocol", 1},
              {"vehicle_protocol", 1},
              {"vehicle_maps", Json::array({qinggan09_map_sha256, qinggan11_map_sha256})},
-             {"prepared", prepared}};
+             {"prepared", prepared},
+             // The USB controller of the multimedia guest is part of the device state.
+             {"usb_controller", "usb-ehci-v1"}};
 
     if (specification.contains("interguest_network")) {
         validate_qnx_interguest_contract(specification.at("interguest_network"));

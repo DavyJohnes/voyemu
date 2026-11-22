@@ -11,6 +11,7 @@
 #include "android_reboot.hpp"
 #include "android_stop_policy.hpp"
 #include "android_system_binding.hpp"
+#include "android_usb_drive.hpp"
 #include "can_model_observation.hpp"
 #include "can_observation.hpp"
 #include "can_restart_boundary.hpp"
@@ -133,6 +134,18 @@ std::filesystem::path session_control_endpoint(const std::filesystem::path &dire
                                                const std::string &session_id);
 // The directory of ${RUNTIME} in launch paths; IPC_PATH on Windows, which has no runtime sockets.
 std::filesystem::path session_runtime_root();
+// A line channel to the QMP endpoint of the SDK process: a Unix-domain socket path on macOS and
+// Linux, {host, port} on loopback TCP on Windows. Failures are IPC_* codes.
+class QmpStream {
+public:
+    virtual ~QmpStream() = default;
+    virtual void write(const std::string &text, int timeout_ms) = 0;
+    virtual std::string read_line(int timeout_ms) = 0;
+};
+std::unique_ptr<QmpStream> qmp_connect(const Json &endpoint, int timeout_ms);
+// The QMP endpoint of the SDK process of a session: a private socket of the session on macOS and
+// Linux, the first free loopback port after the ADB port on Windows.
+Json android_qmp_endpoint(const std::string &session_id, unsigned console_port);
 // The ANGLE libraries that a graphics launch must pin.
 extern const std::array<const char *, 2> angle_libraries;
 // Platform parts of Android and QNX storage and of the stop budgets; session_posix.cpp and

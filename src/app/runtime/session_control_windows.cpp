@@ -135,6 +135,156 @@ std::filesystem::path session_runtime_root() {
     throw VoyemuError("IPC_PATH", "Unix runtime socket path is unavailable on Windows");
 }
 
+namespace {
+class SocketQmpStream final : public QmpStream {
+public:
+    SocketQmpStream() {
+        WSADATA data{};
+
+        if (WSAStartup(MAKEWORD(2, 2), &data) != 0) {
+            throw VoyemuError("IPC_SOCKET", "Winsock unavailable");
+        }
+
+        socket_ = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+
+        if (socket_ == INVALID_SOCKET) {
+            WSACleanup();
+            throw VoyemuError("IPC_SOCKET", "cannot create channel");
+        }
+    }
+
+    ~SocketQmpStream() override {
+        ::closesocket(socket_);
+        WSACleanup();
+    }
+
+    SocketQmpStream(const SocketQmpStream &) = delete;
+    SocketQmpStream &operator=(const SocketQmpStream &) = delete;
+
+    void connect(unsigned port, int timeout_ms) {
+        u_long nonblocking = 1;
+
+        ioctlsocket(socket_, FIONBIO, &nonblocking);
+        sockaddr_in address{};
+        address.sin_family = AF_INET;
+        address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+        address.sin_port = htons(static_cast<unsigned short>(port));
+
+        if (::connect(socket_, reinterpret_cast<sockaddr *>(&address), sizeof address) == 0) {
+            return;
+        }
+
+        if (WSAGetLastError() != WSAEWOULDBLOCK) {
+            throw VoyemuError("IPC_CONNECT", "service unavailable");
+        }
+
+        wait(true, timeout_ms);
+        int error = 0, length = sizeof error;
+        getsockopt(socket_, SOL_SOCKET, SO_ERROR, reinterpret_cast<char *>(&error), &length);
+
+        if (error) {
+            throw VoyemuError("IPC_CONNECT", "service unavailable");
+        }
+    }
+
+    void write(const std::string &text, int timeout_ms) override {
+        const auto deadline = std::chrono::steady_clock::now() +
+                              std::chrono::milliseconds(timeout_ms);
+        std::size_t offset = 0;
+
+        while (offset < text.size()) {
+            wait(true, remaining(deadline));
+            const auto count = ::send(socket_, text.data() + offset,
+                                      static_cast<int>(text.size() - offset), 0);
+
+            if (count <= 0) {
+                throw VoyemuError("IPC_WRITE_UNKNOWN", "local channel failed");
+            }
+
+            offset += static_cast<std::size_t>(count);
+        }
+    }
+
+    std::string read_line(int timeout_ms) override {
+        const auto deadline = std::chrono::steady_clock::now() +
+                              std::chrono::milliseconds(timeout_ms);
+
+        while (remainder_.size() < 64 * 1024) {
+            if (const auto end = remainder_.find('\n'); end != std::string::npos) {
+                auto line = remainder_.substr(0, end);
+                remainder_.erase(0, end + 1);
+
+                return line;
+            }
+
+            wait(false, remaining(deadline));
+            char bytes[4096];
+            const auto count = ::recv(socket_, bytes, sizeof bytes, 0);
+
+            if (count <= 0) {
+                throw VoyemuError("IPC_READ_UNKNOWN", "incomplete message");
+            }
+
+            remainder_.append(bytes, static_cast<std::size_t>(count));
+        }
+
+        throw VoyemuError("IPC_EXTENT", "input too large");
+    }
+
+private:
+    static int remaining(std::chrono::steady_clock::time_point deadline) {
+        const auto left = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                  deadline - std::chrono::steady_clock::now())
+                                  .count();
+
+        if (left <= 0) {
+            throw VoyemuError("IPC_TIMEOUT_UNKNOWN", "local channel deadline");
+        }
+
+        return static_cast<int>(left);
+    }
+
+    void wait(bool write, int timeout_ms) {
+        fd_set selected;
+
+        FD_ZERO(&selected);
+        FD_SET(socket_, &selected);
+        timeval timeout{timeout_ms / 1000, (timeout_ms % 1000) * 1000};
+
+        if (::select(0, write ? nullptr : &selected, write ? &selected : nullptr, nullptr,
+                     &timeout) <= 0) {
+            throw VoyemuError("IPC_TIMEOUT_UNKNOWN", "local channel unavailable");
+        }
+    }
+
+    SOCKET socket_ = INVALID_SOCKET;
+    std::string remainder_;
+};
+} // namespace
+
+std::unique_ptr<QmpStream> qmp_connect(const Json &endpoint, int timeout_ms) {
+    const auto port = endpoint.at("port").get<unsigned>();
+
+    if (endpoint.at("host") != "127.0.0.1" || port < 1024 || port > 65535) {
+        throw VoyemuError("IPC_OWNER", "owned loopback QMP port required");
+    }
+
+    auto stream = std::make_unique<SocketQmpStream>();
+    stream->connect(port, timeout_ms);
+
+    return stream;
+}
+
+Json android_qmp_endpoint(const std::string &, unsigned console_port) {
+    for (unsigned port = console_port + 2; port < 65535; ++port) {
+        if (tcp_port_free(port)) {
+            return {{"host", "127.0.0.1"}, {"port", port}};
+        }
+    }
+
+    throw VoyemuError("USB_DRIVE", "no free loopback QMP port");
+}
+
 Json control_exchange(const std::filesystem::path &endpoint, const std::string &text,
                       const Json &operation, const ControlTimeout &timeout) {
     HANDLE pipe = pipe_connect(endpoint, timeout.remaining());

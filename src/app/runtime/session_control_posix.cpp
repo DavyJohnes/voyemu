@@ -164,16 +164,17 @@ int unix_connect(const std::filesystem::path &endpoint, int timeout, bool owned)
 std::filesystem::path native_socket_root() {
     // The sockets of a session never live under the machine root, whose length is unbounded,
     // but in the first private directory of the user that leaves room in sun_path for the
-    // longest name, <session id>-qmp.sock: the temporary directory, the user runtime directory,
-    // then /tmp, the default temporary directory, which POSIX keeps short. The directory exists
-    // before QEMU or a control server binds there.
+    // longest name, <session id>-media-qmp.sock: the temporary directory, the user runtime
+    // directory, then /tmp, the default temporary directory, which POSIX keeps short. The directory
+    // exists before QEMU or a control server binds there.
     const auto user = "voyemu-" + std::to_string(::geteuid());
 
     for (const auto &root :
          {std::filesystem::canonical(std::filesystem::temp_directory_path()) / user,
           os::user_socket_directory(), std::filesystem::canonical("/tmp") / user}) {
-        if (root.is_absolute() && (root / (std::string(32, '0') + "-qmp.sock")).string().size() <
-                                          sizeof(sockaddr_un{}.sun_path)) {
+        if (root.is_absolute() &&
+            (root / (std::string(32, '0') + "-media-qmp.sock")).string().size() <
+                    sizeof(sockaddr_un{}.sun_path)) {
             ensure_private_directory(root);
 
             return root;
@@ -202,6 +203,42 @@ std::filesystem::path session_control_endpoint(const std::filesystem::path &dire
 
 std::filesystem::path session_runtime_root() {
     return native_socket_root();
+}
+
+namespace {
+class SocketQmpStream final : public QmpStream {
+public:
+    explicit SocketQmpStream(int fd) : fd_(fd) {}
+
+    void write(const std::string &text, int timeout_ms) override {
+        send_text(fd_.value, text, timeout_ms);
+    }
+
+    std::string read_line(int timeout_ms) override {
+        return receive_line(fd_.value, timeout_ms, &remainder_, 64 * 1024);
+    }
+
+private:
+    Fd fd_;
+    std::string remainder_;
+};
+} // namespace
+
+std::unique_ptr<QmpStream> qmp_connect(const Json &endpoint, int timeout_ms) {
+    const std::filesystem::path path = endpoint.get<std::string>();
+    struct stat status{};
+
+    // QEMU creates the socket with the process umask inside the private runtime directory.
+    if (path.parent_path() != native_socket_root() || ::lstat(path.c_str(), &status) != 0 ||
+        !S_ISSOCK(status.st_mode) || status.st_uid != ::geteuid()) {
+        throw VoyemuError("IPC_OWNER", "owned QMP socket required");
+    }
+
+    return std::make_unique<SocketQmpStream>(unix_connect(path, timeout_ms, false));
+}
+
+Json android_qmp_endpoint(const std::string &session_id, unsigned) {
+    return (native_socket_root() / (session_id + "-media-qmp.sock")).string();
 }
 
 Json control_exchange(const std::filesystem::path &endpoint, const std::string &text,
