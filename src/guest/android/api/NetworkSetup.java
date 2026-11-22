@@ -205,17 +205,17 @@ public final class NetworkSetup {
         @Override
         public boolean configured(String iface) throws Exception {
             Object value = configuration(iface);
-            Object address = config.getMethod("getLinkAddress").invoke(value);
+            Object linkAddress = config.getMethod("getLinkAddress").invoke(value);
 
             return MAC.equalsIgnoreCase(
                             (String) config.getMethod("getHardwareAddress").invoke(value))
                     && Boolean.TRUE.equals(config.getMethod("isUp").invoke(value))
-                    && address != null
+                    && linkAddress != null
                     && address.equals(
-                            ((InetAddress) link.getMethod("getAddress").invoke(address))
+                            ((InetAddress) link.getMethod("getAddress").invoke(linkAddress))
                                     .getHostAddress())
                     && Integer.valueOf(24)
-                            .equals(link.getMethod("getPrefixLength").invoke(address));
+                            .equals(link.getMethod("getPrefixLength").invoke(linkAddress));
         }
 
         private void idempotent(Object target, Method method, Object... arguments)

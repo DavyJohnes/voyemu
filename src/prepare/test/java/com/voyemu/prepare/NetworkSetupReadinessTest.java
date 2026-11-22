@@ -14,6 +14,7 @@ import java.util.Map;
 /** Compile the real NetworkSetup entrypoint against controlled Android service stubs. */
 public final class NetworkSetupReadinessTest {
     private static final String PREFIX = "VOYEMU_NETWORK_V1 ";
+    private static final String ADDRESS = "172.30.100.3";
     private static final Map<String, String> SOURCES =
             Map.of(
                     "android/os/IBinder.java",
@@ -51,6 +52,7 @@ public final class NetworkSetupReadinessTest {
                             """
                             package android.os;
                             import android.net.InterfaceConfiguration;
+                            import android.net.LinkAddress;
                             import android.net.RouteInfo;
                             public class INetworkManagementService {
                                 public static class Stub {
@@ -64,8 +66,12 @@ public final class NetworkSetupReadinessTest {
                                 public void setInterfaceConfig(String name, InterfaceConfiguration config) {
                                     System.err.println("configured");
                                     value = config;
+                                    if (Boolean.getBoolean("wrongreadback")) {
+                                        value.setLinkAddress(new LinkAddress("172.30.100.4/24"));
+                                    }
                                 }
                                 public void createPhysicalNetwork(int id, String permission) {
+                                    System.err.println("routes requested");
                                     if (Boolean.getBoolean("routefail")) throw new IllegalStateException("route_denied");
                                 }
                                 public void addInterfaceToNetwork(String name, int id) {}
@@ -140,17 +146,20 @@ public final class NetworkSetupReadinessTest {
                     HostTestRunner.run(new ProcessBuilder(compile).inheritIO(), 60) == 0,
                     "NetworkSetup compilation failed");
 
-            Result result = run(work, List.of("-Dmissing=2"), List.of());
+            var networkArgs = List.of(ADDRESS);
+            Result result = run(work, List.of("-Dmissing=2"), networkArgs);
             require(
                     result.status() == 0
                             && Boolean.TRUE.equals(result.receipt().get("ok"))
+                            && ADDRESS.equals(result.receipt().get("address"))
                             && result.stderr().contains("lookup:3")
-                            && result.stderr().contains("configured"),
+                            && result.stderr().contains("configured")
+                            && result.stderr().contains("routes requested"),
                     result.toString());
             System.out.println(
                     "PASS transient null service -> actual configure and verified receipt");
 
-            result = run(work, List.of("-Dmissing=99999"), List.of());
+            result = run(work, List.of("-Dmissing=99999"), networkArgs);
             requireFailure(result, "service_unavailable");
             require(
                     result.seconds() >= 4
@@ -160,18 +169,30 @@ public final class NetworkSetupReadinessTest {
             System.out.println(
                     "PASS finite readiness deadline, structured nonfatal nonzero failure");
 
+            result = run(work, List.of("-Dwrongreadback=true"), networkArgs);
+            requireFailure(result, "network_setup_failed");
+            require(
+                    result.stderr().contains("configured")
+                            && !result.stderr().contains("routes requested"),
+                    "A mismatching address must fail before routes are requested: " + result);
+
             var scenarios =
                     List.of(
                             new Scenario(
                                     List.of("-Dreflectfail=true"),
-                                    List.of(),
+                                    networkArgs,
                                     "network_setup_failed"),
                             new Scenario(
-                                    List.of("-Droutefail=true"), List.of(), "network_setup_failed"),
-                            new Scenario(List.of("-Duid=2000"), List.of(), "root_required"),
+                                    List.of("-Droutefail=true"),
+                                    networkArgs,
+                                    "network_setup_failed"),
+                            new Scenario(List.of("-Duid=2000"), networkArgs, "root_required"),
                             new Scenario(
-                                    List.of("-Dpermissive=true"), List.of(), "enforcing_required"),
-                            new Scenario(List.of(), List.of("unexpected"), "arguments_rejected"));
+                                    List.of("-Dpermissive=true"),
+                                    networkArgs,
+                                    "enforcing_required"),
+                            new Scenario(List.of(), List.of(), "arguments_rejected"),
+                            new Scenario(List.of(), List.of("8.8.8.8"), "arguments_rejected"));
 
             for (Scenario scenario : scenarios) {
                 result = run(work, scenario.properties(), scenario.args());
