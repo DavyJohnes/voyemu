@@ -11,6 +11,7 @@ import org.jf.dexlib2.iface.instruction.RegisterRangeInstruction;
 import org.jf.dexlib2.immutable.ImmutableClassDef;
 import org.jf.dexlib2.immutable.ImmutableDexFile;
 import org.jf.dexlib2.immutable.ImmutableMethod;
+import org.jf.dexlib2.immutable.ImmutableMethodImplementation;
 import org.jf.dexlib2.immutable.reference.ImmutableMethodReference;
 
 import java.nio.file.Path;
@@ -65,7 +66,7 @@ final class InterguestStartupGuard {
         require(type != null);
         int matched = 0;
 
-        for (Method method : type.getDirectMethods()) {
+        for (Method method : type.getVirtualMethods()) {
             if (method.toString().equals(CALLER)) {
                 verifyReverse(method, rewrite(method, true));
                 ++matched;
@@ -80,17 +81,17 @@ final class InterguestStartupGuard {
         var systemServer = classes.get(OWNER);
 
         require(systemServer != null);
-        var direct = new ArrayList<Method>();
+        var virtual = new ArrayList<Method>();
         int changed = 0;
 
-        for (Method method : systemServer.getDirectMethods()) {
+        for (Method method : systemServer.getVirtualMethods()) {
             if (method.toString().equals(CALLER)) {
                 Method patched = rewrite(method, true);
                 verifyReverse(method, patched);
-                direct.add(patched);
+                virtual.add(patched);
                 ++changed;
             } else {
-                direct.add(method);
+                virtual.add(method);
             }
         }
 
@@ -106,8 +107,8 @@ final class InterguestStartupGuard {
                         systemServer.getAnnotations(),
                         systemServer.getStaticFields(),
                         systemServer.getInstanceFields(),
-                        direct,
-                        systemServer.getVirtualMethods()));
+                        systemServer.getDirectMethods(),
+                        virtual));
         byte[] result =
                 FrameworkDexMaterializer.serialize(
                         new ImmutableDexFile(Opcodes.forApi(30), classes.values()));
@@ -116,7 +117,10 @@ final class InterguestStartupGuard {
 
         for (ClassDef reloaded : reread.values()) {
             require(
-                    FrameworkDexMaterializer.semantic(reloaded)
+                    FrameworkDexMaterializer.semantic(
+                                    reloaded.getType().equals(OWNER)
+                                            ? normalizeReloadedCaller(reloaded)
+                                            : reloaded)
                             .equals(
                                     FrameworkDexMaterializer.semantic(
                                             classes.get(reloaded.getType()))));
@@ -125,9 +129,39 @@ final class InterguestStartupGuard {
         return result;
     }
 
+    private static ClassDef normalizeReloadedCaller(ClassDef type) {
+        var methods = new ArrayList<Method>();
+
+        for (Method method : type.getVirtualMethods()) {
+            methods.add(
+                    method.toString().equals(CALLER)
+                            ? withImplementation(
+                                    method,
+                                    new MutableMethodImplementation(method.getImplementation()))
+                            : method);
+        }
+
+        return new ImmutableClassDef(
+                type.getType(),
+                type.getAccessFlags(),
+                type.getSuperclass(),
+                type.getInterfaces(),
+                type.getSourceFile(),
+                type.getAnnotations(),
+                type.getStaticFields(),
+                type.getInstanceFields(),
+                type.getDirectMethods(),
+                methods);
+    }
+
     private static void verifyReverse(Method original, Method patched) throws Exception {
+        // dexlib2's builder drops derived names on end/restart-local entries even without edits.
+        var baseline =
+                ImmutableMethodImplementation.of(
+                        new MutableMethodImplementation(original.getImplementation()));
+
         require(
-                FrameworkDexMaterializer.semantic(original.getImplementation())
+                FrameworkDexMaterializer.semantic(baseline)
                         .equals(
                                 FrameworkDexMaterializer.semantic(
                                         rewrite(patched, false).getImplementation())));
@@ -195,6 +229,10 @@ final class InterguestStartupGuard {
 
         require(found == 1);
 
+        return withImplementation(method, code);
+    }
+
+    private static Method withImplementation(Method method, MutableMethodImplementation code) {
         return new ImmutableMethod(
                 method.getDefiningClass(),
                 method.getName(),
