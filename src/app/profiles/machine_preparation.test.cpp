@@ -135,6 +135,69 @@ void verify_candidate_profile_artifact_boundary() {
     std::filesystem::remove_all(root);
 }
 
+void verify_candidate_ui_retry() {
+    const Json connection = {{"boot_id", "boot"}, {"observer_pid", 42}};
+    const Json observed = {{"schema", 1}, {"ok", true}, {"boot_id", "boot"}, {"observer_pid", 42}};
+    const Json window_changed = {{"schema", 1}, {"ok", false}, {"reason", "window_changed"}};
+    const Json snapshot_busy = {{"schema", 1}, {"ok", false}, {"reason", "snapshot_busy"}};
+    const auto observe = [&](const std::vector<std::pair<std::string_view, Json>> &replies,
+                             std::string_view expected_error = {}) {
+        std::size_t calls = 0;
+        bool failed = false;
+        try {
+            const auto raw = machine_preparation_detail::read_candidate_ui(
+                    connection, 35000, [&](const Json &message, int timeout) {
+                        check(calls < replies.size());
+                        const auto &[operation, response] = replies[calls++];
+                        check(message.at("op") == operation);
+                        check(timeout > 0 && timeout <= 35000);
+
+                        if (operation == "ui") {
+                            const int guest_timeout = message.at("timeout_ms").get<int>();
+                            check(guest_timeout > 0 && guest_timeout <= std::min(timeout, 30000));
+                            check(message.at("surfaces") ==
+                                  Json::array({"media_primary", "media_secondary"}));
+                            check(message.at("scope").at("windows") == "all_attached");
+                        } else {
+                            check(operation == "hello" && timeout <= 2000 && message.size() == 1);
+                        }
+
+                        return response;
+                    });
+            check(raw == observed);
+        } catch (const VoyemuError &error) {
+            failed = true;
+            check(!expected_error.empty() &&
+                  std::string_view(error.what()).find(expected_error) != std::string_view::npos);
+        }
+
+        check(failed == !expected_error.empty() && calls == replies.size());
+    };
+
+    observe({{"ui", observed}});
+    observe({{"ui", window_changed},
+             {"hello", observed},
+             {"ui", snapshot_busy},
+             {"hello", observed},
+             {"ui", observed}});
+    auto other_boot = observed;
+    other_boot["boot_id"] = "other-boot";
+    observe({{"ui", window_changed}, {"hello", other_boot}}, "rich UI observer lifetime changed");
+    auto other_observer = observed;
+    other_observer["observer_pid"] = 43;
+    observe({{"ui", snapshot_busy}, {"hello", other_observer}},
+            "rich UI observer lifetime changed");
+    observe({{"ui", other_observer}}, "rich UI observer lifetime changed");
+    auto rejected = window_changed;
+    rejected["reason"] = "wm_display_conflict";
+    observe({{"ui", rejected}}, "observer rejected observation; reason=wm_display_conflict");
+    observe({{"ui", window_changed}, {"hello", rejected}},
+            "observer handshake rejected; reason=wm_display_conflict");
+    auto malformed = window_changed;
+    malformed["schema"] = 2;
+    observe({{"ui", malformed}}, "invalid rich UI observer response");
+}
+
 void verify_candidate_rich_ui() {
     const auto check_shell = [&](bool root, bool wrong_context, bool service_ready) {
         std::vector<std::vector<std::string>> calls;
@@ -2441,6 +2504,12 @@ int main(int argc, char **argv) {
         verify_failed_cold_check_retains_observation();
 
         if (argc == 2 && std::string_view(argv[1]) == "--cold-check-failure") {
+            return 0;
+        }
+
+        verify_candidate_ui_retry();
+
+        if (argc == 2 && std::string_view(argv[1]) == "--candidate-ui-retry") {
             return 0;
         }
 

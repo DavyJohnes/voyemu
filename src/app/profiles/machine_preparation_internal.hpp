@@ -698,6 +698,8 @@ getprop qemu.voyemu.token
 };
 bool android_candidate_ui_shell_ready(
         const std::function<std::string(const std::vector<std::string> &)> &shell);
+Json read_candidate_ui(const Json &connection, int timeout_ms,
+                       const std::function<Json(const Json &, int)> &exchange);
 Json capture_candidate_ui(Candidate &c, const Json &profile);
 std::pair<Json, Json> data_install_phases(const Json &entries);
 // Installs the planned entries into the candidate; meter counts the bytes of their files.

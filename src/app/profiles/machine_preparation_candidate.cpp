@@ -1,6 +1,7 @@
 #include "check.hpp"
 #include "machine_preparation_internal.hpp"
 #include "ordinary_path.hpp"
+#include "ui_observer_diagnostics.hpp"
 
 // Drives a booted Android candidate: installs files and packages, configures and wakes its
 // displays.
@@ -494,6 +495,54 @@ bool android_candidate_ui_shell_ready(
     return shell({"service", "check", "accessibility"}) == "Service accessibility: found";
 }
 
+Json read_candidate_ui(const Json &connection, int timeout_ms,
+                       const std::function<Json(const Json &, int)> &exchange) {
+    const auto deadline = Clock::now() + std::chrono::milliseconds(timeout_ms);
+    const auto remaining = [&](int limit) {
+        const auto left =
+                std::chrono::duration_cast<std::chrono::milliseconds>(deadline - Clock::now())
+                        .count();
+        need(left > 0, "rich UI observation deadline elapsed");
+
+        return static_cast<int>(std::min<std::int64_t>(left, limit));
+    };
+    const auto verify_lifetime = [&](const Json &reply) {
+        need(reply.value("boot_id", Json()) == connection.at("boot_id") &&
+                     reply.value("observer_pid", Json()).is_number_integer() &&
+                     reply.at("observer_pid") == connection.at("observer_pid"),
+             "rich UI observer lifetime changed");
+    };
+    const auto valid_reply = [](const Json &reply) {
+        return reply.is_object() && reply.value("schema", Json()).is_number_integer() &&
+               reply.at("schema") == 1 && reply.value("ok", Json()).is_boolean();
+    };
+
+    for (;;) {
+        const auto left = remaining(35000);
+        auto raw = exchange(android_candidate_ui_request(std::min(left, 30000)), left);
+        need(valid_reply(raw), "invalid rich UI observer response");
+        need(raw.dump().size() <= 6 * 1024 * 1024, "bounded rich UI response required");
+
+        if (raw.at("ok") == true) {
+            verify_lifetime(raw);
+
+            return raw;
+        }
+
+        const auto reason = raw.value("reason", Json());
+        const auto diagnostic = observer_failure_summary(raw);
+        need(reason == "window_changed" || reason == "snapshot_busy",
+             "rich UI observer rejected observation; " + diagnostic);
+        logging::write(logging::Level::debug, "prepare", "rich UI observation rejected",
+                       {{"failure", diagnostic}});
+        const auto hello = exchange({{"op", "hello"}}, remaining(2000));
+        need(valid_reply(hello), "invalid rich UI observer handshake");
+        need(hello.at("ok") == true,
+             "rich UI observer handshake rejected; " + observer_failure_summary(hello));
+        verify_lifetime(hello);
+    }
+}
+
 Json capture_candidate_ui(Candidate &c, const Json &profile) {
     auto definition = cached_profile_ui_observer(c.root);
 
@@ -556,14 +605,13 @@ Json capture_candidate_ui(Candidate &c, const Json &profile) {
     try {
         fence();
         const auto connection = observer.connection(budget(30000));
-        const auto request = android_candidate_ui_request(budget(30000));
-        auto raw = observer.exchange(connection, request, budget(35000));
-        fence();
-        need(raw.dump().size() <= 6 * 1024 * 1024, "bounded rich UI response required");
-        need(raw.value("boot_id", std::string{}) == connection.at("boot_id").get<std::string>() &&
-                     raw.value("observer_pid", std::int64_t{}) ==
-                             connection.at("observer_pid").get<std::int64_t>(),
-             "rich UI observer lifetime changed");
+        const auto raw =
+                read_candidate_ui(connection, budget(35000), [&](const Json &message, int timeout) {
+                    auto reply = observer.exchange(connection, message, budget(timeout));
+                    fence();
+
+                    return reply;
+                });
         const auto normalized = save_android_candidate_ui_observation(c.stage, raw,
                                                                       secondary.value());
         Json screens = Json::array();
