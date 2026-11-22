@@ -750,7 +750,10 @@ int main(int argc, char **argv) try {
 
         for (const auto *name :
              {"ui/splash.png", "ui/wheel-routes.json", "ui/wheel/wheel-hotspots.json",
-              "ui/wheel/wheel-left.png", "ui/wheel/wheel-right.png"}) {
+              "ui/wheel/wheel-left.png", "ui/wheel/wheel-right.png", "ui/fonts/primary-regular.ttf",
+              "ui/fonts/primary-medium.ttf", "ui/fonts/primary-bold.ttf",
+              "ui/fonts/fallback-regular.ttf", "ui/fonts/fallback-medium.ttf",
+              "ui/fonts/fallback-bold.ttf"}) {
             const auto file = selected_machine / name;
             ensure_private_directory(file.parent_path());
             const std::string bytes = std::string(name) == "ui/wheel-routes.json"
@@ -776,6 +779,9 @@ int main(int argc, char **argv) try {
             } else if (std::string_view(name).starts_with("ui/wheel/")) {
                 std::filesystem::copy_file(
                         project / "profiles/common/wheels/free-2021" / file.filename(), file);
+            } else if (std::string_view(name).starts_with("ui/fonts/")) {
+                std::filesystem::copy_file(project / "src/app/ui/testdata/fonts" / file.filename(),
+                                           file);
             } else {
                 std::ofstream out(file, std::ios::binary);
                 out << bytes;
