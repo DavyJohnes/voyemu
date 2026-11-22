@@ -604,6 +604,8 @@ private:
     Json retired_graphics_ = Json::array();
     std::uint64_t graphics_owner_challenge_ = 0;
     void publish_graphics_owners();
+    void promote_live_screen(
+            const std::function<std::size_t(std::uint64_t, std::span<std::byte>)> &read_ram);
     void retire_dead_graphics(
             const std::function<std::size_t(std::uint64_t, std::span<std::byte>)> &read_ram);
     void retire_graphics_worker(std::size_t index, bool unclean,

@@ -54,6 +54,110 @@ void Session::publish_graphics_owners() {
                                                            {"owners", owners}});
 }
 
+void Session::promote_live_screen(
+        const std::function<std::size_t(std::uint64_t, std::span<std::byte>)> &read_ram) {
+    const auto owner_path = directory_ / "frame-owner.json", frame_path = directory_ / "frame.bgra";
+    Json claim;
+
+    if (std::filesystem::exists(owner_path)) {
+        terminal_path_guard(owner_path);
+
+        // The initial worker creates its claim exclusively before publishing a backing.
+        if (!std::filesystem::is_regular_file(owner_path) ||
+            !std::filesystem::file_size(owner_path)) {
+            return;
+        }
+
+        claim = read_private_json(owner_path, 1024);
+
+        if (!claim.is_object() || claim.value("schema", 0) != 1 ||
+            claim.value("source", std::string{}) != "original-OEM-Screen-BMP" ||
+            !claim.contains("producer_address") || claim.value("screen_stream", false)) {
+            return;
+        }
+    }
+
+    for (std::size_t i = 0; i < graphics_.size(); ++i) {
+        const auto address = producers_.at(i);
+        const auto owner = graphics_owners_.at(i);
+
+        if (!owner.pid || !owner.incarnation || !graphics_[i].alive()) {
+            continue;
+        }
+
+        std::ostringstream producer;
+        producer << "producer-" << std::hex << address;
+        const auto source = directory_ / producer.str();
+        const auto receipt_path = source / "screen-stream.json";
+
+        if (!std::filesystem::exists(receipt_path)) {
+            continue;
+        }
+
+        const Json expected{{"schema", 1},
+                            {"session_id", session_id_},
+                            {"generation", cluster_generation_},
+                            {"producer_address", address},
+                            {"worker_pid", graphics_[i].pid()},
+                            {"nonce", owner.nonce},
+                            {"guest_pid", owner.pid},
+                            {"producer_incarnation", owner.incarnation}};
+        terminal_path_guard(receipt_path);
+
+        if (read_private_json(receipt_path, 2048) != expected) {
+            continue;
+        }
+
+        std::array<std::uint32_t, 2> header{};
+        std::array<std::uint64_t, 2> identity{};
+
+        if (read_ram(address, std::as_writable_bytes(std::span(header))) != sizeof(header) ||
+            header[0] != 0x58464751 || header[1] != 3 ||
+            read_ram(address + 240, std::as_writable_bytes(std::span(identity))) !=
+                    sizeof(identity) ||
+            identity[0] != owner.pid || identity[1] != owner.incarnation) {
+            continue;
+        }
+
+        const bool already_canonical = !claim.empty() && claim.at("producer_address") == address;
+        const auto candidate = already_canonical ? frame_path : source / "frame.bgra";
+        frames::Reader reader(candidate);
+        const auto fresh = reader.read_latest();
+
+        if (!fresh) {
+            continue;
+        }
+
+        if (!already_canonical) {
+            if (!claim.empty()) {
+                frames::Reader previous(frame_path);
+                const auto initial = previous.read_latest();
+
+                // Keep the existing backing until the successor advances both timeline fences.
+                if (!initial || fresh->sequence <= initial->sequence ||
+                    fresh->timestamp_ns <= initial->timestamp_ns) {
+                    continue;
+                }
+            }
+
+            terminal_path_guard(candidate);
+            terminal_path_guard(frame_path);
+
+            // Readers detect the replaced inode. The successor retains its existing mapping.
+            if (!os::replace_file(candidate, frame_path)) {
+                throw VoyemuError("QNX_FRAME_OWNER", "cannot publish the live Screen backing");
+            }
+        }
+
+        write_private_json(owner_path, {{"schema", 1},
+                                        {"source", "original-OEM-Screen-BMP"},
+                                        {"producer_address", address},
+                                        {"screen_stream", true}});
+
+        return;
+    }
+}
+
 void Session::retire_dead_graphics(
         const std::function<std::size_t(std::uint64_t, std::span<std::byte>)> &read_ram) {
     const auto frame_owner = directory_ / "frame-owner.json";
@@ -882,6 +986,7 @@ void Session::poll_qnx() {
 
         return std::size_t(input.gcount());
     };
+    promote_live_screen(read_ram);
     retire_dead_graphics(read_ram);
     std::string console;
 

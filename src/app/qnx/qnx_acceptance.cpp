@@ -389,8 +389,11 @@ Json run(const std::filesystem::path &root, const std::string &profile,
                      "frame is not original QNX Screen");
 
                 if (!layout.projection.is_null()) {
-                    if (stable_owner.is_null()) {
+                    if (stable_owner.is_null() ||
+                        (!probe_revision && !stable_owner.value("screen_stream", false) &&
+                         owner.value("screen_stream", false))) {
                         stable_owner = owner;
+                        bright_since.reset();
                     } else {
                         need(owner == stable_owner, "Screen producer changed during acceptance");
                     }

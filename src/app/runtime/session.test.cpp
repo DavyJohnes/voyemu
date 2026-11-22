@@ -265,6 +265,99 @@ static int persistent_qmp_fixture(const char *socket_path, const char *log_path)
 #endif
 namespace voyemu {
 struct SessionPersistenceFixture {
+    static void screen_stream_handoff(const std::filesystem::path &executable) {
+        const auto root = std::filesystem::canonical(std::filesystem::temp_directory_path()) /
+                          ("voyemu-screen-stream-" + random_token());
+        ensure_private_directory(root);
+        {
+            Session session(root, random_token());
+            session.cluster_generation_ = 2;
+            constexpr std::uint64_t animation = 0x50001000, live = 0x50002000;
+            const auto frame = root / "frame.bgra", claim = root / "frame-owner.json";
+            const auto candidate = root / "producer-50002000";
+            ensure_private_directory(candidate);
+            frames::Writer animation_frames(frame), live_frames(candidate / "frame.bgra");
+            frames::Reader visible(frame);
+            std::vector<std::byte> pixels(frames::pixel_bytes, std::byte{11});
+            animation_frames.publish(pixels, 4, 10);
+            write_private_json(claim, {{"schema", 1},
+                                       {"source", "original-OEM-Screen-BMP"},
+                                       {"producer_address", animation}});
+            const auto initial_frame = visible.read_latest();
+            assert(initial_frame && initial_frame->bgra.front() == std::byte{11});
+
+            ProcessSpec child;
+            child.executable = executable;
+            child.arguments = {"--screen-stream-worker-fixture"};
+            child.output = root / "worker.log";
+            session.graphics_.push_back(ChildProcess::launch(child));
+            session.graphics_owners_.push_back({41, 42, 43});
+            session.producers_.push_back(live);
+            const Json receipt{{"schema", 1},
+                               {"session_id", session.session_id_},
+                               {"generation", 2},
+                               {"producer_address", live},
+                               {"worker_pid", session.graphics_[0].pid()},
+                               {"nonce", 41},
+                               {"guest_pid", 42},
+                               {"producer_incarnation", 43}};
+            std::array<std::uint64_t, 2> identity{42, 43};
+            auto ram = [&](std::uint64_t address, std::span<std::byte> out) -> std::size_t {
+                const std::array<std::uint32_t, 2> header{0x58464751, 3};
+
+                if (address == live && out.size() == sizeof(header)) {
+                    std::memcpy(out.data(), header.data(), sizeof(header));
+
+                    return sizeof(header);
+                }
+
+                if (address == live + 240 && out.size() == sizeof(identity)) {
+                    std::memcpy(out.data(), identity.data(), sizeof(identity));
+
+                    return sizeof(identity);
+                }
+
+                return 0;
+            };
+            auto still_animation = [&] {
+                session.promote_live_screen(ram);
+                assert(read_private_json(claim).at("producer_address") == animation);
+            };
+            const auto proof = candidate / "screen-stream.json";
+            std::fill(pixels.begin(), pixels.end(), std::byte{22});
+            live_frames.publish(pixels, 1, 20);
+            still_animation(); // A per-window writer with no stream receipt cannot take over.
+            write_private_json(proof, receipt);
+            still_animation(); // Do not reset a reader's sequence during the handoff.
+            live_frames.publish(pixels, 5, 30);
+            auto stale = receipt;
+            stale["generation"] = 1;
+            write_private_json(proof, stale);
+            still_animation();
+            auto unrelated = receipt;
+            unrelated["producer_address"] = live + 4096;
+            write_private_json(proof, unrelated);
+            still_animation();
+            write_private_json(proof, receipt);
+            identity[1] = 44;
+            still_animation();
+            identity[1] = 43;
+            session.promote_live_screen(ram);
+            const auto stream = read_private_json(claim);
+            assert(stream.at("producer_address") == live && stream.at("screen_stream") == true);
+            const auto new_frame = visible.read_latest(4);
+            assert(new_frame && new_frame->sequence == 5 &&
+                   new_frame->bgra.front() == std::byte{22});
+            live_frames.publish(pixels, 6, 40);
+            animation_frames.publish(pixels, 100, 50); // Lost owner cannot update canonical path.
+            const auto newest_frame = visible.read_latest(5);
+            assert(newest_frame && newest_frame->sequence == 6);
+            session.graphics_[0].terminate(1000);
+            assert(!session.graphics_[0].alive());
+        }
+        std::filesystem::remove_all(root);
+    }
+
     // The MCU receiver of a generation dies (Screen ESRCH retirement): the vehicle delivery
     // reports the unavailable receiver with the last receipt instead of an endless queue, a
     // successor owes a receipt of its own and no receipt of the dead receiver is accepted.
@@ -5313,6 +5406,16 @@ static void qinggan11_vehicle_catalog() {
 }
 
 int main(int argc, char **argv) try {
+    if (argc == 2 && std::string_view(argv[1]) == "--screen-stream-worker-fixture") {
+        std::this_thread::sleep_for(std::chrono::seconds(30));
+
+        return 0;
+    }
+
+    if (argc == 1) {
+        SessionPersistenceFixture::screen_stream_handoff(std::filesystem::canonical(argv[0]));
+    }
+
 #ifdef _WIN32
     if (argc == 2 && std::string_view(argv[1]) == "--windows-wheel-pair-flush-only") {
         SessionPersistenceFixture::wheel_pair_flush_run();

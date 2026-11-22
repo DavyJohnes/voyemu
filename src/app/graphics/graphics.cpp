@@ -249,7 +249,7 @@ struct Backend::Impl {
     std::unique_ptr<Profile> profile;
     std::optional<U> last_opcode, last_successful_sequence, last_state;
     bool input_request_seen = false, other_request_seen = false;
-    bool done = false, control_claimed = false, canonical_screen = false;
+    bool done = false, control_claimed = false;
     std::uint32_t last_seq = 0;
     std::uint64_t exported = 0, live_exported = 0, screen_sequence = 0, next_blob = 1;
     std::uint32_t clear_bits[4] = {0, 0, 0, 0};
@@ -3652,8 +3652,8 @@ struct Backend::Impl {
     }
 
     Reply owner_liveness(U op, const Arguments &a, std::span<const std::byte> data) {
-        need(!replaying && canonical_screen && live_exported && options.generation &&
-                     options.worker_nonce && !options.session_id.empty(),
+        need(!replaying && live_exported && options.generation && options.worker_nonce &&
+                     !options.session_id.empty(),
              "Owner liveness observer identity");
         const auto claim = read_json(options.session / "frame-owner.json", 512);
         need(claim.at("schema") == 1 && claim.at("producer_address") == options.address &&
@@ -4034,8 +4034,8 @@ struct Backend::Impl {
             }
 
             if (!frame_writer) {
-                canonical_screen = claim(options.session / "frame-owner.json", options.address,
-                                         "original-OEM-Screen-BMP");
+                const bool canonical_screen = claim(options.session / "frame-owner.json",
+                                                    options.address, "original-OEM-Screen-BMP");
                 auto path = canonical_screen
                                     ? (options.frame.empty() ? options.session / "frame.bgra"
                                                              : options.frame)
@@ -4047,6 +4047,23 @@ struct Backend::Impl {
             ++live_exported;
 
             if (a[2]) {
+                if (live_exported == 1 && options.frame.empty() && options.generation &&
+                    options.worker_nonce && options.guest_pid && options.producer_incarnation &&
+                    !options.session_id.empty()) {
+                    // Only the sequenced native Screen readback is the live display capture.
+                    // Unsequenced startup and per-window posts remain valid provisional frames.
+                    replace_json(producer / "screen-stream.json",
+                                 {{"schema", 1},
+                                  {"session_id", options.session_id},
+                                  {"generation", options.generation},
+                                  {"producer_address", options.address},
+                                  {"worker_pid", os::current_process()},
+                                  {"nonce", options.worker_nonce},
+                                  {"guest_pid", options.guest_pid},
+                                  {"producer_incarnation", options.producer_incarnation}},
+                                 options.address);
+                }
+
                 screen_sequence = a[2];
             }
 

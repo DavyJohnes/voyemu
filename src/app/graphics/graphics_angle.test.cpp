@@ -279,6 +279,8 @@ static void owner_liveness_protocol(const std::filesystem::path &parent,
             assert(target.dispatch(354, {blob, bmp.size(), 1}, {}).result == 1);
         };
         publish(backend);
+        const auto stream_receipt = directory / "producer-40010000" / "screen-stream.json";
+        assert(std::filesystem::exists(stream_receipt) == !legacy);
         assert(!backend.dispatch(owner_liveness_request_opcode, {}, {}).result);
         Json observer{{"nonce", options.worker_nonce},
                       {"producer_address", options.address},
