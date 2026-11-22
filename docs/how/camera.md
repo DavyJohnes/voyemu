@@ -17,3 +17,9 @@ As in the vehicle, the view requests its display from the DVR unit with the CAN 
 The view reports a DVR error only when `qg.canbus` reports the error state of the DVR system; the machine reports no error.
 
 Without a virtual BACK camera with JPEG output, both tiles behave as in a vehicle without these cameras.
+
+## Passion Drive Recorder
+
+The Passion profile opens the Drive Recorder tile in the OEM application `com.mega.dvr`, as the vehicle does. In the vehicle the application shows the picture of the DVR unit through the display client of the firmware; in the machine the virtual BACK camera supplies this picture, and a photo of the application is a still of this camera. When the picture starts or stops, the application gets the stream state that the DVR unit reports.
+
+The machine has no recording service of the DVR unit, so the application records no video. Without a virtual BACK camera with JPEG output, the tile behaves as in a vehicle whose DVR unit has no picture.

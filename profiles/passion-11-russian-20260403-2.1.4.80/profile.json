@@ -2130,7 +2130,8 @@
       "input": "original:MonzaDVR",
       "type": "apk",
       "steps": [
-        "passion-api30-media-libraries.json"
+        "passion-api30-media-libraries.json",
+        "passion-api30-dvr-virtual.json"
       ]
     },
     "LY_Gallery": {

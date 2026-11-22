@@ -292,6 +292,11 @@ final class Recipes {
                     "PATCH_OPERATION_UNSUPPORTED", "Passion virtual camera adapter missing", 5);
         }
 
+        default void guardPassionDvrVirtual(boolean apply) throws Exception {
+            throw new Failure(
+                    "PATCH_OPERATION_UNSUPPORTED", "Passion virtual DVR adapter missing", 5);
+        }
+
         default void guardPassionPhone(boolean apply) throws Exception {
             throw new Failure(
                     "PATCH_OPERATION_UNSUPPORTED", "Passion synthetic phone adapter missing", 5);

@@ -1222,6 +1222,11 @@ int main(int argc, char **argv) {
                   "H53 Scenes, Drive recorder and Photos install the owner launcher tiles");
         }
 
+        check(passion.at("patches").at("MonzaDVR").at("steps") ==
+                      Json::array({"passion-api30-media-libraries.json",
+                                   "passion-api30-dvr-virtual.json"}),
+              "H53 Drive recorder previews the virtual camera after its framework libraries");
+
         for (const auto &role : std::vector<std::array<std::string, 4>>{
                      {"LY_Multimedia", "com.voyah.multimedia",
                       "a3c788860d5df27277d53ffbf838daaefddb6ab098ad52b636671dd70b34765d",

@@ -88,6 +88,7 @@ set(CASES_passion
     "PassionBluetoothRoleGuardTest ROOT NEW NEEDS:${PASSION}"
     "PassionBluetoothVolumeGuardTest ROOT NEW NEEDS:${PASSION}"
     "PassionDiagnosticsGuardTest ROOT NEW NEEDS:${PASSION}"
+    "PassionDvrVirtualGuardTest ORIGINAL:${PASSION}/MonzaDVR.apk ROOT PLATFORM NEW"
     "PassionGuestNullGuardsTest ROOT NEW NEEDS:${PASSION}"
     "PassionLauncherAppsRecipeTest ROOT ORIGINAL:${PASSION}/VOYAH_SceneMode.apk ORIGINAL:${PASSION}/MonzaDVR.apk ORIGINAL:${PASSION}/LY_Gallery.apk"
     "PassionLauncherAudioGuardTest ROOT NEW NEEDS:${PASSION}"

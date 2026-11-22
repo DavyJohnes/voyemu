@@ -285,6 +285,18 @@ final class RecipesApi30 {
                             List.of(Map.of("operation", "guardPassionPhone", "args", List.of()))),
                     "Exact Passion synthetic phone operation required");
         }
+
+        if (name.equals(PassionDvrVirtualGuard.NAME + ".json")) {
+            require(
+                    calls.equals(
+                            List.of(
+                                    Map.of(
+                                            "operation",
+                                            "guardPassionDvrVirtual",
+                                            "args",
+                                            List.of()))),
+                    "Exact Passion virtual DVR operation required");
+        }
     }
 
     void validate(Object value) throws Exception {
@@ -521,6 +533,15 @@ final class RecipesApi30 {
                                 && calls.size() == 1,
                         "Exact Passion virtual Camera operation required");
                 target.guardPassionCameraVirtual(false);
+            }
+            case "guardPassionDvrVirtual" -> {
+                require(
+                        name.equals(PassionDvrVirtualGuard.NAME + ".json")
+                                && pins.equals(List.of(PassionDvrVirtualGuard.APK))
+                                && args.isEmpty()
+                                && calls.size() == 1,
+                        "Exact Passion virtual DVR operation required");
+                target.guardPassionDvrVirtual(false);
             }
             case "guardPassionPhone" -> {
                 require(
@@ -1121,6 +1142,7 @@ final class RecipesApi30 {
                 case "guardPassionSettingsSound" -> target.guardPassionSettingsSound(true);
                 case "guardPassionSettingsUnits" -> target.guardPassionSettingsUnits(true);
                 case "guardPassionCameraVirtual" -> target.guardPassionCameraVirtual(true);
+                case "guardPassionDvrVirtual" -> target.guardPassionDvrVirtual(true);
                 case "guardPassionPhone" -> target.guardPassionPhone(true);
                 case "guardPassionAmbientLight" -> target.guardPassionAmbientLight(true);
                 case "guardPassionLauncherAudio" -> target.guardPassionLauncherAudio(true);

@@ -1041,6 +1041,28 @@ final class PatchTarget implements Recipes.Target {
     }
 
     @Override
+    public void guardPassionDvrVirtual(boolean apply) throws Exception {
+        Failure.require(
+                FilesSupport.tree(Storage.confined(stepRoot, PassionDvrVirtualGuard.HELPER_ROOT))
+                        .keySet()
+                        .equals(Set.of(PassionDvrVirtualGuard.HELPER_SOURCE)),
+                "PASSION_DVR_CONTRACT",
+                "Exact Drive recorder helper source required",
+                3);
+        byte[] client = entries.get(PassionDvrVirtualGuard.CLIENT_DEX),
+                preview = entries.get(PassionDvrVirtualGuard.PREVIEW_DEX);
+
+        if (apply) {
+            var result = PassionDvrVirtualGuard.apply(api, input, client, preview);
+            entries.put(PassionDvrVirtualGuard.CLIENT_DEX, result.get(0));
+            entries.put(PassionDvrVirtualGuard.PREVIEW_DEX, result.get(1));
+            addDex(PassionDvrVirtualGuard.HELPER_ROOT);
+        } else {
+            PassionDvrVirtualGuard.validate(api, input, client, preview);
+        }
+    }
+
+    @Override
     public void guardPassionPhone(boolean apply) throws Exception {
         PassionPhoneGuard.validateHelperSource(
                 Storage.confined(stepRoot, PassionPhoneGuard.HELPER_ROOT));

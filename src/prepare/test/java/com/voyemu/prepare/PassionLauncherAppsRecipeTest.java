@@ -8,7 +8,7 @@ import java.util.Map;
 
 /**
  * The Scenes, Drive recorder and Photos launcher tiles get their owner APKs with framework
- * libraries.
+ * libraries; the Drive recorder also previews the virtual camera.
  */
 public final class PassionLauncherAppsRecipeTest {
     record App(String role, String pkg, String sha256, List<String> steps, String target) {}
@@ -25,7 +25,9 @@ public final class PassionLauncherAppsRecipeTest {
                             "MonzaDVR",
                             "com.mega.dvr",
                             "09f3c93858cd49ab65884d115787322149e4d2a5861cb7cf314f1f6726f05294",
-                            List.of("passion-api30-media-libraries.json"),
+                            List.of(
+                                    "passion-api30-media-libraries.json",
+                                    PassionDvrVirtualGuard.NAME + ".json"),
                             "/system/priv-app/MonzaDVR/MonzaDVR.apk"),
                     new App(
                             "LY_Gallery",
@@ -39,6 +41,7 @@ public final class PassionLauncherAppsRecipeTest {
     static final class Target implements Recipes.Target {
         final String pin;
         final List<List<String>> libraries = new ArrayList<>();
+        int dvrValidations, dvrMutations;
 
         Target(String pin) {
             this.pin = pin;
@@ -92,6 +95,15 @@ public final class PassionLauncherAppsRecipeTest {
         @Override
         public void useLibraries(List<String> names) {
             libraries.add(names);
+        }
+
+        @Override
+        public void guardPassionDvrVirtual(boolean apply) {
+            if (apply) {
+                dvrMutations++;
+            } else {
+                dvrValidations++;
+            }
         }
     }
 
@@ -160,12 +172,18 @@ public final class PassionLauncherAppsRecipeTest {
                     denied = true;
                 }
 
-                check(denied && foreign.libraries.isEmpty(), "Foreign APK accepted by " + step);
+                check(
+                        denied && foreign.libraries.isEmpty() && foreign.dvrMutations == 0,
+                        "Foreign APK accepted by " + step);
             }
 
             check(
                     target.libraries.equals(List.of(LIBRARIES)),
                     app.role + " must declare the framework libraries once");
+            int dvr = app.role.equals("MonzaDVR") ? 1 : 0;
+            check(
+                    target.dvrValidations == dvr && target.dvrMutations == dvr,
+                    "Only the Drive recorder previews the virtual camera");
 
             if (args.length == APPS.size() + 1) {
                 Path apk = Path.of(args[i + 1]);

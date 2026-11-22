@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "api": 30,
+  "constants": {
+    "original_sha256_allowlist": ["09f3c93858cd49ab65884d115787322149e4d2a5861cb7cf314f1f6726f05294"]
+  },
+  "calls": [{"operation": "guardPassionDvrVirtual", "args": []}]
+}
