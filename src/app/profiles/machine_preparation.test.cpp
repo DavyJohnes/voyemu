@@ -3982,7 +3982,7 @@ int main(int argc, char **argv) {
               std::pair{"free-09-chinese-20221230-nxp-rc45", 3U},
               std::pair{"free-11-chinese-20250710-6.11.1", 5U},
               std::pair{"free-11-chinese-20260731-7.3.1", 6U},
-              std::pair{"passion-11-russian-20260403-2.1.4.80", 4U}}) {
+              std::pair{"passion-11-russian-20260403-2.1.4.80", 6U}}) {
             const auto actual = read_private_json(root / "profiles" / name / "profile.json",
                                                   4 << 20);
             std::vector<machine_preparation_detail::Installed> policies;
