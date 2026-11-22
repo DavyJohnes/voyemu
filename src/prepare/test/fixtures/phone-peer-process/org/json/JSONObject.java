@@ -59,25 +59,29 @@ public class JSONObject {
         return value;
     }
 
-    public JSONObject put(String key, Object value) {
+    public JSONObject put(String key, Object value) throws JSONException {
+        if (key == null) {
+            throw new JSONException("Names must be non-null");
+        }
+
         values.put(key, raw(value));
 
         return this;
     }
 
-    public JSONObject put(String key, boolean value) {
+    public JSONObject put(String key, boolean value) throws JSONException {
         return put(key, Boolean.valueOf(value));
     }
 
-    public JSONObject put(String key, int value) {
+    public JSONObject put(String key, int value) throws JSONException {
         return put(key, Integer.valueOf(value));
     }
 
-    public JSONObject put(String key, long value) {
+    public JSONObject put(String key, long value) throws JSONException {
         return put(key, Long.valueOf(value));
     }
 
-    public JSONObject put(String key, double value) {
+    public JSONObject put(String key, double value) throws JSONException {
         return put(key, Double.valueOf(value));
     }
 

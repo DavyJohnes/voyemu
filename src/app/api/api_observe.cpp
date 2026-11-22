@@ -256,6 +256,29 @@ Json Api::dispatch_observe(const std::string &op, const Json &request, Clock::ti
                 .at("observation");
     }
 
+    if (op == "vehicle.mode.history") {
+        Json query{{"schema", 1}};
+
+        for (const auto &[key, value] : request.items()) {
+            if (key == "cursor" || key == "limit") {
+                query[key] = value;
+            } else if (key != "schema" && key != "request_id" && key != "operation_id" &&
+                       key != "op" && key != "profile" && key != "session" && key != "machine" &&
+                       key != "timeout_ms") {
+                throw VoyemuError("TEST_ARGUMENT",
+                                  "mode history inspection is read-only and closed");
+            }
+        }
+
+        validate_mode_request(query);
+        const auto timeout = number(request, "timeout_ms", 5000, 1, 10000);
+
+        return control(request,
+                       {{"op", "test_mode_history"}, {"query", query}, {"timeout_ms", timeout}},
+                       false, static_cast<int>(timeout + 250))
+                .at("observation");
+    }
+
     if (op == "vehicle.can.history") {
         for (const auto &[key, value] : request.items()) {
             (void)value;

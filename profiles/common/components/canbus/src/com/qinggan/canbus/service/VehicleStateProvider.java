@@ -34,7 +34,10 @@ public final class VehicleStateProvider extends ContentProvider {
 
     @Override
     public Bundle call(String method, String argument, Bundle extras) {
-        boolean query = "observe".equals(method) || "ipk-history".equals(method);
+        boolean query =
+                "observe".equals(method)
+                        || "ipk-history".equals(method)
+                        || "mode-history".equals(method);
 
         validate(
                 query || "status".equals(method) || "phone-diagnostics".equals(method),
@@ -57,7 +60,9 @@ public final class VehicleStateProvider extends ContentProvider {
                 String json =
                         ("observe".equals(method)
                                         ? RegistrationService.currentObservation(argument)
-                                        : RegistrationService.ipkHistory(argument))
+                                        : "ipk-history".equals(method)
+                                                ? RegistrationService.ipkHistory(argument)
+                                                : RegistrationService.modeHistory(argument))
                                 .toString();
 
                 if (json.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 128 * 1024) {

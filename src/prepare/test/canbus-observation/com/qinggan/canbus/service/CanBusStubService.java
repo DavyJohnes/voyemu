@@ -17,6 +17,10 @@ class CanBusStubService extends android.os.Binder {
         throw new AssertionError();
     }
 
+    org.json.JSONObject modeHistory(String r) {
+        throw new AssertionError();
+    }
+
     void startIpk() {
         throw new AssertionError();
     }

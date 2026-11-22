@@ -347,6 +347,7 @@ Json operations() {
                         "vehicle.can.get",
                         "vehicle.can.model",
                         "vehicle.can.history",
+                        "vehicle.mode.history",
                         "input.tap",
                         "input.drag",
                         "input.gesture",

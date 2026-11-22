@@ -54,13 +54,14 @@ file(GLOB_RECURSE MODEL_FIXTURES "${ROOT}/src/prepare/test/fixtures/canbus-model
 compile("${WORK}/acc" ${MODEL_FIXTURES} "${SERVICE}/CanModelBridge.java" "${SERVICE}/CanModelClient.java"
     "${TESTS}/CanBusAccStatusTest.java")
 run_java("${WORK}/acc" com.qinggan.canbus.service.CanBusAccStatusTest)
-# The component with the qinggan09 theme variant and with each platform vehicle catalogue; its model
-# socket is the canbus-model double.
+# The component with the qinggan09 theme variant and with each platform vehicle catalogue and BCM PEPS
+# power mode handler; its model socket is the canbus-model double.
 file(GLOB_RECURSE COMPONENT_FIXTURES "${ROOT}/src/prepare/test/fixtures/canbus-component/*.java")
 set(COMPONENT_SOURCES)
 foreach(NAME BaseCanBusComponent CanBusState CanModelBridge CanModelClient CanObservationJournal ClusterThemeStore
-        ICanBusOperator IIpkSyncComponentBase IpkFrames IpkInfoSync IpkLink PhoneDeliveryDiagnostics
-        VehicleInputSnapshot VehicleInputStore protocol/dongfeng/DongfengCanBusComponentImpl)
+        ICanBusOperator IIpkSyncComponentBase IpkFrames IpkInfoSync IpkLink ModeCommandHistory
+        PhoneDeliveryDiagnostics PowerModeVehicle VehicleInputSnapshot VehicleInputStore
+        protocol/dongfeng/DongfengCanBusComponentImpl)
     list(APPEND COMPONENT_SOURCES "${SERVICE}/${NAME}.java")
 endforeach()
 foreach(PLATFORM qinggan09 qinggan11)
@@ -70,8 +71,11 @@ foreach(PLATFORM qinggan09 qinggan11)
         "${ROOT}/src/prepare/test/canbus-observation/com/voyemu/prepare/PhonePeerJsonBridge.java"
         "${ROOT}/src/prepare/java/com/voyemu/prepare/Json.java"
         "${COMPONENT}/${PLATFORM}/com/qinggan/canbus/service/VehicleSignalCatalog.java"
-        "${COMPONENT}/qinggan09/com/qinggan/canbus/service/ClusterTheme.java" "${TESTS}/CanBusComponentTest.java")
+        "${COMPONENT}/${PLATFORM}/com/qinggan/canbus/service/PepsPowerMode.java"
+        "${COMPONENT}/qinggan09/com/qinggan/canbus/service/ClusterTheme.java" "${TESTS}/CanBusComponentTest.java"
+        "${TESTS}/DriveModeStartupTest.java")
     run_java("${WORK}/component-${PLATFORM}" com.qinggan.canbus.service.CanBusComponentTest)
+    run_java("${WORK}/component-${PLATFORM}" com.qinggan.canbus.service.DriveModeStartupTest ${PLATFORM})
 endforeach()
 file(GLOB_RECURSE CLUSTER_FIXTURES "${ROOT}/src/prepare/test/fixtures/cluster-theme/*.java")
 compile("${WORK}/cluster" ${CLUSTER_FIXTURES} "${SERVICE}/ClusterThemeStore.java" "${SERVICE}/ClusterThemeBinder.java"

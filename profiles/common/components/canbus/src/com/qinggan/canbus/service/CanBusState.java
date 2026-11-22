@@ -22,7 +22,9 @@ import com.qinggan.canbus.TPMSInfo;
 import com.qinggan.canbus.VehicleState;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -48,6 +50,7 @@ public final class CanBusState {
     private final long mStartedNs = android.os.SystemClock.elapsedRealtimeNanos();
     private final PhoneDeliveryDiagnostics mPhoneDiagnostics = new PhoneDeliveryDiagnostics();
     private final IpkInfoSync mIpk = new IpkInfoSync(new IpkLink(IpkLink.IVCD));
+    private final ModeCommandHistory mModeHistory;
 
     /** Last value set per state; Setting reads back IPK_THEM_MODE etc. */
     private final Map<VehicleState, Integer> mVehicleStates = new HashMap<>();
@@ -98,6 +101,11 @@ public final class CanBusState {
         mComponent = component;
         record("service_started", null, null, null, null);
         mClimate = context.getSharedPreferences("voyemu-climate", Context.MODE_PRIVATE);
+        mModeHistory =
+                new ModeCommandHistory(
+                        context.getSharedPreferences("voyemu-mode-history", Context.MODE_PRIVATE),
+                        mBootId,
+                        mSourceInstance);
         mVehicleInputStore = new VehicleInputStore(context);
         mVehicleInputs = mVehicleInputStore.load();
 
@@ -232,6 +240,11 @@ public final class CanBusState {
                 throw new IllegalStateException(failure);
             }
         }
+    }
+
+    /** Mode commands the component accepted. */
+    public ModeCommandHistory modeHistory() {
+        return mModeHistory;
     }
 
     /** The journal and its identity; callers hold lock(). */
@@ -768,6 +781,32 @@ public final class CanBusState {
         }
     }
 
+    /** Applies the drive mode packet and records the fields the vehicle state accepted. */
+    public void applyDriveModePacket(Map<VehicleState, Integer> states, String origin) {
+        synchronized (mLock) {
+            Map<String, Integer> applied = new LinkedHashMap<>();
+
+            for (Map.Entry<VehicleState, Integer> entry : states.entrySet()) {
+                if (applyVehicleState(entry.getKey(), entry.getValue())) {
+                    applied.put(entry.getKey().name(), entry.getValue());
+                }
+            }
+
+            if (applied.containsKey(ModeCommandHistory.DRIVING_MODE_SET)) {
+                mModeHistory.accepted(ModeCommandHistory.DRIVING_MODE_SET, applied, origin);
+            }
+        }
+    }
+
+    /** Records the energy mode after the CAN2 model has acknowledged admission. */
+    public void recordModelEnergyMode(int value) {
+        synchronized (mLock) {
+            String command = ModeCommandHistory.IVI_SOC_MODESET;
+            mModeHistory.accepted(
+                    command, Collections.singletonMap(command, value), ModeCommandHistory.CLIENT);
+        }
+    }
+
     /** Adds the paired seat switch or level change; the caller holds the lock. */
     private void putSeatChange(Map<VehicleState, Integer> changed, VehicleState state, int value) {
         VehicleState toggle = seatSwitch(state);
@@ -789,6 +828,10 @@ public final class CanBusState {
      * form and then the new value of every field the write changed.
      */
     public void setVehicleState(final VehicleState state, final int value) {
+        applyVehicleState(state, value);
+    }
+
+    private boolean applyVehicleState(final VehicleState state, final int value) {
         final Map<VehicleState, Integer> changed = new HashMap<>();
         final String write = recordWrite(state, value);
 
@@ -800,7 +843,7 @@ public final class CanBusState {
                 previous.put(VehicleState.IPK_THEME_SKIN, mTheme.skin());
 
                 if (!mTheme.write(state, value, changed)) {
-                    return;
+                    return false;
                 }
             } else {
                 changed.put(state, value);
@@ -855,6 +898,8 @@ public final class CanBusState {
                     }
                 },
                 SETTING_FEEDBACK_MS);
+
+        return true;
     }
 
     private static boolean isTheme(VehicleState state) {

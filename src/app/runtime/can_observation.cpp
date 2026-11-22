@@ -560,4 +560,170 @@ Json collect_ipk_history(const Json &query, const CanGuestIdentity &identity, in
 
     return collect_provider("ipk-history", query, identity, timeout_ms, runner, parse_ipk_history);
 }
+
+namespace {
+[[noreturn]] void mode_invalid(const char *reason) {
+    throw VoyemuError("MODE_PROTOCOL", reason);
+}
+
+std::uint64_t mode_decimal(const Json &value) {
+    try {
+        return decimal(value);
+    } catch (const VoyemuError &) {
+        mode_invalid("invalid decimal");
+    }
+}
+
+bool state_name(const std::string &value) {
+    return !value.empty() && value.size() <= 64 &&
+           value.find_first_not_of(
+                   "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_") ==
+                   std::string::npos;
+}
+} // namespace
+
+void validate_mode_request(const Json &request) {
+    if (!request.is_object() || request.dump().size() > 1024) {
+        throw VoyemuError("MODE_ARGUMENT", "bounded object required");
+    }
+
+    for (const auto &[key, value] : request.items()) {
+        (void)value;
+
+        if (key != "schema" && key != "cursor" && key != "limit") {
+            throw VoyemuError("MODE_ARGUMENT", "mode history accepts cursor and limit only");
+        }
+    }
+
+    if (!request.contains("schema") || !request.at("schema").is_number_integer() ||
+        request.at("schema") != 1) {
+        throw VoyemuError("MODE_ARGUMENT", "schema 1 required");
+    }
+
+    if (request.contains("limit") && (!request.at("limit").is_number_integer() ||
+                                      request.at("limit") < 1 || request.at("limit") > 256)) {
+        throw VoyemuError("MODE_ARGUMENT", "limit 1..256 required");
+    }
+
+    if (request.contains("cursor")) {
+        try {
+            cursor(request.at("cursor"));
+        } catch (const VoyemuError &) {
+            throw VoyemuError("MODE_ARGUMENT", "invalid cursor");
+        }
+    }
+}
+
+Json parse_mode_history(const Json &history) try {
+    if (!history.is_object() || history.dump().size() > 128 * 1024 || !history.contains("schema") ||
+        !history.at("schema").is_number_integer() || history.at("schema") != 1 ||
+        history.value("source", std::string()) != "android:qg.canbus:mode") {
+        mode_invalid("invalid history envelope");
+    }
+
+    const auto status = history.value("status", std::string());
+
+    if (status == "not-ready") {
+        if (history.size() != 3) {
+            mode_invalid("invalid not-ready history");
+        }
+
+        return history;
+    }
+
+    if (status != "observed" || history.size() != 12) {
+        mode_invalid("invalid history status");
+    }
+
+    const auto &instance = history.at("source_instance");
+
+    if (!instance.is_string() || instance.get_ref<const std::string &>().empty() ||
+        instance.get_ref<const std::string &>().size() > 128 ||
+        !(history.at("boot_id").is_null() || history.at("boot_id").is_string())) {
+        mode_invalid("invalid history identity");
+    }
+
+    const auto &complete = history.at("complete");
+    const auto &reason = history.at("incomplete_reason");
+    const auto no_boot = history.at("boot_id").is_null();
+
+    if (!complete.is_boolean() || no_boot != (reason == "boot_unknown") ||
+        (complete == true ? !reason.is_null()
+                          : reason != "service_restarted" && reason != "overflow" &&
+                                    reason != "boot_unknown" && reason != "boot_record_failed")) {
+        mode_invalid("invalid history completeness");
+    }
+
+    const auto oldest = mode_decimal(history.at("oldest_seq"));
+    const auto latest = mode_decimal(history.at("latest_seq"));
+    const auto &gap = history.at("gap");
+
+    if (oldest == 0 || oldest > latest + 1 || (oldest > 1 && complete == true) ||
+        !(gap.is_null() || gap == "source_replaced" || gap == "cursor_ahead" ||
+          gap == "overflow")) {
+        mode_invalid("invalid history window");
+    }
+
+    const auto &events = history.at("events");
+
+    if (!events.is_array() || events.size() > 256) {
+        mode_invalid("bounded events required");
+    }
+
+    std::uint64_t previous = 0;
+
+    for (const auto &event : events) {
+        if (!event.is_object() || event.size() != 6) {
+            mode_invalid("invalid event");
+        }
+
+        const auto seq = mode_decimal(event.at("seq"));
+        const auto command = event.value("command", std::string());
+        const auto origin = event.value("origin", std::string());
+        const auto &value = event.at("value");
+        const auto &packet = event.at("packet");
+
+        if (seq <= previous || seq < oldest || seq > latest ||
+            (command != "DRIVING_MODE_SET" && command != "IVI_SOC_MODESET") ||
+            (origin != "acc_on" && origin != "client") || !value.is_number_integer() ||
+            !packet.is_object() || packet.empty() || packet.size() > 32 ||
+            !packet.contains(command) || packet.at(command) != value ||
+            (command == "IVI_SOC_MODESET" && packet.size() != 1)) {
+            mode_invalid("invalid event");
+        }
+
+        for (const auto &[name, state] : packet.items()) {
+            if (!state_name(name) || !state.is_number_integer()) {
+                mode_invalid("invalid event packet");
+            }
+        }
+
+        mode_decimal(event.at("elapsed_ns"));
+        previous = seq;
+    }
+
+    const auto &next = history.at("next_cursor");
+
+    if (!next.is_object() || next.size() != 2 ||
+        next.value("source_instance", Json()) != instance ||
+        (previous && mode_decimal(next.at("after_seq")) != previous)) {
+        mode_invalid("invalid next cursor");
+    }
+
+    if (mode_decimal(next.at("after_seq")) > latest) {
+        mode_invalid("invalid next cursor sequence");
+    }
+
+    return history;
+} catch (const Json::exception &) {
+    mode_invalid("invalid history structure");
+}
+
+Json collect_mode_history(const Json &query, const CanGuestIdentity &identity, int timeout_ms,
+                          const CanGuestRunner &runner) {
+    validate_mode_request(query);
+
+    return collect_provider("mode-history", query, identity, timeout_ms, runner,
+                            parse_mode_history);
+}
 } // namespace voyemu

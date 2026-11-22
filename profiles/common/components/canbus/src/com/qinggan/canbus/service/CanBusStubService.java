@@ -194,6 +194,11 @@ public class CanBusStubService extends ICanBusService.Stub {
                                 .put("after_seq", Long.toString(after)));
     }
 
+    /** Mode commands the component accepted; see {@link ModeCommandHistory#history}. */
+    org.json.JSONObject modeHistory(String request) throws org.json.JSONException {
+        return mState.modeHistory().history(request);
+    }
+
     PhoneDeliveryDiagnostics phoneDeliveryDiagnostics() {
         return mState.phoneDiagnostics();
     }

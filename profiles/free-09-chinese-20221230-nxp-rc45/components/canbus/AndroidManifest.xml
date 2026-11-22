@@ -3,6 +3,7 @@
  <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/><uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
  <application android:name="com.qinggan.canbus.service.CanApplication" android:label="NXP CAN climate" android:allowBackup="false" android:persistent="true">
   <uses-library android:name="QGAPI" android:required="true"/>
+  <provider android:name=".ModeHistoryProvider" android:authorities="com.voyemu.output.vehicle" android:exported="true" android:permission="android.permission.DUMP" android:grantUriPermissions="false"/>
   <service android:name=".RegistrationService" android:exported="true"><intent-filter><action android:name="qg.canbus"/></intent-filter></service>
   <receiver android:name=".BootReceiver" android:exported="true"><intent-filter><action android:name="android.intent.action.BOOT_COMPLETED"/></intent-filter></receiver>
  </application>

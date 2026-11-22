@@ -1960,6 +1960,44 @@ int main(int argc, char **argv) try {
             assert(ipk_api.call(bad).at("error").at("code") == code && ipk_reads == 1);
         }
 
+        unsigned mode_reads = 0;
+        api::Transports mode_transport = transport;
+        mode_transport.control = [&](const auto &, const Json &command, int timeout) -> Json {
+            assert(command.at("op") == "test_mode_history" && !command.contains("ownership_id") &&
+                   command.at("query") ==
+                           Json({{"schema", 1},
+                                 {"limit", 3},
+                                 {"cursor",
+                                  {{"source_instance", "service"}, {"after_seq", "2"}}}}) &&
+                   command.at("timeout_ms") == 5000 && timeout == 5250);
+            ++mode_reads;
+
+            return {{"ok", true},
+                    {"session_id", id},
+                    {"observation",
+                     {{"schema", 1},
+                      {"source", "android:qg.canbus:mode"},
+                      {"status", "not-ready"}}}};
+        };
+        api::Api mode_api(root, "unused-cli", mode_transport);
+        auto mode = request("vehicle.mode.history");
+        mode["session"].erase("ownership_id");
+        mode["limit"] = 3;
+        mode["cursor"] = {{"source_instance", "service"}, {"after_seq", "2"}};
+        const auto mode_result = mode_api.call(mode);
+        assert(mode_result.at("ok") == true &&
+               mode_result.at("result").at("status") == "not-ready" && mode_reads == 1);
+
+        for (const auto &[key, value, code] :
+             {std::tuple<const char *, Json, const char *>{"nonce", "1", "TEST_ARGUMENT"},
+              {"limit", 0, "MODE_ARGUMENT"},
+              {"cursor", Json{{"source_instance", "x"}}, "MODE_ARGUMENT"},
+              {"timeout_ms", 10001, "TEST_ARGUMENT"}}) {
+            auto bad = mode;
+            bad[key] = value;
+            assert(mode_api.call(bad).at("error").at("code") == code && mode_reads == 1);
+        }
+
         for (const char *removed :
              {"output.can_boundary", "session.restart.prepare", "session.restart.abort"}) {
             assert(history_api.call(request(removed)).at("error").at("code") ==
@@ -2247,6 +2285,7 @@ int main(int argc, char **argv) try {
                                                        "vehicle.can.get",
                                                        "vehicle.can.model",
                                                        "vehicle.can.history",
+                                                       "vehicle.mode.history",
                                                        "input.tap",
                                                        "input.drag",
                                                        "input.gesture",

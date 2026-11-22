@@ -14,7 +14,7 @@ public final class LocalSocket {
     private static final int MAGIC = 0x43414e32, NONE = -2;
     private static final Map<String, Integer> CONNECTS = new HashMap<>();
     private static final int[] REQUESTS = new int[5];
-    private static boolean available = true, holdAcc, rejectAcc;
+    private static boolean available = true, holdAcc, rejectAcc, acceptStates;
     private static long session = 1, epoch = 1, revision = 1;
     private static int acc = 2, pendingAcc = NONE;
     private static LocalSocket lease;
@@ -38,6 +38,11 @@ public final class LocalSocket {
 
     public static synchronized void rejectAcc(boolean value) {
         rejectAcc = value;
+    }
+
+    /** Admits state commands of the current session instead of rejecting them. */
+    public static synchronized void acceptStates(boolean value) {
+        acceptStates = value;
     }
 
     public static synchronized int acc() {
@@ -99,6 +104,8 @@ public final class LocalSocket {
             if (status == 0) {
                 pendingAcc = value;
             }
+        } else if (op == 2 && acceptStates) {
+            status = current ? 0 : -2;
         } else if (op == 4) {
             status = current ? 0 : -2;
 

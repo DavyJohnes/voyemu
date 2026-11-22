@@ -27,19 +27,31 @@ import com.qinggan.canbus.WindowStatus;
 import com.qinggan.canbus.service.BaseCanBusComponent;
 import com.qinggan.canbus.service.CanModelBridge;
 import com.qinggan.canbus.service.IIpkSyncComponentBase;
+import com.qinggan.canbus.service.ModeCommandHistory;
+import com.qinggan.canbus.service.PepsPowerMode;
+import com.qinggan.canbus.service.PowerModeVehicle;
 
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Locale;
+import java.util.Map;
 
 /**
  * Dongfeng component of the emulator: the CAN model of the guest supplies the PW and FEV states and
- * the ACC through {@link CanModelBridge}; the other methods the OEM Dongfeng component declares
- * read and write the vehicle state the base component maintains.
+ * the ACC through {@link CanModelBridge}; the ACC reaches the OEM BCM PEPS power mode handler
+ * {@link PepsPowerMode}; the other methods the OEM Dongfeng component declares read and write the
+ * vehicle state the base component maintains.
  */
 public class DongfengCanBusComponentImpl extends BaseCanBusComponent {
     private static final String TAG = "DongfengBusComponentImpl";
     private final CanModelBridge mModel = new CanModelBridge();
+    private final ThreadLocal<String> mOrigin =
+            ThreadLocal.withInitial(() -> ModeCommandHistory.CLIENT);
+    private volatile ContentResolver mResolver;
+    private volatile PowerModeVehicle mVehicle;
+    private volatile PepsPowerMode mPeps;
 
     private final CanModelBridge.Listener mModelListener =
             new CanModelBridge.Listener() {
@@ -75,23 +87,89 @@ public class DongfengCanBusComponentImpl extends BaseCanBusComponent {
                 }
 
                 @Override
+                public void onModelAccepted(CanModelBridge source, VehicleState state, int value) {
+                    if (state == VehicleState.IVI_SOC_MODESET) {
+                        state().recordModelEnergyMode(value);
+                    }
+                }
+
+                @Override
                 public void onModelAcc(CanModelBridge source, int value) {
                     handler()
                             .post(() -> {
                                 if (source.getAccStatus() == value) {
-                                    onAccStateChanged(value);
+                                    if (value == 0 || value == 2) {
+                                        onBcmPepsPowerMode(value == 2 ? 2 : 1);
+                                    } else {
+                                        onAccStateChanged(value);
+                                    }
                                 }
                             });
                 }
             };
+
+    /** The vehicle of the OEM BCM PEPS power mode handler: this component and its QGAPI. */
+    private final class Vehicle extends PowerModeVehicle {
+        Vehicle(ContentResolver resolver) {
+            super(resolver);
+        }
+
+        @Override
+        public int vehicleState(String state) {
+            return getVehicleState(VehicleState.valueOf(state));
+        }
+
+        @Override
+        public int initVehicleLastStatus(String state, int value) {
+            return DongfengCanBusComponentImpl.this.initVehicleLastStatus(
+                    mResolver, VehicleState.valueOf(state), value);
+        }
+
+        @Override
+        public void cacheVehicleState(String state, int value) {
+            state().initVehicleState(VehicleState.valueOf(state), value);
+        }
+
+        @Override
+        public void setVehicleState(String state, int value) {
+            DongfengCanBusComponentImpl.this.setVehicleState(VehicleState.valueOf(state), value);
+        }
+
+        @Override
+        public void setVehicleBundle(Map<String, Integer> states) {
+            Bundle bundle = new Bundle();
+
+            for (Map.Entry<String, Integer> state : states.entrySet()) {
+                bundle.putInt(state.getKey(), state.getValue());
+            }
+
+            setVehicleAndAirConditionBundleState(null, bundle);
+        }
+
+        @Override
+        public void publishVehicleState(String state, int value) {
+            onVehicleStateChanged(VehicleState.valueOf(state), value);
+        }
+
+        @Override
+        public void accStateChanged(int acc) {
+            onAccStateChanged(acc);
+        }
+    }
 
     private Handler handler() {
         return state().handler();
     }
 
     @Override
-    public void init(Context context) {
+    public synchronized void init(Context context) {
         super.init(context);
+
+        if (mPeps == null) {
+            mResolver = context.getContentResolver();
+            mVehicle = new Vehicle(mResolver);
+            mPeps = new PepsPowerMode(mVehicle);
+        }
     }
 
     @Override
@@ -127,6 +205,20 @@ public class DongfengCanBusComponentImpl extends BaseCanBusComponent {
         Log.i(TAG, "profile ACC request=" + value + "; Binder retained");
     }
 
+    /**
+     * Hands the model ACC to the OEM power mode handler as the bcm_pepsPowerMode of frame 0x2C1:
+     * ACC OFF is power mode 1, ACC ON power mode 2; its commands come from the ACC ON handler.
+     */
+    private void onBcmPepsPowerMode(int power) {
+        mOrigin.set(ModeCommandHistory.ACC_ON);
+
+        try {
+            mPeps.onPowerMode(power);
+        } finally {
+            mOrigin.remove();
+        }
+    }
+
     /** Journals and reports an observed ACC transition. */
     @Override
     public void onAccStateChanged(int value) {
@@ -141,6 +233,10 @@ public class DongfengCanBusComponentImpl extends BaseCanBusComponent {
                 : super.getVehicleState(state);
     }
 
+    /**
+     * Writes a state; the OEM saves the states its ACC ON handler restores to QGSettings, and the
+     * mode history receives DRIVING_MODE_SET written alone.
+     */
     @Override
     public void setVehicleState(VehicleState state, int value) {
         if (CanModelBridge.isModelState(state)) {
@@ -150,7 +246,21 @@ public class DongfengCanBusComponentImpl extends BaseCanBusComponent {
             return;
         }
 
-        super.setVehicleState(state, value);
+        if (state == VehicleState.DRIVING_MODE_SET) {
+            state().applyDriveModePacket(Collections.singletonMap(state, value), mOrigin.get());
+        } else {
+            super.setVehicleState(state, value);
+        }
+
+        saveVehicleState(state, value);
+    }
+
+    private void saveVehicleState(VehicleState state, int value) {
+        PepsPowerMode peps = mPeps;
+
+        if (peps != null && PepsPowerMode.saved(state.name(), peps.accState())) {
+            mVehicle.saveInt(state.name(), value);
+        }
     }
 
     @Override
@@ -158,9 +268,31 @@ public class DongfengCanBusComponentImpl extends BaseCanBusComponent {
         super.onVehicleStateSettingResponse(state, success);
     }
 
+    /** Applies a drive mode packet to the vehicle state; CAN2 commands go to their model. */
     @Override
     public int setVehicleBundleState(Bundle bundle) {
-        return super.setVehicleBundleState(bundle);
+        if (!bundle.containsKey(ModeCommandHistory.DRIVING_MODE_SET)) {
+            return super.setVehicleBundleState(bundle);
+        }
+
+        Map<VehicleState, Integer> packet = new LinkedHashMap<>();
+
+        for (VehicleState state : VehicleState.values()) {
+            if (bundle.containsKey(state.name())) {
+                int value = bundle.getInt(state.name());
+
+                if (CanModelBridge.isModelState(state)) {
+                    setVehicleState(state, value);
+                } else {
+                    packet.put(state, value);
+                }
+            }
+        }
+
+        state().applyDriveModePacket(packet, mOrigin.get());
+        packet.forEach(this::saveVehicleState);
+
+        return 1;
     }
 
     @Override

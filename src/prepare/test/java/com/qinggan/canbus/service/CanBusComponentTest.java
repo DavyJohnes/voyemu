@@ -391,9 +391,12 @@ public final class CanBusComponentTest {
         Handler.drain();
         check(observer.take().equals(List.of("onAirConditionChanged obj")), "climate not reported");
         check(
-                component.initVehicleLastStatus(null, VehicleState.DRIVING_MODE_SET, 5) == 5,
-                "without QGSettings the default must be cached");
-        check(component.getVehicleState(VehicleState.DRIVING_MODE_SET) == 5, "cache not read");
+                com.qinggan.provider.QGSettings.System.VALUES.get("DRIVING_MODE_SET") == 3,
+                "a written drive mode must be saved to QGSettings as the OEM saves it");
+        check(
+                component.initVehicleLastStatus(null, VehicleState.SREV_SOC_SET, 5) == 5,
+                "without a saved value the default must be cached");
+        check(component.getVehicleState(VehicleState.SREV_SOC_SET) == 5, "cache not read");
     }
 
     /** The CAN box transport uses a registered operator and reports its absence as the OEM. */

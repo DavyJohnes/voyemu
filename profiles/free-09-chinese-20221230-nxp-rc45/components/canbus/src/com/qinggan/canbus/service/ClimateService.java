@@ -1,8 +1,16 @@
 package com.qinggan.canbus.service;
 
-/** NXP SDK Binder: climate is implemented; unimplemented vehicle domains stay UNKNOWN. */
+/**
+ * NXP SDK Binder: climate and the states of the BCM PEPS power mode handler are implemented;
+ * unimplemented vehicle domains stay UNKNOWN.
+ */
 final class ClimateService extends com.qinggan.canbus.ICanBusService.Stub {
     private final ClimateModel model;
+    private final java.util.Map<String, Integer> vehicle = new java.util.HashMap<>();
+    private final ModeCommandHistory history;
+    private final PowerModeVehicle access;
+    private final PepsPowerMode peps;
+    private String origin = ModeCommandHistory.CLIENT;
     private final android.os.Handler handler =
             new android.os.Handler(android.os.Looper.getMainLooper());
     private final ClimateCallbacks<com.qinggan.canbus.AirCondition> delivery =
@@ -39,6 +47,152 @@ final class ClimateService extends com.qinggan.canbus.ICanBusService.Stub {
                                 return edit.commit();
                             }
                         });
+        history =
+                new ModeCommandHistory(
+                        context.getSharedPreferences("voyemu-mode-history", 0),
+                        bootId(),
+                        java.util.UUID.randomUUID().toString());
+        access = new Vehicle(context.getContentResolver());
+        peps = new PepsPowerMode(access);
+    }
+
+    private static String bootId() {
+        try (java.io.BufferedReader reader =
+                new java.io.BufferedReader(
+                        new java.io.FileReader("/proc/sys/kernel/random/boot_id"))) {
+            String value = reader.readLine();
+
+            return value != null && value.matches("[0-9a-fA-F-]{36}") ? value : null;
+        } catch (java.io.IOException failure) {
+            return null;
+        }
+    }
+
+    /** The vehicle of the power mode handler: the PEPS states of this service and its QGAPI. */
+    private final class Vehicle extends PowerModeVehicle {
+        Vehicle(android.content.ContentResolver resolver) {
+            super(resolver);
+        }
+
+        @Override
+        public int vehicleState(String state) {
+            return vehicle.getOrDefault(state, -9999);
+        }
+
+        @Override
+        public int initVehicleLastStatus(String state, int value) {
+            int last = savedInt(state, value);
+
+            vehicle.put(state, last);
+
+            return last;
+        }
+
+        @Override
+        public void cacheVehicleState(String state, int value) {
+            vehicle.put(state, value);
+        }
+
+        @Override
+        public void setVehicleState(String state, int value) {
+            write(state, value, true);
+        }
+
+        @Override
+        public void setVehicleBundle(java.util.Map<String, Integer> states) {
+            writeBundle(states);
+        }
+
+        @Override
+        public void publishVehicleState(String state, int value) {
+            publish(state, value);
+        }
+
+        @Override
+        public void accStateChanged(int acc) {
+            broadcast(callback -> callback.onAccStateChanged(acc));
+        }
+    }
+
+    private interface Broadcast {
+        void send(com.qinggan.canbus.ICanBusServiceCallback callback)
+                throws android.os.RemoteException;
+    }
+
+    private void broadcast(Broadcast broadcast) {
+        handler.post(() -> {
+            int count = callbacks.beginBroadcast();
+
+            try {
+                for (int i = 0; i < count; i++) {
+                    try {
+                        broadcast.send(callbacks.getBroadcastItem(i));
+                    } catch (android.os.RemoteException ignored) {
+                    }
+                }
+            } finally {
+                callbacks.finishBroadcast();
+            }
+        });
+    }
+
+    private void publish(String state, int value) {
+        broadcast(callback ->
+                callback.onVehicleStateChanged(
+                        com.qinggan.canbus.VehicleState.valueOf(state), value));
+    }
+
+    /**
+     * Keeps a written state as the CAN feedback reports it; the OEM saves the states its ACC ON
+     * handler restores to QGSettings, and the mode history receives the commands written alone.
+     */
+    private void write(String state, int value, boolean alone) {
+        vehicle.put(state, value);
+
+        if (PepsPowerMode.saved(state, peps.accState())) {
+            access.saveInt(state, value);
+        }
+
+        if (alone
+                && (ModeCommandHistory.DRIVING_MODE_SET.equals(state)
+                        || ModeCommandHistory.IVI_SOC_MODESET.equals(state))) {
+            java.util.Map<String, Integer> packet = new java.util.LinkedHashMap<>();
+            packet.put(state, value);
+            history.accepted(state, packet, origin);
+        }
+
+        publish(state, value);
+    }
+
+    /** Writes the states of one packet; the mode history receives DRIVING_MODE_SET with them. */
+    private void writeBundle(java.util.Map<String, Integer> states) {
+        for (java.util.Map.Entry<String, Integer> state : states.entrySet()) {
+            write(state.getKey(), state.getValue(), false);
+        }
+
+        if (states.containsKey(ModeCommandHistory.DRIVING_MODE_SET)) {
+            history.accepted(ModeCommandHistory.DRIVING_MODE_SET, states, origin);
+        }
+    }
+
+    /** Applies the bcm_pepsPowerMode of a BCM PEPS frame on the main thread. */
+    void powerMode(int power) {
+        handler.post(() -> {
+            synchronized (ClimateService.this) {
+                origin = ModeCommandHistory.ACC_ON;
+
+                try {
+                    peps.onPowerMode(power);
+                } finally {
+                    origin = ModeCommandHistory.CLIENT;
+                }
+            }
+        });
+    }
+
+    /** Mode commands this service accepted; see {@link ModeCommandHistory#history}. */
+    org.json.JSONObject modeHistory(String request) throws org.json.JSONException {
+        return history.history(request);
     }
 
     private int apply(android.os.Bundle bundle) {
@@ -368,7 +522,7 @@ final class ClimateService extends com.qinggan.canbus.ICanBusService.Stub {
 
     @Override
     public synchronized int getVehicleState(com.qinggan.canbus.VehicleState p0) {
-        return -9999;
+        return p0 == null ? -9999 : vehicle.getOrDefault(p0.name(), -9999);
     }
 
     @Override
@@ -497,7 +651,30 @@ final class ClimateService extends com.qinggan.canbus.ICanBusService.Stub {
             return -1;
         }
 
-        return apply(p1);
+        if (p1 == null) {
+            return apply(null);
+        }
+
+        java.util.Map<String, Integer> states = new java.util.LinkedHashMap<>();
+        android.os.Bundle climate = new android.os.Bundle();
+
+        for (String key : p1.keySet()) {
+            Object value = p1.get(key);
+
+            if (PepsPowerMode.STATES.contains(key) && value instanceof Integer) {
+                states.put(key, (Integer) value);
+            } else if (value instanceof Integer) {
+                climate.putInt(key, (Integer) value);
+            } else {
+                throw new IllegalArgumentException("Climate integer");
+            }
+        }
+
+        if (!states.isEmpty()) {
+            writeBundle(states);
+        }
+
+        return states.isEmpty() || !climate.isEmpty() ? apply(climate) : 0;
     }
 
     @Override
@@ -517,7 +694,11 @@ final class ClimateService extends com.qinggan.canbus.ICanBusService.Stub {
     }
 
     @Override
-    public synchronized void setVehicleState(com.qinggan.canbus.VehicleState p0, int p1) {}
+    public synchronized void setVehicleState(com.qinggan.canbus.VehicleState p0, int p1) {
+        if (p0 != null && PepsPowerMode.STATES.contains(p0.name())) {
+            write(p0.name(), p1, true);
+        }
+    }
 
     @Override
     public synchronized void updateCallListInfo(android.os.Bundle p0) {}

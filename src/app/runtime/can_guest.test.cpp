@@ -110,6 +110,37 @@ int main() try {
 
         assert(rejected && ipk_reads == 1);
     }
+    {
+        unsigned mode_reads = 0;
+        const Json mode_query = {{"schema", 1}, {"limit", 8}};
+        const auto mode_runner = [&](const std::vector<std::string> &args, int) {
+            if (args.size() == 2 && args[1].starts_with("content call")) {
+                assert(args[1] == "content call --uri content://com.voyemu.output.vehicle --method "
+                                  "mode-history --arg " +
+                                          android_shell_quote(mode_query.dump()));
+                ++mode_reads;
+
+                return ProcessResult{
+                        0, "Bundle[{json={\"schema\":1,\"source\":\"android:qg.canbus:mode\","
+                           "\"status\":\"not-ready\"}}]\n"};
+            }
+
+            return runner(args, 1000);
+        };
+        const auto history = collect_mode_history(mode_query, identity, 1000, mode_runner);
+        assert(mode_reads == 1 && history.at("status") == "not-ready" &&
+               history.at("guest_boot_id") == boot &&
+               history.at("session_id") == identity.session_id);
+        bool rejected = false;
+
+        try {
+            collect_mode_history({{"schema", 1}, {"limit", 257}}, identity, 1000, mode_runner);
+        } catch (const std::runtime_error &error) {
+            rejected = std::string(error.what()).starts_with("MODE_ARGUMENT: ");
+        }
+
+        assert(rejected && mode_reads == 1);
+    }
     assert(result.at("host_interval").at("clock_id") == "host.steady:" + identity.session_id &&
            result.at("atomic_guest_state") == false);
     auto rejects = [&](const Json &request, const CanGuestIdentity &guest, int timeout,

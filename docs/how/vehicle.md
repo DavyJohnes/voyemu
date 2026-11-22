@@ -57,13 +57,14 @@ With a `session`, `vehicle.fields` adds `delivery` to each field: the list of gu
 
 ## CAN model
 
-The CAN model is the simulated CAN bus inside the multimedia guest. Three read-only operations observe it:
+The CAN model is the simulated CAN bus inside the multimedia guest. Four read-only operations observe it:
 
 | Operation | What it returns |
 | --- | --- |
 | `vehicle.can.get` | Selected CAN states as an Android component inside the guest reports them, with a cursor for incremental reads |
 | `vehicle.can.model` | The state of the simulated CAN model, with a cursor |
 | `vehicle.can.history` | The history of changes at the CAN boundary of the current session, or the reason it is unavailable |
+| `vehicle.mode.history` | The drive mode and energy mode commands the CanBus component accepted, see [drive mode at ACC ON](#drive-mode-at-acc-on) |
 
 These reads go to Android components inside the guest through the session's own emulator transport. A read that times out or loses its transport is marked retryable, see [errors](errors.md).
 
@@ -86,6 +87,14 @@ The service `qg.canbus` keeps the OEM component API: as in the OEM service, each
 | Getters of values the vehicle inputs do not carry | Return what the OEM component returns before its first data: -1 for `getEngineStatus`, `getVehicleKeyState` and the other statuses, 0 for `getHevSysMode` and `getEngineTemperature`, null for objects such as `getVehicleIO` and `getCanBoxVersion`; data objects keep the values of their OEM constructors. Before the first vehicle input the speed and the charge are -1 and the outside temperature is `Integer.MIN_VALUE` |
 
 The OEM service `qg.carsignal` reads the MCU of the multimedia: power and wake-up states, temperatures, light sensors, versions and the vehicle configuration. The emulator has no such MCU, and on the Free 6.0.3, 6.11.1 and 7.3.1 profiles one implementation answers its Binder calls as a parked vehicle: number and flag getters return 0 or false, text getters an empty string, `getVehicleConfig` an empty array, `getRTCTime` the guest clock in seconds and `getMCUHardwareVersion` `V3.0` on Free 6.0.3 and `V1.0` on Free 6.11.1 and 7.3.1. Setters change nothing, and registered callbacks are accepted and never called. Without the service the OEM applications would wait for it for as long as they run.
+
+## Drive mode at ACC ON
+
+On the Free 6.0.3, Free NXP RC45, Free 6.11.1 and 7.3.1 profiles the CanBus component starts the drive mode as the OEM component of its firmware does when the BCM PEPS frame reports a new power mode. The ACC of the CAN model reaches it as that power mode; the Free NXP RC45 machine runs with ACC on, so its service starts once with ACC ON. A repeated power mode changes nothing.
+
+ACC OFF saves in QGSettings whether a guest or a logged-in account was active. ACC ON restores the ambient light and the privacy setting and sends the drive mode packet of that account: a guest gets Eco with the OEM steering, drive and regeneration values whatever was saved before, a logged-in account gets the drive mode, steering, drive and regeneration it saved. A drive mode that an application writes is saved to QGSettings as in the vehicle. Free 6.0.3, 6.11.1 and 7.3.1 run the handler on confirmed model ACC transitions. On Free NXP RC45 the service starts with a fixed ACC ON state and runs the handler during service startup. A guest on that profile first gets the separate energy mode command `IVI_SOC_MODESET`. On Free 6.11.1 and 7.3.1 the component then publishes the drive mode to the callbacks and, when the OEM settings link the ambient light to the drive mode, selects its colour; the export vehicle types always start as a guest.
+
+`vehicle.mode.history` returns the mode commands the component accepted, in order: each `DRIVING_MODE_SET` with the packet it came in and each `IVI_SOC_MODESET` that the CAN model or the Free NXP RC45 service accepted, with `origin` `acc_on` for the start and `client` for an application. The result carries the Android `boot_id` and the `source_instance` of the service. `complete: false` with `incomplete_reason` `service_restarted`, `overflow`, `boot_unknown` or `boot_record_failed` marks a history that misses the first commands of the boot. The operation accepts `cursor` from the previous `next_cursor`, `limit` from 1 to 256 and `timeout_ms` from 1 to 10000. The current drive mode alone does not show the order of the commands.
 
 ## Cluster data channel
 

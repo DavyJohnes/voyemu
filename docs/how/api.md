@@ -52,7 +52,7 @@ A `session.wait` result is saved too, but unlike an action a repeated request is
 | Phone | `multimedia.phone.configure`, `multimedia.phone.connect`, `multimedia.phone.disconnect`, `multimedia.phone.incoming`, `multimedia.phone.answer`, `multimedia.phone.hangup`, `multimedia.phone.state` |
 | USB drive | `multimedia.usb.attach`, `multimedia.usb.detach` |
 | Cluster | `cluster.power`, `cluster.reboot`, `cluster.system`, `cluster.ipk.history` |
-| Vehicle | `vehicle.fields`, `vehicle.get`, `vehicle.set`, `vehicle.can.get`, `vehicle.can.model`, `vehicle.can.history` |
+| Vehicle | `vehicle.fields`, `vehicle.get`, `vehicle.set`, `vehicle.can.get`, `vehicle.can.model`, `vehicle.can.history`, `vehicle.mode.history` |
 | Input | `input.tap`, `input.drag`, `input.gesture`, `input.key.press`, `input.wheel.buttons`, `input.wheel.press`, `input.wheel.release`, `input.voice.trigger` |
 | Results | `operation.get`, `test.run` |
 
@@ -106,7 +106,7 @@ Session operations need a prepared machine with its pinned dependencies; the ava
 | `multimedia.power` | 1..90000 | `90000` |
 | `multimedia.usb.attach`, `multimedia.usb.detach` | 1..25000 | `20000` |
 | `session.ui`, `cluster.system` | 1..30000 | `5000` and `1000` |
-| `session.screenshot`, `vehicle.can.get`, `vehicle.can.model`, `cluster.ipk.history`, `session.logs` with `android`, `anr` or `native` | 1..10000 | `5000` |
+| `session.screenshot`, `vehicle.can.get`, `vehicle.can.model`, `cluster.ipk.history`, `vehicle.mode.history`, `session.logs` with `android`, `anr` or `native` | 1..10000 | `5000` |
 | `vehicle.can.history` | 1..15000 | `5000` |
 | `session.wait` | 1..60000 | `10000` |
 | `session.observe`, `session.watch.start`, `session.watch.read` | 0..60000 | `1000` |

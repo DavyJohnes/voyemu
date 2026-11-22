@@ -612,6 +612,18 @@
         "path": "/system/media/bootanimation2.zip"
       }
     },
+    "CanBusService": {
+      "file": "CanBusService-release.apk",
+      "sha256": "04e473e393882ff09f42186441d8ea924071fd96f3642ddd77e2f9b8d760e518",
+      "source": {
+        "package": "com.qinggan.canbus.service"
+      },
+      "bytes": 2217580,
+      "acquisition": {
+        "image": "system",
+        "path": "/system/priv-app/CanBusService-release/CanBusService-release.apk"
+      }
+    },
     "SystemPolicy": {
       "file": "SystemPolicy-release.apk",
       "sha256": "02749c34c515b8dd2ecdb6f5030762c292bc47fc3b79214d7965cb5cf56226eb",

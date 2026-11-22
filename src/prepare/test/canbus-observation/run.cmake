@@ -24,6 +24,7 @@ execute_process(COMMAND "${JAVAC}" -J-XX:ActiveProcessorCount=1 -J-Xmx128m --rel
     "${ROOT}/src/prepare/java/com/voyemu/prepare/Json.java"
     "${JSON_FIXTURE}/JSONObject.java" "${JSON_FIXTURE}/JSONArray.java" "${JSON_FIXTURE}/JSONException.java"
     "${SOURCE}/CanObservationRequest.java" "${SOURCE}/RegistrationService.java"
+    "${SOURCE}/CanObservationJournal.java" "${SOURCE}/ModeCommandHistory.java"
     TIMEOUT 30 RESULT_VARIABLE RESULT OUTPUT_VARIABLE OUTPUT ERROR_VARIABLE ERROR)
 if(NOT RESULT EQUAL 0)
     message(FATAL_ERROR "Compilation: ${RESULT}\n${OUTPUT}\n${ERROR}; diagnostics: ${WORK}")
@@ -40,6 +41,19 @@ execute_process(COMMAND "${CAN_CONSUMER}" "${PRODUCED}"
     TIMEOUT 15 RESULT_VARIABLE RESULT OUTPUT_VARIABLE OUTPUT ERROR_VARIABLE ERROR)
 if(NOT RESULT EQUAL 0)
     message(FATAL_ERROR "C++ consumer: ${RESULT}\n${OUTPUT}\n${ERROR}; diagnostics: ${WORK}")
+endif()
+message(STATUS "${OUTPUT}")
+set(MODE "${WORK}/mode-history.json")
+execute_process(COMMAND "${JAVA}" -XX:ActiveProcessorCount=1 -Xmx128m
+    -cp "${CLASSES}${CP_SEPARATOR}${PLATFORM}" com.qinggan.canbus.service.ModeHistoryProducerProbe "${MODE}"
+    TIMEOUT 15 RESULT_VARIABLE RESULT OUTPUT_VARIABLE OUTPUT ERROR_VARIABLE ERROR)
+if(NOT RESULT EQUAL 0)
+    message(FATAL_ERROR "Mode history producer: ${RESULT}\n${OUTPUT}\n${ERROR}; diagnostics: ${WORK}")
+endif()
+execute_process(COMMAND "${CAN_CONSUMER}" mode "${MODE}"
+    TIMEOUT 15 RESULT_VARIABLE RESULT OUTPUT_VARIABLE OUTPUT ERROR_VARIABLE ERROR)
+if(NOT RESULT EQUAL 0)
+    message(FATAL_ERROR "C++ mode history consumer: ${RESULT}\n${OUTPUT}\n${ERROR}; diagnostics: ${WORK}")
 endif()
 message(STATUS "${OUTPUT}")
 file(REMOVE_RECURSE "${WORK}")

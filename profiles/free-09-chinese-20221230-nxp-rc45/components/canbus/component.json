@@ -73,6 +73,9 @@
     ]
   },
   "sourceFiles": {
-    "src/com/qinggan/canbus/service/CanApplication.java": "voyemu/profiles/common/components/canbus/src/com/qinggan/canbus/service/CanApplication.java"
+    "src/com/qinggan/canbus/service/CanApplication.java": "voyemu/profiles/common/components/canbus/src/com/qinggan/canbus/service/CanApplication.java",
+    "src/com/qinggan/canbus/service/CanObservationJournal.java": "voyemu/profiles/common/components/canbus/src/com/qinggan/canbus/service/CanObservationJournal.java",
+    "src/com/qinggan/canbus/service/ModeCommandHistory.java": "voyemu/profiles/common/components/canbus/src/com/qinggan/canbus/service/ModeCommandHistory.java",
+    "src/com/qinggan/canbus/service/PowerModeVehicle.java": "voyemu/profiles/common/components/canbus/src/com/qinggan/canbus/service/PowerModeVehicle.java"
   }
 }

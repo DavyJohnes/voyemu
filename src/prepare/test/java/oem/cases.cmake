@@ -4,6 +4,9 @@ set(NXP free-09-chinese-20221230-nxp-rc45)
 set(F611 free-11-chinese-20250710-6.11.1)
 set(F731 free-11-chinese-20260731-7.3.1)
 set(PASSION passion-11-russian-20260403-2.1.4.80)
+set(PEPS profiles/common/components/canbus/src)
+set(DONGFENG com.qinggan.canbus.service.protocol.dongfeng.DongfengCanBusComponentImpl)
+set(H97C com.qinggan.canbus.service.protocol.dongfeng_h97c.DongfengH97CCanBusComponentImpl)
 set(CASES_qinggan09
     "SdkJavaCliClosureTest ROOT ANDROID:${A9}/system/system/framework/am.jar ANDROID:${A9}/system/system/framework/oat/arm64/am.odex ANDROID:${A9}/system/system/framework/oat/arm64/am.vdex ANDROID:${A9}/system/system/framework/bmgr.jar ANDROID:${A9}/system/system/framework/oat/arm64/bmgr.odex ANDROID:${A9}/system/system/framework/oat/arm64/bmgr.vdex ANDROID:${A9}/system/system/framework/bu.jar ANDROID:${A9}/system/system/framework/oat/arm64/bu.odex ANDROID:${A9}/system/system/framework/oat/arm64/bu.vdex ANDROID:${A9}/system/system/framework/content.jar ANDROID:${A9}/system/system/framework/oat/arm64/content.odex ANDROID:${A9}/system/system/framework/oat/arm64/content.vdex ANDROID:${A9}/system/system/framework/dpm.jar ANDROID:${A9}/system/system/framework/oat/arm64/dpm.odex ANDROID:${A9}/system/system/framework/oat/arm64/dpm.vdex ANDROID:${A9}/system/system/framework/input.jar ANDROID:${A9}/system/system/framework/oat/arm64/input.odex ANDROID:${A9}/system/system/framework/oat/arm64/input.vdex ANDROID:${A9}/system/system/framework/monkey.jar ANDROID:${A9}/system/system/framework/oat/arm64/monkey.odex ANDROID:${A9}/system/system/framework/oat/arm64/monkey.vdex ANDROID:${A9}/system/system/framework/requestsync.jar ANDROID:${A9}/system/system/framework/oat/arm64/requestsync.odex ANDROID:${A9}/system/system/framework/oat/arm64/requestsync.vdex ANDROID:${A9}/system/system/framework/sm.jar ANDROID:${A9}/system/system/framework/oat/arm64/sm.odex ANDROID:${A9}/system/system/framework/oat/arm64/sm.vdex ANDROID:${A9}/system/system/framework/svc.jar ANDROID:${A9}/system/system/framework/oat/arm64/svc.odex ANDROID:${A9}/system/system/framework/oat/arm64/svc.vdex ANDROID:${A9}/system/system/framework/uiautomator.jar ANDROID:${A9}/system/system/framework/oat/arm64/uiautomator.odex ANDROID:${A9}/system/system/framework/oat/arm64/uiautomator.vdex ANDROID:${A9}/system/system/framework/android.test.runner.jar ANDROID:${A9}/system/system/framework/oat/arm64/android.test.runner.odex ANDROID:${A9}/system/system/framework/oat/arm64/android.test.runner.vdex"
     "A9NetworkNullGuardTest ROOT NEEDS:${A9}"
@@ -11,6 +14,7 @@ set(CASES_qinggan09
     "Api28PhoneCallWindowGuardTest ROOT NEW NEEDS:${A9}"
     "Api28UsbPlayerGuardTest ROOT NEW PLATFORM NEEDS:${A9}"
     "CameraRecipeDvrEntryTest ORIGINAL:${A9}/Camera.apk"
+    "DriveModeStartupOemTest ROOT WORK ORIGINAL:${A9}/CanBusService-release.apk ${PEPS}/qinggan09/com/qinggan/canbus/service/PepsPowerMode.java ${DONGFENG} dongfeng ORIGINAL:${NXP}/canbus.apk profiles/${NXP}/components/canbus/src/com/qinggan/canbus/service/PepsPowerMode.java ${DONGFENG} dongfeng-nxp"
     "NxpLauncherSeatCardThreadTest ROOT NEW NEEDS:${NXP}"
     "NxpLauncherWindowThreadTest ROOT NEW NEEDS:${NXP}"
     "NxpStatusbarOverlayTest ROOT NEW NEEDS:${NXP}"
@@ -33,6 +37,7 @@ set(CASES_qinggan11_611
     "SettingsVoiceMuteGuardTest ROOT NEEDS:${F611} NEEDS:${F731}"
     "StrPowerGuardTest ROOT NEEDS:${F611} NEEDS:${F731}"
     "HiboardGuardChainTest ORIGINAL:${F611}/Hiboard.apk ORIGINAL:${F731}/Hiboard.apk"
+    "DriveModeStartupOemTest ROOT WORK ORIGINAL:${F611}/CanBusService-release.apk ${PEPS}/qinggan11/com/qinggan/canbus/service/PepsPowerMode.java ${H97C} dongfeng-h97c"
     "KeyManagerIngressChainTest ORIGINAL:${F611}/KeyManagerService.apk NEW ORIGINAL:${F731}/KeyManagerService.apk"
     "LauncherPowerGuardTest ORIGINAL:${F611}/Launcher.apk ORIGINAL:${F731}/Launcher.apk"
     "SettingsVoiceCloneBranchTest ORIGINAL:${F611}/Setting.apk ORIGINAL:${F731}/Setting.apk"
@@ -59,6 +64,7 @@ set(CASES_qinggan11_731
     "OriginalNaviInputsDeterminismTest ROOT PLATFORM ANDROID:${F731}/system/system/framework/framework.jar ANDROID:${F731}/system/system/framework/services.jar NEW"
     "PhoneCallWindowGuardTest ROOT NEW NEEDS:${F731}"
     "HiboardRoutingTest ORIGINAL:${F731}/Hiboard.apk NEW"
+    "DriveModeStartupOemTest ROOT WORK ORIGINAL:${F731}/CanBusService-release.apk ${PEPS}/qinggan11/com/qinggan/canbus/service/PepsPowerMode.java ${H97C} dongfeng-h97c"
     "HiboardStartupGuardTest ORIGINAL:${F731}/Hiboard.apk WORK"
     "KeyManagerGuardTest ORIGINAL:${F731}/KeyManagerService.apk NEW"
     "MediaNotificationGuardTest ORIGINAL:${F731}/QGMedia.apk NEW"

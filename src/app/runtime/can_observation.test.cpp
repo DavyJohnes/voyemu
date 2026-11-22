@@ -45,6 +45,21 @@ int main(int argc, char **argv) try {
         return 0;
     }
 
+    if (argc == 3 && std::string(argv[1]) == "mode") {
+        std::ifstream input(argv[2]);
+        Json produced;
+        input >> produced;
+        assert(parse_mode_history(produced) == produced);
+        assert(produced.at("events").size() == 2 && produced.at("complete") == true);
+        produced["events"][1]["command"] = "DRIVING_MODE_SET";
+        rejects([&] {
+            parse_mode_history(produced);
+        });
+        std::cout << "Java mode history producer to C++ consumer passed\n";
+
+        return 0;
+    }
+
     validate_can_request({{"schema", 1}});
     validate_can_request({{"schema", 1},
                           {"states", {"IVI_SOC_MODESET", "HUM_VSP_FUNCTION_SW"}},
@@ -247,6 +262,103 @@ int main(int argc, char **argv) try {
         assert(rejected);
     }
 
+    validate_mode_request({{"schema", 1},
+                           {"limit", 256},
+                           {"cursor", {{"source_instance", "service"}, {"after_seq", "0"}}}});
+
+    for (const Json &bad : {Json{{"schema", 2}}, Json{{"schema", 1}, {"limit", 0}},
+                            Json{{"schema", 1}, {"states", Json::array()}},
+                            Json{{"schema", 1}, {"cursor", {{"after_seq", "1"}}}}}) {
+        bool rejected = false;
+
+        try {
+            validate_mode_request(bad);
+        } catch (const std::runtime_error &error) {
+            rejected = std::string(error.what()).starts_with("MODE_ARGUMENT: ");
+        }
+
+        assert(rejected);
+    }
+
+    const Json drive = {{"seq", "1"},
+                        {"command", "DRIVING_MODE_SET"},
+                        {"value", 1},
+                        {"packet",
+                         {{"DRIVING_MODE_SET", 1},
+                          {"EPS_MODE_SET", 2},
+                          {"PROP_MODE_SET", 1},
+                          {"IB_MODE_SET", 1},
+                          {"HUM_ENERGY_PTREGEN_LEVL", 4}}},
+                        {"origin", "acc_on"},
+                        {"elapsed_ns", "120"}};
+    const Json energy = {{"seq", "2"},         {"command", "IVI_SOC_MODESET"},
+                         {"value", 1},         {"packet", {{"IVI_SOC_MODESET", 1}}},
+                         {"origin", "client"}, {"elapsed_ns", "130"}};
+    const Json mode = {{"schema", 1},
+                       {"source", "android:qg.canbus:mode"},
+                       {"status", "observed"},
+                       {"boot_id", "1b4e28ba-2fa1-11d2-883f-0016d3cca427"},
+                       {"source_instance", "service"},
+                       {"complete", true},
+                       {"incomplete_reason", nullptr},
+                       {"oldest_seq", "1"},
+                       {"latest_seq", "2"},
+                       {"gap", nullptr},
+                       {"events", {drive, energy}},
+                       {"next_cursor", {{"source_instance", "service"}, {"after_seq", "2"}}}};
+    assert(parse_mode_history(mode) == mode);
+    assert(parse_mode_history({{"schema", 1},
+                               {"source", "android:qg.canbus:mode"},
+                               {"status", "not-ready"}})["status"] == "not-ready");
+    auto restarted = mode;
+    restarted["complete"] = false;
+    restarted["incomplete_reason"] = "service_restarted";
+    assert(parse_mode_history(restarted) == restarted);
+    restarted["incomplete_reason"] = "boot_record_failed";
+    assert(parse_mode_history(restarted) == restarted);
+
+    for (const auto &[pointer, value] : std::initializer_list<std::pair<const char *, Json>>{
+                 {"/complete", false},
+                 {"/incomplete_reason", "service_restarted"},
+                 {"/boot_id", nullptr},
+                 {"/oldest_seq", "2"},
+                 {"/events/0/command", "EPS_MODE_SET"},
+                 {"/events/0/value", 2},
+                 {"/events/0/origin", "boot"},
+                 {"/events/0/packet/EPS_MODE_SET", "2"},
+                 {"/events/1/packet/DRIVING_MODE_SET", 1},
+                 {"/events/1/seq", "1"},
+                 {"/events/1/seq", "3"},
+                 {"/events/0/elapsed_ns", 1},
+                 {"/gap", "lost"},
+                 {"/next_cursor/after_seq", "1"},
+                 {"/schema", 2},
+                 {"/extra", 1}}) {
+        auto broken = mode;
+        broken[Json::json_pointer(pointer)] = value;
+        bool rejected = false;
+
+        try {
+            parse_mode_history(broken);
+        } catch (const std::runtime_error &error) {
+            rejected = std::string(error.what()).starts_with("MODE_PROTOCOL: ");
+        }
+
+        assert(rejected);
+    }
+
+    auto missing_boot = mode;
+    missing_boot.erase("boot_id");
+    missing_boot["replacement"] = nullptr;
+    bool malformed_rejected = false;
+
+    try {
+        parse_mode_history(missing_boot);
+    } catch (const std::runtime_error &error) {
+        malformed_rejected = std::string(error.what()).starts_with("MODE_PROTOCOL: ");
+    }
+
+    assert(malformed_rejected);
     std::cout << "CAN observation contract passed\n";
 } catch (const std::exception &error) {
     std::cerr << error.what() << '\n';

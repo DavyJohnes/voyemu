@@ -23,4 +23,10 @@ void validate_ipk_request(const Json &request);
 Json parse_ipk_history(const Json &history);
 Json collect_ipk_history(const Json &query, const CanGuestIdentity &identity, int timeout_ms,
                          const CanGuestRunner &runner);
+// Same provider, call method mode-history: the DRIVING_MODE_SET packets and IVI_SOC_MODESET
+// commands the CanBus component accepted. Request contains only schema/cursor/limit.
+void validate_mode_request(const Json &request);
+Json parse_mode_history(const Json &history);
+Json collect_mode_history(const Json &query, const CanGuestIdentity &identity, int timeout_ms,
+                          const CanGuestRunner &runner);
 } // namespace voyemu

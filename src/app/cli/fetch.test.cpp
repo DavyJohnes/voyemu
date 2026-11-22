@@ -557,7 +557,8 @@ int main(int argc, char **argv) {
                 }
             }
 
-            check(vendor == 2, "NXP vendor SELinux policy and HiCar acquired from the vendor image");
+            check(vendor == 2,
+                  "NXP vendor SELinux policy and HiCar acquired from the vendor image");
             auto outside = profile;
             outside["original"]["VendorSepolicy"]["acquisition"]["path"] =
                     "/system/etc/selinux/vendor_sepolicy.cil";
@@ -849,8 +850,16 @@ int main(int argc, char **argv) {
                 embedded_profile_names(ProfilePlatform::qinggan09, ProfileBoard::sa8155).at(0);
         const auto qinggan09_inputs =
                 original_input_plan(embedded_profile(qinggan09).at("definition"));
-        check(qinggan09_inputs.size() == 116,
-              "first vehicle declares 116 exact Android inputs with the stock launcher apps");
+        check(qinggan09_inputs.size() == 117,
+              "first vehicle declares 117 exact Android inputs with the stock launcher apps and CAN service");
+        check(std::count_if(qinggan09_inputs.begin(), qinggan09_inputs.end(),
+                            [](const auto &input) {
+                                return input.name == "CanBusService" &&
+                                       input.file == "CanBusService-release.apk" &&
+                                       input.package == "com.qinggan.canbus.service" &&
+                                       input.remote.empty();
+                            }) == 1,
+              "the drive mode fixture takes the exact OEM CAN service APK");
 
         for (const auto &[role, name] :
              {std::pair{"FontRobotoRegular", "Roboto-Regular.ttf"},

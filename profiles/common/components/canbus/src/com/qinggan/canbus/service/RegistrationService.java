@@ -62,6 +62,17 @@ public class RegistrationService extends Service {
                 : binder.ipkHistory(request);
     }
 
+    static org.json.JSONObject modeHistory(String request) throws org.json.JSONException {
+        CanBusStubService binder = sBinder;
+
+        return binder == null
+                ? new org.json.JSONObject()
+                        .put("schema", 1)
+                        .put("source", "android:qg.canbus:mode")
+                        .put("status", "not-ready")
+                : binder.modeHistory(request);
+    }
+
     static VehicleInputSnapshot currentInputs() {
         return sBinder == null ? null : sBinder.currentInputs();
     }

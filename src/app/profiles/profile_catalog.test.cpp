@@ -1307,11 +1307,14 @@ int main(int argc, char **argv) {
         qinggan11_capture_source >> qinggan11_capture;
         check(qinggan11_capture.at("profile") == qinggan11_id &&
                       qinggan11_capture.at("android").size() == 42 &&
-                      a11.at("original").size() == 43,
-              "A11 capture retains 42 roles plus the separately acquired Phone original");
+                      a11.at("original").size() == 44,
+              "A11 capture retains 42 roles plus the separately acquired Phone and CAN service originals");
+        std::set<std::string> qinggan11_capture_roles;
 
         for (const auto &capture : qinggan11_capture.at("android")) {
-            const auto &original = a11.at("original").at(capture.at("name").get<std::string>());
+            const auto role = capture.at("name").get<std::string>();
+            const auto &original = a11.at("original").at(role);
+            check(qinggan11_capture_roles.insert(role).second, "A11 capture roles must be unique");
             auto pins = original.at("sha256");
 
             if (pins.is_string()) {
@@ -1334,6 +1337,12 @@ int main(int argc, char **argv) {
                           original.at("source").size() == 1,
                   "A11 capture/pin device source must agree");
         }
+
+        check(a11.at("original").contains("BluetoothPhone") &&
+                      a11.at("original").contains("CanBusService") &&
+                      !qinggan11_capture_roles.contains("BluetoothPhone") &&
+                      !qinggan11_capture_roles.contains("CanBusService"),
+              "A11 capture omits only the separately acquired Phone and CAN service APKs");
 
         check(a11.at("original").at("AudioPolicy") ==
                       Json{{"file", "AudioPolicy-release.apk"},
@@ -1636,7 +1645,7 @@ int main(int argc, char **argv) {
                                     {{"image", "system"},
                                      {"path",
                                       "/system/priv-app/KeyManagerService-release/KeyManagerService-release.apk"}}}} &&
-                      a11.at("original").size() == 43,
+                      a11.at("original").size() == 44,
               "Free wheel must bind actual acquired OEM KeyManager");
         check(a11.at("components").at("wheel-input") == "components/wheel-input" &&
                       a11.at("components").at("wheel-platform") == "components/wheel-platform" &&

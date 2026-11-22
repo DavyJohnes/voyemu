@@ -1127,16 +1127,20 @@ Json Session::handle(const Json &operation) {
             }
 
             reply = {{"ok", true}, {"session_id", session_id_}, {"logs", logs}};
-        } else if (op == "test_can_observation" || op == "test_ipk_history") {
+        } else if (op == "test_can_observation" || op == "test_ipk_history" ||
+                   op == "test_mode_history") {
             if (!operation.contains("session_id")) {
                 throw VoyemuError("TEST_SESSION", "explicit session required");
             }
 
             const bool ipk = op == "test_ipk_history";
+            const bool mode = op == "test_mode_history";
             const auto query = operation.at("query");
 
             if (ipk) {
                 validate_ipk_request(query);
+            } else if (mode) {
+                validate_mode_request(query);
             } else {
                 validate_can_request(query);
             }
@@ -1148,7 +1152,9 @@ Json Session::handle(const Json &operation) {
                          {"session_id", session_id_},
                          {"observation",
                           {{"schema", 1},
-                           {"source", ipk ? "android:qg.canbus:ipk" : "android:qg.canbus"},
+                           {"source", ipk    ? "android:qg.canbus:ipk"
+                                      : mode ? "android:qg.canbus:mode"
+                                             : "android:qg.canbus"},
                            {"status", "unavailable"},
                            {"reason", "owned Android guest is not powered"}}}};
             } else {
@@ -1189,8 +1195,9 @@ Json Session::handle(const Json &operation) {
                     return adb(args, left);
                 };
                 const auto left = timeout - static_cast<int>(spent);
-                auto observed = ipk ? collect_ipk_history(query, identity, left, runner)
-                                    : collect_can_observation(query, identity, left, runner);
+                auto observed = ipk    ? collect_ipk_history(query, identity, left, runner)
+                                : mode ? collect_mode_history(query, identity, left, runner)
+                                       : collect_can_observation(query, identity, left, runner);
                 lock.lock();
 
                 if (generation != android_generation_ || pid != android_.pid() ||

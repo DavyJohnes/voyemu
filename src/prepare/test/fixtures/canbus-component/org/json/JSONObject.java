@@ -7,7 +7,8 @@ import java.util.Map;
 
 /** The org.json subset of the component with the checked exceptions of the platform API. */
 public class JSONObject {
-    private final Map<String, Object> values;
+    public static final Object NULL = null;
+    final Map<String, Object> values;
 
     public JSONObject() {
         values = new LinkedHashMap<>();
@@ -19,7 +20,11 @@ public class JSONObject {
     }
 
     public JSONObject put(String key, Object value) throws JSONException {
-        values.put(key, value instanceof JSONObject ? ((JSONObject) value).values : value);
+        values.put(
+                key,
+                value instanceof JSONObject
+                        ? ((JSONObject) value).values
+                        : value instanceof JSONArray ? ((JSONArray) value).values : value);
 
         return this;
     }
@@ -44,6 +49,22 @@ public class JSONObject {
 
     public JSONObject getJSONObject(String key) throws JSONException {
         return (JSONObject) get(key);
+    }
+
+    public boolean has(String key) {
+        return values.containsKey(key);
+    }
+
+    public String getString(String key) throws JSONException {
+        return (String) get(key);
+    }
+
+    public int getInt(String key) throws JSONException {
+        return (Integer) get(key);
+    }
+
+    public java.util.Iterator<String> keys() {
+        return values.keySet().iterator();
     }
 
     public int length() {

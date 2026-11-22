@@ -29,6 +29,9 @@ public final class CanModelBridge {
         void onModelResponse(
                 CanModelBridge source, VehicleState state, int value, long session, long epoch);
 
+        /** Reports a model state command the model admitted, before its response. */
+        default void onModelAccepted(CanModelBridge source, VehicleState state, int value) {}
+
         /** Delivers an observed ACC transition; the receiver rechecks it against getAccStatus. */
         void onModelAcc(CanModelBridge source, int value);
     }
@@ -295,6 +298,10 @@ public final class CanModelBridge {
                 c.state == 665 ? VehicleState.HUM_VSP_FUNCTION_SW : VehicleState.IVI_SOC_MODESET;
         int response = status == 0 ? c.value : getVehicleState(field);
         Listener l = listener;
+
+        if (l != null && status == 0) {
+            l.onModelAccepted(this, field, c.value);
+        }
 
         if (l != null && response >= 0) {
             l.onModelResponse(this, field, response, c.session, c.epoch);
