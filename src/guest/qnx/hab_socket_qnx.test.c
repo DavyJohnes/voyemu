@@ -35,23 +35,27 @@ int *qhb_errno(void) {
 static int fake_bind(int fd, const void *address, unsigned size) {
     const QhbSockaddr *q = address;
     struct sockaddr_in linux_address = {0};
+
     assert(size == sizeof(QhbSockaddr));
     bound_length = q->length;
     bound_family = q->family;
     memcpy(bound_address, q->address, 4);
     linux_address.sin_family = AF_INET;
     linux_address.sin_port = htons((unsigned short)((q->port[0] << 8 | q->port[1]) + port_offset));
-    linux_address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    assert(inet_pton(AF_INET, "127.0.0.1", &linux_address.sin_addr) == 1);
+
     return bind(fd, (struct sockaddr *)&linux_address, sizeof(linux_address));
 }
 
 static int fake_setsockopt(int fd, int level, int name, const void *value, unsigned size) {
     assert(level == 0xffff && name == 4);
+
     return setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, value, size);
 }
 
 static int fake_accept(int fd, void *address, unsigned *size) {
     assert(!address && !size);
+
     return accept(fd, 0, 0);
 }
 
@@ -61,12 +65,14 @@ static int uhab_open(int *handle, HabU32 mmid, HabU32 timeout, HabU32 flags) {
     (void)flags;
     ++forwarded_open;
     *handle = 7;
+
     return 0;
 }
 
 static int uhab_close(int handle) {
     assert(handle == 7);
     ++forwarded_close;
+
     return 0;
 }
 
@@ -75,6 +81,7 @@ static int uhab_send(int handle, void *data, HabU32 size, HabU32 flags) {
     (void)data;
     (void)size;
     (void)flags;
+
     return 0;
 }
 
@@ -84,16 +91,19 @@ static int uhab_recv(int handle, void *data, HabU32 *size, HabU32 timeout, HabU3
     (void)size;
     (void)timeout;
     (void)flags;
+
     return 0;
 }
 
 void *qhb_dlopen(const char *name, int mode) {
     assert(mode == 2);
+
     return (void *)name;
 }
 
 void *qhb_dlsym(void *library, const char *name) {
     const char *l = library;
+
     struct {
         const char *library, *name;
         void *function;
@@ -122,23 +132,28 @@ void *qhb_dlsym(void *library, const char *name) {
 static int peer(HabU32 minor) {
     int fd = socket(AF_INET, SOCK_STREAM, 0);
     struct sockaddr_in address = {0};
+
     address.sin_family = AF_INET;
     address.sin_port = htons((unsigned short)(QHB_PORT_BASE + minor + port_offset));
-    address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    assert(inet_pton(AF_INET, "127.0.0.1", &address.sin_addr) == 1);
     assert(!connect(fd, (struct sockaddr *)&address, sizeof(address)));
+
     return fd;
 }
 
 static void frame(int fd, const void *data, HabU32 size) {
     HabU8 head[4] = {(HabU8)(size >> 24), (HabU8)(size >> 16), (HabU8)(size >> 8), (HabU8)size};
+
     assert(write(fd, head, 4) == 4 && write(fd, data, size) == (long)size);
 }
 
 static HabU32 receive(int fd, void *data, HabU32 capacity) {
     HabU8 head[4];
+
     assert(!hab_read_all(fd, head, 4));
     HabU32 size = (HabU32)head[0] << 24 | (HabU32)head[1] << 16 | (HabU32)head[2] << 8 | head[3];
     assert(size <= capacity && !hab_read_all(fd, data, size));
+
     return size;
 }
 
@@ -147,6 +162,7 @@ int main(void) {
     char buffer[512];
     HabU32 size;
     int handle = 0;
+
     port_offset = (unsigned)(getpid() % 1000) * 4;
 
     /* Without the opt-in every call reaches the OEM libuhab. */
