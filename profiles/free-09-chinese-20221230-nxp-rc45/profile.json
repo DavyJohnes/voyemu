@@ -6558,6 +6558,12 @@
    "mode": "0644",
    "uid": 1000,
    "gid": 1000
+  },
+  {
+   "artifact": "files:usb-drive-fstab",
+   "type": "file",
+   "target": "/vendor/etc/fstab.ranchu",
+   "mode": "0644"
   }
  ],
  "configure": {
@@ -6616,6 +6622,9 @@
  "files": {
   "secondary-display-feature": {
    "file": "voyemu-secondary-display.xml"
+  },
+  "usb-drive-fstab": {
+   "file": "fstab.ranchu"
   },
   "launcher-routing-library": {
    "file": "voyemu-launcher-routing.xml"

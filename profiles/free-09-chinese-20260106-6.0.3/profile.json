@@ -1558,6 +1558,12 @@
       "type": "file",
       "target": "/system/bin/voyemu-can-model-observer",
       "mode": "0755"
+    },
+    {
+      "artifact": "files:usb-drive-fstab",
+      "type": "file",
+      "target": "/vendor/etc/fstab.ranchu",
+      "mode": "0644"
     }
   ],
   "configure": {
@@ -1745,6 +1751,9 @@
     },
     "qinggan-framework": {
       "file": "voyemu-qinggan-framework.xml"
+    },
+    "usb-drive-fstab": {
+      "file": "fstab.ranchu"
     }
   },
   "initial_state": {

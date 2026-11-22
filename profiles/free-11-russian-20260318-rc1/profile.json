@@ -1088,6 +1088,12 @@
       "type": "file",
       "target": "/system/framework/services.jar",
       "mode": "0644"
+    },
+    {
+      "artifact": "files:usb-drive-fstab",
+      "type": "file",
+      "target": "/vendor/etc/fstab.ranchu",
+      "mode": "0644"
     }
   ],
   "ownerUpdate": {
@@ -1170,6 +1176,9 @@
     },
     "can-simulator-fixture": {
       "file": "voyemu-can-model.fixture"
+    },
+    "usb-drive-fstab": {
+      "file": "fstab.ranchu"
     }
   },
   "configure": {

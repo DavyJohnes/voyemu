@@ -2457,6 +2457,12 @@
       "mode": "0644"
     },
     {
+      "artifact": "files:usb-drive-fstab",
+      "type": "file",
+      "target": "/vendor/etc/fstab.ranchu",
+      "mode": "0644"
+    },
+    {
       "artifact": "original:VhalService",
       "type": "file",
       "target": "/vendor/bin/hw/android.hardware.automotive.vehicle@2.0-mega-service",
@@ -3555,6 +3561,9 @@
   "files": {
     "framework-libraries": {
       "file": "voyemu-framework.xml"
+    },
+    "usb-drive-fstab": {
+      "file": "fstab.ranchu"
     },
     "message-center-vintf": {
       "file": "voyemu-message-center.xml"

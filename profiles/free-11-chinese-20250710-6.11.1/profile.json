@@ -905,6 +905,12 @@
       "type": "apk",
       "target": "/system/priv-app/SystemPolicy-release/SystemPolicy-release.apk",
       "package": "com.qinggan.systempolicy"
+    },
+    {
+      "artifact": "files:usb-drive-fstab",
+      "type": "file",
+      "target": "/vendor/etc/fstab.ranchu",
+      "mode": "0644"
     }
   ],
   "ownerUpdate": {
@@ -1275,6 +1281,9 @@
     },
     "hybrid-nvram": {
       "file": "hybrid-fixture.img"
+    },
+    "usb-drive-fstab": {
+      "file": "fstab.ranchu"
     }
   },
   "configure": {
