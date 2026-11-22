@@ -91,7 +91,35 @@ final class FontCyrillicOutlineFix {
     }
 
     // The flags and absolute x of each point of a simple outline, and its y coordinate bytes.
-    private record Points(int[] flags, int[] xs, int yStart, int yEnd) {}
+    private static final class Points {
+        private final int[] flags;
+        private final int[] xs;
+        private final int yStart;
+        private final int yEnd;
+
+        Points(int[] flags, int[] xs, int yStart, int yEnd) {
+            this.flags = flags;
+            this.xs = xs;
+            this.yStart = yStart;
+            this.yEnd = yEnd;
+        }
+
+        int[] flags() {
+            return flags;
+        }
+
+        int[] xs() {
+            return xs;
+        }
+
+        int yStart() {
+            return yStart;
+        }
+
+        int yEnd() {
+            return yEnd;
+        }
+    }
 
     // Moves a simple outline by dx; its points, flags and bounds are encoded again.
     static byte[] translate(byte[] outline, int dx) {

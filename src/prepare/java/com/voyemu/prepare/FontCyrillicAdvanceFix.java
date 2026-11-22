@@ -16,7 +16,29 @@ final class FontCyrillicAdvanceFix {
     private FontCyrillicAdvanceFix() {}
 
     /** The repaired copy of source and the count of repaired glyphs; source stays unchanged. */
-    record Result(byte[] bytes, int glyphsPatched, String reason) {
+    static final class Result {
+        private final byte[] bytes;
+        private final int glyphsPatched;
+        private final String reason;
+
+        Result(byte[] bytes, int glyphsPatched, String reason) {
+            this.bytes = bytes;
+            this.glyphsPatched = glyphsPatched;
+            this.reason = reason;
+        }
+
+        byte[] bytes() {
+            return bytes;
+        }
+
+        int glyphsPatched() {
+            return glyphsPatched;
+        }
+
+        String reason() {
+            return reason;
+        }
+
         boolean changed() {
             return glyphsPatched > 0;
         }

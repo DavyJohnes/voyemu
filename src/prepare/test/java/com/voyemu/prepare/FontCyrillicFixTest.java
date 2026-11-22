@@ -13,6 +13,12 @@ public final class FontCyrillicFixTest {
         }
     }
 
+    // An unchanged repair returns its input array itself, not a copy, so identity is the property.
+    @SuppressWarnings("ReferenceEquality")
+    static boolean same(byte[] result, byte[] input) {
+        return result == input;
+    }
+
     static byte[] fixture(String name) throws Exception {
         return Files.readAllBytes(fixtures.resolve(name));
     }
@@ -23,7 +29,7 @@ public final class FontCyrillicFixTest {
 
         check(!result.changed(), "unchanged " + reason);
         check(reason.equals(result.reason()), "reason " + result.reason() + " for " + reason);
-        check(result.bytes() == value && Arrays.equals(before, value), "input kept " + reason);
+        check(same(result.bytes(), value) && Arrays.equals(before, value), "input kept " + reason);
     }
 
     static int tableOffset(byte[] font, String tag) {
@@ -77,7 +83,7 @@ public final class FontCyrillicFixTest {
         FontCyrillicAdvanceFix.Result again = FontCyrillicAdvanceFix.patch(corrected);
         check(
                 !again.changed()
-                        && again.bytes() == corrected
+                        && same(again.bytes(), corrected)
                         && ("already-correct".equals(again.reason())
                                 || "unknown-metrics".equals(again.reason())),
                 "corrected font stays unchanged");
@@ -166,7 +172,7 @@ public final class FontCyrillicFixTest {
                 new int[] {12, 27, 63, 171, 255, 1023, source.length / 2, source.length - 1}) {
             byte[] truncated = Arrays.copyOf(source, length);
             FontCyrillicAdvanceFix.Result result = FontCyrillicAdvanceFix.patch(truncated);
-            check(!result.changed() && result.bytes() == truncated, "truncated " + length);
+            check(!result.changed() && same(result.bytes(), truncated), "truncated " + length);
         }
 
         byte[] noTables = source.clone();
@@ -203,7 +209,7 @@ public final class FontCyrillicFixTest {
             check(Arrays.equals(before, candidate), "bit flip input kept " + offset);
 
             if (!result.changed()) {
-                check(result.bytes() == candidate, "bit flip unchanged " + offset);
+                check(same(result.bytes(), candidate), "bit flip unchanged " + offset);
             }
         }
     }
