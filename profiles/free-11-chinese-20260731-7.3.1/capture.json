@@ -179,6 +179,13 @@
       }
     },
     {
+      "name": "Dvr",
+      "file": "Dvr.apk",
+      "source": {
+        "package": "com.qinggan.dvr"
+      }
+    },
+    {
       "name": "AudioPolicy",
       "file": "AudioPolicy-release.apk",
       "source": {

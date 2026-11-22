@@ -534,6 +534,18 @@
         "path": "/system/priv-app/Video-release-signed/Video-release-signed.apk"
       }
     },
+    "Dvr": {
+      "file": "Dvr.apk",
+      "sha256": "2e21118dabce9f6a093f90dc2eaa84360ea7292873e784f285adce761a4caf84",
+      "source": {
+        "package": "com.qinggan.dvr"
+      },
+      "bytes": 28766392,
+      "acquisition": {
+        "image": "vendor",
+        "path": "/vendor/app/Dvr-release-signed/Dvr-release-signed.apk"
+      }
+    },
     "AudioPolicy": {
       "file": "AudioPolicy-release.apk",
       "sha256": "2152a99acdbee41626c6b661fe6509dd2c9487d3cad6a66aad6320bbb00cc039",
@@ -650,6 +662,7 @@
     "wheel-input": "components/wheel-input",
     "wheel-platform": "components/wheel-platform",
     "gallery-arm64-libraries": "components/gallery-arm64-libraries",
+    "dvr-arm64-libraries": "components/dvr-arm64-libraries",
     "oem-power": "components/oem-power",
     "view-observation": "components/view-observation",
     "bluetooth": "components/bluetooth",
@@ -811,6 +824,16 @@
       ],
       "steps": [
         "api30-gallery-arm64.json"
+      ]
+    },
+    "Dvr": {
+      "type": "apk",
+      "input": "original:Dvr",
+      "uses": [
+        "component:dvr-arm64-libraries"
+      ],
+      "steps": [
+        "api30-dvr-arm64.json"
       ]
     },
     "AudioPolicy": {
@@ -1195,6 +1218,10 @@
     {
       "type": "apk",
       "artifact": "patched:Video"
+    },
+    {
+      "type": "apk",
+      "artifact": "patched:Dvr"
     },
     {
       "artifact": "patched:AudioPolicy",

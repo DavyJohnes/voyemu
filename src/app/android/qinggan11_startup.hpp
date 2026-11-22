@@ -5,6 +5,7 @@
 #include "profile_catalog.hpp"
 #include <algorithm>
 #include <stdexcept>
+#include <string>
 
 namespace voyemu {
 // Whether a qinggan11 profile delivers its wheel through the com.voyemu.input.wheel provider, as
@@ -31,7 +32,7 @@ inline bool qinggan11_wheel_provider_profile(std::string_view profile) {
 
 // A pinned OEM original of a profile: its file, size, SHA-256 and system image path are the
 // profile's own data.
-inline bool qinggan11_pinned_original(const Json &original) {
+inline bool qinggan11_pinned_original(const Json &original, const std::string &image = "system") {
     if (!original.is_object()) {
         return false;
     }
@@ -42,9 +43,9 @@ inline bool qinggan11_pinned_original(const Json &original) {
 
     return file.is_string() && !file.get<std::string>().empty() && bytes.is_number_unsigned() &&
            sha256.is_string() && sha256_text(sha256.get<std::string>()) &&
-           acquisition.is_object() && acquisition.value("image", Json{}) == "system" &&
+           acquisition.is_object() && acquisition.value("image", Json{}) == image &&
            acquisition.value("path", Json{}).is_string() &&
-           acquisition.at("path").get<std::string>().starts_with("/system/");
+           acquisition.at("path").get<std::string>().starts_with("/" + image + "/");
 }
 
 inline Json qinggan11_startup_values(const Json &definition) {
@@ -275,6 +276,30 @@ inline Json qinggan11_wheel_capability(const Json &definition) {
         }
 
         declared.erase("bluetooth");
+    }
+
+    if (declared.is_object() && declared.contains("dvr-arm64-libraries")) {
+        if (declared.at("dvr-arm64-libraries") != "components/dvr-arm64-libraries" ||
+            !qinggan11_pinned_original(
+                    definition.value("original", Json::object()).value("Dvr", Json{}), "vendor") ||
+            definition.value("patches", Json::object()).value("Dvr", Json{}) !=
+                    Json{{"type", "apk"},
+                         {"input", "original:Dvr"},
+                         {"uses", Json::array({"component:dvr-arm64-libraries"})},
+                         {"steps", Json::array({"api30-dvr-arm64.json"})}} ||
+            !definition.contains("install") || !definition.at("install").is_array() ||
+            std::count(definition.at("install").begin(), definition.at("install").end(),
+                       Json{{"artifact", "patched:Dvr"}, {"type", "apk"}}) != 1 ||
+            std::count_if(definition.at("install").begin(), definition.at("install").end(),
+                          [](const auto &n) {
+                              const auto artifact = n.value("artifact", std::string{});
+
+                              return artifact == "patched:Dvr" || artifact == "original:Dvr";
+                          }) != 1) {
+            throw VoyemuError("QINGGAN11_WHEEL", "exact optional DVR build dependency required");
+        }
+
+        declared.erase("dvr-arm64-libraries");
     }
 
     const bool can_early_gallery = declared.is_object() && declared.is_object() &&

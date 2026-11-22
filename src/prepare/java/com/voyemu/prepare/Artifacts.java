@@ -397,9 +397,9 @@ final class Artifacts {
 
         if (definition.get("type").equals("native-library-archive")) {
             Failure.require(
-                    name.equals("gallery-arm64-libraries"),
+                    name.endsWith("-arm64-libraries"),
                     "COMPONENT_TYPE_INVALID",
-                    "Registered Gallery archive component required",
+                    "Registered ARM64 library archive component required",
                     3);
 
             return GalleryArm64Libraries.build(api, abi, source, dir);

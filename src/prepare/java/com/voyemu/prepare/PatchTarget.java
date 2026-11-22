@@ -601,13 +601,19 @@ final class PatchTarget implements Recipes.Target {
 
     @Override
     public void guardGalleryArm64(boolean apply) throws Exception {
-        Path component = uses.get("component:gallery-arm64-libraries");
+        var archives =
+                uses.entrySet().stream()
+                        .filter(e ->
+                                e.getKey().startsWith("component:")
+                                        && e.getKey().endsWith("-arm64-libraries"))
+                        .toList();
 
         Failure.require(
-                component != null,
+                archives.size() == 1,
                 "PATCH_DEPENDENCY_MISSING",
-                "Gallery archive component required",
+                "One ARM64 library archive component required",
                 3);
+        Path component = archives.get(0).getValue();
         var next =
                 GalleryArm64Libraries.add(
                         constants,

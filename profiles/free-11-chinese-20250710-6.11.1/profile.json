@@ -431,6 +431,18 @@
         "path": "/system/priv-app/Video-release-signed/Video-release-signed.apk"
       }
     },
+    "Dvr": {
+      "file": "Dvr.apk",
+      "sha256": "6061242a4d7ffee196c11556e8794be94d155c48e4c66d1f03d38f74ff07c3e6",
+      "source": {
+        "package": "com.qinggan.dvr"
+      },
+      "bytes": 28745372,
+      "acquisition": {
+        "image": "vendor",
+        "path": "/vendor/app/Dvr-release-signed/Dvr-release-signed.apk"
+      }
+    },
     "AudioPolicy": {
       "file": "AudioPolicy-release.apk",
       "sha256": "83fe6f4fd7a02135fb84e02ef8298cefa42365e970f0760a3b90a60de9582aac",
@@ -880,6 +892,10 @@
       "artifact": "patched:Video"
     },
     {
+      "type": "apk",
+      "artifact": "patched:Dvr"
+    },
+    {
       "artifact": "patched:Hiboard",
       "type": "apk",
       "target": "/system/priv-app/Hiboard-release-signed/Hiboard-release-signed.apk",
@@ -1214,6 +1230,16 @@
         "api30-gallery-arm64.json"
       ]
     },
+    "Dvr": {
+      "type": "apk",
+      "input": "original:Dvr",
+      "uses": [
+        "component:dvr-arm64-libraries"
+      ],
+      "steps": [
+        "api30-dvr-arm64.json"
+      ]
+    },
     "Hiboard": {
       "input": "original:Hiboard",
       "type": "apk",
@@ -1278,7 +1304,8 @@
     "oem-power": "components/oem-power",
     "bluetooth": "components/bluetooth",
     "view-observation": "components/view-observation",
-    "gallery-arm64-libraries": "components/gallery-arm64-libraries"
+    "gallery-arm64-libraries": "components/gallery-arm64-libraries",
+    "dvr-arm64-libraries": "components/dvr-arm64-libraries"
   },
   "files": {
     "qinggan-framework": {

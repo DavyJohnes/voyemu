@@ -1030,10 +1030,11 @@ final class RecipesApi30 {
             }
             case "guardGalleryArm64" -> {
                 require(
-                        name.equals(GalleryArm64Libraries.NAME + ".json")
+                        (name.equals(GalleryArm64Libraries.NAME + ".json")
+                                        || name.equals(GalleryArm64Libraries.DVR + ".json"))
                                 && args.isEmpty()
                                 && calls.size() == 1,
-                        "Exact Gallery ARM64 operation required");
+                        "Exact ARM64 library archive operation required");
                 target.guardGalleryArm64(false);
             }
             case "useLibraries" -> {

@@ -146,6 +146,13 @@
       }
     },
     {
+      "name": "Dvr",
+      "file": "Dvr.apk",
+      "source": {
+        "package": "com.qinggan.dvr"
+      }
+    },
+    {
       "name": "BluetoothPhone",
       "file": "BluetoothPhone.apk",
       "source": {

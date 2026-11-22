@@ -1,0 +1,57 @@
+{
+  "type": "native-library-archive",
+  "minSdk": 30,
+  "output": "dvr-arm64.zip",
+  "externalSources": {
+    "ijk.aar": {
+      "kind": "archive",
+      "format": "aar",
+      "url": "https://repo.maven.apache.org/maven2/xyz/doikki/android/dkplayer/player-ijk/3.3.7/player-ijk-3.3.7.aar",
+      "sha256": "36306493fb1037e76a4fd36c088ad4ee1872465b8bfd1d05ad297974a945b411",
+      "bytes": 14753321
+    },
+    "camera.aar": {
+      "kind": "archive",
+      "format": "aar",
+      "url": "https://dl.google.com/android/maven2/androidx/camera/camera-core/1.1.0/camera-core-1.1.0.aar",
+      "sha256": "c6fae68081d9f3344c4ae2b39d095d2f6d7f670f9f4b37e54574d3183cbf9f08",
+      "bytes": 594026
+    }
+  },
+  "libraries": {
+    "lib/arm64-v8a/libijkffmpeg.so": {
+      "archive": "ijk.aar",
+      "entry": "jni/arm64-v8a/libijkffmpeg.so",
+      "sha256": "4a8f36dee25d0d84094a595aec9ac0d0322c78be74748f30501ea705b24d5019",
+      "bytes": 5619008
+    },
+    "lib/arm64-v8a/libijkplayer.so": {
+      "archive": "ijk.aar",
+      "entry": "jni/arm64-v8a/libijkplayer.so",
+      "sha256": "9e29ce5dbaf7b2b888c77027a337b6c6cd66f382b3650d827292b3eff0c1534c",
+      "bytes": 418392
+    },
+    "lib/arm64-v8a/libijksdl.so": {
+      "archive": "ijk.aar",
+      "entry": "jni/arm64-v8a/libijksdl.so",
+      "sha256": "94268f8db4e08712d7060ce84cf48d52dc35d4dccceccd7cbac964c0ae7dda83",
+      "bytes": 481352
+    },
+    "lib/arm64-v8a/libimage_processing_util_jni.so": {
+      "archive": "camera.aar",
+      "entry": "jni/arm64-v8a/libimage_processing_util_jni.so",
+      "sha256": "1fee23733d7d952d30b4f5a53a399ae3e625c7529c39a54b890036b15050c58e",
+      "bytes": 28440
+    }
+  },
+  "provenance": {
+    "distributionLegalClosure": false,
+    "coordinates": [
+      "Doikki player-ijk3.3.7",
+      "androidx.camera camera-core1.1.0"
+    ],
+    "sourceCommits": [
+      "2e4754645f4b2245400736b0abdfd6885ec4aa24"
+    ]
+  }
+}

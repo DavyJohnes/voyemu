@@ -1862,6 +1862,43 @@ int main(int argc, char **argv) {
                   "Gallery cannot widen wheel routes, accept altered dependencies, duplicate APK or install build-only archive");
         }
 
+        for (int mode = 0; mode < 6; ++mode) {
+            auto bad = a11;
+
+            if (mode == 0) {
+                bad["components"]["dvr-arm64-libraries"] = "components/foreign";
+            }
+
+            if (mode == 1) {
+                bad["patches"]["Dvr"]["uses"] = Json::array({"component:gallery-arm64-libraries"});
+            }
+
+            if (mode == 2) {
+                bad["original"]["Dvr"]["sha256"] = "unpinned";
+            }
+
+            if (mode == 3) {
+                bad["patches"]["Dvr"]["steps"] = Json::array({"api30-gallery-arm64.json"});
+            }
+
+            if (mode == 4) {
+                bad["install"].push_back(Json{{"artifact", "patched:Dvr"}, {"type", "apk"}});
+            }
+
+            if (mode == 5) {
+                bad["install"].push_back(Json{{"artifact", "original:Dvr"}, {"type", "apk"}});
+            }
+
+            bool denied = false;
+            try {
+                (void)qinggan11_wheel_capability(bad);
+            } catch (...) {
+                denied = true;
+            }
+
+            check(denied, "DVR accepts only its exact pinned original, archive, step and one APK");
+        }
+
         {
             auto legacy = a11;
             legacy["components"].erase("oem-power");
@@ -2155,6 +2192,8 @@ int main(int argc, char **argv) {
                                                           "api30-camera-virtual.json"})
                                    : (it.key() == "Gallery" || it.key() == "Video")
                                            ? Json::array({"api30-gallery-arm64.json"})
+                                   : it.key() == "Dvr"
+                                           ? Json::array({"api30-dvr-arm64.json"})
                                    : it.key() == "QGMedia"
                                            ? Json::array({"api30-media-runtime.json",
                                                           "api30-media-cloud-availability.json",

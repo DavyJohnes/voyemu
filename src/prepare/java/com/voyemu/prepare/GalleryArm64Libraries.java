@@ -7,12 +7,15 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
-/** Exact official ARM64 additions of the profile; preserves every original OEM entry. */
+/**
+ * Exact official ARM64 additions of a native library archive component; preserves every original
+ * OEM entry.
+ */
 final class GalleryArm64Libraries {
-    static final String NAME = "api30-gallery-arm64";
+    static final String NAME = "api30-gallery-arm64", DVR = "api30-dvr-arm64";
 
     static void need(boolean value) {
-        Failure.require(value, "GALLERY_ARM64", "Exact Gallery ARM64 contract required", 3);
+        Failure.require(value, "GALLERY_ARM64", "Exact ARM64 library archive contract required", 3);
     }
 
     static void context(int api, String abi) {
@@ -49,9 +52,12 @@ final class GalleryArm64Libraries {
                                                 "provenance"))
                         && d.get("type").equals("native-library-archive")
                         && Json.integer(d, "minSdk") == 30
-                        && d.get("output").equals("gallery-arm64.zip"));
+                        && Json.str(d, "output").matches("[a-z]+-arm64\\.zip"));
         var external = Json.obj(d, "externalSources");
-        need(external.keySet().equals(Set.of("ijk.aar", "fmmr.aar")));
+        need(
+                !external.isEmpty()
+                        && external.size() <= 4
+                        && external.keySet().stream().allMatch(k -> k.matches("[a-z]+\\.aar")));
 
         for (var value : external.values()) {
             var p = Json.object(value);
@@ -65,7 +71,8 @@ final class GalleryArm64Libraries {
                             && Json.integer(p, "bytes") <= 16L * 1024 * 1024);
         }
 
-        need(Json.obj(d, "libraries").size() == 10);
+        int libraries = Json.obj(d, "libraries").size();
+        need(libraries > 0 && libraries <= 16);
 
         return d;
     }
@@ -117,7 +124,7 @@ final class GalleryArm64Libraries {
             need(result.put(name, bytes) == null);
         }
 
-        need(result.size() == 10);
+        need(result.size() == Json.obj(d, "libraries").size());
 
         return result;
     }
@@ -125,7 +132,7 @@ final class GalleryArm64Libraries {
     static Path build(int api, String abi, Path source, Path dir) throws Exception {
         context(api, abi);
         var entries = selected(source);
-        Path output = Storage.confined(dir, "gallery-arm64.zip");
+        Path output = Storage.confined(dir, Json.str(definition(source), "output"));
         need(!Files.exists(output));
         NativeCore.zip(output, entries, false);
         need(same(entries, NativeCore.entries(output)));
