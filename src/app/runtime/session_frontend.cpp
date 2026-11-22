@@ -1,4 +1,5 @@
 #include "error.hpp"
+#include "profile_catalog.hpp"
 #include "session_internal.hpp"
 
 namespace voyemu {
@@ -71,9 +72,14 @@ void Session::attach_frontend(const Json &input, bool cluster_panel, bool backgr
             throw VoyemuError("FRONTEND_STARTUP", "two screen animations required");
         }
 
+        // On this platform the imported wave belongs to vehicle unlock. The multimedia
+        // session begins at power-on and exposes guest frames as soon as Android is ready.
+        const bool unlock_animation = record_declares(android_spec_, ProfilePlatform::qinggan09,
+                                                      ProfileBoard::sa8155);
+
         for (unsigned display = 0; display < 2; ++display) {
             process.arguments.push_back("--startup" + std::to_string(display));
-            process.arguments.push_back(startup.at(display).is_null()
+            process.arguments.push_back(unlock_animation || startup.at(display).is_null()
                                                 ? "black"
                                                 : startup.at(display).get<std::string>());
         }

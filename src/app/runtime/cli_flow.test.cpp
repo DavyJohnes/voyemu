@@ -18,6 +18,7 @@
 #include "supervisor_failure.hpp"
 #include <fstream>
 #include <iostream>
+#include <iterator>
 #include <regex>
 #include <sstream>
 #include <stdexcept>
@@ -1616,6 +1617,8 @@ int main(int argc, char **argv) try {
             auto android = read_private_json(launch_directory / "android-launch.json");
             android["headless"] = true;
             android["audioOutput"] = true;
+            android["platform"] = "qinggan09";
+            android["board"] = "8155";
             auto receipt = [&](const char *name) {
                 const auto until = std::chrono::steady_clock::now() + std::chrono::seconds(5);
 
@@ -1706,9 +1709,22 @@ int main(int argc, char **argv) try {
                                    {"splash", (root / "splash.png").string()},
                                    {"assets", (root / "assets").string()},
                                    {"state", (root / "placement.json").string()}};
+            const auto primary = (root / "display0.zip").string(),
+                       secondary = (root / "display1.zip").string();
+            android["frontend"]["startup"] = Json::array({primary, secondary});
             write_private_json(launch_directory / "android-launch.json", android);
             const auto native = presentation_probe(native_background);
             const auto &arguments = native.at("arguments");
+            const auto startup_argument = [](const Json &args, const char *key) {
+                const auto flag = std::find(args.begin(), args.end(), Json(key));
+                require(flag != args.end() && std::next(flag) != args.end(),
+                        "missing frontend startup argument");
+
+                return *std::next(flag);
+            };
+            require(startup_argument(arguments, "--startup0") == "black" &&
+                            startup_argument(arguments, "--startup1") == "black",
+                    "direct power-on replayed the unlock animations");
 #ifdef _WIN32
             require(std::find(arguments.begin(), arguments.end(), Json("--background")) !=
                                     arguments.end() &&
@@ -1752,6 +1768,9 @@ int main(int argc, char **argv) try {
             const auto passion_native = presentation_probe(true);
             const auto &passion_args = passion_native.at("arguments");
             const auto &passion_sdk = passion_native.at("sdk");
+            require(startup_argument(passion_args, "--startup0") == primary &&
+                            startup_argument(passion_args, "--startup1") == secondary,
+                    "native presentation dropped another platform's startup animations");
             require(std::find(passion_args.begin(), passion_args.end(), Json("--assets")) !=
                                     passion_args.end() &&
                             std::find(passion_args.begin(), passion_args.end(),
