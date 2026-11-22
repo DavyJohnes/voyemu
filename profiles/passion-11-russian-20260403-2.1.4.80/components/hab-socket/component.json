@@ -1,0 +1,9 @@
+{
+  "type": "native",
+  "minSdk": 30,
+  "output": "libuhab.so",
+  "libs": ["log"],
+  "sourceFiles": {
+    "src/hab_socket.c": "voyemu/profiles/common/components/hab-socket/src/hab_socket.c"
+  }
+}

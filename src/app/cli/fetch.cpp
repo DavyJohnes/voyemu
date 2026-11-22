@@ -613,13 +613,19 @@ Json fetch_update(const std::filesystem::path &root, std::string_view profile,
         const bool vendor = source.at("image") == "vendor";
 
         if (vendor) {
+            // LY_Car and the OEM message center service with its vendor libraries.
+            const bool vehicle = input.name == "LY_Car";
+
             if (profile_platform(definition) != ProfilePlatform::passion ||
                 definition.at("android").at("package") !=
                         "system-images;android-30;default;arm64-v8a" ||
-                input.name != "LY_Car" || input.file != "LY_Car.apk" ||
-                item.value("source", Json::object()) != Json{{"package", "com.voyah.car"}} ||
-                path != "/vendor/app/LY_Car/LY_Car.apk" || !acquisition.contains("vendor")) {
-                throw VoyemuError("FETCH_UPDATE", "exact Passion vehicle vendor role required");
+                !acquisition.contains("vendor") ||
+                (vehicle &&
+                 (input.file != "LY_Car.apk" ||
+                  item.value("source", Json::object()) != Json{{"package", "com.voyah.car"}} ||
+                  path != "/vendor/app/LY_Car/LY_Car.apk")) ||
+                (!vehicle && item.value("source", Json::object()) != Json{{"path", path}})) {
+                throw VoyemuError("FETCH_UPDATE", "exact Passion vendor role required");
             }
         }
 

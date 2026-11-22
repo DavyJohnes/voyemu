@@ -618,9 +618,9 @@ std::string apply_passion_selinux_patch(ProfileScope scope, unsigned api, std::s
 
     if (id == "services") {
         source_pin = "f6d5316e443b6830d5331e6586cc0fc1df2ea8a59853ae3b0870945990145a17";
-        output_pin = "008fade9e6f183e228e7210a7bc9c30750c45f83ecfdb932ad92f61f0eeaadc4";
+        output_pin = "c66f4ce0c688b108f9a0d973bd708392ed93dc18079ef55c1187b5db649d231a";
         addition =
-                "\n; voyemu Passion API30 services\n(type voyemu_car_service)\n(roletype object_r voyemu_car_service)\n(type voyemu_nexus_service)\n(roletype object_r voyemu_nexus_service)\n(type voyemu_mega_car_service)\n(roletype object_r voyemu_mega_car_service)\n(typeattributeset service_manager_type (voyemu_car_service voyemu_nexus_service voyemu_mega_car_service))\n(allow system_app voyemu_car_service (service_manager (add find)))\n(allow platform_app voyemu_car_service (service_manager (find)))\n(allow system_app voyemu_nexus_service (service_manager (add find)))\n(allow platform_app voyemu_nexus_service (service_manager (find)))\n(allow system_app voyemu_mega_car_service (service_manager (add find)))\n(allow platform_app voyemu_mega_car_service (service_manager (find)))\n";
+                "\n; voyemu Passion API30 services\n(type voyemu_car_service)\n(roletype object_r voyemu_car_service)\n(type voyemu_nexus_service)\n(roletype object_r voyemu_nexus_service)\n(type voyemu_mega_car_service)\n(roletype object_r voyemu_mega_car_service)\n(typeattributeset service_manager_type (voyemu_car_service voyemu_nexus_service voyemu_mega_car_service))\n(allow system_app voyemu_car_service (service_manager (add find)))\n(allow platform_app voyemu_car_service (service_manager (find)))\n(allow system_app voyemu_nexus_service (service_manager (add find)))\n(allow platform_app voyemu_nexus_service (service_manager (find)))\n(allow system_app voyemu_mega_car_service (service_manager (add find)))\n(allow platform_app voyemu_mega_car_service (service_manager (find)))\n; voyemu Passion API30 message center\n(type voyemu_message_center)\n(typeattributeset domain (voyemu_message_center))\n(type voyemu_message_center_hwservice)\n(roletype object_r voyemu_message_center_hwservice)\n(typeattributeset hwservice_manager_type (voyemu_message_center_hwservice))\n(allow init voyemu_message_center (process (transition siginh rlimitinh noatsecure)))\n(allow voyemu_message_center system_file (file (read getattr map execute entrypoint open)))\n(allow voyemu_message_center hwservicemanager (binder (call transfer)))\n(allow hwservicemanager voyemu_message_center (binder (call transfer)))\n(allow hwservicemanager voyemu_message_center (dir (search)))\n(allow hwservicemanager voyemu_message_center (file (read map open)))\n(allow hwservicemanager voyemu_message_center (process (getattr)))\n(allow voyemu_message_center hwservicemanager_prop (file (read getattr map open)))\n(allow voyemu_message_center hidl_base_hwservice (hwservice_manager (add)))\n(allow voyemu_message_center hidl_manager_hwservice (hwservice_manager (find)))\n(allow voyemu_message_center voyemu_message_center_hwservice (hwservice_manager (add find)))\n(allow voyemu_message_center hal_vehicle_hwservice (hwservice_manager (find)))\n(allow voyemu_message_center self (tcp_socket (create connect read write getattr setopt getopt shutdown)))\n(allow voyemu_message_center port (tcp_socket (name_connect)))\n(allow system_app hwservicemanager (binder (call transfer)))\n(allow hwservicemanager system_app (binder (call transfer)))\n(allow hwservicemanager system_app (dir (search)))\n(allow hwservicemanager system_app (file (read map open)))\n(allow hwservicemanager system_app (process (getattr)))\n(allow system_app hwservicemanager_prop (file (read getattr map open)))\n(allow system_app hidl_manager_hwservice (hwservice_manager (find)))\n(allow system_app voyemu_message_center_hwservice (hwservice_manager (find)))\n(allow system_app voyemu_message_center (binder (call transfer)))\n(allow voyemu_message_center system_app (binder (call transfer)))\n";
     } else if (id == "service-contexts") {
         source_pin = "e4a9f3406dc9c3ff5a03c4b478941e02bede17ee95798bdbce1a31cc33f40959";
         output_pin = "25c66b18abdb1bf102f5012387d54336c12a67c80e4ab540b90fdb863c1b82b6";
@@ -630,9 +630,14 @@ std::string apply_passion_selinux_patch(ProfileScope scope, unsigned api, std::s
         source_pin = "a49213f01ea1f8ec19b41311116bc9324c682af1482297e4bbbc05265dfd623e";
         output_pin = "1f322fc1fdea910bee266cc00126d2e8429b82a4a283250f12655e5d49b83d2c";
         addition = "boot.car_service_created u:object_r:system_prop:s0 exact bool\n";
+    } else if (id == "hwservice-contexts") {
+        source_pin = "8b4e2ffcb1a9f8e56423961a561534dd56f9f6b35d26fc0be2b8492e86797c2e";
+        output_pin = "f164945ff92777f0b339d07fc661d12d48d392f69d838e22e51ba1a995d74e97";
+        addition = "vendor.mega.message_center::IMessageCenter "
+                   "u:object_r:voyemu_message_center_hwservice:s0\n";
     } else if (id == "policy-hash") {
-        source_pin = "ef85f42a4dc4627987b0a8d8573a0795ee0fcbb882665635c72aba63be3236fc";
-        output_pin = "243e1ba72d2c8e67417aa9443424c2063732ca932ce9add8530e4fdc907c2f10";
+        source_pin = "2104543bedc2a1f58c4cf0609020ee47ee6ef0f071570ca9b6ab419d001819d5";
+        output_pin = "bc809dc3dda2354674061334fd3aca6fb18ca508a1afe55879b81a56e077e9a5";
     } else {
         throw VoyemuError("SELINUX_PATCH_NOT_FOUND", "unsupported Passion policy recipe");
     }

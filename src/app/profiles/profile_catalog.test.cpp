@@ -622,8 +622,9 @@ int main(int argc, char **argv) {
                                    {"wheel-input", "components/wheel-input"},
                                    {"phone", "components/phone"},
                                    {"view-observation", "components/view-observation"},
-                                   {"statusbar-overlay", "components/statusbar-overlay"}} &&
-                      passion.at("patches").size() == 17 && passion.at("install").size() == 36,
+                                   {"statusbar-overlay", "components/statusbar-overlay"},
+                                   {"hab-socket", "components/hab-socket"}} &&
+                      passion.at("patches").size() == 18 && passion.at("install").size() == 44,
               "H53 finite developer graph must contain only its named OEM, display and synthetic phone adapters");
         check(passion_wheel_capability(passion).at("routes") == passion_wheel_routes(),
               "Passion standard Android wheel routes are exact");

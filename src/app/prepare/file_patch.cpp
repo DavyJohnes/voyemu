@@ -89,7 +89,8 @@ std::vector<std::string> native_file_patch_steps(std::string_view id) {
     }
 
     if (id == "passion-services" || id == "passion-service-contexts" ||
-        id == "passion-property-contexts" || id == "passion-policy-hash") {
+        id == "passion-property-contexts" || id == "passion-hwservice-contexts" ||
+        id == "passion-policy-hash") {
         return {std::string(id) + ".json"};
     }
 
@@ -190,6 +191,7 @@ std::vector<std::string> prepare_file_patches(std::span<const PinnedFilePatch> p
         const bool passion = patch.id == "passion-services" ||
                              patch.id == "passion-service-contexts" ||
                              patch.id == "passion-property-contexts" ||
+                             patch.id == "passion-hwservice-contexts" ||
                              patch.id == "passion-policy-hash";
         const bool free_public = patch.id == "public-qg-runtime-api30",
                    free_property = patch.id == "property-contexts-api30",
@@ -439,7 +441,7 @@ std::vector<std::string> prepare_file_patches(std::span<const PinnedFilePatch> p
                             "391829e0167f44415e54ba64692ad410b1398b16263869beb22e427130eae766" ||
                     patch.patched_dependency != "passion-services" ||
                     patch.dependency_sha256 !=
-                            "008fade9e6f183e228e7210a7bc9c30750c45f83ecfdb932ad92f61f0eeaadc4") {
+                            "c66f4ce0c688b108f9a0d973bd708392ed93dc18079ef55c1187b5db649d231a") {
                     throw VoyemuError("FILE_PATCH_DEPENDENCY",
                                       "exact Passion CIL/mapping/hash provenance required");
                 }
@@ -467,12 +469,13 @@ std::vector<std::string> prepare_file_patches(std::span<const PinnedFilePatch> p
                     throw VoyemuError("FILE_PATCH_DEPENDENCY", "unexpected Passion dependency");
                 }
 
-                output = apply_passion_selinux_patch(*patch.scope, patch.api,
-                                                     patch.id == "passion-services" ? "services"
-                                                     : patch.id == "passion-service-contexts"
-                                                             ? "service-contexts"
-                                                             : "property-contexts",
-                                                     input);
+                output = apply_passion_selinux_patch(
+                        *patch.scope, patch.api,
+                        patch.id == "passion-services"             ? "services"
+                        : patch.id == "passion-service-contexts"   ? "service-contexts"
+                        : patch.id == "passion-hwservice-contexts" ? "hwservice-contexts"
+                                                                   : "property-contexts",
+                        input);
             }
         } else if (bounded) {
             if (!patch.donor || !patch.vendor_donor || !patch.patched_dependency.empty() ||

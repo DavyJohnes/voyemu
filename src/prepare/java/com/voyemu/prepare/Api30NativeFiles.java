@@ -102,7 +102,7 @@ final class Api30NativeFiles {
                             "passion-services",
                             "/system/etc/selinux/plat_sepolicy.cil",
                             "f6d5316e443b6830d5331e6586cc0fc1df2ea8a59853ae3b0870945990145a17",
-                            "008fade9e6f183e228e7210a7bc9c30750c45f83ecfdb932ad92f61f0eeaadc4"),
+                            "c66f4ce0c688b108f9a0d973bd708392ed93dc18079ef55c1187b5db649d231a"),
                     new Spec(
                             "passion-service-contexts",
                             "/system/etc/selinux/plat_service_contexts",
@@ -114,10 +114,15 @@ final class Api30NativeFiles {
                             "a49213f01ea1f8ec19b41311116bc9324c682af1482297e4bbbc05265dfd623e",
                             "1f322fc1fdea910bee266cc00126d2e8429b82a4a283250f12655e5d49b83d2c"),
                     new Spec(
+                            "passion-hwservice-contexts",
+                            "/system/etc/selinux/plat_hwservice_contexts",
+                            "8b4e2ffcb1a9f8e56423961a561534dd56f9f6b35d26fc0be2b8492e86797c2e",
+                            "f164945ff92777f0b339d07fc661d12d48d392f69d838e22e51ba1a995d74e97"),
+                    new Spec(
                             "passion-policy-hash",
                             "/system/etc/selinux/plat_sepolicy_and_mapping.sha256",
                             "391829e0167f44415e54ba64692ad410b1398b16263869beb22e427130eae766",
-                            "243e1ba72d2c8e67417aa9443424c2063732ca932ce9add8530e4fdc907c2f10"));
+                            "bc809dc3dda2354674061334fd3aca6fb18ca508a1afe55879b81a56e077e9a5"));
 
     /** Exact multi-step native recipe order mirrored with native_file_patch_steps. */
     static List<String> nodeSteps(String id) {

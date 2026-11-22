@@ -586,16 +586,17 @@ int main(int argc, char **argv) {
             return 0;
         }
 
-        if (argc == 7 && std::string_view(argv[1]) == "--passion-api30-policy") {
+        if (argc == 8 && std::string_view(argv[1]) == "--passion-api30-policy") {
             const auto cil = std::filesystem::canonical(argv[2]),
                        contexts = std::filesystem::canonical(argv[3]),
                        mapping = std::filesystem::canonical(argv[4]),
                        hash = std::filesystem::canonical(argv[5]),
-                       properties = std::filesystem::canonical(argv[6]);
+                       properties = std::filesystem::canonical(argv[6]),
+                       hwservices = std::filesystem::canonical(argv[7]);
             const std::string
                     cil_pin = "f6d5316e443b6830d5331e6586cc0fc1df2ea8a59853ae3b0870945990145a17",
                     patched_pin =
-                            "008fade9e6f183e228e7210a7bc9c30750c45f83ecfdb932ad92f61f0eeaadc4";
+                            "c66f4ce0c688b108f9a0d973bd708392ed93dc18079ef55c1187b5db649d231a";
             std::vector<PinnedFilePatch> nodes{
                     {"passion-services", 30, cil, cil_pin, patched_pin},
                     {"passion-service-contexts", 30, contexts,
@@ -604,9 +605,12 @@ int main(int argc, char **argv) {
                     {"passion-property-contexts", 30, properties,
                      "a49213f01ea1f8ec19b41311116bc9324c682af1482297e4bbbc05265dfd623e",
                      "1f322fc1fdea910bee266cc00126d2e8429b82a4a283250f12655e5d49b83d2c"},
+                    {"passion-hwservice-contexts", 30, hwservices,
+                     "8b4e2ffcb1a9f8e56423961a561534dd56f9f6b35d26fc0be2b8492e86797c2e",
+                     "f164945ff92777f0b339d07fc661d12d48d392f69d838e22e51ba1a995d74e97"},
                     {"passion-policy-hash", 30, hash,
                      "391829e0167f44415e54ba64692ad410b1398b16263869beb22e427130eae766",
-                     "243e1ba72d2c8e67417aa9443424c2063732ca932ce9add8530e4fdc907c2f10",
+                     "bc809dc3dda2354674061334fd3aca6fb18ca508a1afe55879b81a56e077e9a5",
                      PinnedFileDependency{
                              mapping,
                              "c14ab911584595a94e6783600371fed23cec1d56b8001383584a3192d028eb60"},
@@ -617,35 +621,35 @@ int main(int argc, char **argv) {
             }
 
             const auto output = prepare_file_patches(nodes);
-            check(output.size() == 4 &&
-                          output[3] ==
-                                  "ef85f42a4dc4627987b0a8d8573a0795ee0fcbb882665635c72aba63be3236fc\n",
+            check(output.size() == 5 &&
+                          output[4] ==
+                                  "2104543bedc2a1f58c4cf0609020ee47ee6ef0f071570ca9b6ab419d001819d5\n",
                   "actual API30 native graph derives correct combined hash");
 
-            for (unsigned variant = 0; variant < 14; ++variant) {
+            for (unsigned variant = 0; variant < 16; ++variant) {
                 auto bad = nodes;
 
                 switch (variant) {
                 case 0:
-                    bad[3].donor.reset();
+                    bad[4].donor.reset();
                     break;
                 case 1:
-                    bad[3].donor.value().sha256 = std::string(64, '0');
+                    bad[4].donor.value().sha256 = std::string(64, '0');
                     break;
                 case 2:
-                    bad[3].patched_dependency = "missing";
+                    bad[4].patched_dependency = "missing";
                     break;
                 case 3:
-                    bad[3].dependency_sha256 = std::string(64, '0');
+                    bad[4].dependency_sha256 = std::string(64, '0');
                     break;
                 case 4:
-                    bad[3].api = 28;
+                    bad[4].api = 28;
                     break;
                 case 5:
-                    bad[3].input_sha256 = std::string(64, '0');
+                    bad[4].input_sha256 = std::string(64, '0');
                     break;
                 case 6:
-                    bad[3].output_sha256 = std::string(64, '0');
+                    bad[4].output_sha256 = std::string(64, '0');
                     break;
                 case 7:
                     bad[0].scope = qinggan11_scope;
@@ -668,6 +672,12 @@ int main(int argc, char **argv) {
                 case 13:
                     bad[2].output_sha256 = std::string(64, '0');
                     break;
+                case 14:
+                    bad[3].input_sha256 = std::string(64, '0');
+                    break;
+                case 15:
+                    bad[3].output_sha256 = std::string(64, '0');
+                    break;
                 default:
                     break;
                 }
@@ -683,11 +693,12 @@ int main(int argc, char **argv) {
             }
 
             check(sha256_file(cil) == cil_pin && sha256_file(contexts) == nodes[1].input_sha256 &&
-                          sha256_file(hash) == nodes[3].input_sha256 &&
-                          sha256_file(properties) == nodes[2].input_sha256,
+                          sha256_file(hash) == nodes[4].input_sha256 &&
+                          sha256_file(properties) == nodes[2].input_sha256 &&
+                          sha256_file(hwservices) == nodes[3].input_sha256,
                   "all exact policy original inputs preserved");
             std::cout
-                    << "actual Passion native policy dependency/hash graph and fourteen negatives passed\n";
+                    << "actual Passion native policy dependency/hash graph and sixteen negatives passed\n";
 
             return 0;
         }

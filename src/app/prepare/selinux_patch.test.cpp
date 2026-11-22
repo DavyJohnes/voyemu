@@ -182,7 +182,7 @@ int main(int argc, char **argv) {
 
         check(passion_unpinned, "Passion cannot accept arbitrary platform policy bytes");
 
-        if (argc == 6 && std::string_view(argv[1]) == "--passion-api30-policy") {
+        if (argc == 7 && std::string_view(argv[1]) == "--passion-api30-policy") {
             auto read = [](const char *path) {
                 std::ifstream source(path, std::ios::binary);
                 check(bool(source), "Passion policy input required");
@@ -201,7 +201,7 @@ int main(int argc, char **argv) {
                 }
             };
             const auto input = read(argv[2]), contexts = read(argv[3]), mapping = read(argv[4]),
-                       properties = read(argv[5]);
+                       properties = read(argv[5]), hwservices = read(argv[6]);
             const auto output = apply_passion_selinux_patch(profile, 30, "services", input),
                        mapped = apply_passion_selinux_patch(profile, 30, "service-contexts",
                                                             contexts);
@@ -218,15 +218,27 @@ int main(int argc, char **argv) {
                           denied(profile, 30, "property-contexts", properties + " ") &&
                           denied(profile, 28, "property-contexts", properties),
                   "exact property scope/source/reapply guards");
+            const auto hwservice = apply_passion_selinux_patch(profile, 30, "hwservice-contexts",
+                                                               hwservices);
+            check(hwservice == hwservices + "vendor.mega.message_center::IMessageCenter "
+                                            "u:object_r:voyemu_message_center_hwservice:s0\n" &&
+                          denied(profile, 30, "hwservice-contexts", hwservice) &&
+                          denied(profile, 28, "hwservice-contexts", hwservices),
+                  "exact message center hwservice label");
             const auto own = output.substr(input.size());
             check(own.find("(allow system_app voyemu_car_service (service_manager (add find)))") !=
                                   std::string::npos &&
+                          own.find("(allow voyemu_message_center voyemu_message_center_hwservice "
+                                   "(hwservice_manager (add find)))") != std::string::npos &&
+                          own.find("(allow system_app voyemu_message_center_hwservice "
+                                   "(hwservice_manager (find)))") != std::string::npos &&
+                          own.find("default_android_hwservice") == std::string::npos &&
                           own.find("default_service") == std::string::npos &&
                           own.find("permissive") == std::string::npos &&
                           own.find("su ") == std::string::npos,
-                  "only system_app own service permission allowed");
+                  "own service permissions only: system_app Binder names, the message center domain its hwservice");
             check(apply_passion_selinux_patch(profile, 30, "policy-hash", output + mapping) ==
-                          "ef85f42a4dc4627987b0a8d8573a0795ee0fcbb882665635c72aba63be3236fc\n",
+                          "2104543bedc2a1f58c4cf0609020ee47ee6ef0f071570ca9b6ab419d001819d5\n",
                   "Passion hash binds patched CIL and unchanged mapping");
 
             for (const auto id : {"services", "service-contexts", "policy-hash"}) {

@@ -4,6 +4,6 @@
   "api": 30,
   "native": true,
   "input_sha256": "391829e0167f44415e54ba64692ad410b1398b16263869beb22e427130eae766",
-  "output_sha256": "243e1ba72d2c8e67417aa9443424c2063732ca932ce9add8530e4fdc907c2f10",
-  "description": "Exact native Passion API30 service policy: system_app publishes three pinned Binder names, platform_app can only find them; original bytes remain unchanged."
+  "output_sha256": "bc809dc3dda2354674061334fd3aca6fb18ca508a1afe55879b81a56e077e9a5",
+  "description": "Exact native Passion API30 service policy: system_app publishes three pinned Binder names and the message center HIDL service, platform_app can only find the Binder names; original bytes remain unchanged."
 }

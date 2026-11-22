@@ -95,19 +95,22 @@ inline constexpr std::array<Api30FileRecipe, 8> qinggan11_api30_file_recipes = {
          {"selinux-hash-api30", qinggan11_original_navi_api30_file_recipes[8].target,
           qinggan11_original_navi_api30_file_recipes[8].input_sha256,
           "2f158789774a59073cf85bf2c91272416b0da948eea037f9e13586187338f2c9"}}};
-inline constexpr std::array<Api30FileRecipe, 4> passion_api30_file_recipes = {
+inline constexpr std::array<Api30FileRecipe, 5> passion_api30_file_recipes = {
         {{"passion-services", "/system/etc/selinux/plat_sepolicy.cil",
           "f6d5316e443b6830d5331e6586cc0fc1df2ea8a59853ae3b0870945990145a17",
-          "008fade9e6f183e228e7210a7bc9c30750c45f83ecfdb932ad92f61f0eeaadc4"},
+          "c66f4ce0c688b108f9a0d973bd708392ed93dc18079ef55c1187b5db649d231a"},
          {"passion-service-contexts", "/system/etc/selinux/plat_service_contexts",
           "e4a9f3406dc9c3ff5a03c4b478941e02bede17ee95798bdbce1a31cc33f40959",
           "25c66b18abdb1bf102f5012387d54336c12a67c80e4ab540b90fdb863c1b82b6"},
          {"passion-property-contexts", "/system/etc/selinux/plat_property_contexts",
           "a49213f01ea1f8ec19b41311116bc9324c682af1482297e4bbbc05265dfd623e",
           "1f322fc1fdea910bee266cc00126d2e8429b82a4a283250f12655e5d49b83d2c"},
+         {"passion-hwservice-contexts", "/system/etc/selinux/plat_hwservice_contexts",
+          "8b4e2ffcb1a9f8e56423961a561534dd56f9f6b35d26fc0be2b8492e86797c2e",
+          "f164945ff92777f0b339d07fc661d12d48d392f69d838e22e51ba1a995d74e97"},
          {"passion-policy-hash", "/system/etc/selinux/plat_sepolicy_and_mapping.sha256",
           "391829e0167f44415e54ba64692ad410b1398b16263869beb22e427130eae766",
-          "243e1ba72d2c8e67417aa9443424c2063732ca932ce9add8530e4fdc907c2f10"}}};
+          "bc809dc3dda2354674061334fd3aca6fb18ca508a1afe55879b81a56e077e9a5"}}};
 
 // The API30 native file recipes of a profile platform; on qinggan11 the original_navi feature of
 // the profile selects the Navi graph.

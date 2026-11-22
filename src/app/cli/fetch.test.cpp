@@ -1105,7 +1105,7 @@ int main(int argc, char **argv) {
                 {"source", {{"package", "com.voyah.car"}}},
                 {"acquisition", {{"image", "vendor"}, {"path", "/vendor/app/LY_Car/LY_Car.apk"}}}};
 
-        for (unsigned mode = 0; mode < 7; ++mode) {
+        for (unsigned mode = 0; mode < 8; ++mode) {
             auto requested = vendor_definition;
 
             if (mode == 0) {
@@ -1137,6 +1137,17 @@ int main(int argc, char **argv) {
                 requested["acquisition"].erase("qnxOriginals");
             }
 
+            // A vendor library is declared by its own path, never by a package.
+            if (mode == 7) {
+                requested["original"]["MessageCenterRpc"] = {
+                        {"file", "message-center/libmrpc.so"},
+                        {"bytes", 6u},
+                        {"sha256", sha256_bytes("native")},
+                        {"source", {{"package", "com.voyah.car"}}},
+                        {"acquisition",
+                         {{"image", "vendor"}, {"path", "/vendor/lib64/libmrpc.so"}}}};
+            }
+
             write_private_json(root / "profiles" / passion / "profile.json", requested);
             write_private_json(root / "profiles" / passion / "profile-qnx.json", qnx);
             bool denied = false;
@@ -1147,7 +1158,7 @@ int main(int argc, char **argv) {
             }
 
             check(denied && !std::filesystem::exists(root / ".local/profiles" / passion),
-                  "finite vendor acquisition rejects wrong API, unknown partition, traversal, package, image pin, platform and undeclared QNX originals without publication");
+                  "finite vendor acquisition rejects wrong API, unknown partition, traversal, package, image pin, platform, undeclared QNX originals and a vendor library without its path without publication");
         }
 
         auto media_definition = local;

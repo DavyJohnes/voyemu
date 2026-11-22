@@ -400,6 +400,54 @@
         "image": "system",
         "path": "/system/media/bootanimation.zip"
       }
+    },
+    "MessageCenterService": {
+      "file": "message-center/vendor.mega.message_center@1.0-service",
+      "bytes": 73800,
+      "sha256": "fc15f4993316957f2e1b17ead02564c9a2bc3887f2113d607b15fa9b49789a11",
+      "source": {
+        "path": "/vendor/bin/hw/vendor.mega.message_center@1.0-service"
+      },
+      "acquisition": {
+        "image": "vendor",
+        "path": "/vendor/bin/hw/vendor.mega.message_center@1.0-service"
+      }
+    },
+    "MessageCenterHidl": {
+      "file": "message-center/vendor.mega.message_center@1.0.so",
+      "bytes": 126880,
+      "sha256": "fa3362d2322d9df8097668a33be4ef7fe2d3b0edfdf5f692585352bf60c8ee18",
+      "source": {
+        "path": "/vendor/lib64/vendor.mega.message_center@1.0.so"
+      },
+      "acquisition": {
+        "image": "vendor",
+        "path": "/vendor/lib64/vendor.mega.message_center@1.0.so"
+      }
+    },
+    "MessageCenterRpc": {
+      "file": "message-center/libmrpc.so",
+      "bytes": 75400,
+      "sha256": "be4c373c07836e74cefce88deae4d39c2b6b0eaa7ff23146119f6c6b83f47faf",
+      "source": {
+        "path": "/vendor/lib64/libmrpc.so"
+      },
+      "acquisition": {
+        "image": "vendor",
+        "path": "/vendor/lib64/libmrpc.so"
+      }
+    },
+    "VehicleHidl": {
+      "file": "message-center/android.hardware.automotive.vehicle@2.0.so",
+      "bytes": 158744,
+      "sha256": "f3a63385f5d2d64697704d5e15b9d96bad53bbcc97472fdb56d399f8e411f370",
+      "source": {
+        "path": "/system/lib64/android.hardware.automotive.vehicle@2.0.so"
+      },
+      "acquisition": {
+        "image": "system",
+        "path": "/system/lib64/android.hardware.automotive.vehicle@2.0.so"
+      }
     }
   },
   "components": {
@@ -411,7 +459,8 @@
     "wheel-input": "components/wheel-input",
     "phone": "components/phone",
     "view-observation": "components/view-observation",
-    "statusbar-overlay": "components/statusbar-overlay"
+    "statusbar-overlay": "components/statusbar-overlay",
+    "hab-socket": "components/hab-socket"
   },
   "patches": {
     "LY_CoreService": {
@@ -462,6 +511,13 @@
       "input": "android:/system/etc/selinux/plat_service_contexts",
       "steps": [
         "passion-service-contexts.json"
+      ]
+    },
+    "passion-hwservice-contexts": {
+      "type": "file",
+      "input": "android:/system/etc/selinux/plat_hwservice_contexts",
+      "steps": [
+        "passion-hwservice-contexts.json"
       ]
     },
     "passion-policy-hash": {
@@ -612,6 +668,12 @@
       "mode": "0644"
     },
     {
+      "artifact": "files:message-center-vintf",
+      "type": "file",
+      "target": "/system/etc/vintf/manifest/voyemu-message-center.xml",
+      "mode": "0644"
+    },
+    {
       "artifact": "patched:passion-services",
       "type": "file",
       "target": "/system/etc/selinux/plat_sepolicy.cil",
@@ -627,6 +689,12 @@
       "artifact": "patched:passion-property-contexts",
       "type": "file",
       "target": "/system/etc/selinux/plat_property_contexts",
+      "mode": "0644"
+    },
+    {
+      "artifact": "patched:passion-hwservice-contexts",
+      "type": "file",
+      "target": "/system/etc/selinux/plat_hwservice_contexts",
       "mode": "0644"
     },
     {
@@ -681,6 +749,42 @@
       "artifact": "component:phone",
       "type": "file",
       "target": "/system/priv-app/VoyemuPassionPhone/VoyemuPassionPhone.apk",
+      "mode": "0644"
+    },
+    {
+      "artifact": "original:MessageCenterService",
+      "type": "file",
+      "target": "/system/bin/hw/vendor.mega.message_center@1.0-service",
+      "mode": "0755"
+    },
+    {
+      "artifact": "original:MessageCenterHidl",
+      "type": "file",
+      "target": "/system/lib64/vendor.mega.message_center@1.0.so",
+      "mode": "0644"
+    },
+    {
+      "artifact": "original:MessageCenterRpc",
+      "type": "file",
+      "target": "/system/lib64/libmrpc.so",
+      "mode": "0644"
+    },
+    {
+      "artifact": "original:VehicleHidl",
+      "type": "file",
+      "target": "/system/lib64/android.hardware.automotive.vehicle@2.0.so",
+      "mode": "0644"
+    },
+    {
+      "artifact": "component:hab-socket",
+      "type": "file",
+      "target": "/system/lib64/libuhab.so",
+      "mode": "0644"
+    },
+    {
+      "artifact": "files:message-center-init",
+      "type": "file",
+      "target": "/system/etc/init/voyemu-message-center.rc",
       "mode": "0644"
     },
     {
@@ -1218,6 +1322,12 @@
   "files": {
     "framework-libraries": {
       "file": "voyemu-framework.xml"
+    },
+    "message-center-vintf": {
+      "file": "voyemu-message-center.xml"
+    },
+    "message-center-init": {
+      "file": "voyemu-message-center.rc"
     }
   },
   "emulator": {
