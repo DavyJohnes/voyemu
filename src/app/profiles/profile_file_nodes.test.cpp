@@ -230,7 +230,7 @@ int main(int argc, char **argv) {
               "Free wheel context must not widen generic/Passion context transforms");
         check(api30_file_recipes_for("api30-fixture").size() == 3 &&
                       api30_file_recipes_for("qinggan11").size() == 8 &&
-                      api30_file_recipes_for("passion").size() == 5,
+                      api30_file_recipes_for("passion").size() == 6,
               "profile-specific API30 graph inventories preserved");
         const auto original_recipes = api30_file_recipes_for("qinggan11", true);
         check(original_recipes.size() == 9 && original_recipes[2].id == "original-navi-selinux" &&

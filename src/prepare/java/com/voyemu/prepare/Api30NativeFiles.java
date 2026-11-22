@@ -102,7 +102,7 @@ final class Api30NativeFiles {
                             "passion-services",
                             "/system/etc/selinux/plat_sepolicy.cil",
                             "f6d5316e443b6830d5331e6586cc0fc1df2ea8a59853ae3b0870945990145a17",
-                            "c66f4ce0c688b108f9a0d973bd708392ed93dc18079ef55c1187b5db649d231a"),
+                            "ca7207fdf6cf5b9e7755e33f6bc7eb800eccaedd962f66d30cb5ea195f8597b3"),
                     new Spec(
                             "passion-service-contexts",
                             "/system/etc/selinux/plat_service_contexts",
@@ -117,12 +117,17 @@ final class Api30NativeFiles {
                             "passion-hwservice-contexts",
                             "/system/etc/selinux/plat_hwservice_contexts",
                             "8b4e2ffcb1a9f8e56423961a561534dd56f9f6b35d26fc0be2b8492e86797c2e",
-                            "f164945ff92777f0b339d07fc661d12d48d392f69d838e22e51ba1a995d74e97"),
+                            "2b2ebe82d3b754dc9a00d50de124d7c07ca7c847db91e918d8e1e08778d7ce19"),
+                    new Spec(
+                            "passion-file-contexts",
+                            "/system/etc/selinux/plat_file_contexts",
+                            "cf0a4db0a9962781c83e6d1430c23276ebd406c404a54ab2226a1dfa4ac2844c",
+                            "123be2de1e3225c8295247744068a2c2d8e1dfaeb8d390ffe59d6e9ff45d2e7a"),
                     new Spec(
                             "passion-policy-hash",
                             "/system/etc/selinux/plat_sepolicy_and_mapping.sha256",
                             "391829e0167f44415e54ba64692ad410b1398b16263869beb22e427130eae766",
-                            "bc809dc3dda2354674061334fd3aca6fb18ca508a1afe55879b81a56e077e9a5"));
+                            "9a92c4b94ed354b962e372241eb78cb31e1920478ee55d1c6f1d2bbeae855216"));
 
     /** Exact multi-step native recipe order mirrored with native_file_patch_steps. */
     static List<String> nodeSteps(String id) {

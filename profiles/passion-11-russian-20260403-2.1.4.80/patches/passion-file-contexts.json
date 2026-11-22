@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "profile": "passion-11-russian-20260403-2.1.4.80",
+  "api": 30,
+  "native": true,
+  "input_sha256": "cf0a4db0a9962781c83e6d1430c23276ebd406c404a54ab2226a1dfa4ac2844c",
+  "output_sha256": "123be2de1e3225c8295247744068a2c2d8e1dfaeb8d390ffe59d6e9ff45d2e7a",
+  "description": "Exact native Passion API30 file labels: the OEM vendor_file_contexts labels of the OEM network and message center files as exact platform paths; original bytes remain unchanged."
+}

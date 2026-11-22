@@ -182,7 +182,7 @@ int main(int argc, char **argv) {
 
         check(passion_unpinned, "Passion cannot accept arbitrary platform policy bytes");
 
-        if (argc == 7 && std::string_view(argv[1]) == "--passion-api30-policy") {
+        if (argc == 8 && std::string_view(argv[1]) == "--passion-api30-policy") {
             auto read = [](const char *path) {
                 std::ifstream source(path, std::ios::binary);
                 check(bool(source), "Passion policy input required");
@@ -201,7 +201,8 @@ int main(int argc, char **argv) {
                 }
             };
             const auto input = read(argv[2]), contexts = read(argv[3]), mapping = read(argv[4]),
-                       properties = read(argv[5]), hwservices = read(argv[6]);
+                       properties = read(argv[5]), hwservices = read(argv[6]),
+                       files = read(argv[7]);
             const auto output = apply_passion_selinux_patch(profile, 30, "services", input),
                        mapped = apply_passion_selinux_patch(profile, 30, "service-contexts",
                                                             contexts);
@@ -221,24 +222,41 @@ int main(int argc, char **argv) {
             const auto hwservice = apply_passion_selinux_patch(profile, 30, "hwservice-contexts",
                                                                hwservices);
             check(hwservice == hwservices + "vendor.mega.message_center::IMessageCenter "
-                                            "u:object_r:voyemu_message_center_hwservice:s0\n" &&
+                                            "u:object_r:message_center_hwservice:s0\n" &&
                           denied(profile, 30, "hwservice-contexts", hwservice) &&
                           denied(profile, 28, "hwservice-contexts", hwservices),
                   "exact message center hwservice label");
+            const auto labels = apply_passion_selinux_patch(profile, 30, "file-contexts", files);
+            check(labels.starts_with(files) &&
+                          labels.find("\n/vendor/bin/someipd -- u:object_r:someipd_exec:s0\n") !=
+                                  std::string::npos &&
+                          labels.find("/vendor/bin/config_vlan\\.sh "
+                                      "u:object_r:vendor_qti_init_shell_exec:s0\n") !=
+                                  std::string::npos &&
+                          labels.find("/vendor/bin/oem-eth0\\.sh "
+                                      "u:object_r:goldfish_setup_exec:s0\n") != std::string::npos &&
+                          denied(profile, 30, "file-contexts", labels) &&
+                          denied(profile, 28, "file-contexts", files),
+                  "exact OEM network and message center file labels");
             const auto own = output.substr(input.size());
             check(own.find("(allow system_app voyemu_car_service (service_manager (add find)))") !=
                                   std::string::npos &&
-                          own.find("(allow voyemu_message_center voyemu_message_center_hwservice "
+                          own.find("(allow message_center_default message_center_hwservice "
                                    "(hwservice_manager (add find)))") != std::string::npos &&
-                          own.find("(allow system_app voyemu_message_center_hwservice "
+                          own.find("(allow system_app message_center_hwservice "
                                    "(hwservice_manager (find)))") != std::string::npos &&
+                          own.find("(typetransition init someipd_exec process someipd)") !=
+                                  std::string::npos &&
+                          own.find("(typetransition init vendor_qti_init_shell_exec process "
+                                   "vendor_qti_init_shell)") != std::string::npos &&
+                          own.find("_30_0") == std::string::npos &&
                           own.find("default_android_hwservice") == std::string::npos &&
                           own.find("default_service") == std::string::npos &&
                           own.find("permissive") == std::string::npos &&
                           own.find("su ") == std::string::npos,
-                  "own service permissions only: system_app Binder names, the message center domain its hwservice");
+                  "own service permissions and the OEM vendor domains mapped onto the platform");
             check(apply_passion_selinux_patch(profile, 30, "policy-hash", output + mapping) ==
-                          "2104543bedc2a1f58c4cf0609020ee47ee6ef0f071570ca9b6ab419d001819d5\n",
+                          "8fe95f13b441fa9e3a820ea1b865f3d0dd6685fe1c5b7dd23ed505450a22aeb2\n",
                   "Passion hash binds patched CIL and unchanged mapping");
 
             for (const auto id : {"services", "service-contexts", "policy-hash"}) {

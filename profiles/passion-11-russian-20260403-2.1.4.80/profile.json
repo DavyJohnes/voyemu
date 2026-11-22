@@ -437,16 +437,160 @@
         "path": "/vendor/lib64/libmrpc.so"
       }
     },
-    "VehicleHidl": {
-      "file": "message-center/android.hardware.automotive.vehicle@2.0.so",
-      "bytes": 158744,
-      "sha256": "f3a63385f5d2d64697704d5e15b9d96bad53bbcc97472fdb56d399f8e411f370",
+    "VlanConfig": {
+      "file": "network/config_vlan.sh",
+      "bytes": 12229,
+      "sha256": "a92e5014fd38723c02a5af328659bff0eeccca037d290dbd16c49ed91fd3a14e",
       "source": {
-        "path": "/system/lib64/android.hardware.automotive.vehicle@2.0.so"
+        "path": "/vendor/bin/config_vlan.sh"
+      },
+      "acquisition": {
+        "image": "vendor",
+        "path": "/vendor/bin/config_vlan.sh"
+      }
+    },
+    "SomeipStart": {
+      "file": "network/someipd.sh",
+      "bytes": 1340,
+      "sha256": "52996454217c070ea5242bbbe94782619203fd8b13d7fb5c63f5a5752095eb44",
+      "source": {
+        "path": "/vendor/bin/someipd.sh"
+      },
+      "acquisition": {
+        "image": "vendor",
+        "path": "/vendor/bin/someipd.sh"
+      }
+    },
+    "Someipd": {
+      "file": "network/someipd",
+      "bytes": 6760,
+      "sha256": "6caef0737495dc20cc6b550519d239628978a39171aa558463c8e05b52d312ff",
+      "source": {
+        "path": "/vendor/bin/someipd"
+      },
+      "acquisition": {
+        "image": "vendor",
+        "path": "/vendor/bin/someipd"
+      }
+    },
+    "VendorToybox": {
+      "file": "network/toybox_vendor",
+      "bytes": 506704,
+      "sha256": "b2e8e12559256a8f541690da486e401cf1b5c93aa43b11d40d2237c33c1c3117",
+      "source": {
+        "path": "/vendor/bin/toybox_vendor"
+      },
+      "acquisition": {
+        "image": "vendor",
+        "path": "/vendor/bin/toybox_vendor"
+      }
+    },
+    "SomeipInit": {
+      "file": "network/someipd.rc",
+      "bytes": 319,
+      "sha256": "20514d5752f01d091cd32a08abbbcd554a0d9b41e8d439c8789f90a73c5c3ec3",
+      "source": {
+        "path": "/vendor/etc/init/someipd.rc"
+      },
+      "acquisition": {
+        "image": "vendor",
+        "path": "/vendor/etc/init/someipd.rc"
+      }
+    },
+    "SomeipConfig": {
+      "file": "network/someip_config-OIB_8155_Android.xml",
+      "bytes": 13119,
+      "sha256": "bc1a74b3fbd14b3c4c863c07f0e463346829b3362022400689ee83ebdbcac136",
+      "source": {
+        "path": "/vendor/etc/someipcfg/someip_config-OIB_8155_Android.xml"
+      },
+      "acquisition": {
+        "image": "vendor",
+        "path": "/vendor/etc/someipcfg/someip_config-OIB_8155_Android.xml"
+      }
+    },
+    "SomeipCore": {
+      "file": "network/libx4someipcore.so",
+      "bytes": 940000,
+      "sha256": "14fe5dac41b470577937f0ded00dc021203990c785b9544173105e73acbc93f8",
+      "source": {
+        "path": "/vendor/lib64/libx4someipcore.so"
+      },
+      "acquisition": {
+        "image": "vendor",
+        "path": "/vendor/lib64/libx4someipcore.so"
+      }
+    },
+    "SomeipCfg": {
+      "file": "network/libx4someipcfg.so",
+      "bytes": 68024,
+      "sha256": "97fcb4838b7c02b8d534e6059434f746ebaee27ad426bb9703af078d71d2f224",
+      "source": {
+        "path": "/vendor/lib64/libx4someipcfg.so"
+      },
+      "acquisition": {
+        "image": "vendor",
+        "path": "/vendor/lib64/libx4someipcfg.so"
+      }
+    },
+    "X4Base": {
+      "file": "network/libx4base.so",
+      "bytes": 234320,
+      "sha256": "da45db9c026824b146ac6ba5d5cce1df93bc676a8d7b31771ed10055da5c070b",
+      "source": {
+        "path": "/vendor/lib64/libx4base.so"
+      },
+      "acquisition": {
+        "image": "vendor",
+        "path": "/vendor/lib64/libx4base.so"
+      }
+    },
+    "CxxShared": {
+      "file": "network/libc++_shared.so",
+      "bytes": 919888,
+      "sha256": "bec0c1195fd3d47239c17e6e9a3e033930334e30322849e94959c8896f5370e1",
+      "source": {
+        "path": "/vendor/lib64/libc++_shared.so"
+      },
+      "acquisition": {
+        "image": "vendor",
+        "path": "/vendor/lib64/libc++_shared.so"
+      }
+    },
+    "Stdcxx": {
+      "file": "network/libstdc++.so",
+      "bytes": 19440,
+      "sha256": "bd2630ef50357765d109bfea9dbe892fac9f6dd631fc3f68536474a0398ad3dd",
+      "source": {
+        "path": "/vendor/lib64/libstdc++.so"
+      },
+      "acquisition": {
+        "image": "vendor",
+        "path": "/vendor/lib64/libstdc++.so"
+      }
+    },
+    "UsbHostFeature": {
+      "file": "network/android.hardware.usb.host.xml",
+      "bytes": 868,
+      "sha256": "a1e7f5a1014066e65bd674967bfcd84f9228e1d549af063a8d4874fa113a2c8c",
+      "source": {
+        "path": "/vendor/etc/permissions/android.hardware.usb.host.xml"
+      },
+      "acquisition": {
+        "image": "vendor",
+        "path": "/vendor/etc/permissions/android.hardware.usb.host.xml"
+      }
+    },
+    "ProductOverlay": {
+      "file": "network/framework-res__auto_generated_rro_product.apk",
+      "bytes": 2124058,
+      "sha256": "868e032b81a78a1915cf50ae6a59e0272df3b2133b678dab104b8c0c095adb4b",
+      "source": {
+        "path": "/system/product/overlay/framework-res__auto_generated_rro_product.apk"
       },
       "acquisition": {
         "image": "system",
-        "path": "/system/lib64/android.hardware.automotive.vehicle@2.0.so"
+        "path": "/system/product/overlay/framework-res__auto_generated_rro_product.apk"
       }
     }
   },
@@ -518,6 +662,13 @@
       "input": "android:/system/etc/selinux/plat_hwservice_contexts",
       "steps": [
         "passion-hwservice-contexts.json"
+      ]
+    },
+    "passion-file-contexts": {
+      "type": "file",
+      "input": "android:/system/etc/selinux/plat_file_contexts",
+      "steps": [
+        "passion-file-contexts.json"
       ]
     },
     "passion-policy-hash": {
@@ -670,7 +821,7 @@
     {
       "artifact": "files:message-center-vintf",
       "type": "file",
-      "target": "/system/etc/vintf/manifest/voyemu-message-center.xml",
+      "target": "/vendor/etc/vintf/manifest/vendor.mega.message_center.xml",
       "mode": "0644"
     },
     {
@@ -695,6 +846,12 @@
       "artifact": "patched:passion-hwservice-contexts",
       "type": "file",
       "target": "/system/etc/selinux/plat_hwservice_contexts",
+      "mode": "0644"
+    },
+    {
+      "artifact": "patched:passion-file-contexts",
+      "type": "file",
+      "target": "/system/etc/selinux/plat_file_contexts",
       "mode": "0644"
     },
     {
@@ -754,37 +911,121 @@
     {
       "artifact": "original:MessageCenterService",
       "type": "file",
-      "target": "/system/bin/hw/vendor.mega.message_center@1.0-service",
+      "target": "/vendor/bin/hw/vendor.mega.message_center@1.0-service",
       "mode": "0755"
     },
     {
       "artifact": "original:MessageCenterHidl",
       "type": "file",
-      "target": "/system/lib64/vendor.mega.message_center@1.0.so",
+      "target": "/vendor/lib64/vendor.mega.message_center@1.0.so",
       "mode": "0644"
     },
     {
       "artifact": "original:MessageCenterRpc",
       "type": "file",
-      "target": "/system/lib64/libmrpc.so",
-      "mode": "0644"
-    },
-    {
-      "artifact": "original:VehicleHidl",
-      "type": "file",
-      "target": "/system/lib64/android.hardware.automotive.vehicle@2.0.so",
+      "target": "/vendor/lib64/libmrpc.so",
       "mode": "0644"
     },
     {
       "artifact": "component:hab-socket",
       "type": "file",
-      "target": "/system/lib64/libuhab.so",
+      "target": "/vendor/lib64/libuhab.so",
       "mode": "0644"
     },
     {
       "artifact": "files:message-center-init",
       "type": "file",
-      "target": "/system/etc/init/voyemu-message-center.rc",
+      "target": "/vendor/etc/init/vendor.mega.message_center@1.0-service.rc",
+      "mode": "0644"
+    },
+    {
+      "artifact": "original:VlanConfig",
+      "type": "file",
+      "target": "/vendor/bin/config_vlan.sh",
+      "mode": "0755"
+    },
+    {
+      "artifact": "original:SomeipStart",
+      "type": "file",
+      "target": "/vendor/bin/someipd.sh",
+      "mode": "0755"
+    },
+    {
+      "artifact": "original:Someipd",
+      "type": "file",
+      "target": "/vendor/bin/someipd",
+      "mode": "0755"
+    },
+    {
+      "artifact": "original:VendorToybox",
+      "type": "file",
+      "target": "/vendor/bin/toybox_vendor",
+      "mode": "0755"
+    },
+    {
+      "artifact": "original:SomeipInit",
+      "type": "file",
+      "target": "/vendor/etc/init/someipd.rc",
+      "mode": "0644"
+    },
+    {
+      "artifact": "original:SomeipConfig",
+      "type": "file",
+      "target": "/vendor/etc/someipcfg/someip_config-OIB_8155_Android.xml",
+      "mode": "0644"
+    },
+    {
+      "artifact": "original:SomeipCore",
+      "type": "file",
+      "target": "/vendor/lib64/libx4someipcore.so",
+      "mode": "0644"
+    },
+    {
+      "artifact": "original:SomeipCfg",
+      "type": "file",
+      "target": "/vendor/lib64/libx4someipcfg.so",
+      "mode": "0644"
+    },
+    {
+      "artifact": "original:X4Base",
+      "type": "file",
+      "target": "/vendor/lib64/libx4base.so",
+      "mode": "0644"
+    },
+    {
+      "artifact": "original:CxxShared",
+      "type": "file",
+      "target": "/vendor/lib64/libc++_shared.so",
+      "mode": "0644"
+    },
+    {
+      "artifact": "original:Stdcxx",
+      "type": "file",
+      "target": "/vendor/lib64/libstdc++.so",
+      "mode": "0644"
+    },
+    {
+      "artifact": "original:UsbHostFeature",
+      "type": "file",
+      "target": "/vendor/etc/permissions/android.hardware.usb.host.xml",
+      "mode": "0644"
+    },
+    {
+      "artifact": "original:ProductOverlay",
+      "type": "file",
+      "target": "/system/product/overlay/framework-res__auto_generated_rro_product.apk",
+      "mode": "0644"
+    },
+    {
+      "artifact": "files:oem-eth0",
+      "type": "file",
+      "target": "/vendor/bin/oem-eth0.sh",
+      "mode": "0755"
+    },
+    {
+      "artifact": "files:oem-network-init",
+      "type": "file",
+      "target": "/vendor/etc/init/oem-network.rc",
       "mode": "0644"
     },
     {
@@ -1328,6 +1569,12 @@
     },
     "message-center-init": {
       "file": "voyemu-message-center.rc"
+    },
+    "oem-eth0": {
+      "file": "oem-eth0.sh"
+    },
+    "oem-network-init": {
+      "file": "oem-network.rc"
     }
   },
   "emulator": {

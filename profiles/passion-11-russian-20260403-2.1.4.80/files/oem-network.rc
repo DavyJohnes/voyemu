@@ -1,0 +1,19 @@
+# The emulator's ranchu-net moves its eth0 into the router namespace; the interguest NIC then takes
+# the car's name eth0 (oem-eth0.sh in the emulator's goldfish_setup domain).
+on property:init.svc.ranchu-net=stopped
+    start voyemu_oem_eth0
+
+service voyemu_oem_eth0 /vendor/bin/oem-eth0.sh
+    user root
+    group root
+    disabled
+    oneshot
+
+# The OEM init.target.rc starts mega_vlan_config on boot; here it starts once eth0 exists.
+on property:vendor.qemu.oem_eth0=ready
+    start mega_vlan_config
+
+# Verbatim from the OEM /vendor/etc/init/hw/init.target.rc.
+service mega_vlan_config /vendor/bin/config_vlan.sh
+    user root
+    oneshot

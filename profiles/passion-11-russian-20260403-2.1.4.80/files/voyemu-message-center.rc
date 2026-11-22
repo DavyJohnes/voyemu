@@ -1,8 +1,6 @@
-# The OEM vendor.mega.message_center@1.0-service.rc from /system instead of /vendor: the emulator
-# has no mpower group, inet lets the Voyemu libuhab reach the cluster, and the domain comes from
-# the Passion policy because the emulator vendor policy has no message_center domain.
-service vendor.message_center /system/bin/hw/vendor.mega.message_center@1.0-service
+# The OEM /vendor/etc/init/vendor.mega.message_center@1.0-service.rc without the mpower group the
+# emulator lacks; inet lets the Voyemu libuhab reach the cluster.
+service vendor.message_center /vendor/bin/hw/vendor.mega.message_center@1.0-service
     class hal
     user vehicle_network
     group system inet
-    seclabel u:r:voyemu_message_center:s0

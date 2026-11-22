@@ -90,7 +90,7 @@ std::vector<std::string> native_file_patch_steps(std::string_view id) {
 
     if (id == "passion-services" || id == "passion-service-contexts" ||
         id == "passion-property-contexts" || id == "passion-hwservice-contexts" ||
-        id == "passion-policy-hash") {
+        id == "passion-file-contexts" || id == "passion-policy-hash") {
         return {std::string(id) + ".json"};
     }
 
@@ -192,6 +192,7 @@ std::vector<std::string> prepare_file_patches(std::span<const PinnedFilePatch> p
                              patch.id == "passion-service-contexts" ||
                              patch.id == "passion-property-contexts" ||
                              patch.id == "passion-hwservice-contexts" ||
+                             patch.id == "passion-file-contexts" ||
                              patch.id == "passion-policy-hash";
         const bool free_public = patch.id == "public-qg-runtime-api30",
                    free_property = patch.id == "property-contexts-api30",
@@ -441,7 +442,7 @@ std::vector<std::string> prepare_file_patches(std::span<const PinnedFilePatch> p
                             "391829e0167f44415e54ba64692ad410b1398b16263869beb22e427130eae766" ||
                     patch.patched_dependency != "passion-services" ||
                     patch.dependency_sha256 !=
-                            "c66f4ce0c688b108f9a0d973bd708392ed93dc18079ef55c1187b5db649d231a") {
+                            "ca7207fdf6cf5b9e7755e33f6bc7eb800eccaedd962f66d30cb5ea195f8597b3") {
                     throw VoyemuError("FILE_PATCH_DEPENDENCY",
                                       "exact Passion CIL/mapping/hash provenance required");
                 }
@@ -474,6 +475,7 @@ std::vector<std::string> prepare_file_patches(std::span<const PinnedFilePatch> p
                         patch.id == "passion-services"             ? "services"
                         : patch.id == "passion-service-contexts"   ? "service-contexts"
                         : patch.id == "passion-hwservice-contexts" ? "hwservice-contexts"
+                        : patch.id == "passion-file-contexts"      ? "file-contexts"
                                                                    : "property-contexts",
                         input);
             }

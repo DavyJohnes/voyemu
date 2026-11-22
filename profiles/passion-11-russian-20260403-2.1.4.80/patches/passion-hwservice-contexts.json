@@ -4,6 +4,6 @@
   "api": 30,
   "native": true,
   "input_sha256": "8b4e2ffcb1a9f8e56423961a561534dd56f9f6b35d26fc0be2b8492e86797c2e",
-  "output_sha256": "f164945ff92777f0b339d07fc661d12d48d392f69d838e22e51ba1a995d74e97",
-  "description": "Exact native Passion API30 hwservice label: vendor.mega.message_center::IMessageCenter of the system_app message center; original bytes remain unchanged."
+  "output_sha256": "2b2ebe82d3b754dc9a00d50de124d7c07ca7c847db91e918d8e1e08778d7ce19",
+  "description": "Exact native Passion API30 hwservice label: vendor.mega.message_center::IMessageCenter with the OEM message_center_hwservice label; original bytes remain unchanged."
 }

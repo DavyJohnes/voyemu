@@ -811,11 +811,12 @@ void configure_owned_android_network(
 
         if (!result.is_object() || result.size() != 7 || result.value("schema", 0) != 1 ||
             !result.value("ok", false) || result.value("address", std::string{}) != address ||
-            result.value("prefix", 0) != 24 || !result.value("local_route_requested", false) ||
-            !result.at("interface").is_string() ||
+            result.value("prefix", 0) != 24 || !result.at("interface").is_string() ||
             !std::regex_match(result.at("interface").get<std::string>(),
                               std::regex("[A-Za-z0-9_.:-]{1,15}")) ||
-            !result.at("network_ids").is_array() || result.at("network_ids").size() > 64) {
+            !result.at("network_ids").is_array() || result.at("network_ids").size() > 64 ||
+            // A NIC the OEM EthernetService configures is only verified; no route is requested.
+            result.value("local_route_requested", false) == result.at("network_ids").empty()) {
             throw VoyemuError("INTERGUEST_ANDROID", "fixed startup report mismatch");
         }
 

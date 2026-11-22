@@ -8,11 +8,14 @@ import java.util.List;
 
 /**
  * Fixed Ethernet setup with the multimedia address of the profile's interguest contract; Binder
- * acknowledgements request routes, they do not prove reachability.
+ * acknowledgements request routes, they do not prove reachability. A NIC the OEM network setup
+ * named eth0 belongs to the OEM EthernetService configuration and is only verified.
  */
 public final class NetworkSetup {
     static final String MAC = "52:54:00:76:6f:21";
     static final int NETWORK_ID = 65000;
+    static final String OEM_NAME = "eth0";
+    static final int OEM_READBACKS = 20;
 
     interface Manager {
         String[] interfaces() throws Exception;
@@ -24,6 +27,8 @@ public final class NetworkSetup {
         boolean configured(String iface) throws Exception;
 
         void requestRoutes(String iface) throws Exception;
+
+        void pause() throws Exception;
     }
 
     static final class Result {
@@ -41,7 +46,9 @@ public final class NetworkSetup {
                     + iface
                     + "\",\"address\":\""
                     + address
-                    + "\",\"prefix\":24,\"local_route_requested\":true,\"network_ids\":"
+                    + "\",\"prefix\":24,\"local_route_requested\":"
+                    + !networks.isEmpty()
+                    + ",\"network_ids\":"
                     + networks
                     + "}";
         }
@@ -78,6 +85,18 @@ public final class NetworkSetup {
 
         if (selected == null) {
             throw new IllegalStateException("interface_missing");
+        }
+
+        if (OEM_NAME.equals(selected)) {
+            for (int i = 0; !manager.configured(selected); ++i) {
+                if (i == OEM_READBACKS) {
+                    throw new IllegalStateException("interface_readback");
+                }
+
+                manager.pause();
+            }
+
+            return new Result(selected, address, Collections.emptyList());
         }
 
         manager.configure(selected);
@@ -153,6 +172,11 @@ public final class NetworkSetup {
             return route.getConstructor(link, InetAddress.class, String.class)
                     .newInstance(
                             link.getConstructor(String.class).newInstance(subnet), null, iface);
+        }
+
+        @Override
+        public void pause() throws InterruptedException {
+            Thread.sleep(250L);
         }
 
         @Override

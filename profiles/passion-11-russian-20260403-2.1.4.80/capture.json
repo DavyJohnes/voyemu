@@ -183,6 +183,97 @@
       "source": {
         "path": "/system/media/bootanimation.zip"
       }
+    },
+    {
+      "name": "VlanConfig",
+      "file": "network/config_vlan.sh",
+      "source": {
+        "path": "/vendor/bin/config_vlan.sh"
+      }
+    },
+    {
+      "name": "SomeipStart",
+      "file": "network/someipd.sh",
+      "source": {
+        "path": "/vendor/bin/someipd.sh"
+      }
+    },
+    {
+      "name": "Someipd",
+      "file": "network/someipd",
+      "source": {
+        "path": "/vendor/bin/someipd"
+      }
+    },
+    {
+      "name": "VendorToybox",
+      "file": "network/toybox_vendor",
+      "source": {
+        "path": "/vendor/bin/toybox_vendor"
+      }
+    },
+    {
+      "name": "SomeipInit",
+      "file": "network/someipd.rc",
+      "source": {
+        "path": "/vendor/etc/init/someipd.rc"
+      }
+    },
+    {
+      "name": "SomeipConfig",
+      "file": "network/someip_config-OIB_8155_Android.xml",
+      "source": {
+        "path": "/vendor/etc/someipcfg/someip_config-OIB_8155_Android.xml"
+      }
+    },
+    {
+      "name": "SomeipCore",
+      "file": "network/libx4someipcore.so",
+      "source": {
+        "path": "/vendor/lib64/libx4someipcore.so"
+      }
+    },
+    {
+      "name": "SomeipCfg",
+      "file": "network/libx4someipcfg.so",
+      "source": {
+        "path": "/vendor/lib64/libx4someipcfg.so"
+      }
+    },
+    {
+      "name": "X4Base",
+      "file": "network/libx4base.so",
+      "source": {
+        "path": "/vendor/lib64/libx4base.so"
+      }
+    },
+    {
+      "name": "CxxShared",
+      "file": "network/libc++_shared.so",
+      "source": {
+        "path": "/vendor/lib64/libc++_shared.so"
+      }
+    },
+    {
+      "name": "Stdcxx",
+      "file": "network/libstdc++.so",
+      "source": {
+        "path": "/vendor/lib64/libstdc++.so"
+      }
+    },
+    {
+      "name": "UsbHostFeature",
+      "file": "network/android.hardware.usb.host.xml",
+      "source": {
+        "path": "/vendor/etc/permissions/android.hardware.usb.host.xml"
+      }
+    },
+    {
+      "name": "ProductOverlay",
+      "file": "network/framework-res__auto_generated_rro_product.apk",
+      "source": {
+        "path": "/system/product/overlay/framework-res__auto_generated_rro_product.apk"
+      }
     }
   ]
 }

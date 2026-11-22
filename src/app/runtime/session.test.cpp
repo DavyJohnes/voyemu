@@ -4482,7 +4482,9 @@ static void owned_android_network_recovery_tests() {
     struct Fixture {
         std::map<std::string, Artifact> files;
         std::vector<std::string> created, removed;
-        std::string boot, pin;
+        std::string boot, pin,
+                report =
+                        "\"local_route_requested\":true,\"interface\":\"eth1\",\"network_ids\":[65000]";
         int cleanup_failures = 0, nonce_count = 0, setup_count = 0, command_count = 0;
         bool fail_setup = false, reboot_setup = false, reboot_cleanup = false,
              uncertain_mkdir = false, partial_push = false, fail_chmod = false;
@@ -4607,7 +4609,8 @@ static void owned_android_network_recovery_tests() {
             }
 
             return {0,
-                    "VOYEMU_NETWORK_V1 {\"schema\":1,\"ok\":true,\"address\":\"172.30.100.3\",\"prefix\":24,\"local_route_requested\":true,\"interface\":\"eth1\",\"network_ids\":[65000]}\n",
+                    "VOYEMU_NETWORK_V1 {\"schema\":1,\"ok\":true,\"address\":\"172.30.100.3\",\"prefix\":24," +
+                            report + "}\n",
                     false};
         }
 
@@ -4651,6 +4654,31 @@ static void owned_android_network_recovery_tests() {
             configure(f, second, android, pending, inputs);
         });
         assert(!android.contains("interguest_network") && f.setup_count == 3 && f.nonce_count == 3);
+    }
+    // The OEM EthernetService owns eth0: the report verifies the address and requests no route.
+    for (const auto &[report, accepted] : std::vector<std::pair<std::string, bool>>{
+                 {"\"local_route_requested\":false,\"interface\":\"eth0\",\"network_ids\":[]",
+                  true},
+                 {"\"local_route_requested\":true,\"interface\":\"eth0\",\"network_ids\":[]",
+                  false},
+                 {"\"local_route_requested\":false,\"interface\":\"eth1\",\"network_ids\":[65000]",
+                  false}}) {
+        Fixture f;
+        f.boot = first;
+        f.pin = pin;
+        f.report = report;
+        Json android = Json::object();
+        std::vector<AndroidNetworkArtifact> pending;
+        bool configured = true;
+        try {
+            configure(f, first, android, pending, inputs);
+        } catch (const std::exception &) {
+            configured = false;
+        }
+
+        assert(configured == accepted && f.setup_count == 1 && f.files.empty());
+        assert(!accepted || (android["interguest_network"]["interface"] == "eth0" &&
+                             android["interguest_network"]["network_ids"].empty()));
     }
     {
         Fixture f;

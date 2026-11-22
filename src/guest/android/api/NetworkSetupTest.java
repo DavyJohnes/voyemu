@@ -8,6 +8,7 @@ public final class NetworkSetupTest {
     static final class Fake implements NetworkSetup.Manager {
         String[] names = {"lo", "wlan0", "eth1"};
         boolean configured, changed, failRoute;
+        int pauses, readyAfter = -1;
         String selected;
         final List<String> calls = new ArrayList<>();
 
@@ -30,7 +31,12 @@ public final class NetworkSetupTest {
 
         @Override
         public boolean configured(String name) {
-            return configured && !changed;
+            return (configured || (readyAfter >= 0 && pauses >= readyAfter)) && !changed;
+        }
+
+        @Override
+        public void pause() {
+            ++pauses;
         }
 
         @Override
@@ -78,6 +84,20 @@ public final class NetworkSetupTest {
                         && !result.json().contains("\"local_route\":")
                         && result.json().contains("\"address\":\"172.30.100.3\"")
                         && result.json().contains("\"network_ids\":[65000]"));
+        // EthernetService configures the NIC the OEM setup named eth0; it is only read back.
+        fake = new Fake();
+        fake.names = new String[] {"lo", "eth0"};
+        fake.readyAfter = 3;
+        result = NetworkSetup.apply(fake, "172.30.100.3");
+        check("eth0".equals(result.iface) && result.networks.isEmpty() && fake.pauses == 3);
+        check(fake.calls.isEmpty());
+        check(
+                result.json().contains("\"local_route_requested\":false")
+                        && result.json().contains("\"network_ids\":[]"));
+        fake = new Fake();
+        fake.names = new String[] {"eth0"};
+        reject(fake, "interface_readback");
+        check(fake.calls.isEmpty() && fake.pauses == NetworkSetup.OEM_READBACKS);
         fake = new Fake();
         fake.names = new String[] {"wlan0"};
         reject(fake, "interface_missing");

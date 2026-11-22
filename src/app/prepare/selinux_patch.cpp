@@ -608,6 +608,245 @@ multiwindow u:object_r:voyemu_cockpit_service:s0
     throw VoyemuError("SELINUX_PATCH_NOT_FOUND", "unsupported context recipe");
 }
 
+namespace {
+// OEM vendor_sepolicy.cil statements of the domains the OEM SOME/IP, VLAN and message center
+// services run in, mapped onto the emulator platform (X_30_0 is X) and limited to types the
+// emulator policy declares.
+constexpr std::string_view passion_oem_domains[] = {
+        "(typeattributeset domain (someipd message_center_default vendor_qti_init_shell))",
+        "(typeattributeset file_type (someipd_exec message_center_default_exec vendor_qti_init_shell_exec))",
+        "(typeattributeset exec_type (someipd_exec message_center_default_exec vendor_qti_init_shell_exec))",
+        "(typeattributeset vendor_file_type (someipd_exec message_center_default_exec vendor_qti_init_shell_exec))",
+        "(typeattributeset hwservice_manager_type (message_center_hwservice))",
+        "(typeattributeset netdomain (someipd))",
+        "(typeattributeset data_between_core_and_vendor_violators (someipd))",
+        "(typeattributeset halserverdomain (message_center_default))",
+        "(typeattributeset halclientdomain (message_center_default))",
+        "(typeattributeset hal_vehicle_client (message_center_default))",
+        "(typeattribute message_center)",
+        "(typeattributeset message_center (message_center_default))",
+        "(typeattribute message_center_server)",
+        "(typeattributeset message_center_server (message_center_default))",
+        "(type message_center_hwservice)",
+        "(roletype object_r message_center_hwservice)",
+        "(type someipd)",
+        "(roletype object_r someipd)",
+        "(type someipd_exec)",
+        "(roletype object_r someipd_exec)",
+        "(type message_center_default)",
+        "(roletype object_r message_center_default)",
+        "(type message_center_default_exec)",
+        "(roletype object_r message_center_default_exec)",
+        "(type vendor_qti_init_shell)",
+        "(roletype object_r vendor_qti_init_shell)",
+        "(type vendor_qti_init_shell_exec)",
+        "(roletype object_r vendor_qti_init_shell_exec)",
+        "(allow hal_broadcastradio_default message_center_hwservice (hwservice_manager (find)))",
+        "(allow hal_broadcastradio_default message_center_default (binder (call transfer)))",
+        "(allow vendor_qti_init_shell self (tcp_socket (ioctl create)))",
+        "(allow vendor_qti_init_shell self (udp_socket (ioctl create)))",
+        "(allow vendor_qti_init_shell self (process (setexec)))",
+        "(allow vendor_qti_init_shell vendor_modprobe (process (transition noatsecure siginh rlimitinh)))",
+        "(allow vendor_modprobe vendor_qti_init_shell (fd (use)))",
+        "(allowx vendor_qti_init_shell self (ioctl tcp_socket (0x6900 0x6902)))",
+        "(allowx vendor_qti_init_shell self (ioctl tcp_socket (((range 0x890b 0x890d)) 0x8911 0x8914 0x8916 0x8918 0x891a ((range 0x891c 0x8920)) ((range 0x8922 0x8927)) 0x8929 ((range 0x8930 0x8932)) ((range 0x8934 0x8937)) 0x8939 ((range 0x8940 0x8941)) 0x8943 ((range 0x8946 0x894b)) ((range 0x8953 0x8955)) ((range 0x8960 0x8962)) ((range 0x8970 0x8971)) ((range 0x8980 0x8983)) ((range 0x8990 0x8995)) ((range 0x89a0 0x89a3)) 0x89b0 ((range 0x89e0 0x89ff)))))",
+        "(allowx vendor_qti_init_shell self (ioctl tcp_socket (0x8b00 0x8b02 0x8b04 0x8b06 0x8b08 0x8b0a 0x8b0c 0x8b0e 0x8b10 ((range 0x8b14 0x8b1d)) 0x8b20 0x8b22 0x8b24 0x8b26 0x8b28 ((range 0x8b2a 0x8b2c)) ((range 0x8b30 0x8b36)) ((range 0x8be0 0x8bff)))))",
+        "(allowx vendor_qti_init_shell self (ioctl udp_socket (0x6900 0x6902)))",
+        "(allowx vendor_qti_init_shell self (ioctl udp_socket (((range 0x890b 0x890d)) 0x8911 0x8914 0x8916 0x8918 0x891a ((range 0x891c 0x8920)) ((range 0x8922 0x8927)) 0x8929 ((range 0x8930 0x8932)) ((range 0x8934 0x8937)) 0x8939 ((range 0x8940 0x8941)) 0x8943 ((range 0x8946 0x894b)) ((range 0x8953 0x8955)) ((range 0x8960 0x8962)) ((range 0x8970 0x8971)) ((range 0x8980 0x8983)) ((range 0x8990 0x8995)) ((range 0x89a0 0x89a3)) 0x89b0 ((range 0x89e0 0x89ff)))))",
+        "(allowx vendor_qti_init_shell self (ioctl udp_socket (0x8b00 0x8b02 0x8b04 0x8b06 0x8b08 0x8b0a 0x8b0c 0x8b0e 0x8b10 ((range 0x8b14 0x8b1d)) 0x8b20 0x8b22 0x8b24 0x8b26 0x8b28 ((range 0x8b2a 0x8b2c)) ((range 0x8b30 0x8b36)) ((range 0x8be0 0x8bff)))))",
+        "(allow vendor_qti_init_shell sysfs_dm (file (write)))",
+        "(allow vendor_qti_init_shell vendor_default_prop (file (read)))",
+        "(allow vendor_qti_init_shell property_socket (sock_file (write)))",
+        "(allow vendor_qti_init_shell init (unix_stream_socket (connectto)))",
+        "(allow vendor_qti_init_shell property_socket (sock_file (write)))",
+        "(allow vendor_qti_init_shell init (unix_stream_socket (connectto)))",
+        "(allow vendor_qti_init_shell property_socket (sock_file (write)))",
+        "(allow vendor_qti_init_shell init (unix_stream_socket (connectto)))",
+        "(allow vendor_qti_init_shell property_socket (sock_file (write)))",
+        "(allow vendor_qti_init_shell init (unix_stream_socket (connectto)))",
+        "(allow vendor_qti_init_shell property_socket (sock_file (write)))",
+        "(allow vendor_qti_init_shell init (unix_stream_socket (connectto)))",
+        "(allow dumpstate message_center_hwservice (hwservice_manager (find)))",
+        "(allow dumpstate message_center_default (binder (call transfer)))",
+        "(allow message_center_default dumpstate (binder (call transfer)))",
+        "(allow init someipd_exec (file (read getattr map execute open)))",
+        "(allow init someipd (process (transition)))",
+        "(allow someipd someipd_exec (file (read getattr map execute open entrypoint)))",
+        "(dontaudit init someipd (process (noatsecure)))",
+        "(allow init someipd (process (siginh rlimitinh)))",
+        "(typetransition init someipd_exec process someipd)",
+        "(allow someipd vendor_file_type (file (execute_no_trans)))",
+        "(allow someipd vendor_toolbox_exec (file (execute_no_trans)))",
+        "(allow someipd someipd (netlink_route_socket (create bind)))",
+        "(allow someipd socket_device (dir (ioctl read write create getattr setattr lock rename open watch watch_reads add_name remove_name reparent search rmdir)))",
+        "(allow someipd socket_device (file (ioctl read write create getattr setattr lock append map unlink rename open watch watch_reads)))",
+        "(allow someipd socket_device (sock_file (write create getattr setattr unlink)))",
+        "(allow someipd someipd (udp_socket (ioctl create)))",
+        "(allow someipd proc_net (file (read getattr open)))",
+        "(allow someipd sysfs_net (dir (search)))",
+        "(allowx someipd someipd (ioctl udp_socket (0x891d 0x8927 0x8970)))",
+        "(allow hal_vehicle_default someipd (unix_stream_socket (connectto)))",
+        "(allow hal_vehicle_default someipd (unix_dgram_socket (sendto)))",
+        "(allow someipd hal_vehicle_default (unix_dgram_socket (sendto)))",
+        "(allow someipd hal_vehicle_default (unix_stream_socket (connectto)))",
+        "(allow hal_vehicle_default someipd (file (read)))",
+        "(allow hal_vehicle_default message_center_hwservice (hwservice_manager (find)))",
+        "(allow init message_center_default_exec (file (read getattr map execute open)))",
+        "(allow init message_center_default (process (transition)))",
+        "(allow message_center_default message_center_default_exec (file (read getattr map execute open entrypoint)))",
+        "(dontaudit init message_center_default (process (noatsecure)))",
+        "(allow init message_center_default (process (siginh rlimitinh)))",
+        "(typetransition init message_center_default_exec process message_center_default)",
+        "(allow message_center hwservicemanager (binder (call transfer)))",
+        "(allow hwservicemanager message_center (binder (call transfer)))",
+        "(allow hwservicemanager message_center (dir (search)))",
+        "(allow hwservicemanager message_center (file (read map open)))",
+        "(allow hwservicemanager message_center (process (getattr)))",
+        "(allow message_center_default message_center_hwservice (hwservice_manager (add find)))",
+        "(allow message_center_default hidl_base_hwservice (hwservice_manager (add)))",
+        "(allow message_center_default system_app (binder (call transfer)))",
+        "(allow message_center_default property_socket (sock_file (write)))",
+        "(allow message_center_default init (unix_stream_socket (connectto)))",
+        "(allow vendor_qti_init_shell vendor_file (file (execute_no_trans)))",
+        "(allow vendor_qti_init_shell hwservicemanager_prop (file (read getattr map open)))",
+        "(allow vendor_qti_init_shell message_center_hwservice (hwservice_manager (find)))",
+        "(allow hwservicemanager vendor_qti_init_shell (binder (transfer)))",
+        "(allow vendor_qti_init_shell hwservicemanager (binder (call)))",
+        "(allow vendor_qti_init_shell message_center_default (binder (call)))",
+        "(allow system_app message_center_hwservice (hwservice_manager (find)))",
+        "(allow system_app message_center_default (binder (call transfer)))",
+        "(allow dumpstate message_center_hwservice (hwservice_manager (find)))",
+        "(allow dumpstate message_center_default (binder (call transfer)))",
+        "(allow message_center_default dumpstate (binder (call transfer)))",
+        "(dontaudit vendor_qti_init_shell self (capability (dac_override)))",
+        "(allow init vendor_qti_init_shell_exec (file (read getattr map execute open)))",
+        "(allow init vendor_qti_init_shell (process (transition)))",
+        "(allow vendor_qti_init_shell vendor_qti_init_shell_exec (file (read getattr map execute open entrypoint)))",
+        "(dontaudit init vendor_qti_init_shell (process (noatsecure)))",
+        "(allow init vendor_qti_init_shell (process (siginh rlimitinh)))",
+        "(typetransition init vendor_qti_init_shell_exec process vendor_qti_init_shell)",
+        "(allow init vendor_qti_init_shell (process (transition)))",
+        "(allow vendor_qti_init_shell vendor_shell_exec (file (read getattr map execute open entrypoint)))",
+        "(dontaudit init vendor_qti_init_shell (process (noatsecure)))",
+        "(allow init vendor_qti_init_shell (process (siginh rlimitinh)))",
+        "(allow vendor_qti_init_shell vendor_qti_init_shell_exec (file (ioctl read getattr lock map execute open watch watch_reads execute_no_trans entrypoint)))",
+        "(allow vendor_qti_init_shell vendor_shell_exec (file (ioctl read getattr lock map execute open watch watch_reads execute_no_trans entrypoint)))",
+        "(allow vendor_qti_init_shell vendor_toolbox_exec (file (ioctl read getattr lock map execute open watch watch_reads execute_no_trans)))",
+        "(allow vendor_qti_init_shell mnt_vendor_file (dir (write lock open add_name remove_name search)))",
+        "(allow vendor_qti_init_shell mnt_vendor_file (file (ioctl read write create getattr setattr lock append map unlink rename open watch watch_reads)))",
+        "(allow vendor_qti_init_shell rootfs (file (execute_no_trans)))",
+        "(allow vendor_qti_init_shell vendor_shell_exec (file (execute_no_trans)))",
+        "(allow vendor_qti_init_shell gpu_device (chr_file (getattr)))",
+        "(allow vendor_qti_init_shell self (capability (chown fowner fsetid net_admin sys_module sys_admin)))",
+        "(allow vendor_qti_init_shell property_socket (sock_file (write)))",
+        "(allow vendor_qti_init_shell init (unix_stream_socket (connectto)))",
+        "(allow vendor_qti_init_shell property_socket (sock_file (write)))",
+        "(allow vendor_qti_init_shell init (unix_stream_socket (connectto)))",
+        "(allow vendor_qti_init_shell property_socket (sock_file (write)))",
+        "(allow vendor_qti_init_shell init (unix_stream_socket (connectto)))",
+        "(allow vendor_qti_init_shell property_socket (sock_file (write)))",
+        "(allow vendor_qti_init_shell init (unix_stream_socket (connectto)))",
+        "(allow vendor_qti_init_shell property_socket (sock_file (write)))",
+        "(allow vendor_qti_init_shell init (unix_stream_socket (connectto)))",
+        "(allow vendor_qti_init_shell property_socket (sock_file (write)))",
+        "(allow vendor_qti_init_shell init (unix_stream_socket (connectto)))",
+        "(allow vendor_qti_init_shell property_socket (sock_file (write)))",
+        "(allow vendor_qti_init_shell init (unix_stream_socket (connectto)))",
+        "(allow vendor_qti_init_shell property_socket (sock_file (write)))",
+        "(allow vendor_qti_init_shell init (unix_stream_socket (connectto)))",
+        "(allow vendor_qti_init_shell property_socket (sock_file (write)))",
+        "(allow vendor_qti_init_shell init (unix_stream_socket (connectto)))",
+        "(allow vendor_qti_init_shell property_socket (sock_file (write)))",
+        "(allow vendor_qti_init_shell init (unix_stream_socket (connectto)))",
+        "(allow vendor_qti_init_shell property_socket (sock_file (write)))",
+        "(allow vendor_qti_init_shell init (unix_stream_socket (connectto)))",
+        "(allow vendor_qti_init_shell property_socket (sock_file (write)))",
+        "(allow vendor_qti_init_shell init (unix_stream_socket (connectto)))",
+        "(allow vendor_qti_init_shell property_socket (sock_file (write)))",
+        "(allow vendor_qti_init_shell init (unix_stream_socket (connectto)))",
+        "(allow vendor_qti_init_shell property_socket (sock_file (write)))",
+        "(allow vendor_qti_init_shell init (unix_stream_socket (connectto)))",
+        "(allow vendor_qti_init_shell property_socket (sock_file (write)))",
+        "(allow vendor_qti_init_shell init (unix_stream_socket (connectto)))",
+        "(allow vendor_qti_init_shell exported3_radio_prop (file (read getattr map open)))",
+        "(allow vendor_qti_init_shell property_socket (sock_file (write)))",
+        "(allow vendor_qti_init_shell init (unix_stream_socket (connectto)))",
+        "(allow vendor_qti_init_shell property_socket (sock_file (write)))",
+        "(allow vendor_qti_init_shell init (unix_stream_socket (connectto)))",
+        "(allow vendor_qti_init_shell sysfs_devices_system_cpu (file (write lock append map open)))",
+        "(allow vendor_qti_init_shell sysfs_lowmemorykiller (file (write lock append map open)))",
+        "(allow vendor_qti_init_shell sysfs_type (dir (ioctl read getattr lock open watch watch_reads search)))",
+        "(allow vendor_qti_init_shell sysfs_type (file (ioctl read getattr lock map open watch watch_reads)))",
+        "(allow vendor_qti_init_shell sysfs_type (lnk_file (ioctl read getattr lock map open watch watch_reads)))",
+        "(allow vendor_qti_init_shell sysfs (file (relabelfrom)))",
+        "(allow vendor_qti_init_shell sysfs (dir (relabelfrom)))",
+        "(allow vendor_qti_init_shell sysfs (lnk_file (relabelfrom)))",
+        "(allow vendor_qti_init_shell sysfs_devices_system_cpu (file (relabelto)))",
+        "(allow vendor_qti_init_shell sysfs_devices_system_cpu (dir (relabelto)))",
+        "(allow vendor_qti_init_shell sysfs_devices_system_cpu (lnk_file (relabelto)))",
+        "(allow vendor_qti_init_shell mnt_vendor_file (dir (ioctl read getattr lock open watch watch_reads search)))",
+        "(allow vendor_qti_init_shell mnt_vendor_file (file (ioctl read getattr lock map open watch watch_reads)))",
+        "(allow vendor_qti_init_shell mnt_vendor_file (lnk_file (ioctl read getattr lock map open watch watch_reads)))",
+        "(allow vendor_qti_init_shell proc (file (write)))",
+        "(allow vendor_qti_init_shell proc_net (file (write)))",
+        "(allow vendor_qti_init_shell proc_net (file (ioctl read getattr lock map open watch watch_reads)))",
+        "(allow vendor_qti_init_shell graphics_device (dir (ioctl read write create getattr setattr lock rename open watch watch_reads add_name remove_name reparent search rmdir)))",
+        "(allow vendor_qti_init_shell graphics_device (lnk_file (ioctl read write create getattr setattr lock append map unlink rename open watch watch_reads)))",
+        "(allow vendor_qti_init_shell kernel (key (search)))",
+        "(allow vendor_qti_init_shell cgroup (dir (add_name)))",
+        "(allow vendor_qti_init_shell block_device (dir (ioctl read getattr lock open watch watch_reads search)))",
+        "(allow vendor_qti_init_shell swap_block_device (blk_file (ioctl read write getattr lock append map open watch watch_reads)))",
+        "(allow vendor_qti_init_shell configfs (dir (ioctl read getattr lock open watch watch_reads search)))",
+        "(allow vendor_qti_init_shell configfs (file (ioctl read write getattr lock append map open watch watch_reads)))",
+        "(allow vendor_qti_init_shell sysfs_zram (dir (ioctl read getattr lock open watch watch_reads search)))",
+        "(allow vendor_qti_init_shell sysfs_zram (file (ioctl read write getattr lock append map open watch watch_reads)))",
+        "(allow vendor_qti_init_shell proc (file (ioctl read getattr lock map open watch watch_reads)))",
+        "(allow vendor_qti_init_shell rootfs (file (ioctl read getattr lock map open watch watch_reads)))",
+        "(allow vendor_qti_init_shell property_socket (sock_file (write)))",
+        "(allow vendor_qti_init_shell init (unix_stream_socket (connectto)))",
+        "(allow vendor_qti_init_shell sysfs_devices_system_cpu (file (write lock append map open)))",
+        "(allow vendor_qti_init_shell property_socket (sock_file (write)))",
+        "(allow vendor_qti_init_shell init (unix_stream_socket (connectto)))",
+        "(allow vendor_qti_init_shell property_socket (sock_file (write)))",
+        "(allow vendor_qti_init_shell init (unix_stream_socket (connectto)))",
+        "(allow vendor_qti_init_shell proc_meminfo (file (ioctl read getattr lock map open watch watch_reads)))",
+        "(allow vendor_qti_init_shell sysfs_dm (dir (ioctl read getattr lock open watch watch_reads search)))",
+        "(allow vendor_qti_init_shell sysfs_dm (file (ioctl read write getattr lock append map open watch watch_reads)))",
+        "(allow vendor_qti_init_shell property_socket (sock_file (write)))",
+        "(allow vendor_qti_init_shell init (unix_stream_socket (connectto)))",
+        "(allow vendor_qti_init_shell property_socket (sock_file (write)))",
+        "(allow vendor_qti_init_shell init (unix_stream_socket (connectto)))",
+        "(allow vendor_qti_init_shell property_socket (sock_file (write)))",
+        "(allow vendor_qti_init_shell init (unix_stream_socket (connectto)))",
+        "(allow vendor_qti_init_shell property_socket (sock_file (write)))",
+        "(allow vendor_qti_init_shell init (unix_stream_socket (connectto)))",
+        "(allow vendor_qti_init_shell property_socket (sock_file (write)))",
+        "(allow vendor_qti_init_shell init (unix_stream_socket (connectto)))",
+        "(allow vendor_qti_init_shell property_socket (sock_file (write)))",
+        "(allow vendor_qti_init_shell init (unix_stream_socket (connectto)))",
+        "(allow vendor_qti_init_shell property_socket (sock_file (write)))",
+        "(allow vendor_qti_init_shell init (unix_stream_socket (connectto)))",
+        "(allow vendor_qti_init_shell property_socket (sock_file (write)))",
+        "(allow vendor_qti_init_shell init (unix_stream_socket (connectto)))",
+        "(allow vendor_qti_init_shell property_socket (sock_file (write)))",
+        "(allow vendor_qti_init_shell init (unix_stream_socket (connectto)))",
+        "(allow vendor_qti_init_shell property_socket (sock_file (write)))",
+        "(allow vendor_qti_init_shell init (unix_stream_socket (connectto)))",
+        "(allow vendor_qti_init_shell configfs (dir (write)))",
+};
+
+// OEM vendor_file_contexts labels of the OEM network and message center files; exact paths, so they
+// take precedence over the emulator's /vendor(/.*)? label. oem-eth0.sh runs in the emulator's own
+// network setup domain.
+constexpr std::string_view passion_oem_file_contexts =
+        "/vendor/bin/oem-eth0\\.sh u:object_r:goldfish_setup_exec:s0\n"
+        "/vendor/bin/config_vlan\\.sh u:object_r:vendor_qti_init_shell_exec:s0\n"
+        "/vendor/bin/someipd\\.sh -- u:object_r:someipd_exec:s0\n"
+        "/vendor/bin/someipd -- u:object_r:someipd_exec:s0\n"
+        "/vendor/bin/hw/vendor\\.mega\\.message_center@1\\.0-service "
+        "u:object_r:message_center_default_exec:s0\n";
+} // namespace
+
 std::string apply_passion_selinux_patch(ProfileScope scope, unsigned api, std::string_view id,
                                         std::string_view input) {
     if (scope != passion_scope || api != 30) {
@@ -615,29 +854,41 @@ std::string apply_passion_selinux_patch(ProfileScope scope, unsigned api, std::s
     }
 
     std::string_view source_pin, output_pin, addition;
+    std::string domains;
 
     if (id == "services") {
         source_pin = "f6d5316e443b6830d5331e6586cc0fc1df2ea8a59853ae3b0870945990145a17";
-        output_pin = "c66f4ce0c688b108f9a0d973bd708392ed93dc18079ef55c1187b5db649d231a";
+        output_pin = "ca7207fdf6cf5b9e7755e33f6bc7eb800eccaedd962f66d30cb5ea195f8597b3";
+        domains = "; voyemu Passion OEM vendor domains\n";
+
+        for (const auto line : passion_oem_domains) {
+            domains += line;
+            domains += '\n';
+        }
+
         addition =
-                "\n; voyemu Passion API30 services\n(type voyemu_car_service)\n(roletype object_r voyemu_car_service)\n(type voyemu_nexus_service)\n(roletype object_r voyemu_nexus_service)\n(type voyemu_mega_car_service)\n(roletype object_r voyemu_mega_car_service)\n(typeattributeset service_manager_type (voyemu_car_service voyemu_nexus_service voyemu_mega_car_service))\n(allow system_app voyemu_car_service (service_manager (add find)))\n(allow platform_app voyemu_car_service (service_manager (find)))\n(allow system_app voyemu_nexus_service (service_manager (add find)))\n(allow platform_app voyemu_nexus_service (service_manager (find)))\n(allow system_app voyemu_mega_car_service (service_manager (add find)))\n(allow platform_app voyemu_mega_car_service (service_manager (find)))\n; voyemu Passion API30 message center\n(type voyemu_message_center)\n(typeattributeset domain (voyemu_message_center))\n(type voyemu_message_center_hwservice)\n(roletype object_r voyemu_message_center_hwservice)\n(typeattributeset hwservice_manager_type (voyemu_message_center_hwservice))\n(allow init voyemu_message_center (process (transition siginh rlimitinh noatsecure)))\n(allow voyemu_message_center system_file (file (read getattr map execute entrypoint open)))\n(allow voyemu_message_center hwservicemanager (binder (call transfer)))\n(allow hwservicemanager voyemu_message_center (binder (call transfer)))\n(allow hwservicemanager voyemu_message_center (dir (search)))\n(allow hwservicemanager voyemu_message_center (file (read map open)))\n(allow hwservicemanager voyemu_message_center (process (getattr)))\n(allow voyemu_message_center hwservicemanager_prop (file (read getattr map open)))\n(allow voyemu_message_center hidl_base_hwservice (hwservice_manager (add)))\n(allow voyemu_message_center hidl_manager_hwservice (hwservice_manager (find)))\n(allow voyemu_message_center voyemu_message_center_hwservice (hwservice_manager (add find)))\n(allow voyemu_message_center hal_vehicle_hwservice (hwservice_manager (find)))\n(allow voyemu_message_center self (tcp_socket (create connect read write getattr setopt getopt shutdown)))\n(allow voyemu_message_center port (tcp_socket (name_connect)))\n(allow system_app hwservicemanager (binder (call transfer)))\n(allow hwservicemanager system_app (binder (call transfer)))\n(allow hwservicemanager system_app (dir (search)))\n(allow hwservicemanager system_app (file (read map open)))\n(allow hwservicemanager system_app (process (getattr)))\n(allow system_app hwservicemanager_prop (file (read getattr map open)))\n(allow system_app hidl_manager_hwservice (hwservice_manager (find)))\n(allow system_app voyemu_message_center_hwservice (hwservice_manager (find)))\n(allow system_app voyemu_message_center (binder (call transfer)))\n(allow voyemu_message_center system_app (binder (call transfer)))\n";
+                "\n; voyemu Passion API30 services\n(type voyemu_car_service)\n(roletype object_r voyemu_car_service)\n(type voyemu_nexus_service)\n(roletype object_r voyemu_nexus_service)\n(type voyemu_mega_car_service)\n(roletype object_r voyemu_mega_car_service)\n(typeattributeset service_manager_type (voyemu_car_service voyemu_nexus_service voyemu_mega_car_service))\n(allow system_app voyemu_car_service (service_manager (add find)))\n(allow platform_app voyemu_car_service (service_manager (find)))\n(allow system_app voyemu_nexus_service (service_manager (add find)))\n(allow platform_app voyemu_nexus_service (service_manager (find)))\n(allow system_app voyemu_mega_car_service (service_manager (add find)))\n(allow platform_app voyemu_mega_car_service (service_manager (find)))\n; voyemu Passion API30 message center over the Voyemu libuhab\n(allow message_center_default self (tcp_socket (create connect read write getattr setopt getopt shutdown)))\n(allow message_center_default port (tcp_socket (name_connect)))\n(allow system_app hwservicemanager (binder (call transfer)))\n(allow hwservicemanager system_app (binder (call transfer)))\n(allow hwservicemanager system_app (dir (search)))\n(allow hwservicemanager system_app (file (read map open)))\n(allow hwservicemanager system_app (process (getattr)))\n(allow system_app hwservicemanager_prop (file (read getattr map open)))\n(allow system_app hidl_manager_hwservice (hwservice_manager (find)))\n";
     } else if (id == "service-contexts") {
         source_pin = "e4a9f3406dc9c3ff5a03c4b478941e02bede17ee95798bdbce1a31cc33f40959";
         output_pin = "25c66b18abdb1bf102f5012387d54336c12a67c80e4ab540b90fdb863c1b82b6";
         addition =
                 "car_service u:object_r:voyemu_car_service:s0\ncom.mega.NexusService u:object_r:voyemu_nexus_service:s0\ncom.mega.car.CarService u:object_r:voyemu_mega_car_service:s0\n";
+    } else if (id == "file-contexts") {
+        source_pin = "cf0a4db0a9962781c83e6d1430c23276ebd406c404a54ab2226a1dfa4ac2844c";
+        output_pin = "123be2de1e3225c8295247744068a2c2d8e1dfaeb8d390ffe59d6e9ff45d2e7a";
+        addition = passion_oem_file_contexts;
     } else if (id == "property-contexts") {
         source_pin = "a49213f01ea1f8ec19b41311116bc9324c682af1482297e4bbbc05265dfd623e";
         output_pin = "1f322fc1fdea910bee266cc00126d2e8429b82a4a283250f12655e5d49b83d2c";
         addition = "boot.car_service_created u:object_r:system_prop:s0 exact bool\n";
     } else if (id == "hwservice-contexts") {
         source_pin = "8b4e2ffcb1a9f8e56423961a561534dd56f9f6b35d26fc0be2b8492e86797c2e";
-        output_pin = "f164945ff92777f0b339d07fc661d12d48d392f69d838e22e51ba1a995d74e97";
+        output_pin = "2b2ebe82d3b754dc9a00d50de124d7c07ca7c847db91e918d8e1e08778d7ce19";
         addition = "vendor.mega.message_center::IMessageCenter "
-                   "u:object_r:voyemu_message_center_hwservice:s0\n";
+                   "u:object_r:message_center_hwservice:s0\n";
     } else if (id == "policy-hash") {
-        source_pin = "2104543bedc2a1f58c4cf0609020ee47ee6ef0f071570ca9b6ab419d001819d5";
-        output_pin = "bc809dc3dda2354674061334fd3aca6fb18ca508a1afe55879b81a56e077e9a5";
+        source_pin = "8fe95f13b441fa9e3a820ea1b865f3d0dd6685fe1c5b7dd23ed505450a22aeb2";
+        output_pin = "9a92c4b94ed354b962e372241eb78cb31e1920478ee55d1c6f1d2bbeae855216";
     } else {
         throw VoyemuError("SELINUX_PATCH_NOT_FOUND", "unsupported Passion policy recipe");
     }
@@ -649,7 +900,7 @@ std::string apply_passion_selinux_patch(ProfileScope scope, unsigned api, std::s
     }
 
     auto output = id == "policy-hash" ? std::string(source_pin) + "\n"
-                                      : std::string(input) + std::string(addition);
+                                      : std::string(input) + std::string(addition) + domains;
 
     if (sha256_bytes(output) != output_pin) {
         throw VoyemuError("SELINUX_PATCH_MISMATCH", "Passion policy output differs");

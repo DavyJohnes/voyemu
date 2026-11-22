@@ -1,4 +1,5 @@
-<manifest version="1.0" type="framework">
+<!-- The message center entry of the OEM vendor manifest.xml. -->
+<manifest version="1.0" type="device">
     <hal format="hidl">
         <name>vendor.mega.message_center</name>
         <transport>hwbinder</transport>
@@ -7,5 +8,11 @@
             <name>IMessageCenter</name>
             <instance>default</instance>
         </interface>
+        <interface>
+            <name>IMsgRxCallback</name>
+            <instance>default</instance>
+        </interface>
+        <fqname>@1.0::IMessageCenter/default</fqname>
+        <fqname>@1.0::IMsgRxCallback/default</fqname>
     </hal>
 </manifest>
