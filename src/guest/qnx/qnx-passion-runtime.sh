@@ -336,7 +336,10 @@ qm_spawn() { qm_pb=$1; qm_pt=$2; qm_pu=$3; shift 3
  "$qm_on" -T "$qm_pt" -u "$qm_pu" "$qm_pb" "$@" > /var/log/peer.log 2>&1 & echo "QPC SPAWN $qm_pb pid=$!"; }
 qm_spawn park_assist ic_apps_t 834:819
 qm_spawn mcu_hb mcu_hb_t mcu_hb 1000
-[ -e /slm/msg_center.xml ] && { "$qm_slm" -V /slm/msg_center.xml > /var/log/msg.log 2>&1 & echo "QPC SPAWN msg_center pid=$!"; }
+# The OEM message_center bridges Android topics; the preload carries its HAB channels over tap0.
+qm_mc() { [ -e /slm/msg_center.xml ] && { VOYEMU_HAB_SOCKET=1 LD_PRELOAD=$qm_snap "$qm_slm" -V /slm/msg_center.xml > /var/log/msg.log 2>&1 & qm_mcp=$!; echo "QPC SPAWN msg_center pid=$qm_mcp"; }
+ qm_mcr=$("$qm_pidin" ar 2>/dev/null | /usr/bin/awk '/iox-roudi/{print $1; exit}'); }
+qm_mc
 qm_svcxml=/slm/service_apps.xml
 if [ -n "$qm_slm" ] && [ -e "$qm_svcxml" ]; then
  "$qm_slm" -V "$qm_svcxml" > /var/log/svc.log 2>&1 & echo "QPC SVC spawned=$! xml=$qm_svcxml"
@@ -413,12 +416,11 @@ while :; do
  # Every tick: msg_center and the compositor both restart and drop earlier publications, which
  # leaves the frame black, so the gate and the parity topics re-publish while alive.
  qm_icq ic_apps_t 834:819 "$qm_ipp" -t icdriving/StartSelfCheck -m '{"value": 1}'
- # Parity topics: the cluster restarts its compositor per handover and must re-receive theme, language
- # and mileage-mode; DrivingInfo/Theme/Set also acks on DrivingInfo/Theme (QML publishes it retained).
+ # Theme, language and mileage mode come from the multimedia settings through message_center.
  qm_icq ic_apps_t 834:819 "$qm_ipp" -t icdriving/UsageMode -m '{"value": 0}'
- qm_icq ic_apps_t 834:819 "$qm_ipp" -t DrivingInfo/Theme/Set -m '{"value": 1}'
- qm_icq ic_apps_t 834:819 "$qm_ipp" -t DrivingInfo/Language/Set -m '{"value": 2}'
- qm_icq ic_apps_t 834:819 "$qm_ipp" -t DrivingInfo/RemainingMileageMode/Set -m '{"value": 0}'
+ # A new RouDi drops the iceoryx runtime of message_center: restart it on the new one.
+ qm_r=$("$qm_pidin" ar 2>/dev/null | /usr/bin/awk '/iox-roudi/{print $1; exit}')
+ [ -n "$qm_r" ] && [ "$qm_r" != "$qm_mcr" ] && { echo "QPC MSGC roudi=$qm_r was=$qm_mcr"; kill "$qm_mcp"; /bin/slay -f message_center; qm_mc; }
  # Vehicle signal ({ticks*11}) for the Step-2 freshness proof, republished every tick.
 
  qm_icq ic_apps_t 834:819 "$qm_ipp" -t icdriving/VehicleSpeed -m "{\"value\": $((qm_alive*11))}"
