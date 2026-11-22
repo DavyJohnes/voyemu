@@ -127,7 +127,7 @@ int main(int argc, char **argv) {
             }
         }
 
-        check(file_supported == 12 && supported_nodes == 14,
+        check(file_supported == 12 && supported_nodes == 22,
               "native file nodes not integrated or unsupported APK promoted");
         const auto selinux_canbus = std::find_if(
                 graph.at("nodes").begin(), graph.at("nodes").end(), [](const auto &node) {

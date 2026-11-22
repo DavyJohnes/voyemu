@@ -649,6 +649,54 @@
         "path": "/system/priv-app/IflytekMotorMaster_release/IflytekMotorMaster_release.apk"
       }
     },
+    "MessageCenter": {
+      "file": "MessageCenter.apk",
+      "sha256": "99fa2fb1ad3d5e9359514c5f5c4014a5691e930f1e032f536afebe995e1aa7e4",
+      "source": {
+        "package": "com.qinggan.app.messagecenter"
+      },
+      "bytes": 22952274,
+      "acquisition": {
+        "image": "system",
+        "path": "/system/priv-app/MessageCenter-release-signed/MessageCenter-release-signed.apk"
+      }
+    },
+    "VoiceClone": {
+      "file": "VoiceClone.apk",
+      "sha256": "692402f656625e487a8892a5dbf7037c18c2ac76c91b00969acde2492f16b097",
+      "source": {
+        "package": "com.qinggan.qingai.voiceclone"
+      },
+      "bytes": 25880272,
+      "acquisition": {
+        "image": "system",
+        "path": "/system/priv-app/VoiceClone-release-signed/VoiceClone-release-signed.apk"
+      }
+    },
+    "UserSettingTracking": {
+      "file": "UserSettingTracking.apk",
+      "sha256": "db3a058541f493f1e6379324e63ccabbd062c7a28ec7967480b587da2ffb0690",
+      "source": {
+        "package": "com.qinggan.usersettingtracking"
+      },
+      "bytes": 12050014,
+      "acquisition": {
+        "image": "system",
+        "path": "/system/priv-app/UserSettingTracking-release-signed/UserSettingTracking-release-signed.apk"
+      }
+    },
+    "QGAnalyticsService": {
+      "file": "QGAnalyticsService.apk",
+      "sha256": "df4a2c06f4fe7a75d3d8f0bcdfd324f321cb6649001bac21a31d0c1454c5cc47",
+      "source": {
+        "package": "com.qinggan.analytics.service"
+      },
+      "bytes": 7218731,
+      "acquisition": {
+        "image": "system",
+        "path": "/system/priv-app/QGAnalyticsService-release/QGAnalyticsService-release.apk"
+      }
+    },
     "FontRobotoRegular": {
       "file": "fonts/Roboto-Regular.ttf",
       "bytes": 305608,
@@ -721,11 +769,7 @@
     "media": "components/media",
     "bootstrap": "components/bootstrap",
     "statusbar-overlay": "components/statusbar-overlay",
-    "messagecenter-provider": "components/messagecenter-provider",
     "gallery-arm64-libraries": "components/gallery-arm64-libraries",
-    "voiceclone-provider": "components/voiceclone-provider",
-    "usersettingtracking-provider": "components/usersettingtracking-provider",
-    "analytics-service": "components/analytics-service",
     "qgsettings": "components/qgsettings",
     "multidisplay": "components/multidisplay",
     "multidisplay-shim": "components/multidisplay-shim",
@@ -1166,6 +1210,39 @@
       "input": "original:FreeBaike",
       "steps": [],
       "sign": "platform"
+    },
+    "MessageCenter": {
+      "type": "apk",
+      "input": "original:MessageCenter",
+      "steps": [],
+      "sign": "platform"
+    },
+    "VoiceClone": {
+      "type": "apk",
+      "input": "original:VoiceClone",
+      "uses": [
+        "component:qg-runtime",
+        "component:framework-qgapi",
+        "component:framework-qgmod",
+        "component:framework-qgvehicle"
+      ],
+      "steps": [
+        "systemservice-framework.json",
+        "add-qg-runtime.json"
+      ],
+      "sign": "platform"
+    },
+    "UserSettingTracking": {
+      "type": "apk",
+      "input": "original:UserSettingTracking",
+      "steps": [],
+      "sign": "platform"
+    },
+    "QGAnalyticsService": {
+      "type": "apk",
+      "input": "original:QGAnalyticsService",
+      "steps": [],
+      "sign": "platform"
     }
   },
   "install": [
@@ -1281,19 +1358,19 @@
       "type": "apk"
     },
     {
-      "artifact": "component:messagecenter-provider",
+      "artifact": "patched:MessageCenter",
       "type": "apk"
     },
     {
-      "artifact": "component:voiceclone-provider",
+      "artifact": "patched:VoiceClone",
       "type": "apk"
     },
     {
-      "artifact": "component:usersettingtracking-provider",
+      "artifact": "patched:UserSettingTracking",
       "type": "apk"
     },
     {
-      "artifact": "component:analytics-service",
+      "artifact": "patched:QGAnalyticsService",
       "type": "apk"
     },
     {

@@ -237,6 +237,34 @@
       }
     },
     {
+      "name": "MessageCenter",
+      "file": "MessageCenter.apk",
+      "source": {
+        "package": "com.qinggan.app.messagecenter"
+      }
+    },
+    {
+      "name": "VoiceClone",
+      "file": "VoiceClone.apk",
+      "source": {
+        "package": "com.qinggan.qingai.voiceclone"
+      }
+    },
+    {
+      "name": "UserSettingTracking",
+      "file": "UserSettingTracking.apk",
+      "source": {
+        "package": "com.qinggan.usersettingtracking"
+      }
+    },
+    {
+      "name": "QGAnalyticsService",
+      "file": "QGAnalyticsService.apk",
+      "source": {
+        "package": "com.qinggan.analytics.service"
+      }
+    },
+    {
       "name": "FontRobotoRegular",
       "file": "fonts/Roboto-Regular.ttf",
       "source": {
