@@ -402,7 +402,7 @@ if(BUILD_TESTING)
     endforeach()
     target_sources(android_adb_test PRIVATE android/android_adb_${voyemu_host_backend}.test.cpp)
     target_sources(android_console_test PRIVATE android/android_console_${voyemu_host_backend}.test.cpp)
-    target_sources(session_test PRIVATE qnx/shutdown_fixture_${voyemu_host_backend}.cpp)
+    target_sources(session_test PRIVATE qnx/shutdown_fixture_${voyemu_host_backend}.cpp runtime/session_${voyemu_host_backend}.test.cpp)
     target_sources(android_audio_test PRIVATE android/android_audio_${voyemu_host_backend}.test.cpp)
     target_sources(qnx_process_ram_test PRIVATE qnx/qnx_process_ram_${voyemu_host_backend}.test.cpp)
     # Adapts the shipped qnx-runtime.sh for both A11 profiles: utility counts and the ssplash slot.

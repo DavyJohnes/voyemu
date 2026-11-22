@@ -1,16 +1,10 @@
-#ifdef _WIN32
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <winsock2.h>
-#endif
+#include "session.hpp"
 #include "android_adb_route.hpp"
 #include "nxp_presentation.hpp"
 #include "os/fs.hpp"
-#include "os/private_state_security.hpp"
+#include "os/held_file.hpp"
+#include "os/platform.hpp"
+#include "os/socket.hpp"
 #include "passion_display_cache.hpp"
 #include "passion_presentation.hpp"
 #include "passion_wheel.hpp"
@@ -20,16 +14,16 @@
 #include "qnx_mcu_projection.hpp"
 #include "qnx_persistent_storage.hpp"
 #include "qnx_shutdown_monitor.hpp"
-#include "session.hpp"
 #include "session_internal.hpp"
+#include "session_test_host.hpp"
 #include "shutdown_fixture.hpp"
 #include "ui_observer.hpp"
 #include <algorithm>
 #include <array>
 #include <cassert>
 #include <condition_variable>
-#include <csignal>
 #include <cstring>
+#include <exception>
 #include <fstream>
 #include <functional>
 #include <future>
@@ -38,19 +32,6 @@
 #include <sstream>
 #include <thread>
 #include <tuple>
-#ifndef _WIN32
-#include <fcntl.h>
-#include <sys/mman.h>
-#include <sys/socket.h>
-#include <sys/stat.h>
-#include <sys/un.h>
-#include <unistd.h>
-#endif
-#ifdef _WIN32
-#define NOMINMAX
-#include <windows.h>
-#include <exception>
-#endif
 using namespace voyemu;
 // Bound of a wait for an event that a passing run sees within milliseconds; loaded hosts get time.
 constexpr auto event_wait = std::chrono::seconds(30);
@@ -79,190 +60,47 @@ static std::string rejection(const std::function<void()> &action) {
     return {};
 }
 
-#ifdef _WIN32
-static unsigned reserve_loopback_port() {
-    WSADATA data{};
+// Writes or reads exactly bytes at offset of an existing file.
+static void write_at(const std::filesystem::path &path, std::uint64_t offset, const void *data,
+                     std::size_t bytes) {
+    os::PositionalFile file(path, true);
 
-    assert(WSAStartup(MAKEWORD(2, 2), &data) == 0);
-    const SOCKET fd = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    assert(fd != INVALID_SOCKET);
+    assert(file.open() && file.write(offset, static_cast<const char *>(data), bytes));
+}
+
+static void read_at(const std::filesystem::path &path, std::uint64_t offset, void *data,
+                    std::size_t bytes) {
+    const os::PositionalFile file(path, false);
+
+    assert(file.open() && file.read(offset, static_cast<char *>(data), bytes));
+}
+
+// Creates a new private file of bytes, sparse where the filesystem allows.
+static void create_private_extent(const std::filesystem::path &path, std::uint64_t bytes) {
+    assert(os::create_private_file(path));
+    os::resize_file(path, bytes);
+}
+
+static unsigned reserve_loopback_port() {
+    const os::SocketLibrary library;
+
+    assert(!library.error());
+    const auto fd = os::open_stream_socket(AF_INET);
+    assert(fd != os::no_socket);
     sockaddr_in address{};
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
     address.sin_port = 0;
-    assert(::bind(fd, reinterpret_cast<sockaddr *>(&address), sizeof address) == 0);
-    int extent = sizeof address;
-    assert(getsockname(fd, reinterpret_cast<sockaddr *>(&address), &extent) == 0);
+    assert(os::bind_socket(fd, reinterpret_cast<sockaddr *>(&address), sizeof address));
+    os::SocketLength extent = sizeof address;
+    assert(os::socket_name(fd, reinterpret_cast<sockaddr *>(&address), &extent));
     const unsigned port = ntohs(address.sin_port);
-    ::closesocket(fd);
-    WSACleanup();
+    os::close_socket(fd);
     assert(port >= 1024 && port <= 65535);
 
     return port;
 }
 
-static int persistent_windows_qmp_fixture(const char *log_path) {
-    WSADATA startup{};
-
-    assert(WSAStartup(MAKEWORD(2, 2), &startup) == 0);
-    const SOCKET listener = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    assert(listener != INVALID_SOCKET);
-    sockaddr_in address{};
-    address.sin_family = AF_INET;
-    address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-    assert(::bind(listener, reinterpret_cast<sockaddr *>(&address), sizeof address) == 0);
-    int extent = sizeof address;
-    assert(getsockname(listener, reinterpret_cast<sockaddr *>(&address), &extent) == 0 &&
-           ::listen(listener, 4) == 0);
-    {
-        std::ofstream ready(std::string(log_path) + ".ready");
-        ready << ntohs(address.sin_port);
-    }
-    bool running = true;
-
-    for (;;) {
-        const SOCKET fd = ::accept(listener, nullptr, nullptr);
-        assert(fd != INVALID_SOCKET);
-        auto emit = [&](const Json &value) {
-            const auto text = value.dump() + "\n";
-
-            return ::send(fd, text.data(), static_cast<int>(text.size()), 0) ==
-                   static_cast<int>(text.size());
-        };
-
-        if (!emit({{"QMP", Json::object()}})) {
-            closesocket(fd);
-            continue;
-        }
-
-        std::string line;
-        char byte;
-
-        while (::recv(fd, &byte, 1, 0) == 1) {
-            if (byte != '\n') {
-                line += byte;
-                continue;
-            }
-
-            const auto request = Json::parse(line);
-            line.clear();
-            const auto command = request.at("execute").get<std::string>();
-            {
-                std::ofstream log(log_path, std::ios::app);
-                log << command << '\n';
-            }
-            Json result = Json::object();
-
-            if (command == "stop") {
-                running = false;
-            } else if (command == "cont") {
-                running = true;
-            } else if (command == "query-status") {
-                result = {{"running", std::filesystem::exists(std::string(log_path) + ".badstate")
-                                              ? !running
-                                              : running}};
-            } else {
-                assert(command == "qmp_capabilities");
-            }
-
-            if (command == "stop" || command == "cont") {
-                if (!emit({{"event", "STOP"}})) {
-                    break;
-                }
-            }
-
-            Json reply{{"return", result}};
-
-            if (request.contains("id")) {
-                reply["id"] = request.at("id");
-            }
-
-            if (!emit(reply)) {
-                break;
-            }
-        }
-
-        closesocket(fd);
-    }
-}
-#endif
-#ifndef _WIN32
-static int persistent_qmp_fixture(const char *socket_path, const char *log_path) {
-    std::signal(SIGPIPE, SIG_IGN);
-    ::umask(0022);
-    const int listener = ::socket(AF_UNIX, SOCK_STREAM, 0);
-    assert(listener >= 0);
-    sockaddr_un address{};
-    address.sun_family = AF_UNIX;
-    assert(std::strlen(socket_path) < sizeof address.sun_path);
-    std::strcpy(address.sun_path, socket_path);
-    assert(::bind(listener, reinterpret_cast<sockaddr *>(&address), sizeof address) == 0);
-    struct stat mode{};
-    assert(::lstat(socket_path, &mode) == 0 && (mode.st_mode & 0777) == 0755);
-    assert(::listen(listener, 4) == 0);
-    {
-        std::ofstream ready(std::string(log_path) + ".ready");
-        ready << "ready";
-    }
-    bool running = true;
-
-    for (;;) {
-        const int fd = ::accept(listener, nullptr, nullptr);
-        assert(fd >= 0);
-
-        if (std::string(log_path).ends_with("swap.log")) {
-            std::filesystem::rename(socket_path, std::string(socket_path) + ".retained");
-            std::ofstream replacement(socket_path);
-            replacement << "replacement";
-        }
-
-        const std::string greeting = "{\"QMP\":{}}\n";
-
-        if (::write(fd, greeting.data(), greeting.size()) !=
-            static_cast<ssize_t>(greeting.size())) {
-            ::close(fd);
-            continue;
-        }
-
-        std::string line;
-        char byte;
-
-        while (::read(fd, &byte, 1) == 1) {
-            if (byte != '\n') {
-                line += byte;
-                continue;
-            }
-
-            const auto request = Json::parse(line);
-            line.clear();
-            const auto command = request.at("execute").get<std::string>();
-            {
-                std::ofstream log(log_path, std::ios::app);
-                log << command << '\n';
-            }
-            Json result = Json::object();
-
-            if (command == "stop") {
-                running = false;
-            } else if (command == "cont") {
-                running = true;
-            } else if (command == "query-status") {
-                result = {{"running", running}};
-            } else {
-                assert(command == "qmp_capabilities");
-            }
-
-            const auto reply = Json{{"return", result}, {"id", request.at("id")}}.dump() + "\n";
-
-            if (::write(fd, reply.data(), reply.size()) != static_cast<ssize_t>(reply.size())) {
-                break;
-            }
-        }
-
-        ::close(fd);
-    }
-}
-#endif
 namespace voyemu {
 struct SessionPersistenceFixture {
     static void screen_stream_handoff(const std::filesystem::path &executable) {
@@ -499,7 +337,6 @@ struct SessionPersistenceFixture {
         std::filesystem::remove_all(root);
     }
 
-#ifdef _WIN32
     static void wheel_pair_flush_run() {
         const auto root = std::filesystem::canonical(std::filesystem::temp_directory_path()) /
                           ("voyemu-wheel-flush-" + random_token());
@@ -559,7 +396,9 @@ struct SessionPersistenceFixture {
         std::filesystem::remove_all(root);
     }
 
-    static void run(const std::filesystem::path &executable) {
+    // Windows pauses the persistence of the owned QEMU over QMP on loopback TCP and rejects a
+    // foreign QMP peer and a wrong run state.
+    static void qmp_pause_run(const std::filesystem::path &executable) {
         const auto root = std::filesystem::current_path() / ".local/build" /
                           ("qnx-win-pause-" + random_token());
         const auto id = random_token();
@@ -624,8 +463,7 @@ struct SessionPersistenceFixture {
         }
         std::filesystem::remove_all(root);
     }
-#endif
-#ifndef _WIN32
+
     static void uart_ready_run() {
         for (const bool passion : {true, false}) {
             const auto root = std::filesystem::current_path() / ".local/build" /
@@ -642,18 +480,17 @@ struct SessionPersistenceFixture {
                 std::ofstream script(worker);
                 script << "#!/bin/sh\nprintf '%s\\n' \"$@\" > graphics-argv.tmp\nmv graphics-argv.tmp graphics-argv\nexec /bin/sleep 30\n";
             }
-            assert(::chmod(worker.c_str(), 0700) == 0);
+            std::filesystem::permissions(worker, std::filesystem::perms::owner_all);
             constexpr std::uint64_t page = 0x40003000;
             const std::array<std::uint32_t, 2> identity{0x58464751, 3};
-            const int fd = ::open(ram.c_str(), O_RDWR);
-            assert(fd >= 0 && ::pwrite(fd, identity.data(), sizeof(identity), page - 0x40000000) ==
-                                      sizeof(identity));
-            ::close(fd);
+            write_at(ram, page - 0x40000000, identity.data(), sizeof(identity));
             {
                 std::ofstream serial(root / "qnx-serial.log");
                 serial << "QG3 READY paddr=0x40003000 length=4096\n";
             }
-            assert(::chmod((root / "qnx-serial.log").c_str(), 0600) == 0);
+            std::filesystem::permissions(root / "qnx-serial.log",
+                                         std::filesystem::perms::owner_read |
+                                                 std::filesystem::perms::owner_write);
             {
                 Session session(root, random_token());
                 session.cluster_finalized_ = true;
@@ -789,13 +626,9 @@ struct SessionPersistenceFixture {
 
                 for (std::uint64_t incarnation = 1; incarnation <= 9; ++incarnation) {
                     const std::array<std::uint64_t, 2> identity_owner{123, incarnation};
-                    const int update = ::open(ram.c_str(), O_RDWR);
-                    assert(update >= 0 &&
-                           ::pwrite(update, identity.data(), sizeof(identity),
-                                    fresh_page - 0x40000000) == sizeof(identity) &&
-                           ::pwrite(update, identity_owner.data(), sizeof(identity_owner),
-                                    fresh_page - 0x40000000 + 240) == sizeof(identity_owner));
-                    ::close(update);
+                    write_at(ram, fresh_page - 0x40000000, identity.data(), sizeof(identity));
+                    write_at(ram, fresh_page - 0x40000000 + 240, identity_owner.data(),
+                             sizeof(identity_owner));
                     {
                         std::ofstream serial(root / "qnx-serial.log", std::ios::app);
                         serial << "QG3 READY paddr=0x" << std::hex << fresh_page
@@ -834,11 +667,7 @@ struct SessionPersistenceFixture {
                     assert(session.qnx_.alive() &&
                            session.producers_ == std::vector<std::uint64_t>{page + 4096});
                     const std::array<std::byte, 256> zero{};
-                    const int clear = ::open(ram.c_str(), O_RDWR);
-                    assert(clear >= 0 &&
-                           ::pwrite(clear, zero.data(), zero.size(), fresh_page - 0x40000000) ==
-                                   static_cast<ssize_t>(zero.size()));
-                    ::close(clear);
+                    write_at(ram, fresh_page - 0x40000000, zero.data(), zero.size());
                     session.poll_qnx();
                     assert(session.qnx_.alive() &&
                            session.producers_ ==
@@ -857,13 +686,8 @@ struct SessionPersistenceFixture {
                 for (unsigned i = 0; i < 7; ++i) {
                     const auto address = page + 0x10000 + static_cast<std::uint64_t>(i) * 4096;
                     const std::array<std::uint64_t, 2> retained{500 + i, 100 + i};
-                    const int update = ::open(ram.c_str(), O_RDWR);
-                    assert(update >= 0 &&
-                           ::pwrite(update, identity.data(), sizeof(identity),
-                                    address - 0x40000000) == sizeof(identity) &&
-                           ::pwrite(update, retained.data(), sizeof(retained),
-                                    address - 0x40000000 + 240) == sizeof(retained));
-                    ::close(update);
+                    write_at(ram, address - 0x40000000, identity.data(), sizeof(identity));
+                    write_at(ram, address - 0x40000000 + 240, retained.data(), sizeof(retained));
                     auto child = survivor;
                     child.output = root / ("retained-" + std::to_string(i) + ".log");
                     session.graphics_.push_back(ChildProcess::launch(child));
@@ -921,20 +745,14 @@ struct SessionPersistenceFixture {
                 // Even an exact receipt cannot reap a page now belonging to another incarnation.
                 auto changed_identity = std::array<std::uint64_t, 2>{500, 999};
                 const auto retained_address = session.producers_[1];
-                int change = ::open(ram.c_str(), O_RDWR);
-                assert(change >= 0 &&
-                       ::pwrite(change, changed_identity.data(), sizeof(changed_identity),
-                                retained_address - 0x40000000 + 240) == sizeof(changed_identity));
-                ::close(change);
+                write_at(ram, retained_address - 0x40000000 + 240, changed_identity.data(),
+                         sizeof(changed_identity));
                 write_private_json(proof_path, proof);
                 session.poll_qnx();
                 assert(session.graphics_.size() == 8 && session.graphics_[1].alive());
                 changed_identity[1] = 100;
-                change = ::open(ram.c_str(), O_RDWR);
-                assert(change >= 0 &&
-                       ::pwrite(change, changed_identity.data(), sizeof(changed_identity),
-                                retained_address - 0x40000000 + 240) == sizeof(changed_identity));
-                ::close(change);
+                write_at(ram, retained_address - 0x40000000 + 240, changed_identity.data(),
+                         sizeof(changed_identity));
 
                 for (std::size_t i = 1; i <= 3; ++i) {
                     write_private_json(root / ("owner-death-" +
@@ -950,24 +768,15 @@ struct SessionPersistenceFixture {
                 write_private_json(proof_path, proof);
                 session.poll_qnx();
                 assert(session.graphics_.size() == 5); // Replayed retired tuple is inert.
-                const int retained = ::open(ram.c_str(), O_RDONLY);
                 std::array<std::uint32_t, 2> unchanged{};
-                assert(retained >= 0 &&
-                       ::pread(retained, unchanged.data(), sizeof(unchanged),
-                               retained_address - 0x40000000) == sizeof(unchanged) &&
-                       unchanged == identity);
-                ::close(retained);
+                read_at(ram, retained_address - 0x40000000, unchanged.data(), sizeof(unchanged));
+                assert(unchanged == identity);
 
                 for (unsigned i = 0; i < 3; ++i) {
                     const auto address = page + 0x20000 + static_cast<std::uint64_t>(i) * 4096;
                     const std::array<std::uint64_t, 2> next{900 + i, 300 + i};
-                    const int update = ::open(ram.c_str(), O_RDWR);
-                    assert(update >= 0 &&
-                           ::pwrite(update, identity.data(), sizeof(identity),
-                                    address - 0x40000000) == sizeof(identity) &&
-                           ::pwrite(update, next.data(), sizeof(next),
-                                    address - 0x40000000 + 240) == sizeof(next));
-                    ::close(update);
+                    write_at(ram, address - 0x40000000, identity.data(), sizeof(identity));
+                    write_at(ram, address - 0x40000000 + 240, next.data(), sizeof(next));
                     std::ofstream serial(root / "qnx-serial.log", std::ios::app);
                     serial << "QG3 READY paddr=0x" << std::hex << address
                            << " length=4096 pid=" << std::dec << 900 + i << " incarnation=0x"
@@ -1027,25 +836,21 @@ struct SessionPersistenceFixture {
         for (const auto &entry :
              {std::pair{system, 1025ULL << 20}, std::pair{userdata, 32ULL << 20},
               std::pair{ram, 0x200000000ULL}}) {
-            const int fd = ::open(entry.first.c_str(), O_CREAT | O_EXCL | O_RDWR, 0600);
-            assert(fd >= 0 && ::ftruncate(fd, entry.second) == 0);
-            ::close(fd);
+            create_private_extent(entry.first, entry.second);
         }
 
-        const int fd = ::open(ram.c_str(), O_RDWR);
-        assert(fd >= 0);
-        auto *m = static_cast<unsigned char *>(
-                ::mmap(nullptr, 8192, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0));
-        assert(m != MAP_FAILED);
-        auto *w = reinterpret_cast<std::uint32_t *>(m + 4096);
+        os::HeldFile mapped;
+        assert(mapped.open(ram, true) == os::HeldFile::Opening::opened &&
+               mapped.map(0, 8192) == os::HeldFile::Mapping::mapped);
+        auto *w = reinterpret_cast<std::uint32_t *>(static_cast<unsigned char *>(mapped.view()) +
+                                                    4096);
         w[0] = 0x54454e51;
         w[1] = 1;
         std::array<std::uint32_t, 8> ring{0xbeefeeee, 16352};
         const std::string marker = "QNET READY pid=42 paddr=0x40001000 length=4096 version=1\n";
         ring[2] = marker.size();
-        assert(::pwrite(fd, ring.data(), 32, 0x10010000) == 32);
-        assert(::pwrite(fd, marker.data(), marker.size(), 0x10010020) ==
-               static_cast<ssize_t>(marker.size()));
+        write_at(ram, 0x10010000, ring.data(), 32);
+        write_at(ram, 0x10010020, marker.data(), marker.size());
         auto wait = [&](const std::function<bool()> &condition) {
             const auto until = std::chrono::steady_clock::now() + event_wait;
 
@@ -1093,7 +898,8 @@ struct SessionPersistenceFixture {
             session.cluster_finalized_ = true;
             // Reject an unsafe private parent before connecting, without weakening global IPC.
             session.cluster_spec_["qmp"] = (directory / "qmp.sock").string();
-            assert(::chmod(directory.c_str(), 0770) == 0);
+            std::filesystem::permissions(directory, std::filesystem::perms::owner_all |
+                                                            std::filesystem::perms::group_all);
             bool unsafe = false;
             try {
                 session.set_qnx_persistence_paused(true);
@@ -1103,7 +909,7 @@ struct SessionPersistenceFixture {
             }
 
             assert(unsafe && session.qnx_.alive() && !std::filesystem::exists(log));
-            assert(::chmod(directory.c_str(), 0700) == 0);
+            std::filesystem::permissions(directory, std::filesystem::perms::owner_all);
             session.cluster_spec_["qmp"] = socket.string();
             // The connected owner replaces its pathname before greeting: reject the changed inode
             // before commands.
@@ -1185,23 +991,20 @@ struct SessionPersistenceFixture {
             std::filesystem::rename(root / "retained-userdata", userdata);
             // Exercise an actual fsync syscall failure after quiescence/pause, then restore the
             // retained capability.
-            const int disk_fd = static_cast<int>(
-                              session.qnx_persistent_storage_->disks_[0].native_handle()),
-                      saved = ::dup(disk_fd), null_fd = ::open("/dev/null", O_RDWR);
-            assert(saved >= 0 && null_fd >= 0 && ::dup2(null_fd, disk_fd) == disk_fd);
-            ::close(null_fd);
-            auto io_failed = acknowledge(4, 0);
-            rejects([&] {
-                session.stop();
-            });
-            io_failed.join();
-            assert(session.qnx_.alive() && session.qnx_persistence_paused_ && !session.stopped() &&
-                   std::filesystem::exists(system) && std::filesystem::exists(userdata));
-            assert(session.deliveries_["qnx"]["persistence"]["error"].get<std::string>().find(
-                           "durable disk flush failed") != std::string::npos);
-            assert(::dup2(saved, disk_fd) == disk_fd);
-            ::close(saved);
-            assert(::fcntl(disk_fd, F_SETFD, FD_CLOEXEC) == 0);
+            with_failing_disk_flushes(
+                    session.qnx_persistent_storage_->disks_[0].native_handle(), [&] {
+                        auto io_failed = acknowledge(4, 0);
+                        rejects([&] {
+                            session.stop();
+                        });
+                        io_failed.join();
+                        assert(session.qnx_.alive() && session.qnx_persistence_paused_ &&
+                               !session.stopped() && std::filesystem::exists(system) &&
+                               std::filesystem::exists(userdata));
+                        assert(session.deliveries_["qnx"]["persistence"]["error"]
+                                       .get<std::string>()
+                                       .find("durable disk flush failed") != std::string::npos);
+                    });
             auto retry = acknowledge(5, 0);
             session.stop();
             retry.join();
@@ -1253,18 +1056,13 @@ struct SessionPersistenceFixture {
             assert(terminal.cluster_requested_ && std::filesystem::exists(ram));
             std::filesystem::remove(userdata);
             std::filesystem::rename(root / "retained-userdata", userdata);
-            const int disk_fd = static_cast<int>(
-                              terminal.qnx_persistent_storage_->disks_[0].native_handle()),
-                      saved = ::dup(disk_fd), null_fd = ::open("/dev/null", O_RDWR);
-            assert(saved >= 0 && null_fd >= 0 && ::dup2(null_fd, disk_fd) == disk_fd);
-            ::close(null_fd);
-            rejects([&] {
-                terminal.close_cluster(false, "restart");
-            });
-            assert(terminal.cluster_requested_ && std::filesystem::exists(ram));
-            assert(::dup2(saved, disk_fd) == disk_fd);
-            ::close(saved);
-            assert(::fcntl(disk_fd, F_SETFD, FD_CLOEXEC) == 0);
+            with_failing_disk_flushes(
+                    terminal.qnx_persistent_storage_->disks_[0].native_handle(), [&] {
+                        rejects([&] {
+                            terminal.close_cluster(false, "restart");
+                        });
+                        assert(terminal.cluster_requested_ && std::filesystem::exists(ram));
+                    });
             terminal.close_cluster(false, "restart");
             assert(!terminal.cluster_requested_ && !terminal.qnx_.alive() &&
                    terminal.cluster_finalized_ && !std::filesystem::exists(ram));
@@ -1331,9 +1129,7 @@ struct SessionPersistenceFixture {
                                             abnormal_id;
             ensure_private_directory(abnormal_directory);
             const auto abnormal_ram = abnormal_directory / "qnx-ram.bin";
-            const int restored_ram = ::open(abnormal_ram.c_str(), O_CREAT | O_EXCL | O_RDWR, 0600);
-            assert(restored_ram >= 0 && ::ftruncate(restored_ram, 0x200000000ULL) == 0);
-            ::close(restored_ram);
+            create_private_extent(abnormal_ram, 0x200000000ULL);
             Session abnormal(abnormal_directory, abnormal_id);
             Json spec{{"persistent_storage",
                        {{"schema", 1},
@@ -1365,13 +1161,12 @@ struct SessionPersistenceFixture {
             abnormal.cluster_requested_ = false;
             abnormal.stop();
         }
-        ::munmap(m, 8192);
-        ::close(fd);
+        mapped.unmap();
+        mapped.close();
         std::filesystem::remove(socket);
         std::filesystem::remove_all(root);
     }
 
-#ifndef _WIN32
     static void spontaneous_android_exit_closes_frontend() {
         const auto root = std::filesystem::canonical(std::filesystem::temp_directory_path()) /
                           ("session-spontaneous-exit-" + random_token());
@@ -1496,9 +1291,7 @@ struct SessionPersistenceFixture {
 
         for (const auto &entry :
              {std::pair{system, 1025ULL << 20}, std::pair{userdata, 32ULL << 20}}) {
-            const int fd = ::open(entry.first.c_str(), O_CREAT | O_EXCL | O_RDWR, 0600);
-            assert(fd >= 0 && ::ftruncate(fd, entry.second) == 0);
-            ::close(fd);
+            create_private_extent(entry.first, entry.second);
         }
 
         const auto spec_for = [&] {
@@ -1570,12 +1363,9 @@ struct SessionPersistenceFixture {
             session.interguest_link_ = std::make_unique<InterguestLink>();
             session.interguest_link_->start(directory, id);
             {
-                const int fd = ::open(ram.c_str(), O_CREAT | O_EXCL | O_RDWR, 0600);
-                assert(fd >= 0 && ::ftruncate(fd, 0x200000000ULL) == 0);
+                create_private_extent(ram, 0x200000000ULL);
                 const std::array<std::uint32_t, 2> bad{0xbeefeeee, 1};
-                assert(::pwrite(fd, bad.data(), sizeof bad, 0x10010000) ==
-                       static_cast<ssize_t>(sizeof bad));
-                ::close(fd);
+                write_at(ram, 0x10010000, bad.data(), sizeof bad);
             }
             session.interguest_link_->bind_ram(ram);
             wait([&] {
@@ -1634,9 +1424,7 @@ struct SessionPersistenceFixture {
 
         for (const auto &entry :
              {std::pair{system, 1025ULL << 20}, std::pair{userdata, 32ULL << 20}}) {
-            const int fd = ::open(entry.first.c_str(), O_CREAT | O_EXCL | O_RDWR, 0600);
-            assert(fd >= 0 && ::ftruncate(fd, entry.second) == 0);
-            ::close(fd);
+            create_private_extent(entry.first, entry.second);
         }
 
         ProcessSpec sleeper;
@@ -1644,19 +1432,12 @@ struct SessionPersistenceFixture {
         sleeper.arguments = {"60"};
         sleeper.output = root / "foreign.log";
         auto foreign = ChildProcess::launch(sleeper);
-        const auto gone = [](std::int64_t pid) {
-            return ::kill(static_cast<pid_t>(pid), 0) != 0 && errno == ESRCH;
-        };
         const auto scenario = [&](bool acceptance, bool stop_first) {
             const auto id = random_token();
             const auto directory = root / ".local/machines/test-profile/sessions" / id;
             ensure_private_directory(directory);
             const auto ram = directory / "qnx-ram.bin";
-            {
-                const int fd = ::open(ram.c_str(), O_CREAT | O_EXCL | O_RDWR, 0600);
-                assert(fd >= 0 && ::ftruncate(fd, 0x200000000ULL) == 0);
-                ::close(fd);
-            }
+            create_private_extent(ram, 0x200000000ULL);
             Session session(directory, id);
             Json spec{
                     {"persistent_storage",
@@ -1730,7 +1511,7 @@ struct SessionPersistenceFixture {
                    !std::filesystem::exists(ram));
 
             for (const auto pid : children) {
-                assert(gone(pid));
+                assert(process_gone(pid));
             }
 
             const auto qnx = session.deliveries_["qnx"];
@@ -1750,17 +1531,13 @@ struct SessionPersistenceFixture {
         std::filesystem::remove_all(root);
         std::cout << "QNX source acceptance discard ends owned QEMU and graphics, removes RAM\n";
     }
-#endif
-#endif
-#if defined(__APPLE__) || defined(_WIN32)
+
     static void reboot_run(const std::filesystem::path &executable) {
-#ifdef __APPLE__
-        const auto root = std::filesystem::canonical(std::filesystem::path("/tmp")) /
+        // The long macOS TMPDIR leaves no room for the Unix socket paths of the fixture.
+        const auto temp = os::platform_name == "macOS" ? std::filesystem::path("/tmp")
+                                                       : std::filesystem::temp_directory_path();
+        const auto root = std::filesystem::canonical(temp) /
                           ("qnx-auto-" + random_token().substr(0, 12));
-#else
-        const auto root = std::filesystem::canonical(std::filesystem::temp_directory_path()) /
-                          ("qnx-auto-" + random_token().substr(0, 12));
-#endif
         ensure_private_directory(root);
         const auto executable_sha = sha256_file(executable);
         const auto read = [](const std::filesystem::path &path) {
@@ -1769,49 +1546,24 @@ struct SessionPersistenceFixture {
             return std::string(std::istreambuf_iterator<char>(in), {});
         };
         auto make_disk = [&](const std::filesystem::path &path, std::uint64_t bytes) {
-#ifdef _WIN32
-            detail::PrivateStateSecurity security;
-            const HANDLE file = CreateFileW(path.c_str(), GENERIC_WRITE, 0, &security.attributes,
-                                            CREATE_NEW, FILE_ATTRIBUTE_NORMAL, nullptr);
-            assert(file != INVALID_HANDLE_VALUE);
-            LARGE_INTEGER extent{};
-            extent.QuadPart = static_cast<LONGLONG>(bytes);
-            assert(SetFilePointerEx(file, extent, nullptr, FILE_BEGIN) && SetEndOfFile(file));
-            CloseHandle(file);
-#else
-            const int fd = ::open(path.c_str(), O_CREAT | O_EXCL | O_RDWR, 0600);
-            assert(fd >= 0 && ::ftruncate(fd, bytes) == 0);
-            ::close(fd);
-#endif
+            assert(os::create_private_file(path));
+            os::resize_file(path, bytes);
         };
         auto disk_identity = [&](const std::filesystem::path &path) {
-#ifdef _WIN32
-            const HANDLE file = CreateFileW(path.c_str(), FILE_READ_ATTRIBUTES,
-                                            FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr,
-                                            OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
-            assert(file != INVALID_HANDLE_VALUE);
-            BY_HANDLE_FILE_INFORMATION info{};
-            assert(GetFileInformationByHandle(file, &info));
-            CloseHandle(file);
+            const auto object = os::PositionalFile(path, false).object();
+            assert(object);
 
-            return std::pair<std::uint64_t, std::uint64_t>{
-                    info.dwVolumeSerialNumber,
-                    (static_cast<std::uint64_t>(info.nFileIndexHigh) << 32) | info.nFileIndexLow};
-#else
-            struct stat status{};
-            assert(::lstat(path.c_str(), &status) == 0);
-
-            return std::pair<std::uint64_t, std::uint64_t>{status.st_dev, status.st_ino};
-#endif
+            return std::pair<std::uint64_t, std::uint64_t>{object->volume, object->index};
         };
         std::vector<std::string> names{
                 "positive", "repeat",       "guest-shutdown", "host-signal",
                 "none",     "exit7",        "disk-failure",   "cleanup-failure",
                 "expired",  "explicit-off", "explicit-stop"};
-#ifndef _WIN32
-        names.insert(names.begin() + 7,
-                     "fsync-failure"); // POSIX fd replacement only; no Windows analogue here.
-#endif
+
+        // POSIX fd replacement only; no Windows analogue here.
+        if (!os::host_windows) {
+            names.insert(names.begin() + 7, "fsync-failure");
+        }
 
         for (const auto &name : names) {
             const std::string test = name;
@@ -1839,18 +1591,24 @@ struct SessionPersistenceFixture {
 
             {
                 Session session(directory, id);
-#ifdef _WIN32
-                const unsigned primary_port = reserve_loopback_port();
-                const std::string primary_argument = std::to_string(primary_port);
-                const std::string qmp_argument = "tcp:127.0.0.1:" + std::to_string(primary_port) +
-                                                 ",server=on,wait=off";
-                const Json qmp_endpoint = {{"host", "127.0.0.1"}, {"port", primary_port}};
-#else
-                const auto primary = native_socket_root() / (id + "-qmp.sock");
-                const std::string primary_argument = primary.string();
-                const std::string qmp_argument = "unix:" + primary.string() + ",server=on,wait=off";
-                const Json qmp_endpoint = primary.string();
-#endif
+                std::filesystem::path primary;
+                std::string primary_argument, qmp_argument;
+                Json qmp_endpoint;
+
+                // Windows serves QMP on loopback TCP, POSIX on a Unix socket.
+                if (os::host_windows) {
+                    const unsigned primary_port = reserve_loopback_port();
+                    primary_argument = std::to_string(primary_port);
+                    qmp_argument = "tcp:127.0.0.1:" + std::to_string(primary_port) +
+                                   ",server=on,wait=off";
+                    qmp_endpoint = {{"host", "127.0.0.1"}, {"port", primary_port}};
+                } else {
+                    primary = native_socket_root() / (id + "-qmp.sock");
+                    primary_argument = primary.string();
+                    qmp_argument = "unix:" + primary.string() + ",server=on,wait=off";
+                    qmp_endpoint = primary.string();
+                }
+
                 auto args = std::vector<std::string>{"--qnx-shutdown-fixture",
                                                      scenario,
                                                      state.string(),
@@ -1862,15 +1620,9 @@ struct SessionPersistenceFixture {
                                                      "-S",
                                                      "-qmp",
                                                      qmp_argument};
-#ifdef _WIN32
-                const auto mapping = qnx_persistent_ram_launch(QnxEngine::tcg_file, system.string(),
-                                                               userdata.string(), true)
-                                             .options;
-#else
                 const auto mapping = qnx_persistent_ram_launch(host_qnx_engine, system.string(),
-                                                               userdata.string())
+                                                               userdata.string(), os::host_windows)
                                              .options;
-#endif
                 args.insert(args.end(), mapping.begin(), mapping.end());
                 Json spec{{"schema", 1},
                           {"pins", Json::array({{{"path", executable.string()},
@@ -1884,10 +1636,14 @@ struct SessionPersistenceFixture {
                             {"userdata", userdata.string()}}},
                           {"interguest_network", qnx_interguest_contract()},
                           {"qemu", {{"executable", executable.string()}, {"args", args}}}};
-#ifdef _WIN32
-                spec["qnx_file_backend"] = {
-                        {"schema", 1}, {"version", "11.1.2"}, {"engine_sha256", executable_sha}};
-#endif
+
+                // The TCG engine of Windows maps RAM through its verified file backend.
+                if (os::host_windows) {
+                    spec["qnx_file_backend"] = {{"schema", 1},
+                                                {"version", "11.1.2"},
+                                                {"engine_sha256", executable_sha}};
+                }
+
                 session.attach_cluster(spec, 30);
                 const auto original_deadline = session.qnx_deadline_;
                 const auto until = [&](const auto &predicate) {
@@ -1998,24 +1754,19 @@ struct SessionPersistenceFixture {
                         std::filesystem::rename(project / "retained-userdata", userdata);
                     }
 
-#ifndef _WIN32
                     if (test == "fsync-failure") {
-                        const int disk_fd = static_cast<int>(
-                                          session.qnx_persistent_storage_->disks_[0]
-                                                  .native_handle()),
-                                  saved = ::dup(disk_fd), null_fd = ::open("/dev/null", O_RDWR);
-                        assert(saved >= 0 && null_fd >= 0 && ::dup2(null_fd, disk_fd) == disk_fd);
-                        ::close(null_fd);
-                        rejects([&] {
-                            session.poll_qnx();
-                        });
-                        assert(session.cluster_generation_ == 1 && session.cluster_requested_ &&
-                               std::filesystem::exists(ram) && read(state / "boots") == "1");
-                        assert(::dup2(saved, disk_fd) == disk_fd);
-                        ::close(saved);
-                        assert(::fcntl(disk_fd, F_SETFD, FD_CLOEXEC) == 0);
+                        with_failing_disk_flushes(
+                                session.qnx_persistent_storage_->disks_[0].native_handle(), [&] {
+                                    rejects([&] {
+                                        session.poll_qnx();
+                                    });
+                                    assert(session.cluster_generation_ == 1 &&
+                                           session.cluster_requested_ &&
+                                           std::filesystem::exists(ram) &&
+                                           read(state / "boots") == "1");
+                                });
                     }
-#endif
+
                     until([&] {
                         return session.cluster_generation_ == 2 && session.qmp_cont_ &&
                                session.interguest_link_->status().utc_complete;
@@ -2061,28 +1812,29 @@ struct SessionPersistenceFixture {
                     session.stop();
                 }
 
-#ifdef _WIN32
-                assert(!session.qnx_shutdown_monitor_); // TCP events listener torn down with the
-                                                        // generation.
-#else
-                assert(!std::filesystem::exists(native_socket_root() / (id + "-evt.sock")) &&
-                       !std::filesystem::exists(primary));
-#endif
+                // Windows tears the TCP events listener down with the generation, POSIX removes
+                // the Unix sockets.
+                if (os::host_windows) {
+                    assert(!session.qnx_shutdown_monitor_);
+                } else {
+                    assert(!std::filesystem::exists(native_socket_root() / (id + "-evt.sock")) &&
+                           !std::filesystem::exists(primary));
+                }
             }
-#ifdef _WIN32
-            std::filesystem::remove_all(
-                    project); // Bound the per-scenario disk footprint on Windows.
-#endif
+
+            // Bound the per-scenario disk footprint on Windows.
+            if (os::host_windows) {
+                std::filesystem::remove_all(project);
+            }
         }
 
         std::filesystem::remove_all(root);
         std::cout
                 << "automatic QNX guest-reset generations, durable data/fresh RAM, network UTC, shutdown causes, explicit off/stop and persistence failure retention passed\n";
     }
-#endif
 };
 } // namespace voyemu
-#ifndef _WIN32
+
 static void qnx_ready_survives_blocked_android() {
     const auto root = std::filesystem::current_path() / ".local/build" /
                       ("qnx-ready-" + random_token());
@@ -2096,10 +1848,7 @@ static void qnx_ready_survives_blocked_android() {
     std::filesystem::resize_file(ram, 0x10000);
     constexpr std::uint64_t ring = 0x40001000, page = 0x40003000;
     auto write = [&](std::uint64_t address, const void *data, std::size_t bytes) {
-        const auto fd = ::open(ram.c_str(), O_WRONLY);
-        assert(fd >= 0);
-        assert(::pwrite(fd, data, bytes, address - 0x40000000) == static_cast<ssize_t>(bytes));
-        ::close(fd);
+        write_at(ram, address - 0x40000000, data, bytes);
     };
     auto publish = [&](const std::string &text) {
         std::array<char, 4096> bytes{};
@@ -2126,10 +1875,7 @@ static void qnx_ready_survives_blocked_android() {
         publish(std::string(4096 - 33, 'x'));
         std::this_thread::sleep_for(std::chrono::milliseconds(5800));
         std::array<char, 4096> latest{};
-        const auto fd = ::open(ram.c_str(), O_RDONLY);
-        assert(fd >= 0);
-        assert(::pread(fd, latest.data(), latest.size(), 0x1000) == 4096);
-        ::close(fd);
+        read_at(ram, 0x1000, latest.data(), latest.size());
         assert(std::string_view(latest.data(), latest.size()).find("QG3 READY") ==
                std::string_view::npos); // Old polling loses it.
         assert(collector.addresses() == std::vector<std::uint64_t>{page});
@@ -2223,7 +1969,6 @@ static void qnx_ready_survives_blocked_android() {
     }
     std::filesystem::remove_all(root);
 }
-#endif
 
 static void observer_metadata_after_exchanged_shutdown() {
     // Test fixtures stay inside the project, including when ctest uses its build directory.
@@ -2287,63 +2032,6 @@ static void android_nonce_authority() {
     // SDK cold fallback is admitted even if restoration was requested.
     assert(android_nonce_matches("current", "current", "retained", true));
 }
-
-#ifdef _WIN32
-// Files created under an elevated Windows Server token are owned by Administrators; reproduce that
-// default owner whenever the token allows it. The previous default owner is returned for restoring,
-// or nothing when the token, such as under Wine, keeps its default owner.
-static std::vector<std::byte> elevated_default_owner() {
-    HANDLE token = nullptr;
-
-    if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY | TOKEN_ADJUST_DEFAULT, &token)) {
-        throw std::runtime_error("process token unavailable");
-    }
-
-    DWORD size = 0;
-    GetTokenInformation(token, TokenOwner, nullptr, 0, &size);
-    std::vector<std::byte> previous(size);
-    BYTE administrators[SECURITY_MAX_SID_SIZE]{};
-    DWORD administrators_size = sizeof administrators;
-    TOKEN_OWNER owner{administrators};
-    const bool loaded = GetTokenInformation(token, TokenOwner, previous.data(), size, &size) != 0 &&
-                        CreateWellKnownSid(WinBuiltinAdministratorsSid, nullptr, administrators,
-                                           &administrators_size) != 0;
-
-    const bool set = loaded && SetTokenInformation(token, TokenOwner, &owner, sizeof owner) != 0;
-    CloseHandle(token);
-
-    if (!loaded) {
-        throw std::runtime_error("default owner unavailable");
-    }
-
-    if (!set) {
-        previous.clear();
-    }
-
-    // Returned without a copy: the owner pointer of TOKEN_OWNER refers into this buffer.
-    return previous;
-}
-
-static void restore_default_owner(std::vector<std::byte> &previous) {
-    if (previous.empty()) {
-        return;
-    }
-
-    HANDLE token = nullptr;
-    const bool restored = OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_DEFAULT, &token) !=
-                                  0 &&
-                          SetTokenInformation(token, TokenOwner, previous.data(),
-                                              static_cast<DWORD>(previous.size())) != 0;
-
-    if (token) {
-        CloseHandle(token);
-    }
-
-    if (!restored) {
-        throw std::runtime_error("default owner not restored");
-    }
-}
-#endif
 
 static void cleanup_guards() {
     auto root = std::filesystem::canonical(std::filesystem::temp_directory_path()) /
@@ -2416,44 +2104,51 @@ static void cleanup_guards() {
         finalize_owned_qnx_session(size, size.filename().string(), size / "qnx-ram.bin", terminal);
     });
     assert(std::filesystem::file_size(size / "qnx-ram.bin") == 64);
-#ifndef _WIN32
-    auto linked = make(false);
-    std::filesystem::create_symlink(path, linked / "qnx-ram.bin");
-    rejects([&] {
-        finalize_owned_qnx_session(linked, linked.filename().string(), linked / "qnx-ram.bin",
-                                   terminal);
-    });
-    assert(std::filesystem::exists(path));
-    auto hard = make(false);
-    std::filesystem::create_hard_link(path, hard / "qnx-ram.bin");
-    rejects([&] {
-        finalize_owned_qnx_session(hard, hard.filename().string(), hard / "qnx-ram.bin", terminal);
-    });
-    assert(std::filesystem::exists(path));
-    std::filesystem::remove(hard / "qnx-ram.bin");
-#endif
-#ifdef _WIN32
-    // Under an elevated token a backing that only inherits the token default owner stays foreign,
-    // while the explicit user owner of the session backing passes.
-    auto previous_owner = elevated_default_owner();
-    auto defaulted = make(false);
-    { std::ofstream(defaulted / "qnx-ram.bin", std::ios::binary) << "defaulted"; }
-    os::resize_file(defaulted / "qnx-ram.bin", 8ULL << 30);
-    auto valid = make();
-    restore_default_owner(previous_owner);
 
-    if (previous_owner.empty()) {
-        std::cout << "SKIP elevated default owner: token keeps its default owner\n";
-    } else {
+    // The linked backings are POSIX fixtures: a symbolic link needs a privilege on Windows.
+    if (!os::host_windows) {
+        auto linked = make(false);
+        std::filesystem::create_symlink(path, linked / "qnx-ram.bin");
         rejects([&] {
-            finalize_owned_qnx_session(defaulted, defaulted.filename().string(),
-                                       defaulted / "qnx-ram.bin", terminal);
+            finalize_owned_qnx_session(linked, linked.filename().string(), linked / "qnx-ram.bin",
+                                       terminal);
         });
-        assert(std::filesystem::exists(defaulted / "qnx-ram.bin"));
+        assert(std::filesystem::exists(path));
+        auto hard = make(false);
+        std::filesystem::create_hard_link(path, hard / "qnx-ram.bin");
+        rejects([&] {
+            finalize_owned_qnx_session(hard, hard.filename().string(), hard / "qnx-ram.bin",
+                                       terminal);
+        });
+        assert(std::filesystem::exists(path));
+        std::filesystem::remove(hard / "qnx-ram.bin");
     }
-#else
-    auto valid = make();
-#endif
+
+    std::filesystem::path valid;
+
+    // Under an elevated Windows token a backing that only inherits the token default owner stays
+    // foreign, while the explicit user owner of the session backing passes.
+    if (os::host_windows) {
+        auto previous_owner = elevated_default_owner();
+        auto defaulted = make(false);
+        { std::ofstream(defaulted / "qnx-ram.bin", std::ios::binary) << "defaulted"; }
+        os::resize_file(defaulted / "qnx-ram.bin", 8ULL << 30);
+        valid = make();
+        restore_default_owner(previous_owner);
+
+        if (previous_owner.empty()) {
+            std::cout << "SKIP elevated default owner: token keeps its default owner\n";
+        } else {
+            rejects([&] {
+                finalize_owned_qnx_session(defaulted, defaulted.filename().string(),
+                                           defaulted / "qnx-ram.bin", terminal);
+            });
+            assert(std::filesystem::exists(defaulted / "qnx-ram.bin"));
+        }
+    } else {
+        valid = make();
+    }
+
     {
         std::ofstream(valid / "qnx-console.log") << "preserved";
         std::ofstream(valid / "OEM-input.bin") << "preserved";
@@ -2508,51 +2203,55 @@ static void cleanup_guards() {
     auto no_ram = finalize_owned_qnx_session(absent, absent.filename().string(),
                                              absent / "qnx-ram.bin", terminal);
     assert(no_ram["status"] == "ram_not_created" && std::filesystem::exists(handoff));
-#ifdef __APPLE__
-    auto prelaunch = make();
-    auto clone_path = prelaunch / "qnx-ram.bin";
-    auto clone_owner = read_private_json(prelaunch / "session-owner.json");
-    clone_owner["qnx_pid"] = 0;
-    clone_owner["ram_clone_identity"] = cache_file_identity(clone_path);
-    write_private_json(prelaunch / "session-owner.json", clone_owner);
-    Json no_child{{"children_terminal", true},
-                  {"qemu", {{"pid", 0}, {"alive", false}, {"started", false}, {"exit_code", -1}}},
-                  {"graphics", Json::array()},
-                  {"qemu_launch_failed_before_child", true},
-                  {"ram_clone_identity", clone_owner["ram_clone_identity"]}};
-    auto wrong = no_child;
-    wrong.erase("qemu_launch_failed_before_child");
-    rejects([&] {
-        finalize_owned_qnx_session(prelaunch, prelaunch.filename().string(), clone_path, wrong);
-    });
-    assert(std::filesystem::exists(clone_path));
-    wrong = no_child;
-    wrong["ram_clone_identity"]["inode"] = 0;
-    rejects([&] {
-        finalize_owned_qnx_session(prelaunch, prelaunch.filename().string(), clone_path, wrong);
-    });
-    assert(std::filesystem::exists(clone_path));
-    wrong = no_child;
-    wrong["qemu"]["exit_code"] = 0;
-    rejects([&] {
-        finalize_owned_qnx_session(prelaunch, prelaunch.filename().string(), clone_path, wrong);
-    });
-    assert(std::filesystem::exists(clone_path));
-    wrong = no_child;
-    wrong["qemu"]["started"] = true;
-    wrong["qemu"]["exit_code"] = 0;
-    rejects([&] {
-        finalize_owned_qnx_session(prelaunch, prelaunch.filename().string(), clone_path, wrong);
-    });
-    assert(std::filesystem::exists(clone_path));
-    auto removed = finalize_owned_qnx_session(prelaunch, prelaunch.filename().string(), clone_path,
-                                              no_child);
-    assert(removed["ram_removed"] == true && !std::filesystem::exists(clone_path));
-    std::ifstream no_child_record(removed["handoff"].get<std::string>());
-    std::string no_child_text{std::istreambuf_iterator<char>(no_child_record), {}};
-    assert(no_child_text.find("\"started\": false") != std::string::npos &&
-           no_child_text.find("\"exit_code\": -1") != std::string::npos);
-#endif
+
+    // Only macOS clones the RAM backing before QEMU starts.
+    if (os::platform_name == "macOS") {
+        auto prelaunch = make();
+        auto clone_path = prelaunch / "qnx-ram.bin";
+        auto clone_owner = read_private_json(prelaunch / "session-owner.json");
+        clone_owner["qnx_pid"] = 0;
+        clone_owner["ram_clone_identity"] = cache_file_identity(clone_path);
+        write_private_json(prelaunch / "session-owner.json", clone_owner);
+        Json no_child{
+                {"children_terminal", true},
+                {"qemu", {{"pid", 0}, {"alive", false}, {"started", false}, {"exit_code", -1}}},
+                {"graphics", Json::array()},
+                {"qemu_launch_failed_before_child", true},
+                {"ram_clone_identity", clone_owner["ram_clone_identity"]}};
+        auto wrong = no_child;
+        wrong.erase("qemu_launch_failed_before_child");
+        rejects([&] {
+            finalize_owned_qnx_session(prelaunch, prelaunch.filename().string(), clone_path, wrong);
+        });
+        assert(std::filesystem::exists(clone_path));
+        wrong = no_child;
+        wrong["ram_clone_identity"]["inode"] = 0;
+        rejects([&] {
+            finalize_owned_qnx_session(prelaunch, prelaunch.filename().string(), clone_path, wrong);
+        });
+        assert(std::filesystem::exists(clone_path));
+        wrong = no_child;
+        wrong["qemu"]["exit_code"] = 0;
+        rejects([&] {
+            finalize_owned_qnx_session(prelaunch, prelaunch.filename().string(), clone_path, wrong);
+        });
+        assert(std::filesystem::exists(clone_path));
+        wrong = no_child;
+        wrong["qemu"]["started"] = true;
+        wrong["qemu"]["exit_code"] = 0;
+        rejects([&] {
+            finalize_owned_qnx_session(prelaunch, prelaunch.filename().string(), clone_path, wrong);
+        });
+        assert(std::filesystem::exists(clone_path));
+        auto removed = finalize_owned_qnx_session(prelaunch, prelaunch.filename().string(),
+                                                  clone_path, no_child);
+        assert(removed["ram_removed"] == true && !std::filesystem::exists(clone_path));
+        std::ifstream no_child_record(removed["handoff"].get<std::string>());
+        std::string no_child_text{std::istreambuf_iterator<char>(no_child_record), {}};
+        assert(no_child_text.find("\"started\": false") != std::string::npos &&
+               no_child_text.find("\"exit_code\": -1") != std::string::npos);
+    }
+
     auto blocked = make();
     std::filesystem::rename(root / "plans", root / "preserved-plans");
     { std::ofstream(root / "plans") << "block handoff parent"; }
@@ -2700,8 +2399,9 @@ static void android_avd_config_guards() {
     });
     { std::ofstream(backing_fixture) << "system.img.qcow2"; }
     assert(sha256_file(backing_fixture) == original_overlay);
-#ifndef _WIN32
-    {
+
+    // Creating a symbolic link needs a privilege on Windows.
+    if (!os::host_windows) {
         const auto guarded = root / "marker-link/avd-home";
         ensure_private_directory(guarded / "content");
         const auto input = machine / "userdata-qemu.img",
@@ -2720,7 +2420,7 @@ static void android_avd_config_guards() {
         assert(sha256_file(input) == before);
         std::filesystem::remove(marker);
     }
-#endif
+
     auto expected = sha256_file(source);
     auto home = root / "session" / "avd-home";
     // A pre-existing alias that is a foreign regular file must be rejected without
@@ -2770,25 +2470,27 @@ static void android_avd_config_guards() {
         std::filesystem::rename(machine / "absent.saved", machine / name);
     }
 
-#ifndef _WIN32
-    ensure_private_directory(home / "content");
-    auto pending = home / "content/config.ini.voyemu-pending",
-         foreign = root / "foreign-config.ini";
-    std::filesystem::create_symlink(foreign, pending);
-    rejects([&] {
-        prepare_android_avd(home, machine, "test", source, expected);
-    });
-    assert(!std::filesystem::exists(foreign));
-    std::filesystem::remove(pending);
-    { std::ofstream(foreign) << "must remain unchanged"; }
-    auto foreign_hash = sha256_file(foreign);
-    std::filesystem::create_hard_link(foreign, pending);
-    rejects([&] {
-        prepare_android_avd(home, machine, "test", source, expected);
-    });
-    assert(sha256_file(foreign) == foreign_hash);
-    std::filesystem::remove(pending);
-#endif
+    // Creating a symbolic link needs a privilege on Windows.
+    if (!os::host_windows) {
+        ensure_private_directory(home / "content");
+        auto pending = home / "content/config.ini.voyemu-pending",
+             foreign = root / "foreign-config.ini";
+        std::filesystem::create_symlink(foreign, pending);
+        rejects([&] {
+            prepare_android_avd(home, machine, "test", source, expected);
+        });
+        assert(!std::filesystem::exists(foreign));
+        std::filesystem::remove(pending);
+        { std::ofstream(foreign) << "must remain unchanged"; }
+        auto foreign_hash = sha256_file(foreign);
+        std::filesystem::create_hard_link(foreign, pending);
+        rejects([&] {
+            prepare_android_avd(home, machine, "test", source, expected);
+        });
+        assert(sha256_file(foreign) == foreign_hash);
+        std::filesystem::remove(pending);
+    }
+
     std::map<std::filesystem::path, std::string> disks;
 
     for (auto name : names) {
@@ -2930,123 +2632,137 @@ static void android_avd_config_guards() {
             {"android_sdk_root", (root / "unused-sdk").string()},
             {"pins", Json::array({{{"path", engine.string()}, {"sha256", sha256_file(engine)}},
                                   {{"path", source.string()}, {"sha256", expected}}})}};
-#ifndef _WIN32
-    {
-        const auto passion_id = random_token();
-        const auto passion_dir = root / ".local/machines/passion-test/sessions" / passion_id;
-        ensure_private_directory(passion_dir);
-        Session passion(passion_dir, passion_id);
-        auto presentation = spec;
-        presentation["api"] = 30;
-        presentation["home"] = {{"package", "com.voyah.os.carlauncher"},
-                                {"component", passion_home}};
-        presentation["reference_profile"] = "synthetic-passion";
-        presentation["platform"] = "passion";
-        presentation["board"] = "8155";
-        presentation["presentation_adapter"] = passion_presentation_contract("synthetic-passion");
-        presentation["gpuMode"] = "invalid-before-child";
-        bool before_child = false;
-        try {
-            passion.attach_android(presentation, true);
-        } catch (const std::exception &e) {
-            before_child = std::string(e.what()).starts_with("ANDROID_GPU:");
+
+    // Windows attaches Android through its startup transaction, covered by its own fixtures.
+    if (!os::host_windows) {
+        {
+            const auto passion_id = random_token();
+            const auto passion_dir = root / ".local/machines/passion-test/sessions" / passion_id;
+            ensure_private_directory(passion_dir);
+            Session passion(passion_dir, passion_id);
+            auto presentation = spec;
+            presentation["api"] = 30;
+            presentation["home"] = {{"package", "com.voyah.os.carlauncher"},
+                                    {"component", passion_home}};
+            presentation["reference_profile"] = "synthetic-passion";
+            presentation["platform"] = "passion";
+            presentation["board"] = "8155";
+            presentation["presentation_adapter"] =
+                    passion_presentation_contract("synthetic-passion");
+            presentation["gpuMode"] = "invalid-before-child";
+            bool before_child = false;
+            try {
+                passion.attach_android(presentation, true);
+            } catch (const std::exception &e) {
+                before_child = std::string(e.what()).starts_with("ANDROID_GPU:");
+            }
+
+            assert(before_child);
+            const auto before = passion.handle({{"op", "status"}});
+            assert(before.at("android_pid") == 0 && before.at("wheel_routes").is_null());
+            const auto state_sha = sha256_file(passion_dir / "vehicle-state.json");
+
+            for (const Json &command :
+                 Json::array({{{"op", "patch"}, {"values", {{"ivi_languageSet", 1}}}},
+                              {{"op", "wheel"},
+                               {"id", "voice"},
+                               {"phase", "down"},
+                               {"owner", "test"}}})) {
+                const auto rejected = passion.handle(command);
+                assert(rejected.at("ok") == false);
+                const auto after = passion.handle({{"op", "status"}});
+                assert(after.at("revision") == before.at("revision") &&
+                       after.at("held_buttons") == 0 &&
+                       sha256_file(passion_dir / "vehicle-state.json") == state_sha);
+            }
+
+            passion.stop();
         }
+        {
+            const auto nxp_id = random_token();
+            const auto nxp_dir = root / ".local/machines/nxp-test/sessions" / nxp_id;
+            ensure_private_directory(nxp_dir);
+            Session nxp(nxp_dir, nxp_id);
+            auto presentation = spec;
+            presentation["api"] = 28;
+            presentation["home"] = {{"package", "com.qinggan.app.launcher"},
+                                    {"component", nxp_home}};
+            presentation["reference_profile"] = "synthetic-nxp";
+            presentation["platform"] = "qinggan09";
+            presentation["board"] = "nxp";
+            presentation["presentation_adapter"] = nxp_presentation_contract("synthetic-nxp");
+            presentation["gpuMode"] = "invalid-before-child";
+            bool before_child = false;
+            try {
+                nxp.attach_android(presentation, true);
+            } catch (const std::exception &e) {
+                before_child = std::string(e.what()).starts_with("ANDROID_GPU:");
+            }
 
-        assert(before_child);
-        const auto before = passion.handle({{"op", "status"}});
-        assert(before.at("android_pid") == 0 && before.at("wheel_routes").is_null());
-        const auto state_sha = sha256_file(passion_dir / "vehicle-state.json");
+            assert(before_child);
+            const auto before = nxp.handle({{"op", "status"}});
+            assert(before.at("android_pid") == 0 && before.at("wheel_routes").is_null());
+            const auto state_sha = sha256_file(nxp_dir / "vehicle-state.json");
 
-        for (const Json &command : Json::array(
-                     {{{"op", "patch"}, {"values", {{"ivi_languageSet", 1}}}},
-                      {{"op", "wheel"}, {"id", "voice"}, {"phase", "down"}, {"owner", "test"}}})) {
-            const auto rejected = passion.handle(command);
-            assert(rejected.at("ok") == false);
-            const auto after = passion.handle({{"op", "status"}});
-            assert(after.at("revision") == before.at("revision") && after.at("held_buttons") == 0 &&
-                   sha256_file(passion_dir / "vehicle-state.json") == state_sha);
+            for (const Json &command :
+                 Json::array({{{"op", "patch"}, {"values", {{"ivi_languageSet", 1}}}},
+                              {{"op", "wheel"},
+                               {"id", "voice"},
+                               {"phase", "down"},
+                               {"owner", "test"}}})) {
+                const auto rejected = nxp.handle(command);
+                assert(rejected.at("ok") == false);
+                const auto after = nxp.handle({{"op", "status"}});
+                assert(after.at("revision") == before.at("revision") &&
+                       after.at("held_buttons") == 0 &&
+                       sha256_file(nxp_dir / "vehicle-state.json") == state_sha);
+            }
+
+            nxp.stop();
         }
+        {
+            const auto nxp_id = random_token();
+            const auto nxp_dir = root / ".local/machines/nxp-wheel-test/sessions" / nxp_id;
+            ensure_private_directory(nxp_dir);
+            Session nxp(nxp_dir, nxp_id);
+            auto presentation = spec;
+            presentation["api"] = 28;
+            presentation["home"] = {{"package", "com.qinggan.app.launcher"},
+                                    {"component", nxp_home}};
+            presentation["reference_profile"] = "synthetic-nxp";
+            presentation["platform"] = "qinggan09";
+            presentation["board"] = "nxp";
+            presentation["presentation_adapter"] = nxp_presentation_contract("synthetic-nxp");
+            presentation["wheel_adapter"] = nxp_wheel_adapter();
+            presentation["gpuMode"] = "invalid-before-child";
+            bool before_child = false;
+            try {
+                nxp.attach_android(presentation, true);
+            } catch (const std::exception &e) {
+                before_child = std::string(e.what()).starts_with("ANDROID_GPU:");
+            }
 
-        passion.stop();
-    }
-    {
-        const auto nxp_id = random_token();
-        const auto nxp_dir = root / ".local/machines/nxp-test/sessions" / nxp_id;
-        ensure_private_directory(nxp_dir);
-        Session nxp(nxp_dir, nxp_id);
-        auto presentation = spec;
-        presentation["api"] = 28;
-        presentation["home"] = {{"package", "com.qinggan.app.launcher"}, {"component", nxp_home}};
-        presentation["reference_profile"] = "synthetic-nxp";
-        presentation["platform"] = "qinggan09";
-        presentation["board"] = "nxp";
-        presentation["presentation_adapter"] = nxp_presentation_contract("synthetic-nxp");
-        presentation["gpuMode"] = "invalid-before-child";
-        bool before_child = false;
-        try {
-            nxp.attach_android(presentation, true);
-        } catch (const std::exception &e) {
-            before_child = std::string(e.what()).starts_with("ANDROID_GPU:");
-        }
+            assert(before_child);
+            const auto before = nxp.handle({{"op", "status"}});
+            assert(before.at("wheel_routes").at("photo").at("android").at("key_code") == 142);
+            assert(!before.at("wheel_routes").at("ica").contains("ecu"));
+            const auto state_sha = sha256_file(nxp_dir / "vehicle-state.json");
 
-        assert(before_child);
-        const auto before = nxp.handle({{"op", "status"}});
-        assert(before.at("android_pid") == 0 && before.at("wheel_routes").is_null());
-        const auto state_sha = sha256_file(nxp_dir / "vehicle-state.json");
+            for (const char *phase : {"down", "up"}) {
+                const auto receipt = nxp.handle(
+                        {{"op", "wheel"}, {"id", "ica"}, {"phase", phase}, {"owner", "test"}});
+                assert(receipt.at("ok") == true &&
+                       receipt.at("deliveries").at("android") == "unmapped" &&
+                       receipt.at("deliveries").at("adas_ecu") == "not_a_consumer");
+            }
 
-        for (const Json &command : Json::array(
-                     {{{"op", "patch"}, {"values", {{"ivi_languageSet", 1}}}},
-                      {{"op", "wheel"}, {"id", "voice"}, {"phase", "down"}, {"owner", "test"}}})) {
-            const auto rejected = nxp.handle(command);
-            assert(rejected.at("ok") == false);
             const auto after = nxp.handle({{"op", "status"}});
             assert(after.at("revision") == before.at("revision") && after.at("held_buttons") == 0 &&
                    sha256_file(nxp_dir / "vehicle-state.json") == state_sha);
+            nxp.stop();
         }
-
-        nxp.stop();
     }
-    {
-        const auto nxp_id = random_token();
-        const auto nxp_dir = root / ".local/machines/nxp-wheel-test/sessions" / nxp_id;
-        ensure_private_directory(nxp_dir);
-        Session nxp(nxp_dir, nxp_id);
-        auto presentation = spec;
-        presentation["api"] = 28;
-        presentation["home"] = {{"package", "com.qinggan.app.launcher"}, {"component", nxp_home}};
-        presentation["reference_profile"] = "synthetic-nxp";
-        presentation["platform"] = "qinggan09";
-        presentation["board"] = "nxp";
-        presentation["presentation_adapter"] = nxp_presentation_contract("synthetic-nxp");
-        presentation["wheel_adapter"] = nxp_wheel_adapter();
-        presentation["gpuMode"] = "invalid-before-child";
-        bool before_child = false;
-        try {
-            nxp.attach_android(presentation, true);
-        } catch (const std::exception &e) {
-            before_child = std::string(e.what()).starts_with("ANDROID_GPU:");
-        }
 
-        assert(before_child);
-        const auto before = nxp.handle({{"op", "status"}});
-        assert(before.at("wheel_routes").at("photo").at("android").at("key_code") == 142);
-        assert(!before.at("wheel_routes").at("ica").contains("ecu"));
-        const auto state_sha = sha256_file(nxp_dir / "vehicle-state.json");
-
-        for (const char *phase : {"down", "up"}) {
-            const auto receipt = nxp.handle(
-                    {{"op", "wheel"}, {"id", "ica"}, {"phase", phase}, {"owner", "test"}});
-            assert(receipt.at("ok") == true &&
-                   receipt.at("deliveries").at("android") == "unmapped" &&
-                   receipt.at("deliveries").at("adas_ecu") == "not_a_consumer");
-        }
-
-        const auto after = nxp.handle({{"op", "status"}});
-        assert(after.at("revision") == before.at("revision") && after.at("held_buttons") == 0 &&
-               sha256_file(nxp_dir / "vehicle-state.json") == state_sha);
-        nxp.stop();
-    }
-#endif
     {
         const auto free_id = random_token();
         const auto free_dir = root / ".local/machines/free-test/sessions" / free_id;
@@ -3173,15 +2889,19 @@ static void android_avd_config_guards() {
                    partial.handle({{"op", "status"}}).at("held_buttons") == 0);
         }
 
-#ifndef _WIN32
-        const auto paired = partial.handle(
-                {{"op", "wheel_pair"}, {"id", "volume_down"}, {"owner", "test"}, {"hold_ms", 100}});
-        assert(paired.at("ok") == true && paired.at("session_id") == partial_id &&
-               paired.at("released") == true && paired.at("guest_acknowledged") == false &&
-               paired.at("up").at("event_sequence").get<unsigned>() ==
-                       paired.at("down").at("event_sequence").get<unsigned>() + 1 &&
-               partial.handle({{"op", "status"}}).at("held_buttons") == 0);
-#endif
+        // Windows pairs wheel events through its Android startup transaction: wheel_pair_flush_run.
+        if (!os::host_windows) {
+            const auto paired = partial.handle({{"op", "wheel_pair"},
+                                                {"id", "volume_down"},
+                                                {"owner", "test"},
+                                                {"hold_ms", 100}});
+            assert(paired.at("ok") == true && paired.at("session_id") == partial_id &&
+                   paired.at("released") == true && paired.at("guest_acknowledged") == false &&
+                   paired.at("up").at("event_sequence").get<unsigned>() ==
+                           paired.at("down").at("event_sequence").get<unsigned>() + 1 &&
+                   partial.handle({{"op", "status"}}).at("held_buttons") == 0);
+        }
+
         partial.stop();
     }
     {
@@ -3313,9 +3033,12 @@ static void android_avd_relocation_guards() {
     const auto pin = sha256_file(source);
     const auto content = prepare_android_avd(home, old_machine, "relocation", source, pin,
                                              old_machine);
-#ifndef _WIN32
-    assert(std::filesystem::read_symlink(content / "system.img") == old_machine / "system.img");
-#endif
+
+    // Windows links an overlay by a hard link where it can, POSIX always by a symbolic link.
+    if (!os::host_windows) {
+        assert(std::filesystem::read_symlink(content / "system.img") == old_machine / "system.img");
+    }
+
     std::map<std::string, std::string> disks;
 
     for (const auto &entry : std::filesystem::directory_iterator(old_machine)) {
@@ -3340,58 +3063,62 @@ static void android_avd_relocation_guards() {
     auto old_spec = Json{{"machine", old_machine.string()}, {"base", old_machine.string()}},
          new_spec = Json{{"machine", machine.string()}, {"base", machine.string()}};
     assert(android_quickboot_key(old_spec) != android_quickboot_key(new_spec));
-#ifndef _WIN32
-    std::filesystem::remove(home / "relocation.ini");
-    const auto alias = content / "system.img";
-    std::filesystem::remove(alias);
-    std::filesystem::create_symlink(old_machine / "system.img", alias);
-    const auto retained = std::filesystem::read_symlink(alias);
-    rejects([&] {
-        prepare_android_avd(home, machine, "relocation", source, pin, machine);
-    });
-    assert(std::filesystem::read_symlink(alias) == retained);
-    rejects([&] {
-        prepare_android_avd(home, machine, "relocation", source, pin, machine, 28, Json(),
-                            root / "unrelated/car/android");
-    });
-    assert(std::filesystem::read_symlink(alias) == retained);
-    ensure_private_directory(old_machine);
-    rejects([&] {
+
+    // Creating a symbolic link needs a privilege on Windows.
+    if (!os::host_windows) {
+        std::filesystem::remove(home / "relocation.ini");
+        const auto alias = content / "system.img";
+        std::filesystem::remove(alias);
+        std::filesystem::create_symlink(old_machine / "system.img", alias);
+        const auto retained = std::filesystem::read_symlink(alias);
+        rejects([&] {
+            prepare_android_avd(home, machine, "relocation", source, pin, machine);
+        });
+        assert(std::filesystem::read_symlink(alias) == retained);
+        rejects([&] {
+            prepare_android_avd(home, machine, "relocation", source, pin, machine, 28, Json(),
+                                root / "unrelated/car/android");
+        });
+        assert(std::filesystem::read_symlink(alias) == retained);
+        ensure_private_directory(old_machine);
+        rejects([&] {
+            prepare_android_avd(home, machine, "relocation", source, pin, machine, 28, Json(),
+                                old_machine);
+        });
+        assert(std::filesystem::read_symlink(alias) == retained);
+        std::filesystem::remove_all(old_seed);
+        std::filesystem::remove(alias);
+        const auto foreign = root / "foreign-missing-system.img";
+        std::filesystem::create_symlink(foreign, alias);
+        rejects([&] {
+            prepare_android_avd(home, machine, "relocation", source, pin, machine, 28, Json(),
+                                old_machine);
+        });
+        assert(std::filesystem::read_symlink(alias) == foreign);
+        std::filesystem::remove(alias);
+        std::filesystem::create_symlink(old_machine / "system.img", alias);
         prepare_android_avd(home, machine, "relocation", source, pin, machine, 28, Json(),
                             old_machine);
-    });
-    assert(std::filesystem::read_symlink(alias) == retained);
-    std::filesystem::remove_all(old_seed);
-    std::filesystem::remove(alias);
-    const auto foreign = root / "foreign-missing-system.img";
-    std::filesystem::create_symlink(foreign, alias);
-    rejects([&] {
+        // Once aliases match, a later reuse of the old directory must not break this machine.
+        std::filesystem::remove(home / "relocation.ini");
+        ensure_private_directory(old_machine);
         prepare_android_avd(home, machine, "relocation", source, pin, machine, 28, Json(),
                             old_machine);
-    });
-    assert(std::filesystem::read_symlink(alias) == foreign);
-    std::filesystem::remove(alias);
-    std::filesystem::create_symlink(old_machine / "system.img", alias);
-    prepare_android_avd(home, machine, "relocation", source, pin, machine, 28, Json(), old_machine);
-    // Once aliases match, a later reuse of the old directory must not break this machine.
-    std::filesystem::remove(home / "relocation.ini");
-    ensure_private_directory(old_machine);
-    prepare_android_avd(home, machine, "relocation", source, pin, machine, 28, Json(), old_machine);
-    std::filesystem::remove_all(old_seed);
-    std::filesystem::remove(home / "relocation.ini");
-    std::filesystem::rename(new_seed, old_seed);
-    prepare_android_avd(home, old_machine, "relocation", source, pin, old_machine, 28, Json(),
-                        machine);
+        std::filesystem::remove_all(old_seed);
+        std::filesystem::remove(home / "relocation.ini");
+        std::filesystem::rename(new_seed, old_seed);
+        prepare_android_avd(home, old_machine, "relocation", source, pin, old_machine, 28, Json(),
+                            machine);
 
-    for (const char *name : {"system.img.qcow2", "vendor.img.qcow2", "system.img", "vendor.img",
-                             "encryptionkey.img"}) {
-        assert(std::filesystem::equivalent(content / name, old_machine / name));
-    }
+        for (const char *name : {"system.img.qcow2", "vendor.img.qcow2", "system.img", "vendor.img",
+                                 "encryptionkey.img"}) {
+            assert(std::filesystem::equivalent(content / name, old_machine / name));
+        }
 
-    for (const auto &[name, sha] : disks) {
-        assert(sha256_file(old_machine / name) == sha);
+        for (const auto &[name, sha] : disks) {
+            assert(sha256_file(old_machine / name) == sha);
+        }
     }
-#endif
 }
 
 static void android_startup_stage_isolation() {
@@ -3478,41 +3205,42 @@ static void android_short_pair_guards() {
         assert(refused);
     }
 
-#ifndef _WIN32
-    const std::string expected =
-            R"(Result: Bundle[{json={"schema":1,"session_id":"pair-session","boot_id":"pair-boot","sequence":41,"button":"volume_down","phase":"down","status":"terminal-requested","oem_handled":null,"visible_effect_verified":false,"submission_confirmed":true,"key_code":1,"action":4096,"flags":0,"scope":"OEM transaction7 completed; callbacks/effects not inferred"}}])";
-    auto run = [&](const std::string &reply) {
-        ProcessSpec shell;
-        shell.executable = "/bin/sh";
-        shell.arguments = {
-                "-c",
-                "content() { case \"$*\" in *phase:s:down*) printf '%s\\n' " +
-                        android_shell_quote(reply) +
-                        ";; *phase:s:up*) printf '%s\\n' RELEASE_SENT;; *) return 9;; esac; };\n" +
-                        android_short_wheel_pair_command("pair-session", std::string(32, 'a'),
-                                                         "pair-boot", down, up, 1)};
+    // The pair command runs under /bin/sh.
+    if (!os::host_windows) {
+        const std::string expected =
+                R"(Result: Bundle[{json={"schema":1,"session_id":"pair-session","boot_id":"pair-boot","sequence":41,"button":"volume_down","phase":"down","status":"terminal-requested","oem_handled":null,"visible_effect_verified":false,"submission_confirmed":true,"key_code":1,"action":4096,"flags":0,"scope":"OEM transaction7 completed; callbacks/effects not inferred"}}])";
+        auto run = [&](const std::string &reply) {
+            ProcessSpec shell;
+            shell.executable = "/bin/sh";
+            shell.arguments = {
+                    "-c",
+                    "content() { case \"$*\" in *phase:s:down*) printf '%s\\n' " +
+                            android_shell_quote(reply) +
+                            ";; *phase:s:up*) printf '%s\\n' RELEASE_SENT;; *) return 9;; esac; };\n" +
+                            android_short_wheel_pair_command("pair-session", std::string(32, 'a'),
+                                                             "pair-boot", down, up, 1)};
 
-        return execute(shell, 2000);
-    };
-    const auto good = run(expected);
-    assert(good.exit_code == 0 && good.output.find("VOYEMU_DOWN\n") == 0 &&
-           good.output.find("VOYEMU_UP\nRELEASE_SENT\n") != std::string::npos);
+            return execute(shell, 2000);
+        };
+        const auto good = run(expected);
+        assert(good.exit_code == 0 && good.output.find("VOYEMU_DOWN\n") == 0 &&
+               good.output.find("VOYEMU_UP\nRELEASE_SENT\n") != std::string::npos);
 
-    for (const auto &replacement : std::vector<std::pair<std::string, std::string>>{
-                 {"pair-boot", "foreign-boot"},
-                 {"terminal-requested", "terminal-unavailable"},
-                 {"\"submission_confirmed\":true", "\"submission_confirmed\":false"},
-                 {"\"sequence\":41", "\"sequence\":40"},
-                 {"\"key_code\":1", "\"key_code\":2"}}) {
-        auto bad = expected;
-        const auto position = bad.find(replacement.first);
-        assert(position != std::string::npos);
-        bad.replace(position, replacement.first.size(), replacement.second);
-        const auto rejected = run(bad);
-        assert(rejected.exit_code == 24 &&
-               rejected.output.find("RELEASE_SENT") == std::string::npos);
+        for (const auto &replacement : std::vector<std::pair<std::string, std::string>>{
+                     {"pair-boot", "foreign-boot"},
+                     {"terminal-requested", "terminal-unavailable"},
+                     {"\"submission_confirmed\":true", "\"submission_confirmed\":false"},
+                     {"\"sequence\":41", "\"sequence\":40"},
+                     {"\"key_code\":1", "\"key_code\":2"}}) {
+            auto bad = expected;
+            const auto position = bad.find(replacement.first);
+            assert(position != std::string::npos);
+            bad.replace(position, replacement.first.size(), replacement.second);
+            const auto rejected = run(bad);
+            assert(rejected.exit_code == 24 &&
+                   rejected.output.find("RELEASE_SENT") == std::string::npos);
+        }
     }
-#endif
 }
 
 static void android_wheel_terminal_receipts() {
@@ -3713,13 +3441,16 @@ static void theme_consumer_acknowledgements() {
            !already.value().at("guest_acknowledged").get<bool>());
     std::filesystem::remove(observation_path);
     write_private_json(theme_path, receipt(theme));
-#ifndef _WIN32
-    std::filesystem::rename(theme_path, theme_path.string() + ".saved");
-    std::filesystem::create_symlink(theme_path.filename().string() + ".saved", theme_path);
-    rejects([&] {
-        find_qnx_theme_receipt(directory, {mcu, theme}, 2, 2);
-    });
-#endif
+
+    // Creating a symbolic link needs a privilege on Windows.
+    if (!os::host_windows) {
+        std::filesystem::rename(theme_path, theme_path.string() + ".saved");
+        std::filesystem::create_symlink(theme_path.filename().string() + ".saved", theme_path);
+        rejects([&] {
+            find_qnx_theme_receipt(directory, {mcu, theme}, 2, 2);
+        });
+    }
+
     auto language_path = [&](std::uint64_t address) {
         std::ostringstream name;
         name << "producer-" << std::hex << address;
@@ -3776,149 +3507,19 @@ static void theme_consumer_acknowledgements() {
     std::filesystem::remove_all(directory);
 }
 
-static void project_socket_root_guard() {
-#ifndef _WIN32
-    auto temp = std::filesystem::canonical(std::filesystem::temp_directory_path());
-    auto root = temp / ("voyemu-socket-path-test-" + random_token());
-    auto id = random_token();
-    auto directory = root / std::string(100, 'x') / id;
-    ensure_private_directory(directory);
-    {
-        Session session(directory, id);
-        auto expected = temp / ("voyemu-" + std::to_string(::geteuid()));
-#ifdef __APPLE__
-        if ((expected / (id + "-qmp.sock")).string().size() >= 104) {
-            expected = std::filesystem::path(std::getenv("HOME")) / "Library/Caches/voyemu/runtime";
-        }
-#endif
-        assert(session.endpoint() == expected / (id + ".sock"));
-        assert(session.endpoint().string().size() < sizeof(sockaddr_un{}.sun_path));
-        session.stop();
-    }
-    std::filesystem::remove_all(root);
-#ifdef __APPLE__
-    const auto suffix = "voyemu-" + std::to_string(::geteuid());
-
-    if (temp.string().size() + suffix.size() < 60) {
-        const auto boundary = temp / (random_token() + random_token())
-                                             .substr(0, 60 - temp.string().size() - suffix.size());
-        ensure_private_directory(boundary);
-        const char *configured = std::getenv("TMPDIR");
-        const std::optional<std::string> preserved =
-                configured ? std::optional<std::string>(configured) : std::nullopt;
-        assert(::setenv("TMPDIR", boundary.c_str(), 1) == 0);
-        const auto selected = native_socket_root();
-        const auto restored = preserved ? ::setenv("TMPDIR", preserved->c_str(), 1)
-                                        : ::unsetenv("TMPDIR");
-        assert(restored == 0);
-        assert((boundary / suffix / (id + "-qmp.sock")).string().size() == 104);
-        assert(selected != boundary / suffix &&
-               (selected / (id + "-qmp.sock")).string().size() < sizeof(sockaddr_un{}.sun_path));
-        std::filesystem::remove(boundary);
-    }
-#else
-    // A TMPDIR too long for a socket path falls back to XDG_RUNTIME_DIR.
-    {
-        const auto deep = temp / ("voyemu-socket-path-test-" + random_token()) /
-                          std::string(100, 'y');
-        const auto runtime = temp / ("r" + random_token().substr(0, 8));
-        ensure_private_directory(deep);
-        ensure_private_directory(runtime);
-        std::map<std::string, std::optional<std::string>> preserved;
-
-        for (const auto *name : {"TMPDIR", "XDG_RUNTIME_DIR"}) {
-            const char *configured = std::getenv(name);
-            preserved[name] = configured ? std::optional<std::string>(configured) : std::nullopt;
-        }
-
-        assert(::setenv("TMPDIR", deep.c_str(), 1) == 0 &&
-               ::setenv("XDG_RUNTIME_DIR", runtime.c_str(), 1) == 0);
-        const auto selected = native_socket_root();
-
-        for (const auto &[name, value] : preserved) {
-            assert(value ? ::setenv(name.c_str(), value->c_str(), 1) == 0
-                         : ::unsetenv(name.c_str()) == 0);
-        }
-
-        assert(selected == runtime / "voyemu" && std::filesystem::is_directory(selected));
-        std::filesystem::remove_all(deep.parent_path());
-        std::filesystem::remove_all(runtime);
-    }
-#endif
-    // The runtime directory of ${RUNTIME} exists, private and owned, before QEMU binds its QMP
-    // socket there, also when the control socket of a short session stays in the session; a
-    // TMPDIR and user runtime directory too long for a socket path fall back to /tmp.
-    {
-        const auto suffix = "voyemu-" + std::to_string(::geteuid());
-        const auto fresh = temp / ("s" + random_token().substr(0, 8));
-        const auto deep = temp / ("voyemu-socket-path-test-" + random_token()) /
-                          std::string(100, 'y');
-        ensure_private_directory(fresh);
-        ensure_private_directory(deep);
-        std::map<std::string, std::optional<std::string>> preserved;
-
-        for (const auto *name : {"TMPDIR", "XDG_RUNTIME_DIR", "HOME"}) {
-            const char *configured = std::getenv(name);
-            preserved[name] = configured ? std::optional<std::string>(configured) : std::nullopt;
-        }
-
-        assert(::setenv("TMPDIR", fresh.c_str(), 1) == 0);
-        const auto qmp = std::filesystem::path(
-                expand_session_path("${RUNTIME}/${TOKEN}-qmp.sock", directory, id));
-        struct stat status{};
-        const bool created = ::lstat(qmp.parent_path().c_str(), &status) == 0 &&
-                             S_ISDIR(status.st_mode) && status.st_uid == ::geteuid() &&
-                             (status.st_mode & 0777) == 0700;
-        assert(::setenv("TMPDIR", deep.c_str(), 1) == 0 && ::unsetenv("XDG_RUNTIME_DIR") == 0 &&
-               ::setenv("HOME", deep.c_str(), 1) == 0);
-        std::filesystem::path fallback;
-        std::string refusal;
-        try {
-            fallback = native_socket_root();
-        } catch (const std::exception &error) {
-            refusal = error.what();
-        }
-
-        for (const auto &[name, value] : preserved) {
-            assert(value ? ::setenv(name.c_str(), value->c_str(), 1) == 0
-                         : ::unsetenv(name.c_str()) == 0);
-        }
-
-        assert(created && qmp.filename() == id + "-qmp.sock" &&
-               qmp.string().size() < sizeof(sockaddr_un{}.sun_path));
-
-        if ((fresh / suffix / (id + "-qmp.sock")).string().size() <
-            sizeof(sockaddr_un{}.sun_path)) {
-            assert(qmp.parent_path() == fresh / suffix);
-        }
-
-        assert(refusal.empty() && fallback == std::filesystem::canonical("/tmp") / suffix &&
-               std::filesystem::is_directory(fallback));
-        std::filesystem::remove_all(fresh);
-        std::filesystem::remove_all(deep.parent_path());
-    }
-#endif
-}
-
 static void lifecycle_ipc_deadlines() {
     std::atomic<bool> stopped = false;
-
-#ifdef _WIN32
-    const auto endpoint =
-            std::filesystem::path(R"(\\.\pipe\voyemu-session-test-)" + random_token());
-#else
-    const auto endpoint = native_socket_root() / (random_token() + "-vld.sock");
-    assert(endpoint.string().size() < sizeof(sockaddr_un{}.sun_path));
-#endif
+    const auto endpoint = private_control_endpoint(random_token() + "-vld");
     {
         ControlServer server(endpoint, [](const Json &input) {
             return Json{{"op", input.at("op")}, {"payload", std::string(65536, 'x')}};
         });
         std::thread worker([&] {
-#ifdef _WIN32
             // WaitNamedPipe returns FILE_NOT_FOUND before the first instance is created.
-            std::this_thread::sleep_for(std::chrono::milliseconds(40));
-#endif
+            if (os::host_windows) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(40));
+            }
+
             server.serve(stopped);
         });
         try {
@@ -3959,9 +3560,7 @@ static void lifecycle_ipc_deadlines() {
 }
 
 static void control_server_stop_reply() {
-#ifndef _WIN32
-    const auto endpoint = native_socket_root() / (random_token() + "-vsr.sock");
-    assert(endpoint.string().size() < sizeof(sockaddr_un{}.sun_path));
+    const auto endpoint = private_control_endpoint(random_token() + "-vsr");
 
     for (unsigned attempt = 0; attempt < 4; ++attempt) {
         std::atomic<bool> stopped = false;
@@ -3987,137 +3586,9 @@ static void control_server_stop_reply() {
         assert(response.at("ok") == true && response.at("payload") == std::string(65536, 'x'));
     }
 
-    {
-        std::atomic<bool> stopped = false;
-        ControlServer server(endpoint, [](const Json &) {
-            return Json{{"ok", true}};
-        });
-        std::array<int, 16> clients{};
-
-        for (auto &client : clients) {
-            client = ::socket(AF_UNIX, SOCK_STREAM, 0);
-            assert(client >= 0);
-            sockaddr_un address{};
-            address.sun_family = AF_UNIX;
-            const auto path = endpoint.string();
-            assert(path.size() < sizeof address.sun_path);
-            std::memcpy(address.sun_path, path.c_str(), path.size() + 1);
-            assert(::connect(client, reinterpret_cast<sockaddr *>(&address), sizeof address) == 0);
-        }
-
-        // Fill the kernel backlog before the accept thread runs: the overload client must still
-        // connect.
-        std::thread serving([&] {
-            std::this_thread::sleep_for(std::chrono::milliseconds(20));
-            server.serve(stopped);
-        });
-        // The seventeenth response proves all sixteen idle clients reached worker slots.
-        Json busy;
-        try {
-            busy = request(endpoint, {{"op", "status"}}, 2000);
-        } catch (...) {
-            stopped = true;
-            serving.join();
-
-            for (const auto client : clients) {
-                ::close(client);
-            }
-
-            throw;
-        }
-
-        assert(busy.at("ok") == false && busy.at("error").get<std::string>().find(
-                                                 "active connection limit") != std::string::npos);
-        const auto start = std::chrono::steady_clock::now();
-        stopped = true;
-        serving.join();
-        assert(std::chrono::steady_clock::now() - start < std::chrono::seconds(3));
-
-        for (const auto client : clients) {
-            ::close(client);
-        }
-    }
-#endif
+    control_server_idle_clients(endpoint);
 }
 
-static void control_server_early_busy_reply() {
-#ifndef _WIN32
-    const auto endpoint = native_socket_root() / (random_token() + "-vbr.sock");
-    const auto path = endpoint.string();
-    const Json busy{{"ok", false}, {"error", "IPC_BUSY: active connection limit"}};
-    auto exchange = [&](const std::string &response, bool accepted) {
-        const int listener = ::socket(AF_UNIX, SOCK_STREAM, 0);
-        assert(listener >= 0);
-        sockaddr_un address{};
-        address.sun_family = AF_UNIX;
-        assert(path.size() < sizeof address.sun_path);
-        std::memcpy(address.sun_path, path.c_str(), path.size() + 1);
-        assert(::bind(listener, reinterpret_cast<sockaddr *>(&address), sizeof address) == 0);
-        assert(::chmod(endpoint.c_str(), 0600) == 0);
-        assert(::listen(listener, 1) == 0);
-        std::thread peer([&] {
-            const int fd = ::accept(listener, nullptr, nullptr);
-            assert(fd >= 0);
-            char first;
-            assert(::recv(fd, &first, 1, MSG_PEEK) == 1);
-            assert(::send(fd, response.data(), response.size(), 0) ==
-                   static_cast<ssize_t>(response.size()));
-            ::close(fd);
-        });
-        // Peeking waits for connect completion without consuming request bytes.
-        // The 120KB request exceeds the
-        // supported macOS Unix socket buffer (8KB), forcing the early-close write failure.
-        Json actual;
-        std::exception_ptr failure;
-        const auto start = std::chrono::steady_clock::now();
-        try {
-            actual = request(endpoint, {{"op", "status"}, {"payload", std::string(120000, 'x')}},
-                             1000);
-        } catch (...) {
-            failure = std::current_exception();
-        }
-
-        peer.join();
-        ::close(listener);
-        std::filesystem::remove(endpoint);
-        assert(std::chrono::steady_clock::now() - start < std::chrono::seconds(2));
-
-        if (accepted) {
-            if (failure) {
-                std::rethrow_exception(failure);
-            }
-
-            assert(actual == busy);
-        } else {
-            assert(failure); // Preserve the write failure, not a parse/read error or another
-                             // response.
-            try {
-                std::rethrow_exception(failure);
-            } catch (const std::exception &error) {
-                assert(std::string(error.what()).starts_with("IPC_WRITE_UNKNOWN:"));
-            }
-        }
-    };
-
-    for (unsigned i = 0; i < 8; ++i) {
-        exchange(busy.dump() + "\n", true);
-    }
-
-#ifdef __APPLE__
-    // Linux Unix-socket buffers accept the whole request, so only macOS forces the write failure.
-    exchange(Json{{"ok", true}}.dump() + "\n", false);
-    exchange(Json{{"ok", false}, {"error", "other"}}.dump() + "\n", false);
-    exchange(Json{{"ok", false}, {"error", "IPC_BUSY: active connection limit"}, {"extra", true}}
-                             .dump() +
-                     "\n",
-             false);
-    exchange(busy.dump(), false);
-    exchange("{broken}\n", false);
-#endif
-#endif
-}
-
-#ifdef _WIN32
 namespace voyemu {
 struct SessionInterguestSnapshotFixture {
     static void run() {
@@ -4140,18 +3611,8 @@ struct SessionInterguestSnapshotFixture {
                    before.at("qnx_pid") == 0 && session.deliveries_ == original);
             const auto ram = directory / "qnx-ram.bin";
             create_qnx_ram(ram, 8ULL << 30);
-            HANDLE file = CreateFileW(ram.c_str(), GENERIC_WRITE,
-                                      FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING,
-                                      FILE_FLAG_OPEN_REPARSE_POINT, nullptr);
-            assert(file != INVALID_HANDLE_VALUE);
-            DWORD count = 0;
-            LARGE_INTEGER size{};
-            size.QuadPart = 0x10010000;
-            assert(SetFilePointerEx(file, size, nullptr, FILE_BEGIN));
             const std::array<std::uint32_t, 8> invalid{0xbeefeeee, 1};
-            assert(WriteFile(file, invalid.data(), sizeof invalid, &count, nullptr) &&
-                   count == sizeof invalid);
-            CloseHandle(file);
+            write_at(ram, 0x10010000, invalid.data(), sizeof invalid);
             session.interguest_link_->bind_ram(ram);
             const auto end = std::chrono::steady_clock::now() + event_wait;
 
@@ -4257,46 +3718,9 @@ struct SessionRequestIoFixture {
     }
 };
 } // namespace voyemu
-#endif
-
-static void windows_control_server_stop_reply() {
-#ifdef _WIN32
-    const auto endpoint = std::filesystem::path(R"(\\.\pipe\voyemu-stop-drain-)" + random_token());
-
-    for (unsigned attempt = 0; attempt < 4; ++attempt) {
-        std::atomic<bool> stopped = false;
-        ControlServer server(endpoint, [&](const Json &) {
-            stopped = true;
-            std::this_thread::sleep_for(std::chrono::milliseconds(120));
-
-            return Json{{"ok", true}, {"payload", std::string(65536, 'x')}};
-        });
-        std::thread serving([&] {
-            server.serve(stopped);
-        });
-        Json response;
-        try {
-            response = request(endpoint, {{"op", "stop"}}, 2000);
-        } catch (...) {
-            stopped = true;
-            serving.join();
-            throw;
-        }
-
-        serving.join();
-        assert(response.at("ok") == true && response.at("payload") == std::string(65536, 'x'));
-    }
-#endif
-}
 
 static void control_server_concurrency() {
-#ifndef _WIN32
-    const auto endpoint = native_socket_root() / (random_token() + "-vcc.sock");
-    assert(endpoint.string().size() < sizeof(sockaddr_un{}.sun_path));
-#else
-    const auto endpoint =
-            std::filesystem::path(R"(\\.\pipe\voyemu-control-concurrency-)" + random_token());
-#endif
+    const auto endpoint = private_control_endpoint(random_token() + "-vcc");
     std::atomic<bool> stopped = false;
     std::mutex mutex;
     std::condition_variable changed;
@@ -5440,17 +4864,22 @@ int main(int argc, char **argv) try {
         SessionPersistenceFixture::screen_stream_handoff(std::filesystem::canonical(argv[0]));
     }
 
-#ifdef _WIN32
-    if (argc == 2 && std::string_view(argv[1]) == "--windows-wheel-pair-flush-only") {
-        SessionPersistenceFixture::wheel_pair_flush_run();
-
-        return 0;
+    if (const auto code = persistence_qmp_fixture(argc, argv)) {
+        return *code;
     }
 
-    if (argc == 1) {
-        SessionPersistenceFixture::wheel_pair_flush_run();
+    // The wheel pair flush belongs to the Android startup transaction of Windows.
+    if (os::host_windows) {
+        if (argc == 2 && std::string_view(argv[1]) == "--windows-wheel-pair-flush-only") {
+            SessionPersistenceFixture::wheel_pair_flush_run();
+
+            return 0;
+        }
+
+        if (argc == 1) {
+            SessionPersistenceFixture::wheel_pair_flush_run();
+        }
     }
-#endif
 
     if (argc == 2 && std::string_view(argv[1]) == "--socket-root-only") {
         project_socket_root_guard();
@@ -5480,64 +4909,66 @@ int main(int argc, char **argv) try {
         return 0;
     }
 
-#if defined(__APPLE__) || defined(_WIN32)
-    if (argc >= 8 && std::string_view(argv[1]) == "--qnx-shutdown-fixture") {
-        return shutdown_fixture::run(argc, argv);
+    // The automatic reboot fixture covers the QNX engines of macOS and Windows.
+    const bool reboot_fixture = os::platform_name != "Linux";
+
+    if (reboot_fixture) {
+        if (argc >= 8 && std::string_view(argv[1]) == "--qnx-shutdown-fixture") {
+            return shutdown_fixture::run(argc, argv);
+        }
+
+        if (argc == 2 && std::string_view(argv[1]) == "--qnx-reboot-only") {
+            SessionPersistenceFixture::reboot_run(std::filesystem::canonical(argv[0]));
+
+            return 0;
+        }
     }
 
-    if (argc == 2 && std::string_view(argv[1]) == "--qnx-reboot-only") {
-        SessionPersistenceFixture::reboot_run(std::filesystem::canonical(argv[0]));
+    // QMP over loopback TCP pauses the persistence of Windows; the POSIX fixtures drive Unix
+    // sockets, descriptors and /bin/sh children.
+    if (os::host_windows) {
+        SessionPersistenceFixture::qmp_pause_run(std::filesystem::canonical(argv[0]));
+    } else {
+        if (argc == 2 && std::string_view(argv[1]) == "--qnx-uart-ready-only") {
+            SessionPersistenceFixture::uart_ready_run();
 
-        return 0;
-    }
-#endif
-#ifdef _WIN32
-    if (argc == 3 && std::string(argv[1]) == "--qnx-persistence-win-qmp-fixture") {
-        return persistent_windows_qmp_fixture(argv[2]);
-    }
-    SessionPersistenceFixture::run(std::filesystem::canonical(argv[0]));
-#endif
-#ifndef _WIN32
-    if (argc == 2 && std::string_view(argv[1]) == "--qnx-uart-ready-only") {
+            return 0;
+        }
+
+        if (argc == 2 && std::string_view(argv[1]) == "--qnx-never-attached-only") {
+            SessionPersistenceFixture::never_attached_close_run(
+                    std::filesystem::canonical(argv[0]));
+
+            return 0;
+        }
+
+        if (argc == 2 && std::string_view(argv[1]) == "--qnx-acceptance-discard-only") {
+            SessionPersistenceFixture::acceptance_discard_run();
+
+            return 0;
+        }
+
+        SessionPersistenceFixture::spontaneous_android_exit_closes_frontend();
+        SessionPersistenceFixture::unbounded_restart_preflight();
         SessionPersistenceFixture::uart_ready_run();
-
-        return 0;
-    }
-
-    if (argc == 4 && std::string(argv[1]) == "--qnx-persistence-qmp-fixture") {
-        return persistent_qmp_fixture(argv[2], argv[3]);
-    }
-
-    if (argc == 2 && std::string_view(argv[1]) == "--qnx-never-attached-only") {
+        SessionPersistenceFixture::run(std::filesystem::canonical(argv[0]));
         SessionPersistenceFixture::never_attached_close_run(std::filesystem::canonical(argv[0]));
-
-        return 0;
-    }
-
-    if (argc == 2 && std::string_view(argv[1]) == "--qnx-acceptance-discard-only") {
         SessionPersistenceFixture::acceptance_discard_run();
-
-        return 0;
     }
 
-    SessionPersistenceFixture::spontaneous_android_exit_closes_frontend();
-    SessionPersistenceFixture::unbounded_restart_preflight();
-    SessionPersistenceFixture::uart_ready_run();
-    SessionPersistenceFixture::run(std::filesystem::canonical(argv[0]));
-    SessionPersistenceFixture::never_attached_close_run(std::filesystem::canonical(argv[0]));
-    SessionPersistenceFixture::acceptance_discard_run();
-#endif
-#if defined(__APPLE__) || defined(_WIN32)
-    SessionPersistenceFixture::reboot_run(std::filesystem::canonical(argv[0]));
-#endif
+    if (reboot_fixture) {
+        SessionPersistenceFixture::reboot_run(std::filesystem::canonical(argv[0]));
+    }
 
     if (argc == 2 && std::string(argv[1]) == "--qnx-persistence-only") {
         return 0;
     }
 
-#ifndef _WIN32
-    qnx_ready_survives_blocked_android();
-#endif
+    // The fixture replaces the RAM file under an open collector, which POSIX allows.
+    if (!os::host_windows) {
+        qnx_ready_survives_blocked_android();
+    }
+
     {
         std::vector<std::string> renamed{"--fixture"};
         program_mode("/tmp/renamed-voyemu", "_window", renamed, true);
@@ -5562,11 +4993,13 @@ int main(int argc, char **argv) try {
     owned_android_network_recovery_tests();
     control_server_stop_reply();
     control_server_early_busy_reply();
-#ifdef _WIN32
-    assert(SessionRequestIoFixture::run());
-    SessionInterguestSnapshotFixture::run();
-#endif
-    windows_control_server_stop_reply();
+
+    // The request I/O state and interguest snapshot fixtures are acceptance of the Windows host.
+    if (os::host_windows) {
+        assert(SessionRequestIoFixture::run());
+        SessionInterguestSnapshotFixture::run();
+    }
+
     control_server_concurrency();
     lifecycle_ipc_deadlines();
     project_socket_root_guard();
@@ -6015,15 +5448,14 @@ int main(int argc, char **argv) try {
             std::string(160, 'x');
     assert(expand_session_path("${SESSION}/${TOKEN}", long_session, token) ==
            long_session.string() + "/" + token);
-#ifndef _WIN32
-    auto qmp = expand_session_path("${RUNTIME}/${TOKEN}-qmp.sock", long_session, token);
-    assert(qmp == (native_socket_root() / (token + "-qmp.sock")).string() &&
-           qmp.size() < sizeof(sockaddr_un{}.sun_path) && qmp.find("${") == std::string::npos);
-#else
-    rejects([&] {
-        expand_session_path("${RUNTIME}/${TOKEN}-qmp.sock", long_session, token);
-    });
-#endif
+
+    // Windows has no ${RUNTIME} socket directory: its control endpoints are named pipes;
+    // project_socket_root_guard expands it on POSIX.
+    if (os::host_windows) {
+        rejects([&] {
+            expand_session_path("${RUNTIME}/${TOKEN}-qmp.sock", long_session, token);
+        });
+    }
 
     assert(passion_qnx_wheel_index("volume_up") == 325 &&
            passion_qnx_wheel_index("volume_down") == 326);
