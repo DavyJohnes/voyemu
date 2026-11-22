@@ -22,7 +22,10 @@ struct Symbol {
 struct Elf {
     std::string_view bytes;
     std::map<std::string, Symbol, std::less<>> symbols;
-    std::map<std::uint64_t, std::uint64_t> relative; // R_AARCH64_RELATIVE: place -> addend
+    // R_AARCH64_RELATIVE (place -> addend) and R_AARCH64_ABS64 (place -> symbol + addend).
+    std::map<std::uint64_t, std::uint64_t> relative;
+    std::map<std::uint64_t, std::string> slots;      // R_AARCH64_JUMP_SLOT: place -> symbol
+    std::map<std::uint64_t, std::string> plt;        // PLT stub -> symbol it jumps to
     std::vector<std::array<std::uint64_t, 3>> loads; // vaddr, offset, file size
     std::uint64_t text = 0, text_size = 0, text_offset = 0;
 
@@ -50,19 +53,38 @@ struct Elf {
         };
         const auto names = section(shstrndx, 24, 8);
 
+        std::array<std::uint64_t, 3> stubs{}; // .plt address, offset, size
+
         for (std::uint64_t i = 0; i < shnum; ++i) {
-            if (cstring(image, names + section(i, 0, 4)) == ".text") {
+            const auto name = cstring(image, names + section(i, 0, 4));
+
+            if (name == ".text") {
                 this->text = section(i, 16, 8);
                 text_offset = section(i, 24, 8);
                 text_size = section(i, 32, 8);
             }
 
+            if (name == ".plt") {
+                stubs = {section(i, 16, 8), section(i, 24, 8), section(i, 32, 8)};
+            }
+
             if (section(i, 4, 4) == 4) {
                 const auto offset = section(i, 24, 8), size = section(i, 32, 8);
+                const auto table = section(i, 40, 4);
+                const auto table_offset = section(table, 24, 8),
+                           table_strings = section(section(table, 40, 4), 24, 8);
 
                 for (std::uint64_t at = offset; at + 24 <= offset + size; at += 24) {
-                    if ((field(image, at + 8, 8) & 0xffffffff) == 1027) {
-                        relative[field(image, at, 8)] = field(image, at + 16, 8);
+                    const auto info = field(image, at + 8, 8), place = field(image, at, 8);
+                    const auto symbol = table_offset + (info >> 32) * 24;
+
+                    if ((info & 0xffffffff) == 1027) {
+                        relative[place] = field(image, at + 16, 8);
+                    } else if ((info & 0xffffffff) == 257 && (info >> 32) &&
+                               field(image, symbol + 8, 8)) {
+                        relative[place] = field(image, symbol + 8, 8) + field(image, at + 16, 8);
+                    } else if ((info & 0xffffffff) == 1026 && (info >> 32)) {
+                        slots[place] = cstring(image, table_strings + field(image, symbol, 4));
                     }
                 }
             }
@@ -77,6 +99,22 @@ struct Elf {
             for (std::uint64_t at = offset; at + 24 <= offset + size; at += 24) {
                 symbols[cstring(image, strings + field(image, at, 4))] = {field(image, at + 8, 8),
                                                                           field(image, at + 16, 8)};
+            }
+        }
+
+        // A PLT stub loads its target from a jump slot: adrp x16, page; ldr x17, [x16, #slot].
+        for (std::uint64_t at = 0; at + 8 <= stubs[2]; at += 4) {
+            const auto adrp = static_cast<std::uint32_t>(field(image, stubs[1] + at, 4)),
+                       ldr = static_cast<std::uint32_t>(field(image, stubs[1] + at + 4, 4));
+
+            if ((adrp & 0x9f00001fU) == 0x90000010U && (ldr & 0xffc003ffU) == 0xf9400211U) {
+                const auto page = ((stubs[0] + at) & ~0xfffULL) +
+                                  ((((adrp >> 5) & 0x7ffffULL) << 2) | ((adrp >> 29) & 3)) * 4096;
+                const auto slot = slots.find(page + ((ldr >> 10) & 0xfff) * 8);
+
+                if (slot != slots.end()) {
+                    plt[stubs[0] + at] = slot->second;
+                }
             }
         }
 
@@ -155,8 +193,8 @@ bool descriptor_leaves(const Elf &elf, std::uint64_t at, std::vector<Leaf> &out,
     return false;
 }
 
-// The service and method id of a generated getter: the `bl <Service>_request_send` in its body
-// and the `mov w0, #id` right before it.
+// The service and method id of a generated getter: the `bl <Service>_request_send` in its body,
+// direct or through its PLT stub, and the `mov w0, #id` before it, or `mov wN, #id; mov w0, wN`.
 std::pair<std::string, std::uint16_t>
 request_method(const Elf &elf, const Symbol &function,
                const std::map<std::uint64_t, std::string> &senders) {
@@ -177,11 +215,17 @@ request_method(const Elf &elf, const Symbol &function,
             continue;
         }
 
+        std::uint32_t target = 0;
+
         for (std::uint64_t back = pc - 4; back + 20 >= pc && back >= function.value; back -= 4) {
             const auto mov = word(back);
 
-            if ((mov & 0xffe0001fU) == 0x52800000U) {
+            if ((mov & 0xffe0001fU) == (0x52800000U | target)) {
                 return {sender->second, static_cast<std::uint16_t>((mov >> 5) & 0xffff)};
+            }
+
+            if (target == 0 && (mov & 0xffe0ffffU) == 0x2a0003e0U) {
+                target = (mov >> 16) & 0x1f;
             }
         }
     }
@@ -230,10 +274,13 @@ call_strings(const Elf &elf, const std::set<std::uint64_t> &targets) {
 
     return found;
 }
-} // namespace
+using Table = std::map<std::string, std::map<std::string, const Json *>>;
 
-Json qnx_passion_someip_contract(std::string_view ic_service, const Json &service_table) {
-    const Elf elf(ic_service);
+// Adds the generated clients of one ELF that no earlier ELF declared, with their events and
+// getters. A VLAN of 0 takes each client's VLAN from the name its start_<Service>_client call
+// passes.
+void add_clients(const Elf &elf, unsigned given_vlan, const Table &table,
+                 std::map<std::string, Json> &services) {
     std::map<std::string, std::uint16_t> clients;
     std::map<std::uint64_t, std::string> starts;
 
@@ -244,7 +291,7 @@ Json qnx_passion_someip_contract(std::string_view ic_service, const Json &servic
             const auto service = name.substr(0, name.size() - suffix.size());
             const auto start = elf.symbols.find("start_" + service + "_client");
 
-            if (start != elf.symbols.end()) {
+            if (start != elf.symbols.end() && !services.contains(service)) {
                 clients[service] = static_cast<std::uint16_t>(elf.read(symbol.value, 2));
                 starts[start->second.value] = service;
             }
@@ -257,30 +304,27 @@ Json qnx_passion_someip_contract(std::string_view ic_service, const Json &servic
         targets.insert(item.first);
     }
 
-    const auto strings = call_strings(elf, targets);
-    std::map<std::string, Json> services;
+    const auto strings = given_vlan ? decltype(call_strings(elf, targets)){}
+                                    : call_strings(elf, targets);
+    std::set<std::string> own;
 
     for (const auto &[address, service] : starts) {
-        const auto at = strings.find(address);
-        need(at != strings.end() && at->second.size() == 1 &&
-                     at->second.begin()->starts_with("VLAN"),
-             "QNX_PASSION_SOMEIP_VLAN");
-        const auto vlan = std::stoul(at->second.begin()->substr(4));
+        auto vlan = static_cast<unsigned long>(given_vlan);
+
+        if (!given_vlan) {
+            const auto at = strings.find(address);
+            need(at != strings.end() && at->second.size() == 1 &&
+                         at->second.begin()->starts_with("VLAN"),
+                 "QNX_PASSION_SOMEIP_VLAN");
+            vlan = std::stoul(at->second.begin()->substr(4));
+        }
+
         need(vlan >= 1 && vlan <= 4094, "QNX_PASSION_SOMEIP_VLAN");
+        own.insert(service);
         services[service] = {
                 {"name", service},         {"vlan", vlan}, {"service", clients.at(service)},
                 {"instance", 1},           {"major", 1},   {"events", Json::array()},
                 {"methods", Json::array()}};
-    }
-
-    // Service table: service name -> event name -> signals.
-    std::map<std::string, std::map<std::string, const Json *>> table;
-
-    for (const auto &service : service_table.at("servicedefine")) {
-        for (const auto &event : service.at("method_event_define")) {
-            table[service.at("ServiceName").get<std::string>()]
-                 [event.at("Method_Event_Name").get<std::string>()] = &event.at("Signals");
-        }
     }
 
     for (const auto &[name, symbol] : elf.symbols) {
@@ -315,7 +359,7 @@ Json qnx_passion_someip_contract(std::string_view ic_service, const Json &servic
         }
 
         for (auto &[service_name, service] : services) {
-            if (service.at("service") != service_id) {
+            if (service.at("service") != service_id || !own.contains(service_name)) {
                 continue;
             }
 
@@ -376,6 +420,14 @@ Json qnx_passion_someip_contract(std::string_view ic_service, const Json &servic
         }
     }
 
+    for (const auto &[stub, name] : elf.plt) {
+        constexpr std::string_view suffix = "_request_send";
+
+        if (name.ends_with(suffix)) {
+            senders[stub] = name.substr(0, name.size() - suffix.size());
+        }
+    }
+
     for (const auto &[name, symbol] : elf.symbols) {
         constexpr std::string_view prefix = "field_getter_", suffix = "_rpc_call";
 
@@ -390,7 +442,7 @@ Json qnx_passion_someip_contract(std::string_view ic_service, const Json &servic
                 elf.symbols.find("field_getter_" + method_name + "_returnType_fields");
         std::vector<Leaf> leaves;
 
-        if (!services.contains(service_name) || descriptor == elf.symbols.end() ||
+        if (!own.contains(service_name) || descriptor == elf.symbols.end() ||
             !descriptor_leaves(elf, descriptor->second.value, leaves, 0, nullptr) ||
             leaves.empty()) {
             continue;
@@ -430,6 +482,30 @@ Json qnx_passion_someip_contract(std::string_view ic_service, const Json &servic
                                       {"method", method_id},
                                       {"bytes", offset},
                                       {"fields", fields}});
+    }
+}
+} // namespace
+
+Json qnx_passion_someip_contract(std::string_view ic_service, const Json &service_table,
+                                 std::span<const SomeipClientLibrary> android_clients) {
+    // Service table: service name -> event name -> signals.
+    Table table;
+
+    for (const auto &service : service_table.at("servicedefine")) {
+        for (const auto &event : service.at("method_event_define")) {
+            table[service.at("ServiceName").get<std::string>()]
+                 [event.at("Method_Event_Name").get<std::string>()] = &event.at("Signals");
+        }
+    }
+
+    std::map<std::string, Json> services;
+    add_clients(Elf(ic_service), 0, table, services);
+
+    for (const auto &library : android_clients) {
+        const auto before = services.size();
+        need(library.vlan >= 1, "QNX_PASSION_SOMEIP_VLAN");
+        add_clients(Elf(library.elf), library.vlan, table, services);
+        need(services.size() > before, "QNX_PASSION_SOMEIP_ANDROID_CLIENT");
     }
 
     Json list = Json::array();

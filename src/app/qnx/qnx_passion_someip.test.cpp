@@ -140,6 +140,111 @@ std::string elf(std::string_view vlan, unsigned other_kind = 0) {
     return out;
 }
 
+// A synthetic multimedia client library as the vendor ones are linked: the descriptor of its one
+// event reaches its members through R_AARCH64_ABS64 on a symbol, and its getter loads the method
+// id 5 into w8, moves it to w0 and calls <service>_request_send through a PLT stub.
+std::string android_elf(std::string_view service, std::uint16_t id) {
+    std::string out(0x2000, '\0');
+    out.replace(0, 4,
+                "\x7f"
+                "ELF");
+    out[4] = 2;
+    out[5] = 1;
+    out[6] = 1;
+    put(out, 16, 3, 2);
+    put(out, 18, 183, 2);
+    put(out, 20, 1, 4);
+    put(out, 32, 0x40, 8);
+    put(out, 40, 0x600, 8);
+    put(out, 52, 64, 2);
+    put(out, 54, 56, 2);
+    put(out, 56, 1, 2);
+    put(out, 58, 64, 2);
+    put(out, 60, 8, 2);
+    put(out, 62, 4, 2);
+    put(out, 0x40, 1, 4);
+    put(out, 0x40 + 32, 0x2000, 8);
+    put(out, 0x40 + 40, 0x2000, 8);
+    put(out, 0x100, 0xd65f03c0, 4);
+    put(out, 0x110, 0x528000a8, 4);
+    put(out, 0x114, 0x2a0803e0, 4);
+    put(out, 0x118, 0x94000000 | ((0x180 - 0x118) / 4), 4);
+    put(out, 0x11c, 0xd65f03c0, 4);
+    // .plt: adrp x16, 0; ldr x17, [x16, #0x300]; add x16, x16, #0x300; br x17.
+    put(out, 0x180, 0x90000010, 4);
+    put(out, 0x184, 0xf9400211 | ((0x300 / 8) << 10), 4);
+    put(out, 0x188, 0x91000210 | (0x300 << 10), 4);
+    put(out, 0x18c, 0xd61f0220, 4);
+    put(out, 0x200, id, 2);
+    put(out, 0x240, 1, 4);
+    put(out, 0x244, id, 2);
+    put(out, 0x240 + 0x28, id, 2);
+    put(out, 0x240 + 0x2a, 1, 2);
+    put(out, 0x240 + 0x2c, 1, 2);
+    put(out, 0x240 + 0x34, 0x8001, 2);
+    auto record = [&](std::size_t at, unsigned kind, unsigned bytes) {
+        put(out, at, kind, 8);
+        put(out, at + 16, std::uint64_t(bytes) << 32, 8);
+        put(out, at + 24, bytes, 8);
+    };
+    record(0x800, 3, 5);
+    record(0xd00, 3, 5);
+    record(0x860, 0, 4);
+    record(0x890, 0, 1);
+    const std::string name(service);
+    const struct {
+        std::string value;
+        std::size_t address, size;
+    } symbols[] = {{"start_" + name + "_client", 0x100, 4},
+                   {name + "_client_data", 0x200, 0x20},
+                   {"event_field_notifier_Notify_f_Door", 0x240, 64},
+                   {"field_notifier_Notify_f_Door_event_fields", 0x800, 96},
+                   {"field_getter_Get_f_Door_rpc_call", 0x110, 16},
+                   {"field_getter_Get_f_Door_returnType_fields", 0xd00, 96},
+                   {"Door_members", 0x860, 96},
+                   {name + "_request_send", 0, 0}};
+    std::string strings(1, '\0');
+
+    for (std::size_t i = 0; i < std::size(symbols); ++i) {
+        const auto at = 0x400 + 24 * (i + 1);
+        put(out, at, strings.size(), 4);
+        put(out, at + 8, symbols[i].address, 8);
+        put(out, at + 16, symbols[i].size, 8);
+        strings.append(symbols[i].value).push_back('\0');
+    }
+
+    out.replace(0x1000, strings.size(), strings);
+    // Members of both descriptors: Door_members (symbol 7); the jump slot: request_send (8).
+    for (std::size_t i = 0; i < 2; ++i) {
+        put(out, 0xa80 + 24 * i, i ? 0xd20 : 0x820, 8);
+        put(out, 0xa80 + 24 * i + 8, (7ULL << 32) | 257, 8);
+    }
+
+    put(out, 0xb00, 0x300, 8);
+    put(out, 0xb08, (8ULL << 32) | 1026, 8);
+    const auto names = "\0.text\0.symtab\0.strtab\0.shstrtab\0.rela.dyn\0.rela.plt\0.plt\0"s;
+    out.replace(0x5a0, names.size(), names);
+    auto section = [&](unsigned index, unsigned title, unsigned type, std::size_t offset,
+                       std::size_t size, unsigned link) {
+        const auto at = 0x600 + 64 * index;
+        put(out, at, title, 4);
+        put(out, at + 4, type, 4);
+        put(out, at + 16, offset, 8);
+        put(out, at + 24, offset, 8);
+        put(out, at + 32, size, 8);
+        put(out, at + 40, link, 4);
+    };
+    section(1, 1, 1, 0x100, 0x20, 0);
+    section(2, 7, 2, 0x400, 24 * (std::size(symbols) + 1), 3);
+    section(3, 15, 3, 0x1000, strings.size(), 0);
+    section(4, 23, 3, 0x5a0, names.size(), 0);
+    section(5, 33, 4, 0xa80, 24 * 2, 2);
+    section(6, 43, 4, 0xb00, 24, 2);
+    section(7, 53, 1, 0x180, 0x10, 0);
+
+    return out;
+}
+
 template <class Function> void rejects(Function action) {
     bool failed = false;
 
@@ -223,6 +328,29 @@ int main() try {
     assert(someip_contract(qnx_passion_someip_contract(elf("VLAN12", 8), table))
                    .services.front()
                    .events.size() == 1);
+    // A multimedia client library adds its service on the VLAN its VHAL starts it on.
+    const auto door = android_elf("DoorHandleService", 0x114);
+    const SomeipClientLibrary libraries[] = {{door, 10}};
+    const auto both = someip_contract(qnx_passion_someip_contract(elf("VLAN12"), table, libraries));
+    assert(both.services.size() == 2);
+    const auto &added = both.services[0].name == "DoorHandleService" ? both.services[0]
+                                                                     : both.services[1];
+    assert(added.name == "DoorHandleService" && added.vlan == 10 && added.id == 0x114 &&
+           added.events.size() == 1 && added.methods.size() == 1);
+    assert(added.events[0].id == 0x8001 && added.events[0].bytes == 5 &&
+           added.events[0].fields.size() == 2 && added.events[0].fields[1].offset == 4 &&
+           added.events[0].fields[0].name == "DoorHandleService.Notify_f_Door.#0");
+    assert(added.methods[0].id == 5 && added.methods[0].bytes == 5 &&
+           added.methods[0].fields[1].name == "DoorHandleService.Notify_f_Door.#1");
+    // A library must bring a service ic_service lacks, on a VLAN.
+    const auto same = android_elf("VehicleDrivingInfo", 0x2000);
+    const SomeipClientLibrary duplicate[] = {{same, 12}}, unplaced[] = {{door, 0}};
+    rejects([&] {
+        qnx_passion_someip_contract(elf("VLAN12"), table, duplicate);
+    });
+    rejects([&] {
+        qnx_passion_someip_contract(elf("VLAN12"), table, unplaced);
+    });
     rejects([&] {
         qnx_passion_someip_contract(elf("ETH12"), table);
     });

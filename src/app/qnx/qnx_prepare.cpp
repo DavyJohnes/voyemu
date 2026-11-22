@@ -4,6 +4,7 @@
 #include "ordinary_path.hpp"
 #include "os/fs.hpp"
 #include "process.hpp"
+#include "profile_originals.hpp"
 #include "project_files.hpp"
 #include "qnx6_file.hpp"
 #include "qnx_bootstrap.hpp"
@@ -955,9 +956,29 @@ Json prepare_qnx_passion_developer_images(const std::filesystem::path &root,
                            "etc/exd/adapter_config/signaldefine/S32G_8155/8155_qnx/"
                            "H53_SOMEIP_ServiceTable_V6.0.0_OIB_8155_QNX_20240103-142433.json");
     need(sha256_bytes(service_table) == passion_map_sha256, "QNX_PASSION_SERVICE_TABLE");
+    // The multimedia's client libraries of the services only its VHAL uses, on the VLANs it starts
+    // them on, are pinned Android originals named in profile-qnx.json.
+    const auto definition = read_private_json(profile_file, 1 << 20);
+    const auto android_names = config.value("someip_android_clients", Json::object());
+    std::vector<std::string> android_bytes;
+    std::vector<SomeipClientLibrary> android_clients;
+    android_bytes.reserve(android_names.size());
+
+    for (auto it = android_names.begin(); it != android_names.end(); ++it) {
+        const auto &original = definition.at("original").at(it.key());
+        const auto file = profile_originals_directory(root, profile) /
+                          original.at("file").get<std::string>();
+        ordinary(file);
+        android_bytes.push_back(read(file, 16 * 1024 * 1024));
+        need(sha256_bytes(android_bytes.back()) == original.at("sha256").get<std::string>() &&
+                     it.value().is_number_unsigned(),
+             "QNX_PASSION_ANDROID_CLIENT");
+        android_clients.push_back({android_bytes.back(), it.value().get<unsigned>()});
+    }
+
     const auto gateway = qnx_passion_someip_contract(
             read_qnx6_file(files.at("system_la.img"), originals[2].sha, "usr/bin/ic_service"),
-            Json::parse(service_table));
+            Json::parse(service_table), android_clients);
     // Our RAM device carries exactly the extent fs-qnx6 accepts (blocksize*blocks + the 0x3000
     // header and the 0x1000 alternate pair), so the capacity is pinned at this call site rather
     // than in the shared contract.

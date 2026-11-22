@@ -592,6 +592,222 @@
         "image": "system",
         "path": "/system/product/overlay/framework-res__auto_generated_rro_product.apk"
       }
+    },
+    "SomeipClientDoorHandleService": {
+      "file": "someip-clients/libDoorHandleService-client.so",
+      "bytes": 127336,
+      "sha256": "aec2c2c97bd07532aa1863447d5011a4673209ede0364098e426e7a3bb019d05",
+      "source": {
+        "path": "/vendor/lib64/libDoorHandleService-client.so"
+      },
+      "acquisition": {
+        "image": "vendor",
+        "path": "/vendor/lib64/libDoorHandleService-client.so"
+      }
+    },
+    "SomeipClientCarSwitchService": {
+      "file": "someip-clients/libCarSwitchService-client.so",
+      "bytes": 86056,
+      "sha256": "57987bba0f537c972e7967e4ea0e6520cadc28cda4b09a7849ca25c5210fd934",
+      "source": {
+        "path": "/vendor/lib64/libCarSwitchService-client.so"
+      },
+      "acquisition": {
+        "image": "vendor",
+        "path": "/vendor/lib64/libCarSwitchService-client.so"
+      }
+    },
+    "SomeipClientVI_VC_TboxResetControl": {
+      "file": "someip-clients/libVI_VC_TboxResetControl-client.so",
+      "bytes": 75616,
+      "sha256": "772f1ef2a4de32db09504f468b152c0559563138914a7a46027dd68ee0ad386f",
+      "source": {
+        "path": "/vendor/lib64/libVI_VC_TboxResetControl-client.so"
+      },
+      "acquisition": {
+        "image": "vendor",
+        "path": "/vendor/lib64/libVI_VC_TboxResetControl-client.so"
+      }
+    },
+    "SomeipClientVI_VC_ETCInfo": {
+      "file": "someip-clients/libVI_VC_ETCInfo-client.so",
+      "bytes": 85392,
+      "sha256": "87127453296b59e691d0b384a3bdae0fac3681b32a580fd2ab857daad5afb6b7",
+      "source": {
+        "path": "/vendor/lib64/libVI_VC_ETCInfo-client.so"
+      },
+      "acquisition": {
+        "image": "vendor",
+        "path": "/vendor/lib64/libVI_VC_ETCInfo-client.so"
+      }
+    },
+    "SomeipClientOTAGeneralService": {
+      "file": "someip-clients/libOTAGeneralService-client.so",
+      "bytes": 233104,
+      "sha256": "d97642f1c095989a4fcbccadd66baea3ba4bf4326d31377f80271977a8ea9dff",
+      "source": {
+        "path": "/vendor/lib64/libOTAGeneralService-client.so"
+      },
+      "acquisition": {
+        "image": "vendor",
+        "path": "/vendor/lib64/libOTAGeneralService-client.so"
+      }
+    },
+    "SomeipClientGeneralDiagService": {
+      "file": "someip-clients/libGeneralDiagService-client.so",
+      "bytes": 92584,
+      "sha256": "4dc2cc3cbdc08a5ca684b42676e9dd0c5db631a784ae924c369c1889f95fdb41",
+      "source": {
+        "path": "/vendor/lib64/libGeneralDiagService-client.so"
+      },
+      "acquisition": {
+        "image": "vendor",
+        "path": "/vendor/lib64/libGeneralDiagService-client.so"
+      }
+    },
+    "SomeipClientRVDCGeneralService": {
+      "file": "someip-clients/libRVDCGeneralService-client.so",
+      "bytes": 120000,
+      "sha256": "3cfb39107c7f7f7d4bea06d8bd80beb85ab55c9f190b169383b3ae11e527f5bb",
+      "source": {
+        "path": "/vendor/lib64/libRVDCGeneralService-client.so"
+      },
+      "acquisition": {
+        "image": "vendor",
+        "path": "/vendor/lib64/libRVDCGeneralService-client.so"
+      }
+    },
+    "SomeipClientFrontWipersController": {
+      "file": "someip-clients/libFrontWipersController-client.so",
+      "bytes": 120072,
+      "sha256": "291ebfa43547112a6ab509bfc97f1589c37a7a9f883e4328a9ea728883ac076a",
+      "source": {
+        "path": "/vendor/lib64/libFrontWipersController-client.so"
+      },
+      "acquisition": {
+        "image": "vendor",
+        "path": "/vendor/lib64/libFrontWipersController-client.so"
+      }
+    },
+    "SomeipClientReadingLightsService": {
+      "file": "someip-clients/libReadingLightsService-client.so",
+      "bytes": 140296,
+      "sha256": "836b0647dd2712a9ac6d17f1de597ea27ee2cd91fcbe01f97090dc1cc584ad15",
+      "source": {
+        "path": "/vendor/lib64/libReadingLightsService-client.so"
+      },
+      "acquisition": {
+        "image": "vendor",
+        "path": "/vendor/lib64/libReadingLightsService-client.so"
+      }
+    },
+    "SomeipClientAMPControl": {
+      "file": "someip-clients/libAMPControl-client.so",
+      "bytes": 146472,
+      "sha256": "4f06eb0a31390caeb96d454e8965adcc5727414c663949c5cb149806160a84c1",
+      "source": {
+        "path": "/vendor/lib64/libAMPControl-client.so"
+      },
+      "acquisition": {
+        "image": "vendor",
+        "path": "/vendor/lib64/libAMPControl-client.so"
+      }
+    },
+    "SomeipClientCloudControlVMService": {
+      "file": "someip-clients/libCloudControlVMService-client.so",
+      "bytes": 82152,
+      "sha256": "d022d1d453e383554f0e5bef8fdb17528bd06b2c4a0bfe98a4ddcedf389ee678",
+      "source": {
+        "path": "/vendor/lib64/libCloudControlVMService-client.so"
+      },
+      "acquisition": {
+        "image": "vendor",
+        "path": "/vendor/lib64/libCloudControlVMService-client.so"
+      }
+    },
+    "SomeipClientHMI_SA_FDD_ACCControlSwitch": {
+      "file": "someip-clients/libHMI_SA_FDD_ACCControlSwitch-client.so",
+      "bytes": 95440,
+      "sha256": "35d9b3172d15d736bf06d6da9678f590317979df67f6240cd36acff7ca39a11d",
+      "source": {
+        "path": "/vendor/lib64/libHMI_SA_FDD_ACCControlSwitch-client.so"
+      },
+      "acquisition": {
+        "image": "vendor",
+        "path": "/vendor/lib64/libHMI_SA_FDD_ACCControlSwitch-client.so"
+      }
+    },
+    "SomeipClientVI_VC_GNSSController": {
+      "file": "someip-clients/libVI_VC_GNSSController-client.so",
+      "bytes": 87376,
+      "sha256": "fe837919b8a9ad7ca6f80c61dc4b8bbeef46b1a7d14b2906ccf8e7846aa86698",
+      "source": {
+        "path": "/vendor/lib64/libVI_VC_GNSSController-client.so"
+      },
+      "acquisition": {
+        "image": "vendor",
+        "path": "/vendor/lib64/libVI_VC_GNSSController-client.so"
+      }
+    },
+    "SomeipClientVI_VC_RTKController": {
+      "file": "someip-clients/libVI_VC_RTKController-client.so",
+      "bytes": 86560,
+      "sha256": "392fbfe66f2d497cafd7a00fd836b7f82009e1296730c2e7e58dd24ff634fb08",
+      "source": {
+        "path": "/vendor/lib64/libVI_VC_RTKController-client.so"
+      },
+      "acquisition": {
+        "image": "vendor",
+        "path": "/vendor/lib64/libVI_VC_RTKController-client.so"
+      }
+    },
+    "SomeipClientFuLocalization": {
+      "file": "someip-clients/libFuLocalization-client.so",
+      "bytes": 85208,
+      "sha256": "88950d60f8d6443c5afccc8108fac2e24786b8d32161b52bce627df0a9219442",
+      "source": {
+        "path": "/vendor/lib64/libFuLocalization-client.so"
+      },
+      "acquisition": {
+        "image": "vendor",
+        "path": "/vendor/lib64/libFuLocalization-client.so"
+      }
+    },
+    "SomeipClientHppManager": {
+      "file": "someip-clients/libHppManager-client.so",
+      "bytes": 129736,
+      "sha256": "6b36a025349b4e02f6cb29563e2873fe5e79735976cdb8899907c95b8ec93864",
+      "source": {
+        "path": "/vendor/lib64/libHppManager-client.so"
+      },
+      "acquisition": {
+        "image": "vendor",
+        "path": "/vendor/lib64/libHppManager-client.so"
+      }
+    },
+    "SomeipClientADASOptionalPackage": {
+      "file": "someip-clients/libADASOptionalPackage-client.so",
+      "bytes": 87112,
+      "sha256": "19eb82f8ca7e38764cf3723c49d3c9afabf57b35b9d50e2670b232866e7e69b1",
+      "source": {
+        "path": "/vendor/lib64/libADASOptionalPackage-client.so"
+      },
+      "acquisition": {
+        "image": "vendor",
+        "path": "/vendor/lib64/libADASOptionalPackage-client.so"
+      }
+    },
+    "SomeipClientPS_DM_DeviceManager": {
+      "file": "someip-clients/libPS_DM_DeviceManager-client.so",
+      "bytes": 93880,
+      "sha256": "11430403d2383229c6aca61878f530f2e5d1d19d889cc3d0f926eb02fe01c052",
+      "source": {
+        "path": "/vendor/lib64/libPS_DM_DeviceManager-client.so"
+      },
+      "acquisition": {
+        "image": "vendor",
+        "path": "/vendor/lib64/libPS_DM_DeviceManager-client.so"
+      }
     }
   },
   "components": {

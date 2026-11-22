@@ -274,6 +274,132 @@
       "source": {
         "path": "/system/product/overlay/framework-res__auto_generated_rro_product.apk"
       }
+    },
+    {
+      "name": "SomeipClientDoorHandleService",
+      "file": "someip-clients/libDoorHandleService-client.so",
+      "source": {
+        "path": "/vendor/lib64/libDoorHandleService-client.so"
+      }
+    },
+    {
+      "name": "SomeipClientCarSwitchService",
+      "file": "someip-clients/libCarSwitchService-client.so",
+      "source": {
+        "path": "/vendor/lib64/libCarSwitchService-client.so"
+      }
+    },
+    {
+      "name": "SomeipClientVI_VC_TboxResetControl",
+      "file": "someip-clients/libVI_VC_TboxResetControl-client.so",
+      "source": {
+        "path": "/vendor/lib64/libVI_VC_TboxResetControl-client.so"
+      }
+    },
+    {
+      "name": "SomeipClientVI_VC_ETCInfo",
+      "file": "someip-clients/libVI_VC_ETCInfo-client.so",
+      "source": {
+        "path": "/vendor/lib64/libVI_VC_ETCInfo-client.so"
+      }
+    },
+    {
+      "name": "SomeipClientOTAGeneralService",
+      "file": "someip-clients/libOTAGeneralService-client.so",
+      "source": {
+        "path": "/vendor/lib64/libOTAGeneralService-client.so"
+      }
+    },
+    {
+      "name": "SomeipClientGeneralDiagService",
+      "file": "someip-clients/libGeneralDiagService-client.so",
+      "source": {
+        "path": "/vendor/lib64/libGeneralDiagService-client.so"
+      }
+    },
+    {
+      "name": "SomeipClientRVDCGeneralService",
+      "file": "someip-clients/libRVDCGeneralService-client.so",
+      "source": {
+        "path": "/vendor/lib64/libRVDCGeneralService-client.so"
+      }
+    },
+    {
+      "name": "SomeipClientFrontWipersController",
+      "file": "someip-clients/libFrontWipersController-client.so",
+      "source": {
+        "path": "/vendor/lib64/libFrontWipersController-client.so"
+      }
+    },
+    {
+      "name": "SomeipClientReadingLightsService",
+      "file": "someip-clients/libReadingLightsService-client.so",
+      "source": {
+        "path": "/vendor/lib64/libReadingLightsService-client.so"
+      }
+    },
+    {
+      "name": "SomeipClientAMPControl",
+      "file": "someip-clients/libAMPControl-client.so",
+      "source": {
+        "path": "/vendor/lib64/libAMPControl-client.so"
+      }
+    },
+    {
+      "name": "SomeipClientCloudControlVMService",
+      "file": "someip-clients/libCloudControlVMService-client.so",
+      "source": {
+        "path": "/vendor/lib64/libCloudControlVMService-client.so"
+      }
+    },
+    {
+      "name": "SomeipClientHMI_SA_FDD_ACCControlSwitch",
+      "file": "someip-clients/libHMI_SA_FDD_ACCControlSwitch-client.so",
+      "source": {
+        "path": "/vendor/lib64/libHMI_SA_FDD_ACCControlSwitch-client.so"
+      }
+    },
+    {
+      "name": "SomeipClientVI_VC_GNSSController",
+      "file": "someip-clients/libVI_VC_GNSSController-client.so",
+      "source": {
+        "path": "/vendor/lib64/libVI_VC_GNSSController-client.so"
+      }
+    },
+    {
+      "name": "SomeipClientVI_VC_RTKController",
+      "file": "someip-clients/libVI_VC_RTKController-client.so",
+      "source": {
+        "path": "/vendor/lib64/libVI_VC_RTKController-client.so"
+      }
+    },
+    {
+      "name": "SomeipClientFuLocalization",
+      "file": "someip-clients/libFuLocalization-client.so",
+      "source": {
+        "path": "/vendor/lib64/libFuLocalization-client.so"
+      }
+    },
+    {
+      "name": "SomeipClientHppManager",
+      "file": "someip-clients/libHppManager-client.so",
+      "source": {
+        "path": "/vendor/lib64/libHppManager-client.so"
+      }
+    },
+    {
+      "name": "SomeipClientADASOptionalPackage",
+      "file": "someip-clients/libADASOptionalPackage-client.so",
+      "source": {
+        "path": "/vendor/lib64/libADASOptionalPackage-client.so"
+      }
+    },
+    {
+      "name": "SomeipClientPS_DM_DeviceManager",
+      "file": "someip-clients/libPS_DM_DeviceManager-client.so",
+      "source": {
+        "path": "/vendor/lib64/libPS_DM_DeviceManager-client.so"
+      }
     }
   ]
 }

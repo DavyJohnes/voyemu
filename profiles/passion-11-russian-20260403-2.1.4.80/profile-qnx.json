@@ -311,5 +311,25 @@
       "not_in_passion_archive": true,
       "runtime_accepted": false
     }
-  ]
+  ],
+  "someip_android_clients": {
+    "SomeipClientDoorHandleService": 10,
+    "SomeipClientCarSwitchService": 10,
+    "SomeipClientVI_VC_TboxResetControl": 10,
+    "SomeipClientVI_VC_ETCInfo": 10,
+    "SomeipClientOTAGeneralService": 10,
+    "SomeipClientGeneralDiagService": 10,
+    "SomeipClientRVDCGeneralService": 10,
+    "SomeipClientFrontWipersController": 11,
+    "SomeipClientReadingLightsService": 11,
+    "SomeipClientAMPControl": 11,
+    "SomeipClientCloudControlVMService": 12,
+    "SomeipClientHMI_SA_FDD_ACCControlSwitch": 13,
+    "SomeipClientVI_VC_GNSSController": 13,
+    "SomeipClientVI_VC_RTKController": 13,
+    "SomeipClientFuLocalization": 13,
+    "SomeipClientHppManager": 13,
+    "SomeipClientADASOptionalPackage": 13,
+    "SomeipClientPS_DM_DeviceManager": 14
+  }
 }
