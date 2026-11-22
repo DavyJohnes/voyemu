@@ -110,7 +110,7 @@ struct Elf {
             if ((adrp & 0x9f00001fU) == 0x90000010U && (ldr & 0xffc003ffU) == 0xf9400211U) {
                 const auto page = ((stubs[0] + at) & ~0xfffULL) +
                                   ((((adrp >> 5) & 0x7ffffULL) << 2) | ((adrp >> 29) & 3)) * 4096;
-                const auto slot = slots.find(page + ((ldr >> 10) & 0xfff) * 8);
+                const auto slot = slots.find(page + ((ldr >> 10) & 0xfff) * 8ULL);
 
                 if (slot != slots.end()) {
                     plt[stubs[0] + at] = slot->second;
@@ -158,6 +158,7 @@ std::int64_t sign(std::uint64_t value, unsigned bits) {
 struct Leaf {
     unsigned bytes;
 };
+
 bool descriptor_leaves(const Elf &elf, std::uint64_t at, std::vector<Leaf> &out, unsigned depth,
                        std::string *first_type) {
     need(depth < 16, "QNX_PASSION_SOMEIP_DESCRIPTOR");
@@ -274,6 +275,7 @@ call_strings(const Elf &elf, const std::set<std::uint64_t> &targets) {
 
     return found;
 }
+
 using Table = std::map<std::string, std::map<std::string, const Json *>>;
 
 // Adds the generated clients of one ELF that no earlier ELF declared, with their events and
