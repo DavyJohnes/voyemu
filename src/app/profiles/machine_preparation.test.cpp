@@ -4624,7 +4624,7 @@ int main(int argc, char **argv) {
         const auto acquired_plan = android_candidate_install_plan(acquired_api30,
                                                                   acquired_artifacts);
         check(acquired_plan.at("apks").size() == 10 && acquired_plan.at("data").empty() &&
-              acquired_plan.at("system").size() == 44);
+              acquired_plan.at("system").size() == 45);
         std::set<std::string> acquired_apks;
 
         for (const auto &entry : acquired_plan.at("apks")) {
@@ -4639,7 +4639,7 @@ int main(int argc, char **argv) {
                                      "component:bootstrap"}));
         check(acquired_plan.at("system").size() + acquired_plan.at("data").size() +
                       acquired_plan.at("apks").size() ==
-              54);
+              55);
         const Json expected_vendor_overlay = {{"artifact", "files:vendor-overlay"},
                                               {"type", "directory"},
                                               {"target", "/vendor/overlay"},
@@ -4694,6 +4694,7 @@ int main(int argc, char **argv) {
                                                         "files:qg-settings-guest",
                                                         "component:early-inputs",
                                                         "files:early-inputs-init",
+                                                        "files:usb-drive-fstab",
                                                         "files:vendor-overlay",
                                                         "patched:QGBus",
                                                         "patched:SystemPolicy"}));
