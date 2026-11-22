@@ -1213,6 +1213,7 @@ int main(int argc, char **argv) {
             check(original.at("source").at("package") == role[1] &&
                           original.at("acquisition").at("image") == role[2] &&
                           original.at("acquisition").at("path") == role[3] &&
+                          captured.contains(role[0]) &&
                           passion.at("patches").at(role[0]).at("steps").at(0) == role[4] &&
                           std::count(passion.at("install").begin(), passion.at("install").end(),
                                      Json{{"artifact", "patched:" + role[0]},
