@@ -117,7 +117,7 @@ jobs:
         if: ${{ !inputs.windows_only }}
         name: macOS arm64 Release (Zig native, Command Line Tools SDK)
         runs-on: macos-15
-        timeout-minutes: 30
+        timeout-minutes: 45
         env:
             TMPDIR: ${{ github.workspace }}/.local/build/tmp/ci
         steps:
