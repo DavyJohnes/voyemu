@@ -237,8 +237,9 @@ AdasOutcome AdasEcu::input(const Json &state, std::uint32_t sequence, std::strin
         changed(result.patch, state, "acc_mode", active ? 3 : 2);
         changed(result.patch, state, "mpc_icaSts", requested_ica ? (active ? 3 : 2) : 1);
 
-        if (active) {
-            set_target(result.patch, state, *concept_value(state, VehicleConcept::speed));
+        // An active readiness has a speed within the policy.
+        if (const auto speed = concept_value(state, VehicleConcept::speed); active && speed) {
+            set_target(result.patch, state, *speed);
         }
 
         if (raw(state, "time_gap_set") == 0) {

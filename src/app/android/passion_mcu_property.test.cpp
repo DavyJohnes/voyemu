@@ -54,10 +54,9 @@ static Json charge(int percent) {
     return concept_patch(VehicleCatalog::passion, VehicleConcept::charge, percent);
 }
 
-static const std::string soc = concept_field(VehicleCatalog::passion, VehicleConcept::charge);
-
 int main() try {
 #ifndef NDEBUG
+    const auto soc = concept_field(VehicleCatalog::passion, VehicleConcept::charge);
     auto state = apply_patch(initial_state(VehicleCatalog::passion), charge(23));
     auto p = passion_mcu_projection(state, boot);
     assert(state.at("raw_oem").at(soc) == 230);

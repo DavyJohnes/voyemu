@@ -44,7 +44,10 @@ inline Json passion_mcu_projection(const Json &state, const std::string &boot) {
     validate_state(state);
     passion_mcu_need(android_boot_id_valid(boot), "actual boot required");
     const auto charge = concept_value(state, VehicleConcept::charge);
-    passion_mcu_need(charge.has_value(), "charge concept required");
+
+    if (!charge) {
+        throw VoyemuError("PASSION_MCU", "charge concept required");
+    }
 
     return {{"schema", 1},
             {"boot", boot},

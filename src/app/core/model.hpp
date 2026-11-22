@@ -188,8 +188,7 @@ Json concept_patch(VehicleCatalog catalog, VehicleConcept id, std::int64_t logic
 // concept_patch without the fields that already hold their value in state.
 Json concept_change(const Json &state, VehicleConcept id, std::int64_t logical);
 // Sets a concept in every bound field of raw, for a projection that bypasses apply_patch.
-void concept_assign(VehicleCatalog catalog, Json &raw, VehicleConcept id,
-                    std::int64_t logical);
+void concept_assign(VehicleCatalog catalog, Json &raw, VehicleConcept id, std::int64_t logical);
 // Whether raw in a field keeps its concept valid: within the range of the concept for a primary
 // field, a whole logical value within the range for a mirror.
 bool concept_raw_allowed(VehicleCatalog catalog, std::string_view field, std::uint64_t raw);

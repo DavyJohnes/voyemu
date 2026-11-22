@@ -164,7 +164,8 @@ static void ipc_fixture() {
         throw std::runtime_error("observer IPC expanded an unrelated message limit");
     };
     rejects({{"op", "status"}});
-    rejects({{"op", "ui_observer_exchange"}, {"payload", std::string(128 * 1024, 'x')}});
+    // A request above the 1 MiB session message limit stays rejected for the observer exchange.
+    rejects({{"op", "ui_observer_exchange"}, {"payload", std::string(2 * 1024 * 1024, 'x')}});
 }
 
 int main() try {

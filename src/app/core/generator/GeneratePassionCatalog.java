@@ -64,7 +64,7 @@ public final class GeneratePassionCatalog {
                 var event = Json.object(eventValue);
                 String eventName = Json.str(event, "Method_Event_Name");
 
-                if (!eventName.split("_")[0].toLowerCase(Locale.ROOT).startsWith("notify")) {
+                if (!eventName.toLowerCase(Locale.ROOT).startsWith("notify")) {
                     continue;
                 }
 
@@ -231,7 +231,8 @@ public final class GeneratePassionCatalog {
     private static String quote(String text) {
         var output = new StringBuilder("\"");
 
-        for (char c : text.toCharArray()) {
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
             require(c >= 0x20 && c < 0x7f, "Non-ASCII text " + text);
 
             if (c == '"' || c == '\\') {
