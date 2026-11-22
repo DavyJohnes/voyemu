@@ -109,6 +109,8 @@ public:
     bool cluster_restart();
     bool media_power(bool enabled);
     bool media_restart();
+    // Plugs the USB drive into the multimedia guest or unplugs it.
+    bool usb_drive(bool attached);
 
     const std::string &owner() const {
         return owner_;
@@ -253,6 +255,7 @@ private:
                std::span<const char *const> labels, int selected, MusicTabIndicator &indicator);
     void artwork(ui::Resource id, const ParameterRect &bounds, std::uint32_t color);
     void screens_toggle(const ParameterRect &bounds);
+    void usb_toggle(const ParameterRect &bounds, float hit_radius);
     void about();
     void editor();
     void record_item(const std::string &name, const char *kind);

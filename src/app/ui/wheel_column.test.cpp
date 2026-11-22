@@ -96,6 +96,10 @@ int main() {
         require(near(column.screens_toggle.x + 40 * side - (stack_left + glyph), 16) &&
                         near(column.screens_toggle.width, 40),
                 "the screens toggle sits 16 points right of multimedia power");
+        require(near(column.usb_toggle.x, column.screens_toggle.x) &&
+                        near(column.usb_toggle.y, column.media_restart.y) &&
+                        near(column.usb_toggle.width, column.media_restart.width),
+                "the USB drive toggle sits right of multimedia restart on its centre line");
         require(near(column.screens_toggle.x - column.media_power.x,
                      2 * column.button_hit_radius) &&
                         column.cluster_restart.y - column.cluster_power.y >=

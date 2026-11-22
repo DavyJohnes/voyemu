@@ -16,9 +16,13 @@ const ui::VectorArtwork &vector_artwork(ui::Resource id) {
     };
     static const auto text = parse(ui::Resource::LogoText),
                       figure = parse(ui::Resource::LogoFigure),
-                      screens = parse(ui::Resource::ScreensIcon);
+                      screens = parse(ui::Resource::ScreensIcon),
+                      usb = parse(ui::Resource::UsbIcon);
 
-    return id == ui::Resource::LogoText ? text : id == ui::Resource::ScreensIcon ? screens : figure;
+    return id == ui::Resource::LogoText      ? text
+           : id == ui::Resource::ScreensIcon ? screens
+           : id == ui::Resource::UsbIcon     ? usb
+                                             : figure;
 }
 
 constexpr std::array<const char *, 4> gear_labels{"P", "R", "N", "D"};
@@ -1422,6 +1426,48 @@ void Window::screens_toggle(const ParameterRect &bounds) {
             ImGui::GetItemID());
 }
 
+// The USB drive toggle beside the multimedia restart button: its icon takes the primary ink while
+// the drive is plugged in and the inactive ink while it is out, like the screens toggle. Its hit
+// square keeps to the hit radius of the lifecycle glyphs, so it stays clear of the power circle
+// below the restart button.
+void Window::usb_toggle(const ParameterRect &bounds, float hit_radius) {
+    const auto android = view_.deliveries.value("android", Json::object());
+    const bool attached = android.value("usb_drive", Json::object()).value("attached", false);
+    const bool available = view_.ready && android.value("powered", false) &&
+                           android.contains("usb_drive");
+
+    const ParameterRect hit{bounds.x + bounds.width / 2 - hit_radius,
+                            bounds.y + bounds.height / 2 - hit_radius, 2 * hit_radius,
+                            2 * hit_radius};
+    ImGui::SetCursorScreenPos(ImVec2(hit.x, hit.y));
+    ImGui::BeginDisabled(!available);
+
+    if (ImGui::InvisibleButton("##usb", ImVec2(hit.width, hit.height),
+                               ImGuiButtonFlags_NoNavFocus)) {
+        client_.usb_drive(!attached);
+    }
+
+    const bool hovered = ImGui::IsItemHovered();
+    record_item("usb", "usb");
+
+    if (!options_.capture_ui.empty()) {
+        inspection_["fields"].back()["selected"] = attached;
+        inspection_["fields"].back()["available"] = available;
+    }
+
+    const auto &icon = vector_artwork(ui::Resource::UsbIcon);
+    const float unit = bounds.width / 28;
+    artwork(ui::Resource::UsbIcon,
+            {bounds.x + icon.x * unit, bounds.y + icon.y * unit, icon.width * unit,
+             icon.height * unit},
+            available      ? glyph_ink(light_theme_, hovered, attached)
+            : light_theme_ ? IM_COL32(0, 0, 0, 77)
+                           : IM_COL32(255, 255, 255, 77));
+    ImGui::RenderNavCursor(ImRect(ImVec2(hit.x, hit.y), ImVec2(hit.right(), hit.bottom())),
+                           ImGui::GetItemID());
+    ImGui::EndDisabled();
+}
+
 // All radios share one segment: the widest caption of the gear, scale and language radios.
 WheelColumn Window::wheel_layout() const {
     float widest = 0;
@@ -1586,6 +1632,10 @@ void Window::wheel_controls() {
         screens_toggle(column.screens_toggle);
     }
 
+    if (android.value("lifecycle_supported", false)) {
+        usb_toggle(column.usb_toggle, column.button_hit_radius);
+    }
+
     if (!options_.capture_ui.empty()) {
         const auto rect = [](const ParameterRect &r) {
             return Json::array({r.x, r.y, r.width, r.height});
@@ -1598,7 +1648,8 @@ void Window::wheel_controls() {
                                        {"cluster_restart", rect(column.cluster_restart)},
                                        {"media_power", rect(column.media_power)},
                                        {"media_restart", rect(column.media_restart)},
-                                       {"screens_toggle", rect(column.screens_toggle)}};
+                                       {"screens_toggle", rect(column.screens_toggle)},
+                                       {"usb_toggle", rect(column.usb_toggle)}};
     }
 }
 

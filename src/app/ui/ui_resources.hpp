@@ -6,7 +6,8 @@ enum class Resource {
     Icon,
     LogoText,
     LogoFigure,
-    ScreensIcon
+    ScreensIcon,
+    UsbIcon
 };
 std::span<const std::uint8_t> resource(Resource id);
 } // namespace voyemu::ui

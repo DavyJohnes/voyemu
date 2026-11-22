@@ -784,6 +784,22 @@ bool Client::media_restart() {
     return true;
 }
 
+bool Client::usb_drive(bool attached) {
+    std::lock_guard lock(mutex_);
+    const auto android = state_.deliveries.value("android", Json::object());
+
+    if (!state_.ready || !android.value("powered", false) || !android.contains("usb_drive") ||
+        events_.size() >= 512) {
+        return false;
+    }
+
+    events_.push_back(
+            {{"schema", 1}, {"op", "usb_drive"}, {"attached", attached}, {"owner", owner_}});
+    wake_.notify_one();
+
+    return true;
+}
+
 void Client::ingest(const Json &response) {
     if (!response.value("ok", false)) {
         throw std::runtime_error(

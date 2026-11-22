@@ -23,6 +23,8 @@ Deflated deflated(Resource id) {
         return {logo_figure, logo_figure_size};
     case Resource::ScreensIcon:
         return {screens_icon, screens_icon_size};
+    case Resource::UsbIcon:
+        return {usb_icon, usb_icon_size};
     }
 
     throw std::invalid_argument("UI_RESOURCE: unknown resource");

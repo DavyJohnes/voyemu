@@ -391,6 +391,8 @@ struct WheelColumn {
     float button_hit_radius{};
     // The screens window toggle in the bottom row, right of the multimedia power button.
     ParameterRect screens_toggle;
+    // The USB drive toggle in the top row, right of the multimedia restart button.
+    ParameterRect usb_toggle;
 };
 
 // The column around the wheel is laid out once at 100 percent and scaled by wheel width / 460.
@@ -398,8 +400,8 @@ struct WheelColumn {
 // The scale and language choices share the gear row of the current form: top, height and caption
 // size; their cell is the segment of every radio, the P/R/N/D radio included. The cluster power
 // glyph starts, and the multimedia power glyph ends, the edge margin of the gear row from the area
-// edges; the multimedia pair mirrors the cluster pair: power below, restart above, and the screens
-// window toggle right of power on its centre line.
+// edges; the multimedia pair mirrors the cluster pair: power below, restart above, the screens
+// window toggle right of power and the USB drive toggle right of restart on their centre lines.
 // The wheel rectangle at a scale: horizontally where view_layout puts it; vertically the visible
 // bottom of the wheel photos ends 40 physical pixels at 100 percent above the gear row, which ends
 // as far above the bottom of the area. Without a silhouette the rectangle stays centred.
@@ -526,7 +528,8 @@ inline WheelColumn wheel_column(unsigned screen_scale, const WheelInk &left, con
     const float language_x = row_right - choice_width,
                 scale_x = (row_left + language_x - choice_width) / 2;
     const float media_y = design.top_height - margin - button * (1 - power_bottom),
-                media_center = media_y + button * (power_top + 1 - power_bottom) / 2;
+                media_center = media_y + button * (power_top + 1 - power_bottom) / 2,
+                restart_y = media_y + button * power_top - gap - button * (1 - restart_bottom);
     const auto view = view_layout(screen_scale);
     const auto actual = view.wheel;
     const float k = actual.width / wheel.width;
@@ -545,12 +548,12 @@ inline WheelColumn wheel_column(unsigned screen_scale, const WheelInk &left, con
             scaled({box_x, margin - button * power_top, button, button}),
             scaled({box_x, margin + power_visible + gap - button * restart_top, button, button}),
             scaled({box_x, media_y, button, button}),
-            scaled({box_x, media_y + button * power_top - gap - button * (1 - restart_bottom),
-                    button, button}),
+            scaled({box_x, restart_y, button, button}),
             cell * k,
             gear_font_size(screen_scale),
             (button * (.5f - side) + gap / 2) * k,
             scaled({x + visible_width + gap - button * side, media_center - button / 2, button,
-                    button})};
+                    button}),
+            scaled({x + visible_width + gap - button * side, restart_y, button, button})};
 }
 } // namespace voyemu::cluster
