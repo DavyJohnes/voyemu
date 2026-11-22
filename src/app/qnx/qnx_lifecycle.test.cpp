@@ -171,10 +171,13 @@ int main(int argc, char **argv) try {
             auto restarted = cycle.handle({{"op", "cluster_restart"}, {"session_id", id}});
             require(restarted["ok"] == true && restarted["deliveries"]["qnx"]["generation"] == 3,
                     "restart reused stale generation");
-            // Closing the cluster ends the startup sequence of its cold start: ign returns to the
-            // vehicle before it, the reset keeps it, and no other value of the scenario changes.
+            // Closing the cluster ends the startup sequence of its cold start: the READY power
+            // state held at ACC returns with ign, ready_lamp and the charging battery voltage, the
+            // reset keeps it, and no other value of the scenario changes.
             auto scenario = logical;
             scenario["raw_oem"]["ign"] = 1;
+            scenario["raw_oem"]["ready_lamp"] = 1;
+            scenario["raw_oem"]["ic_bat_voltage"] = 1380;
             scenario["sequence"] = restarted["state"]["sequence"];
             scenario["updated_utc"] = restarted["state"]["updated_utc"];
             require(restarted["deliveries"]["startup_ignition"] ==
