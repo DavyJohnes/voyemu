@@ -1362,6 +1362,62 @@ int main(int argc, char **argv) try {
                 require(started.exit_code == 0, "canonical API machine failed: " + started.output);
                 const auto response = Json::parse(started.output);
                 require(response.at("ok") == true, "canonical API start not accepted");
+
+                if (!api_first_bind) {
+                    // The USB drive reaches the SDK process over its QMP channel and the guest
+                    // reports the mounted volume; unplugging removes the device and the volume.
+                    const auto usb = [&](const char *op) {
+                        const auto path = root / ".local/build/canonical-api-usb.json";
+                        write_private_json(path, {{"schema", 1},
+                                                  {"request_id", random_token()},
+                                                  {"op", op},
+                                                  {"profile", qinggan09_profile()},
+                                                  {"machine", qinggan09_profile()},
+                                                  {"session", response.at("result").at("session")},
+                                                  {"timeout_ms", 10000}});
+                        const auto result = run({"test", "--request", path.string()});
+                        require(result.exit_code == 0,
+                                std::string(op) + " failed: " + result.output);
+
+                        return Json::parse(result.output).at("result");
+                    };
+                    const auto plugged = usb("multimedia.usb.attach");
+                    require(plugged.at("attached") == true && plugged.at("changed") == true &&
+                                    plugged.at("volume") ==
+                                            Json{{"uuid", "2026-1122"}, {"state", "mounted"}},
+                            "USB drive attach did not mount the guest volume: " + plugged.dump());
+                    require(usb("multimedia.usb.attach").at("changed") == false,
+                            "a second attach changed the port");
+                    require(json({"status"}).at("deliveries").at("android").at("usb_drive") ==
+                                    Json{{"attached", true}},
+                            "session status lacks the plugged drive");
+                    const auto unplugged = usb("multimedia.usb.detach");
+                    require(unplugged.at("attached") == false && unplugged.at("changed") == true &&
+                                    unplugged.at("volume").is_null(),
+                            "USB drive detach left the guest volume: " + unplugged.dump());
+                    const auto commands = read_private_json(root / "qmp-commands.json");
+                    std::vector<std::string> executed;
+
+                    for (const auto &command : commands) {
+                        executed.push_back(command.at("execute").get<std::string>());
+                    }
+
+                    require(executed == std::vector<std::string>{"qmp_capabilities",
+                                                                 "human-monitor-command",
+                                                                 "device_add", "qmp_capabilities",
+                                                                 "device_del"},
+                            "unexpected QMP conversation: " + commands.dump());
+                    bool image = false;
+
+                    for (const auto &entry :
+                         std::filesystem::recursive_directory_iterator(root / "machines")) {
+                        image |= entry.path().filename() == "usb-drive.img" &&
+                                 entry.file_size() == 64ULL << 20;
+                    }
+
+                    require(image, "the machine has no generated USB drive image");
+                }
+
                 const auto observed = json({"status"});
                 require(observed.at("machine") == qinggan09_profile() &&
                                 observed.at("machine_seed") == selected_machine.string() &&
@@ -3472,18 +3528,26 @@ int main(int argc, char **argv) try {
             return 0;
         }
 #endif
+        // The USB controller and its QMP channel follow the board arguments of the host.
+        require(sdk_args.size() >= 4 && sdk_args.at(sdk_args.size() - 4) == "-device" &&
+                        sdk_args.at(sdk_args.size() - 3) == "usb-ehci,id=voyemu-usb" &&
+                        sdk_args.at(sdk_args.size() - 2) == "-qmp" &&
+                        sdk_args.back().get<std::string>().ends_with(",server=on,wait=off"),
+                "SDK launch lacks the USB controller and its QMP channel");
+        require(std::count(sdk_args.begin(), sdk_args.end(), Json("-qemu")) == 1,
+                "SDK launch has more than one QEMU boundary");
 #ifdef _WIN32
         const auto trusted_tail = android_sdk_machine_arguments(true);
-        require(sdk_args.size() >= trusted_tail.size() &&
+        require(sdk_args.size() >= trusted_tail.size() + 4 &&
                         std::equal(trusted_tail.begin(), trusted_tail.end(),
                                    sdk_args.end() -
-                                           static_cast<std::ptrdiff_t>(trusted_tail.size()),
+                                           static_cast<std::ptrdiff_t>(trusted_tail.size() + 4),
                                    [](const std::string &expected, const Json &actual) {
                                        return actual == Json(expected);
                                    }),
                 "Windows ARM64 launch omitted the owned virt/TCG/ICount tail");
 #else
-        require(std::find(sdk_args.begin(), sdk_args.end(), Json("-qemu")) == sdk_args.end(),
+        require(sdk_args.at(sdk_args.size() - 5) == "-qemu",
                 "Mac launch acquired Windows QEMU board arguments");
 #endif
 

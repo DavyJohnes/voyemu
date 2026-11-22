@@ -2967,6 +2967,8 @@ int main(int argc, char **argv) try {
                                                        "multimedia.phone.answer",
                                                        "multimedia.phone.hangup",
                                                        "multimedia.phone.state",
+                                                       "multimedia.usb.attach",
+                                                       "multimedia.usb.detach",
                                                        "cluster.power",
                                                        "cluster.reboot",
                                                        "cluster.system",

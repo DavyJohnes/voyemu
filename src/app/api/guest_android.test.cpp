@@ -260,6 +260,52 @@ void system_phone_logs(const std::filesystem::path &base) {
     const auto off = instance.call(owned.request("multimedia.phone.state")).at("error");
     assert(off.at("code") == "PHONE_PROVIDER_UNAVAILABLE" && off.at("outcome") == "not_started");
 }
+
+void usb_drive(const std::filesystem::path &base) {
+    struct Unconfirmed final : api::FakeGuestAndroid {
+        Json usb_drive(const Json &request, bool, int) override {
+            return {{"ok", true}, {"session_id", request.at("session").at("id")}};
+        }
+    };
+    Observed fixture(base, std::make_shared<api::FakeGuestAndroid>());
+    auto &android = *fixture.android;
+    auto &instance = fixture.instance;
+    const auto &owned = fixture.owned;
+
+    const auto attached = instance.call(owned.request("multimedia.usb.attach"));
+
+    assert(attached.at("ok") == true && attached.at("result").at("attached") == true &&
+           attached.at("result").at("changed") == true &&
+           attached.at("result").at("volume").at("state") == "mounted" &&
+           !attached.at("result").contains("ok") && android.calls.back() == "usb_attach");
+    const auto again = instance.call(owned.request("multimedia.usb.attach"));
+    assert(again.at("result").at("changed") == false);
+    const auto detached = instance.call(owned.request("multimedia.usb.detach"));
+    assert(detached.at("result").at("attached") == false &&
+           detached.at("result").at("volume").is_null() && android.calls.back() == "usb_detach");
+
+    auto bounded = owned.request("multimedia.usb.attach");
+    bounded["timeout_ms"] = 25001;
+    auto extra = owned.request("multimedia.usb.attach");
+    extra["image"] = "/tmp/other.img";
+    auto foreign = owned.request("multimedia.usb.detach");
+    foreign["session"].erase("ownership_id");
+    const auto calls = android.calls.size();
+    assert(code(instance.call(bounded)) == "TEST_ARGUMENT" &&
+           code(instance.call(extra)) == "TEST_ARGUMENT" &&
+           code(instance.call(foreign)) == "TEST_OWNERSHIP" && android.calls.size() == calls);
+
+    android.failure = "USB_DRIVE_UNKNOWN: QMP channel lost: IPC_READ_UNKNOWN: incomplete message";
+    const auto lost = instance.call(owned.request("multimedia.usb.attach")).at("error");
+    assert(lost.at("code") == "USB_DRIVE_UNKNOWN" && lost.at("outcome") == "unknown");
+    android.powered = false;
+    const auto off = instance.call(owned.request("multimedia.usb.attach")).at("error");
+    assert(off.at("code") == "USB_DRIVE" && off.at("outcome") == "not_started");
+
+    Observed unconfirmed(base, std::make_shared<Unconfirmed>());
+    assert(code(unconfirmed.instance.call(unconfirmed.owned.request("multimedia.usb.attach"))) ==
+           "USB_DRIVE_UNKNOWN");
+}
 } // namespace
 
 int main(int argc, char **argv) try {
@@ -271,6 +317,7 @@ int main(int argc, char **argv) try {
     tree(base);
     frame(base);
     system_phone_logs(base);
+    usb_drive(base);
     std::cout << "Android multimedia API lifecycle and observations dispatch through "
                  "GuestAndroid\n";
 } catch (const std::exception &error) {

@@ -325,6 +325,8 @@ Json operations() {
                         "multimedia.phone.answer",
                         "multimedia.phone.hangup",
                         "multimedia.phone.state",
+                        "multimedia.usb.attach",
+                        "multimedia.usb.detach",
                         "cluster.power",
                         "cluster.reboot",
                         "cluster.system",
@@ -518,7 +520,8 @@ Json normalize_request(Json request, bool suite_case) {
                           "use screen or screens; legacy surface names are unsupported");
     }
 
-    if (op == "cluster.system" || op == "multimedia.power") {
+    if (op == "cluster.system" || op == "multimedia.power" || op == "multimedia.usb.attach" ||
+        op == "multimedia.usb.detach") {
         for (const auto &[key, value] : request.items()) {
             (void)value;
 
@@ -580,7 +583,8 @@ bool writer(std::string_view op) {
            op == "session.stop" || op == "vehicle.set" || op == "input.wheel.press" ||
            op == "input.wheel.release" || op == "input.voice.trigger" || op == "input.tap" ||
            op == "input.drag" || op == "input.gesture" || op == "input.key.press" ||
-           op == "cluster.power" || op == "cluster.reboot";
+           op == "cluster.power" || op == "cluster.reboot" || op == "multimedia.usb.attach" ||
+           op == "multimedia.usb.detach";
 }
 
 bool recorded(std::string_view op) {
@@ -849,6 +853,13 @@ public:
                          {"method", command.at("method")},
                          {"payload", command.at("payload")}},
                         command.at("method") != "snapshot", 15000);
+    }
+
+    Json usb_drive(const Json &request, bool attached, int timeout_ms) override {
+        return control_(
+                request,
+                {{"op", "test_usb_drive"}, {"attached", attached}, {"timeout_ms", timeout_ms}},
+                true, timeout_ms + 5000);
     }
 
     Json logs(const Json &request, const Json &query, int timeout_ms) override {

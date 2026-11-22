@@ -30,6 +30,8 @@ public:
     virtual Json system(const Json &request, int timeout_ms) = 0;
     // Synthetic phone command (method, payload); "snapshot" reads state, other methods mutate.
     virtual Json phone(const Json &request, const Json &command) = 0;
+    // Plugs or unplugs the USB drive and waits up to timeout_ms for the guest volume.
+    virtual Json usb_drive(const Json &request, bool attached, int timeout_ms) = 0;
     // Diagnostic logs reply; query holds source, timeout_ms and source-specific fields.
     virtual Json logs(const Json &request, const Json &query, int timeout_ms) = 0;
 };

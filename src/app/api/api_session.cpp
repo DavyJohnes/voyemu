@@ -446,6 +446,22 @@ Json Api::dispatch_lifecycle(const std::string &op, const Json &request,
         return result;
     }
 
+    if (op == "multimedia.usb.attach" || op == "multimedia.usb.detach") {
+        const bool attached = op == "multimedia.usb.attach";
+        const auto timeout = number(request, "timeout_ms", 20000, 1, 25000);
+        auto result = transports_.android->usb_drive(request, attached, static_cast<int>(timeout));
+
+        if (result.value("attached", !attached) != attached ||
+            !result.value("changed", Json()).is_boolean() ||
+            !(result.value("volume", Json()).is_null() || result.at("volume").is_object())) {
+            throw VoyemuError("USB_DRIVE_UNKNOWN", "invalid USB drive receipt after dispatch");
+        }
+
+        result.erase("ok");
+
+        return result;
+    }
+
     if (op == "multimedia.launch") {
         const auto package = text(request, "package", 255),
                    screen = request.contains("screen") ? text(request, "screen")

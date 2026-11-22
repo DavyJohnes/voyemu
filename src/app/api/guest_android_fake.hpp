@@ -31,6 +31,7 @@ public:
     std::uint32_t frame_sequence = 1;
     Json system_state = {{"source", "system"}, {"android_pid", 4242}};
     Json phone_state = {{"connected", false}, {"call", "idle"}};
+    bool usb_attached = false;
     std::string logs_source;
     // A non-empty failure is thrown by the next call, as the supervisor reports it.
     std::string failure;
@@ -222,6 +223,22 @@ public:
         return {{"ok", true},
                 {"session_id", request.at("session").at("id")},
                 {"state", phone_state}};
+    }
+
+    Json usb_drive(const Json &request, bool attached, int) override {
+        calls.push_back(attached ? "usb_attach" : "usb_detach");
+        fail();
+        ready("USB_DRIVE: multimedia is not running");
+        const bool changed = usb_attached != attached;
+        usb_attached = attached;
+
+        return {{"ok", true},
+                {"session_id", request.at("session").at("id")},
+                {"attached", attached},
+                {"changed", changed},
+                {"android_generation", generation},
+                {"volume",
+                 attached ? Json{{"uuid", "2026-1122"}, {"state", "mounted"}} : Json(nullptr)}};
     }
 
     Json logs(const Json &request, const Json &query, int) override {
