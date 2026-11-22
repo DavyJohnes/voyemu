@@ -216,6 +216,27 @@
       }
     },
     {
+      "name": "WecarFlow",
+      "file": "WecarFlow.apk",
+      "source": {
+        "package": "com.tencent.wecarflow"
+      }
+    },
+    {
+      "name": "HiCar",
+      "file": "HiCar.apk",
+      "source": {
+        "package": "com.huawei.hicar"
+      }
+    },
+    {
+      "name": "Bill",
+      "file": "Bill.apk",
+      "source": {
+        "package": "com.pateo.flutter_order_center"
+      }
+    },
+    {
       "name": "FontRobotoRegular",
       "file": "fonts/Roboto-Regular.ttf",
       "source": {

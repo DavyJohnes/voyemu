@@ -565,6 +565,66 @@
         "path": "/system/priv-app/QGBus-release/QGBus-release.apk"
       }
     },
+    "CloudApp": {
+      "file": "CloudApp.apk",
+      "sha256": "dcd5375e4380bc4b763c2943a72457c9c0367ba860426cc9af81848d425634d2",
+      "source": {
+        "package": "com.reachauto.clouddesk"
+      },
+      "bytes": 87014811,
+      "acquisition": {
+        "image": "vendor",
+        "path": "/vendor/app/CloudApp/CloudApp.apk"
+      }
+    },
+    "WecarFlow": {
+      "file": "WecarFlow.apk",
+      "sha256": "63be10e99b261e976b49e607c9d64a2aab5c07a527bda9b912719c1e90f2326b",
+      "source": {
+        "package": "com.tencent.wecarflow"
+      },
+      "bytes": 195102015,
+      "acquisition": {
+        "image": "vendor",
+        "path": "/vendor/app/WeCarFlow/WeCarFlow.apk"
+      }
+    },
+    "HiCar": {
+      "file": "HiCar.apk",
+      "sha256": "fdb752eb99b7e3c521a56590ec5eea66fcbbd9cccd29f11ae072fd46de321791",
+      "source": {
+        "package": "com.huawei.hicar"
+      },
+      "bytes": 9156556,
+      "acquisition": {
+        "image": "vendor",
+        "path": "/vendor/app/HwHiCar/HwHiCar.apk"
+      }
+    },
+    "Bill": {
+      "file": "Bill.apk",
+      "sha256": "6e143afcaf216637271ed59891bab8c7f45c4e4f120b40fed8c7dd9f3abd8849",
+      "source": {
+        "package": "com.pateo.flutter_order_center"
+      },
+      "bytes": 66777178,
+      "acquisition": {
+        "image": "vendor",
+        "path": "/vendor/app/flutter_order_center-release/flutter_order_center-release.apk"
+      }
+    },
+    "FreeBaike": {
+      "file": "FreeBaike.apk",
+      "sha256": "37a7a45fce795ec3b3c353b8daab7385419e3f682f31aa64e3d4318decd7207e",
+      "source": {
+        "package": "com.iflytek.autofly.motormaster"
+      },
+      "bytes": 40124087,
+      "acquisition": {
+        "image": "system",
+        "path": "/system/priv-app/IflytekMotorMaster_release/IflytekMotorMaster_release.apk"
+      }
+    },
     "FontRobotoRegular": {
       "file": "fonts/Roboto-Regular.ttf",
       "bytes": 305608,
@@ -1029,6 +1089,36 @@
       "steps": [
         "qgapi-use-libraries.json"
       ],
+      "sign": "platform"
+    },
+    "CloudApp": {
+      "type": "apk",
+      "input": "original:CloudApp",
+      "steps": [],
+      "sign": "platform"
+    },
+    "WecarFlow": {
+      "type": "apk",
+      "input": "original:WecarFlow",
+      "steps": [],
+      "sign": "platform"
+    },
+    "HiCar": {
+      "type": "apk",
+      "input": "original:HiCar",
+      "steps": [],
+      "sign": "platform"
+    },
+    "Bill": {
+      "type": "apk",
+      "input": "original:Bill",
+      "steps": [],
+      "sign": "platform"
+    },
+    "FreeBaike": {
+      "type": "apk",
+      "input": "original:FreeBaike",
+      "steps": [],
       "sign": "platform"
     }
   },
@@ -1564,6 +1654,26 @@
       "type": "file",
       "target": "/vendor/etc/fstab.ranchu",
       "mode": "0644"
+    },
+    {
+      "artifact": "patched:CloudApp",
+      "type": "apk"
+    },
+    {
+      "artifact": "patched:WecarFlow",
+      "type": "apk"
+    },
+    {
+      "artifact": "patched:HiCar",
+      "type": "apk"
+    },
+    {
+      "artifact": "patched:Bill",
+      "type": "apk"
+    },
+    {
+      "artifact": "patched:FreeBaike",
+      "type": "apk"
     }
   ],
   "configure": {

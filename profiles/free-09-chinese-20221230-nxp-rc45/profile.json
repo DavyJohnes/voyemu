@@ -3691,6 +3691,42 @@
     "path": "/system/media/bootanimation1.zip"
    }
   },
+  "HiCar": {
+   "file": "hicar.apk",
+   "sha256": "77e3f1cd5089da81fc4c471b78b868feb1bbc06b49a3b380cecfdca20019678e",
+   "source": {
+    "path": "/vendor/app/HwHiCar/HwHiCar.apk"
+   },
+   "bytes": 6032543,
+   "acquisition": {
+    "image": "vendor",
+    "path": "/vendor/app/HwHiCar/HwHiCar.apk"
+   }
+  },
+  "Bill": {
+   "file": "bill.apk",
+   "sha256": "d8b66007fa9bf7a98e3f19171a2cce96c1cf0ff6d80a9779acadf039eef904a1",
+   "source": {
+    "path": "/system/priv-app/flutter_order_center-release/flutter_order_center-release.apk"
+   },
+   "bytes": 75545103,
+   "acquisition": {
+    "image": "system",
+    "path": "/system/priv-app/flutter_order_center-release/flutter_order_center-release.apk"
+   }
+  },
+  "FreeBaike": {
+   "file": "freebaike.apk",
+   "sha256": "216cd14ccf68a64428dd2aa08242d5c589a92b4758800436e30e31425c117c7d",
+   "source": {
+    "path": "/system/priv-app/IflytekMotorMaster_release/IflytekMotorMaster_release.apk"
+   },
+   "bytes": 83394053,
+   "acquisition": {
+    "image": "system",
+    "path": "/system/priv-app/IflytekMotorMaster_release/IflytekMotorMaster_release.apk"
+   }
+  },
   "FontRobotoRegular": {
    "file": "fonts/Roboto-Regular.ttf",
    "bytes": 158604,
@@ -4056,6 +4092,24 @@
     "nxp-phone-connect-anr.json",
     "qgapi-use-libraries.json"
    ],
+   "sign": "platform"
+  },
+  "HiCar": {
+   "type": "apk",
+   "input": "original:HiCar",
+   "steps": [],
+   "sign": "platform"
+  },
+  "Bill": {
+   "type": "apk",
+   "input": "original:Bill",
+   "steps": [],
+   "sign": "platform"
+  },
+  "FreeBaike": {
+   "type": "apk",
+   "input": "original:FreeBaike",
+   "steps": [],
    "sign": "platform"
   }
  },
@@ -6564,6 +6618,18 @@
    "type": "file",
    "target": "/vendor/etc/fstab.ranchu",
    "mode": "0644"
+  },
+  {
+   "artifact": "patched:HiCar",
+   "type": "apk"
+  },
+  {
+   "artifact": "patched:Bill",
+   "type": "apk"
+  },
+  {
+   "artifact": "patched:FreeBaike",
+   "type": "apk"
   }
  ],
  "configure": {

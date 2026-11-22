@@ -612,6 +612,42 @@
         "path": "/system/priv-app/QGBus-release/QGBus-release.apk"
       }
     },
+    "WecarFlow": {
+      "file": "WecarFlow.apk",
+      "sha256": "f0d81a258d4493d30e4bb3b70b5c8c303d8135cf096cdefd9d83aa7787107939",
+      "source": {
+        "package": "com.tencent.wecarflow"
+      },
+      "bytes": 210954084,
+      "acquisition": {
+        "image": "vendor",
+        "path": "/vendor/app/WeCarFlow/WeCarFlow.apk"
+      }
+    },
+    "HiCar": {
+      "file": "HiCar.apk",
+      "sha256": "984adb44a224af4f104eb9307be67daaa481f5ab99bb3929009c3eb0b36a1d9f",
+      "source": {
+        "package": "com.huawei.hicar"
+      },
+      "bytes": 8175470,
+      "acquisition": {
+        "image": "vendor",
+        "path": "/vendor/app/HwHiCar/HwHiCar-release.apk"
+      }
+    },
+    "Bill": {
+      "file": "Bill.apk",
+      "sha256": "e75db0f4b6279e2d641831ab5e95b66b54c0af8b1eecf23828907e7878a6d9d2",
+      "source": {
+        "package": "com.pateo.flutter_order_center"
+      },
+      "bytes": 75568671,
+      "acquisition": {
+        "image": "vendor",
+        "path": "/vendor/app/flutter_order_center-release/flutter_order_center-release.apk"
+      }
+    },
     "FontRobotoRegular": {
       "file": "fonts/Roboto-Regular.ttf",
       "bytes": 305608,
@@ -943,6 +979,18 @@
       "type": "file",
       "target": "/vendor/etc/fstab.ranchu",
       "mode": "0644"
+    },
+    {
+      "artifact": "patched:WecarFlow",
+      "type": "apk"
+    },
+    {
+      "artifact": "patched:HiCar",
+      "type": "apk"
+    },
+    {
+      "artifact": "patched:Bill",
+      "type": "apk"
     }
   ],
   "ownerUpdate": {
@@ -1290,6 +1338,21 @@
       "steps": [
         "api30-qgbus-libraries.json"
       ]
+    },
+    "WecarFlow": {
+      "type": "apk",
+      "input": "original:WecarFlow",
+      "steps": []
+    },
+    "HiCar": {
+      "type": "apk",
+      "input": "original:HiCar",
+      "steps": []
+    },
+    "Bill": {
+      "type": "apk",
+      "input": "original:Bill",
+      "steps": []
     }
   },
   "components": {

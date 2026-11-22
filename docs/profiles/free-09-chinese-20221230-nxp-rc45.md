@@ -25,3 +25,5 @@ Import the pinned firmware archive `update.zip` from a local path; `fetch` extra
 ## Notes
 
 The machine has no cluster, so `start` runs only the multimedia, see [launch and sessions](../how/launch.md).
+
+The tiles HiCar, Bill and FreeBaike open the OEM applications of the firmware unchanged; without the cloud services, the phone or the network of the vehicle they show their own login, connection or error screens.

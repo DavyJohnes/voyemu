@@ -630,6 +630,54 @@
         "path": "/system/priv-app/QGBus-release/QGBus-release.apk"
       }
     },
+    "CloudApp": {
+      "file": "CloudApp.apk",
+      "sha256": "46ed7d2a0eacd7ed1f3fc22002c0238de763500e902f0e357398f685258dd9ec",
+      "source": {
+        "package": "com.reachauto.clouddesk"
+      },
+      "bytes": 92003921,
+      "acquisition": {
+        "image": "vendor",
+        "path": "/vendor/app/CloudApp/CloudApp.apk"
+      }
+    },
+    "WecarFlow": {
+      "file": "WecarFlow.apk",
+      "sha256": "37c24dae3d787f904ac8e4326d5030a5ca0b47da3a883f09cf56e3756aef5c74",
+      "source": {
+        "package": "com.tencent.wecarflow"
+      },
+      "bytes": 210970116,
+      "acquisition": {
+        "image": "vendor",
+        "path": "/vendor/app/WeCarFlow/WeCarFlow.apk"
+      }
+    },
+    "HiCar": {
+      "file": "HiCar.apk",
+      "sha256": "ff94d184b068520bd453d5f10e833b1a4841643785df862412f54e44f2fa2d79",
+      "source": {
+        "package": "com.huawei.hicar"
+      },
+      "bytes": 8176978,
+      "acquisition": {
+        "image": "vendor",
+        "path": "/vendor/app/HwHiCar/HwHiCar-release.apk"
+      }
+    },
+    "Bill": {
+      "file": "Bill.apk",
+      "sha256": "9fd99204394ccb4e9cd139a4952f4b8551f5b204c06adb3012c3409e9160fc45",
+      "source": {
+        "package": "com.pateo.flutter_order_center"
+      },
+      "bytes": 75574355,
+      "acquisition": {
+        "image": "vendor",
+        "path": "/vendor/app/flutter_order_center-release/flutter_order_center-release.apk"
+      }
+    },
     "FontRobotoRegular": {
       "file": "fonts/Roboto-Regular.ttf",
       "bytes": 305608,
@@ -962,6 +1010,26 @@
       "steps": [
         "api30-qgbus-libraries.json"
       ]
+    },
+    "CloudApp": {
+      "type": "apk",
+      "input": "original:CloudApp",
+      "steps": []
+    },
+    "WecarFlow": {
+      "type": "apk",
+      "input": "original:WecarFlow",
+      "steps": []
+    },
+    "HiCar": {
+      "type": "apk",
+      "input": "original:HiCar",
+      "steps": []
+    },
+    "Bill": {
+      "type": "apk",
+      "input": "original:Bill",
+      "steps": []
     }
   },
   "install": [
@@ -1284,6 +1352,22 @@
       "type": "file",
       "target": "/vendor/etc/fstab.ranchu",
       "mode": "0644"
+    },
+    {
+      "artifact": "patched:CloudApp",
+      "type": "apk"
+    },
+    {
+      "artifact": "patched:WecarFlow",
+      "type": "apk"
+    },
+    {
+      "artifact": "patched:HiCar",
+      "type": "apk"
+    },
+    {
+      "artifact": "patched:Bill",
+      "type": "apk"
     }
   ],
   "ownerUpdate": {

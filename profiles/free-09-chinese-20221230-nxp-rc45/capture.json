@@ -180,6 +180,27 @@
    }
   },
   {
+   "name": "HiCar",
+   "file": "hicar.apk",
+   "source": {
+    "path": "/vendor/app/HwHiCar/HwHiCar.apk"
+   }
+  },
+  {
+   "name": "Bill",
+   "file": "bill.apk",
+   "source": {
+    "path": "/system/priv-app/flutter_order_center-release/flutter_order_center-release.apk"
+   }
+  },
+  {
+   "name": "FreeBaike",
+   "file": "freebaike.apk",
+   "source": {
+    "path": "/system/priv-app/IflytekMotorMaster_release/IflytekMotorMaster_release.apk"
+   }
+  },
+  {
    "name": "FontRobotoRegular",
    "file": "fonts/Roboto-Regular.ttf",
    "source": {

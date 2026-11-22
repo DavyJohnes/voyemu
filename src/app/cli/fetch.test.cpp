@@ -550,7 +550,7 @@ int main(int argc, char **argv) {
                 }
             }
 
-            check(vendor == 1, "NXP vendor SELinux policy acquired from the vendor image");
+            check(vendor == 2, "NXP vendor SELinux policy and HiCar acquired from the vendor image");
             auto outside = profile;
             outside["original"]["VendorSepolicy"]["acquisition"]["path"] =
                     "/system/etc/selinux/vendor_sepolicy.cil";
