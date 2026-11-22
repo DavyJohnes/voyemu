@@ -2153,7 +2153,7 @@ int main(int argc, char **argv) {
                                    : it.key() == "Camera"
                                            ? Json::array({"api30-navigation-camera-libraries.json",
                                                           "api30-camera-virtual.json"})
-                                   : it.key() == "Gallery"
+                                   : (it.key() == "Gallery" || it.key() == "Video")
                                            ? Json::array({"api30-gallery-arm64.json"})
                                    : it.key() == "QGMedia"
                                            ? Json::array({"api30-media-runtime.json",

@@ -448,6 +448,18 @@
         "path": "/system/priv-app/Gallery-release-signed/Gallery-release-signed.apk"
       }
     },
+    "Video": {
+      "file": "Video.apk",
+      "sha256": "57b6c41e0cd17213b6da55df2e354a5fd047330ca48b6d5391f925e1b97aec18",
+      "source": {
+        "package": "com.qinggan.app.video"
+      },
+      "bytes": 40051313,
+      "acquisition": {
+        "image": "system",
+        "path": "/system/priv-app/Video-release-signed/Video-release-signed.apk"
+      }
+    },
     "AudioPolicy": {
       "file": "AudioPolicy-release.apk",
       "sha256": "b82a2923bfeab0c9df2b46d7caf9cd45281a63623d4fd5243e45d23a0a531e1c",
@@ -698,6 +710,16 @@
     "Gallery": {
       "type": "apk",
       "input": "original:Gallery",
+      "uses": [
+        "component:gallery-arm64-libraries"
+      ],
+      "steps": [
+        "api30-gallery-arm64.json"
+      ]
+    },
+    "Video": {
+      "type": "apk",
+      "input": "original:Video",
       "uses": [
         "component:gallery-arm64-libraries"
       ],
@@ -1032,6 +1054,10 @@
     {
       "type": "apk",
       "artifact": "patched:Gallery"
+    },
+    {
+      "type": "apk",
+      "artifact": "patched:Video"
     },
     {
       "artifact": "patched:AudioPolicy",

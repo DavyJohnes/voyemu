@@ -3,7 +3,8 @@
   "api": 30,
   "constants": {
     "original_sha256_allowlist": [
-      "f716384510601971d1dc80a45304aac09e03530e5073c1497255b2cb810aae30"
+      "f716384510601971d1dc80a45304aac09e03530e5073c1497255b2cb810aae30",
+      "ecc612fe82a008a91382ccdf993cd72c44840e186d0a00af9f0dbf9f2fbf2ae3"
     ]
   },
   "calls": [

@@ -31,3 +31,5 @@ The firmware fingerprint is `qti/msmnile_gvmq/msmnile_gvmq:11/RQ3A.211001.001/47
 The machine has no cluster, so `start` runs only the multimedia, see [launch and sessions](../how/launch.md). The cluster can be added once the QNX images are captured from a vehicle with `voyemu fetch free-11-russian-20260318-rc1 --source=adb --serial SERIAL` and their pins are contributed, see [contributing](../../CONTRIBUTING.md).
 
 The Camera tile opens the ordinary camera and the DVR tile the OEM DVR view, both with a virtual camera, see [camera and DVR](../how/camera.md).
+
+The Video tile opens the OEM Video application `com.qinggan.app.video`; preparation adds to it the same pinned ARM64 libraries as to the OEM Gallery, so the application runs on ARM64 hosts without 32-bit support.

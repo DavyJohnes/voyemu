@@ -419,6 +419,18 @@
         "path": "/system/priv-app/Gallery-release-signed/Gallery-release-signed.apk"
       }
     },
+    "Video": {
+      "file": "Video.apk",
+      "sha256": "ecc612fe82a008a91382ccdf993cd72c44840e186d0a00af9f0dbf9f2fbf2ae3",
+      "source": {
+        "package": "com.qinggan.app.video"
+      },
+      "bytes": 78902051,
+      "acquisition": {
+        "image": "system",
+        "path": "/system/priv-app/Video-release-signed/Video-release-signed.apk"
+      }
+    },
     "AudioPolicy": {
       "file": "AudioPolicy-release.apk",
       "sha256": "83fe6f4fd7a02135fb84e02ef8298cefa42365e970f0760a3b90a60de9582aac",
@@ -864,6 +876,10 @@
       "artifact": "patched:Gallery"
     },
     {
+      "type": "apk",
+      "artifact": "patched:Video"
+    },
+    {
       "artifact": "patched:Hiboard",
       "type": "apk",
       "target": "/system/priv-app/Hiboard-release-signed/Hiboard-release-signed.apk",
@@ -1181,6 +1197,16 @@
     "Gallery": {
       "input": "original:Gallery",
       "type": "apk",
+      "uses": [
+        "component:gallery-arm64-libraries"
+      ],
+      "steps": [
+        "api30-gallery-arm64.json"
+      ]
+    },
+    "Video": {
+      "type": "apk",
+      "input": "original:Video",
       "uses": [
         "component:gallery-arm64-libraries"
       ],

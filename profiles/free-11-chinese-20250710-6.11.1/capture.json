@@ -139,6 +139,13 @@
       }
     },
     {
+      "name": "Video",
+      "file": "Video.apk",
+      "source": {
+        "package": "com.qinggan.app.video"
+      }
+    },
+    {
       "name": "BluetoothPhone",
       "file": "BluetoothPhone.apk",
       "source": {

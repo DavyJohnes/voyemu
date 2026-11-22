@@ -172,6 +172,13 @@
       }
     },
     {
+      "name": "Video",
+      "file": "Video.apk",
+      "source": {
+        "package": "com.qinggan.app.video"
+      }
+    },
+    {
       "name": "AudioPolicy",
       "file": "AudioPolicy-release.apk",
       "source": {
