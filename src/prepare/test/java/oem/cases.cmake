@@ -10,6 +10,7 @@ set(CASES_qinggan09
     "A9BacklightAbiTest ROOT NEW NEEDS:${A9}"
     "Api28PhoneCallWindowGuardTest ROOT NEW NEEDS:${A9}"
     "Api28UsbPlayerGuardTest ROOT NEW PLATFORM NEEDS:${A9}"
+    "CameraRecipeDvrEntryTest ORIGINAL:${A9}/Camera.apk"
     "NxpLauncherSeatCardThreadTest ROOT NEW NEEDS:${NXP}"
     "NxpLauncherWindowThreadTest ROOT NEW NEEDS:${NXP}"
     "NxpStatusbarOverlayTest ROOT NEW NEEDS:${NXP}"

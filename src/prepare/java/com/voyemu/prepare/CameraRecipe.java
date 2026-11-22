@@ -111,10 +111,15 @@ final class CameraRecipe {
                 ACTIVITY + "->initIntent(Landroid/content/Intent;)V",
                 DexEdits.Edit.replace(
                         List.of("iput v5, p0, " + ACTIVITY + "->mInType:I"),
+                        // The DVR entry keeps the OEM DVR view with the virtual camera as its
+                        // DVR camera.
                         List.of(
                                 "const/4 v7, 0x1",
                                 "if-ne v5, v7, :voyemu_input_ready",
-                                "const/4 v5, 0x0",
+                                "invoke-static {}, " + setting + "getInstance()" + SETTING,
+                                "move-result-object v7",
+                                "const/4 v8, 0x2",
+                                "invoke-virtual {v7, v8}, " + setting + "setCameraType(I)V",
                                 ":voyemu_input_ready",
                                 "iput v5, p0, " + ACTIVITY + "->mInType:I")),
                 DexEdits.Edit.replace(
