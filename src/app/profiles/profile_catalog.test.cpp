@@ -624,8 +624,15 @@ int main(int argc, char **argv) {
                                    {"view-observation", "components/view-observation"},
                                    {"statusbar-overlay", "components/statusbar-overlay"},
                                    {"hab-socket", "components/hab-socket"}} &&
-                      passion.at("patches").size() == 19 && passion.at("install").size() == 171,
+                      passion.at("patches").size() == 19 && passion.at("install").size() == 172,
               "H53 finite developer graph must contain only its named OEM, display and synthetic phone adapters");
+        const auto &passion_install = passion.at("install");
+        check(std::count(passion_install.begin(), passion_install.end(),
+                         Json{{"artifact", "files:usb-drive-fstab"},
+                              {"type", "file"},
+                              {"target", "/vendor/etc/fstab.ranchu"},
+                              {"mode", "0644"}}) == 1,
+              "H53 installs the emulator USB filesystem table at its exact vendor path");
         check(passion_wheel_capability(passion).at("routes") == passion_wheel_routes(),
               "Passion standard Android wheel routes are exact");
         {
@@ -737,60 +744,55 @@ int main(int argc, char **argv) {
 
             check(denied, "Passion stale foreign media route rejected");
         }
-        check(passion.at("install").at(
+        check(passion_install.at(
                       0) == Json{{"artifact", "component:statusbar-overlay"},
                                  {"type", "file"},
                                  {"target",
                                   "/system/app/VoyemuPassionStatusbar/VoyemuPassionStatusbar.apk"},
                                  {"mode", "0644"}} &&
-                      passion.at("install").at(1) ==
-                              Json{{"artifact", "component:view-observation"},
-                                   {"type", "file"},
-                                   {"target", "/system/framework/framework.jar"},
-                                   {"mode", "0644"}},
+                      passion_install.at(1) == Json{{"artifact", "component:view-observation"},
+                                                    {"type", "file"},
+                                                    {"target", "/system/framework/framework.jar"},
+                                                    {"mode", "0644"}},
               "H53 stock statusbar overlay and framework observation precede its original graph");
-        check(passion.at("install").at(6).at("artifact") == "files:framework-libraries",
-              "H53 own library XML uses the existing files artifact namespace");
-        check(passion.at("install").at(18) ==
-                              Json{{"artifact", "component:phone"},
-                                   {"type", "file"},
-                                   {"target",
-                                    "/system/priv-app/VoyemuPassionPhone/VoyemuPassionPhone.apk"},
-                                   {"mode", "0644"}} &&
-                      std::count_if(passion.at("install").begin(), passion.at("install").end(),
-                                    [](const auto &node) {
-                                        return node.at("artifact") == "component:phone";
-                                    }) == 1,
-              "H53 standalone synthetic Telecom phone installs exactly once at its own privileged target");
-        check(passion.at("install").at(22) ==
-                      Json{{"artifact", "patched:passion-api30-secondary-navigation"},
-                           {"type", "file"},
-                           {"target", "/system/framework/services.jar"},
-                           {"mode", "0644"}},
-              "Passion clean policy appends only its system JAR");
+        const auto check_passion_file = [&](const char *artifact, const char *target,
+                                            const char *message) {
+            const Json expected = {
+                    {"artifact", artifact}, {"type", "file"}, {"target", target}, {"mode", "0644"}};
+            const auto matches = std::count_if(passion_install.begin(), passion_install.end(),
+                                               [&](const auto &node) {
+                                                   return node.at("artifact") == artifact;
+                                               });
+            check(matches == 1 && std::find(passion_install.begin(), passion_install.end(),
+                                            expected) != passion_install.end(),
+                  message);
+        };
+        check_passion_file("files:framework-libraries",
+                           "/system/etc/permissions/voyemu-framework.xml",
+                           "H53 own library XML uses the existing files artifact namespace");
+        check_passion_file(
+                "component:phone", "/system/priv-app/VoyemuPassionPhone/VoyemuPassionPhone.apk",
+                "H53 standalone synthetic Telecom phone installs exactly once at its own privileged target");
+        check_passion_file("patched:passion-api30-secondary-navigation",
+                           "/system/framework/services.jar",
+                           "Passion clean policy installs exactly one system JAR");
         check(passion.at("patches").at("passion-api30-statusbar") ==
                               Json{{"input", "android:/system_ext/priv-app/SystemUI/SystemUI.apk"},
                                    {"type", "apk"},
                                    {"steps", Json::array({"passion-api30-statusbar.json"})}} &&
                       !passion.at("patches").contains("MonzaSystemUI"),
               "Passion patches actual SDK stock SystemUI without substituting unused Monza");
-        check(passion.at("install").at(21) ==
-                      Json{{"artifact", "patched:passion-api30-statusbar"},
-                           {"type", "file"},
-                           {"target", "/system/system_ext/priv-app/SystemUI/SystemUI.apk"},
-                           {"mode", "0644"}},
-              "Stock SystemUI uses the verified system_ext guest alias");
+        check_passion_file("patched:passion-api30-statusbar",
+                           "/system/system_ext/priv-app/SystemUI/SystemUI.apk",
+                           "Stock SystemUI uses the verified system_ext guest alias");
         check(passion.at("displays").at(1).at("flag") == 0,
               "Passion secondary geometry and right OEM icons retain their original display flag");
         check(passion.at("original").at("LY_Car").at("acquisition") ==
-                              Json{{"image", "vendor"},
-                                   {"path", "/vendor/app/LY_Car/LY_Car.apk"}} &&
-                      passion.at("install").at(23) ==
-                              Json{{"artifact", "patched:LY_Car"},
-                                   {"type", "file"},
-                                   {"target", "/system/app/LY_Car/LY_Car.apk"},
-                                   {"mode", "0644"}},
-              "Passion installs its exact owner vehicle package without replacing OEM icon routing");
+                      Json{{"image", "vendor"}, {"path", "/vendor/app/LY_Car/LY_Car.apk"}},
+              "Passion acquires its exact owner vehicle package from the vendor image");
+        check_passion_file(
+                "patched:LY_Car", "/system/app/LY_Car/LY_Car.apk",
+                "Passion installs its exact owner vehicle package without replacing OEM icon routing");
         const auto passion_plan = declared_patch_plan(passion);
         unsigned passion_jars = 0;
 
@@ -1166,9 +1168,30 @@ int main(int argc, char **argv) {
                                              "capture.json");
         Json passion_capture;
         passion_capture_source >> passion_capture;
-        check(passion.at("original").size() == 26 && passion_capture.at("profile") == passion_id &&
-                      passion_capture.at("android").size() == 26,
-              "H53 capture covers twelve APKs, five framework contracts, eight genuine screen-control files and the boot animation");
+        check(passion_capture.at("profile") == passion_id, "H53 capture profile differs");
+        const auto &passion_originals = passion.at("original");
+        std::set<std::string> captured;
+
+        for (const auto &item : passion_capture.at("android")) {
+            const auto name = item.at("name").get<std::string>();
+            const auto &original = passion_originals.at(name);
+            check(captured.insert(name).second && item.at("file") == original.at("file") &&
+                          item.at("source") == original.at("source") &&
+                          original.at("sha256").get<std::string>().size() == 64,
+                  "H53 capture pins and actual sources agree");
+        }
+
+        std::set<std::string> uncaptured;
+
+        for (auto it = passion_originals.begin(); it != passion_originals.end(); ++it) {
+            if (!captured.contains(it.key())) {
+                uncaptured.insert(it.key());
+            }
+        }
+
+        check(uncaptured == std::set<std::string>{"MessageCenterHidl", "MessageCenterRpc",
+                                                  "MessageCenterService"},
+              "H53 capture omits only the OTA message center inputs");
 
         for (const auto &role : std::vector<std::array<std::string, 4>>{
                      {"LY_Multimedia", "com.voyah.multimedia",
@@ -1199,14 +1222,6 @@ int main(int argc, char **argv) {
                                          node.at("target") == role[3];
                               }),
                   "H53 genuine Music/Phone target retains owner app/priv-app placement");
-        }
-
-        for (const auto &item : passion_capture.at("android")) {
-            const auto &original = passion.at("original").at(item.at("name").get<std::string>());
-            check(item.at("file") == original.at("file") &&
-                          item.at("source") == original.at("source") &&
-                          original.at("sha256").get<std::string>().size() == 64,
-                  "H53 capture pins and actual sources agree");
         }
 
         std::ifstream passion_qnx_source(std::filesystem::path(argv[1]) / passion_id /
@@ -1463,6 +1478,13 @@ int main(int argc, char **argv) {
                            {"package", "com.qinggan.app.hiboard"}}) == 1,
               "genuine Hiboard retains its exact privileged package target");
 
+        const Json a11_usb_fstab = {{"artifact", "files:usb-drive-fstab"},
+                                    {"type", "file"},
+                                    {"target", "/vendor/etc/fstab.ranchu"},
+                                    {"mode", "0644"}};
+        check(std::count(a11.at("install").begin(), a11.at("install").end(), a11_usb_fstab) == 1,
+              "A11 installs one USB filesystem table at its exact vendor target");
+
         for (const auto &install : a11.at("install")) {
             const auto reference = install.at("artifact").get<std::string>();
             check((reference.starts_with("original:") &&
@@ -1483,7 +1505,7 @@ int main(int argc, char **argv) {
                           reference == "files:secondary-display-feature" ||
                           reference == "files:launcher-privapp" || reference == "files:nvram" ||
                           reference == "files:can-simulator-fixture" ||
-                          reference == "files:can-simulator-init" ||
+                          reference == "files:can-simulator-init" || install == a11_usb_fstab ||
                           reference == "files:hybrid-nvram" ||
                           reference == "files:qg-settings-guest" ||
                           reference == "files:early-inputs-init" ||
@@ -1583,7 +1605,7 @@ int main(int argc, char **argv) {
               "Free wheel must bind actual acquired OEM KeyManager");
         check(a11.at("components").at("wheel-input") == "components/wheel-input" &&
                       a11.at("components").at("wheel-platform") == "components/wheel-platform" &&
-                      a11.at("install").size() == 54 &&
+                      a11.at("install").size() == 55 &&
                       std::count(a11.at("install").begin(), a11.at("install").end(),
                                  Json{{"artifact", "patched:original-navi-framework"},
                                       {"type", "file"},
