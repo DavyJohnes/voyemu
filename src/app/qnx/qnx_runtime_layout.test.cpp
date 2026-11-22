@@ -1,4 +1,5 @@
 #include "qnx_runtime_layout.hpp"
+#include "profile_catalog.hpp"
 #ifdef NDEBUG
 #undef NDEBUG
 #endif
@@ -45,9 +46,9 @@ int main() try {
                           "profiles";
     unsigned definitions = 0;
 
-    // Every profile-qnx.json of the catalog declares exactly the originals of its adapter layout.
-    for (const auto &entry : std::filesystem::directory_iterator(profiles)) {
-        const auto file = entry.path() / "profile-qnx.json";
+    // Each bundled cluster profile declares exactly the originals of its adapter layout.
+    for (const auto &name : embedded_profile_names()) {
+        const auto file = profiles / name / "profile-qnx.json";
 
         if (!std::filesystem::is_regular_file(file)) {
             continue;
