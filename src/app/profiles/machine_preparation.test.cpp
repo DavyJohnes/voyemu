@@ -4072,46 +4072,70 @@ int main(int argc, char **argv) {
 
             check(policies.size() == expected_count);
             Json checks = Json::array();
-            std::size_t contents = 0, modes = 0, labels = 0;
-            bool rooted = false;
-            machine_preparation_detail::verify_cold_policy_files(
-                    actual, policies, checks,
-                    [&](const std::vector<std::string> &command) {
-                        if (command.front() == "cat") {
-                            return std::string("sibling-cold");
-                        }
+            std::size_t contents = 0, modes = 0, labels = 0, roots = 0;
+            bool changed_boot = false;
+            const auto passion = actual.at("platform") == "passion";
+            const auto read_policy = [&](const std::vector<std::string> &command) {
+                if (command.front() == "cat") {
+                    return std::string(roots && changed_boot ? "different-boot" : "sibling-cold");
+                }
 
-                        const auto policy = std::find_if(policies.begin(), policies.end(),
-                                                         [&](const auto &item) {
-                                                             return item.target == command.back();
-                                                         });
-                        check(policy != policies.end());
-                        check(rooted == (policy->artifact == "patched:original-navi-selinux"));
+                const auto policy = std::find_if(policies.begin(), policies.end(),
+                                                 [&](const auto &item) {
+                                                     return item.target == command.back();
+                                                 });
+                check(policy != policies.end());
+                const bool restricted =
+                        policy->artifact == "patched:original-navi-selinux" ||
+                        (passion &&
+                         policy->target == "/system/etc/selinux/plat_hwservice_contexts");
+                check((roots == 1) == restricted);
 
-                        if (command.front() == "sha256sum") {
-                            ++contents;
+                if (command.front() == "sha256sum") {
+                    ++contents;
 
-                            return policy->sha256 + "  " + policy->target;
-                        }
+                    return policy->sha256 + "  " + policy->target;
+                }
 
-                        if (command.front() == "stat") {
-                            check(command.at(2) == "%a");
-                            ++modes;
+                if (command.front() == "stat") {
+                    check(command.at(2) == "%a");
+                    ++modes;
 
-                            return std::string("644");
-                        }
+                    return std::string("644");
+                }
 
-                        check(command.front() == "ls" &&
-                              policy->artifact == "patched:original-navi-selinux");
-                        ++labels;
+                check(command.front() == "ls" &&
+                      policy->artifact == "patched:original-navi-selinux");
+                ++labels;
 
-                        return std::string("u:object_r:mac_perms_file:s0 ") + policy->target;
-                    },
-                    [&] {
-                        rooted = true;
-                    });
+                return std::string("u:object_r:mac_perms_file:s0 ") + policy->target;
+            };
+            const auto rooted_adb = [&] {
+                ++roots;
+            };
+            machine_preparation_detail::verify_cold_policy_files(actual, policies, checks,
+                                                                 read_policy, rooted_adb);
             check(contents == expected_count && modes == expected_count);
             check(labels == (original_navi_requested(actual) ? 1U : 0U));
+            check(roots == (passion || original_navi_requested(actual) ? 1U : 0U));
+
+            if (roots) {
+                roots = 0;
+                contents = 0;
+                changed_boot = true;
+                Json new_boot_checks = Json::array();
+                bool rejected = false;
+                try {
+                    machine_preparation_detail::verify_cold_policy_files(
+                            actual, policies, new_boot_checks, read_policy, rooted_adb);
+                } catch (const std::runtime_error &error) {
+                    rejected = std::string_view(error.what())
+                                       .ends_with("cold policy reader boot identity changed");
+                }
+
+                check(rejected && roots == 1 && contents == expected_count - 1);
+            }
+
             check(checks.size() == 2 * static_cast<std::size_t>(expected_count) + labels);
 
             for (const auto &policy : policies) {

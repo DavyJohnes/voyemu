@@ -1,4 +1,5 @@
 #include "machine_preparation_internal.hpp"
+#include "profile_catalog.hpp"
 #include "selinux_patch.hpp"
 
 // Verifies a prepared candidate by a cold boot, captures its frames and exports its images.
@@ -177,7 +178,7 @@ void read_cold_artifact_file(
 void verify_cold_policy_files(
         const Json &profile, const std::vector<Installed> &installed, Json &checks,
         const std::function<std::string(const std::vector<std::string> &)> &shell,
-        const std::function<void()> &root_for_navi_mac) {
+        const std::function<void()> &root_for_policy) {
     const auto boot_id = shell({"cat", "/proc/sys/kernel/random/boot_id"});
 
     need(!boot_id.empty(), "cold policy reader boot identity required");
@@ -206,28 +207,42 @@ void verify_cold_policy_files(
         }
     };
 
-    const Installed *navi_mac = nullptr;
+    const auto passion = record_declares(profile, ProfilePlatform::passion, ProfileBoard::sa8155);
+    std::vector<const Installed *> restricted;
 
     for (const auto &item : installed) {
         if (!cold_policy_file(profile, item)) {
             continue;
         }
 
-        if (item.artifact == "patched:original-navi-selinux") {
-            need(!navi_mac, "duplicate cold Navi SELinux artifact");
-            navi_mac = &item;
+        // The SDK's stock shell can read the other patch targets, but not hwservice contexts.
+        const bool passion_hwservice = passion &&
+                                       item.artifact == "patched:passion-hwservice-contexts" &&
+                                       item.target == "/system/etc/selinux/plat_hwservice_contexts";
+
+        if (item.artifact == "patched:original-navi-selinux" || passion_hwservice) {
+            need(std::none_of(restricted.begin(), restricted.end(),
+                              [&](const Installed *previous) {
+                                  return previous->target == item.target;
+                              }),
+                 "duplicate restricted cold SELinux artifact");
+            restricted.push_back(&item);
         } else {
             verify(item);
         }
     }
 
-    if (navi_mac) {
-        need(static_cast<bool>(root_for_navi_mac),
-             "root proof required to read cold Navi SELinux policy");
-        root_for_navi_mac();
-        need(shell({"cat", "/proc/sys/kernel/random/boot_id"}) == boot_id,
-             "cold policy reader boot identity changed");
-        verify(*navi_mac);
+    if (restricted.empty()) {
+        return;
+    }
+
+    need(static_cast<bool>(root_for_policy), "root proof required to read restricted cold policy");
+    root_for_policy();
+    need(shell({"cat", "/proc/sys/kernel/random/boot_id"}) == boot_id,
+         "cold policy reader boot identity changed");
+
+    for (const auto *policy : restricted) {
+        verify(*policy);
     }
 }
 

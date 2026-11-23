@@ -730,7 +730,7 @@ void record_cold_check(Json &checks, const std::string &id, const std::string &a
 void verify_cold_policy_files(
         const Json &profile, const std::vector<Installed> &installed, Json &checks,
         const std::function<std::string(const std::vector<std::string> &)> &shell,
-        const std::function<void()> &root_for_navi_mac = {});
+        const std::function<void()> &root_for_policy = {});
 bool cold_policy_verified(const Json &profile, const Installed &item, const Json &checks,
                           const std::string &boot_id);
 void verify_cold_installed_file(
