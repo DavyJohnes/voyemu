@@ -29,11 +29,6 @@ public class BootReceiver extends BroadcastReceiver {
                             .setClassName(
                                     "com.qinggan.keymanager.service",
                                     "com.qinggan.keymanager.service.KeyManagerService"));
-            context.startService(
-                    new Intent()
-                            .setClassName(
-                                    "com.qinggan.app.setting",
-                                    "com.qinggan.app.setting.service.MainSettingService"));
             context.startService(new Intent(context, SecondScreenService.class));
         }
     }

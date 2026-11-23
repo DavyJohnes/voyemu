@@ -62,54 +62,45 @@ public final class Api30BootstrapTest {
                         root.resolve(".local/build/tmp"), "api30-bootstrap-test-");
 
         try {
-            Map<String, String> fixtures =
-                    Map.of(
-                            "android/content/ComponentName.java",
-                                    "package android.content; public class ComponentName {}",
-                            "android/content/BroadcastReceiver.java",
-                                    "package android.content; public abstract class"
-                                            + " BroadcastReceiver {public abstract void"
-                                            + " onReceive(Context c,Intent i);}",
-                            "android/content/Intent.java",
-                                    "package android.content; public class Intent {public static"
-                                        + " final String"
-                                        + " ACTION_BOOT_COMPLETED=\"android.intent.action.BOOT_COMPLETED\";"
-                                        + " public String action,component; public Intent(){}"
-                                        + " public Intent(String a){action=a;} public"
-                                        + " Intent(Context c,Class<?>"
-                                        + " cls){component=\"com.voyemu/\"+cls.getName();} public"
-                                        + " Intent setClassName(String p,String"
-                                        + " c){component=p+\"/\"+c;return this;} public String"
-                                        + " getAction(){return action;}}",
-                            "android/content/Context.java",
-                                    "package android.content; public class Context {public final"
-                                        + " java.util.List<String> calls=new"
-                                        + " java.util.ArrayList<>(); public ComponentName"
-                                        + " startService(Intent i){calls.add(i.component);return"
-                                        + " new ComponentName();}}",
-                            "com/voyemu/output/SecondScreenService.java",
-                                    "package com.voyemu.output; public class SecondScreenService"
-                                            + " {}");
             List<String> compiler =
                     new ArrayList<>(List.of("-d", scratch.resolve("classes").toString()));
 
-            for (var entry : fixtures.entrySet()) {
+            for (var entry : fixtures().entrySet()) {
                 Path file = scratch.resolve(entry.getKey());
                 Files.createDirectories(file.getParent());
                 Files.writeString(file, entry.getValue());
                 compiler.add(file.toString());
             }
 
-            compiler.add(directory.resolve("src/com/voyemu/output/BootReceiver.java").toString());
-            compiler.add(
-                    directory
-                            .resolve("src/com/voyemu/output/SecondaryDisplayTarget.java")
-                            .toString());
+            var androidDoubles = root.resolve("src/prepare/test/nxp-bootstrap/android");
+
+            for (String file :
+                    List.of(
+                            "app/ActivityOptions.java",
+                            "content/ComponentName.java",
+                            "hardware/display/DisplayManager.java",
+                            "os/Bundle.java",
+                            "os/Handler.java",
+                            "os/IBinder.java",
+                            "os/Looper.java",
+                            "util/Log.java")) {
+                compiler.add(androidDoubles.resolve(file).toString());
+            }
+
+            for (String file :
+                    List.of(
+                            "BootReceiver.java",
+                            "SecondScreenService.java",
+                            "SecondaryDisplayTarget.java")) {
+                compiler.add(directory.resolve("src/com/voyemu/output").resolve(file).toString());
+            }
+
             check(
                     ToolProvider.getSystemJavaCompiler()
                                     .run(null, null, null, compiler.toArray(String[]::new))
                             == 0,
-                    "actual own receiver compiles against recording public API contract");
+                    "actual receiver and second-screen service compile against recording public API"
+                            + " contract");
 
             try (var loader =
                     new URLClassLoader(
@@ -117,7 +108,19 @@ public final class Api30BootstrapTest {
                             null)) {
                 Class<?> context = loader.loadClass("android.content.Context"),
                         intent = loader.loadClass("android.content.Intent"),
-                        receiver = loader.loadClass("com.voyemu.output.BootReceiver");
+                        receiver = loader.loadClass("com.voyemu.output.BootReceiver"),
+                        service = loader.loadClass("com.voyemu.output.SecondScreenService");
+                String setting =
+                        "com.qinggan.app.setting/com.qinggan.app.setting.service.MainSettingService";
+                Object explicitStart = service.getConstructor().newInstance();
+                service.getMethod("onCreate").invoke(explicitStart);
+                var start = service.getMethod("onStartCommand", intent, int.class, int.class);
+                start.invoke(explicitStart, null, 0, 1);
+                start.invoke(explicitStart, null, 0, 2);
+                check(
+                        context.getField("calls").get(explicitStart).equals(List.of(setting)),
+                        "direct display bootstrap starts Settings once without a boot broadcast");
+
                 Object live = context.getConstructor().newInstance(),
                         own = receiver.getConstructor().newInstance();
                 var receive = receiver.getMethod("onReceive", context, intent);
@@ -135,8 +138,11 @@ public final class Api30BootstrapTest {
                 List<?> calls = (List<?>) context.getField("calls").get(live);
                 check(
                         calls.contains("com.voyemu/com.voyemu.output.SecondScreenService")
+                                && !calls.contains(setting)
+                                && initial.contains(setting)
                                 && calls.equals(initial.stream().filter(calls::contains).toList()),
-                        "actual A11 receiver starts configured services in configured order");
+                        "boot keeps the remaining services in configured order and delegates"
+                                + " Settings to the same display service");
                 checkDisplaySelection(loader);
             }
         } finally {
@@ -157,7 +163,112 @@ public final class Api30BootstrapTest {
                                 "guest_started",
                                 false,
                                 "api30_background_service_acceptance",
-                                false)));
+                                false,
+                                "explicit_bootstrap_starts_settings",
+                                true)));
+    }
+
+    private static Map<String, String> fixtures() {
+        return Map.of(
+                "android/content/Context.java",
+                """
+                package android.content;
+
+                public class Context {
+                    public static final String DISPLAY_SERVICE = "display";
+                    public final java.util.List<String> calls = new java.util.ArrayList<>();
+
+                    public ComponentName startService(Intent intent) {
+                        ComponentName component = intent.getComponent();
+                        calls.add(component.getPackageName() + "/" + component.getClassName());
+                        return component;
+                    }
+
+                    public Object getSystemService(String name) {
+                        return null;
+                    }
+                }
+                """,
+                "android/content/BroadcastReceiver.java",
+                """
+                package android.content;
+
+                public abstract class BroadcastReceiver {
+                    public abstract void onReceive(Context context, Intent intent);
+                }
+                """,
+                "android/content/Intent.java",
+                """
+                package android.content;
+
+                public class Intent {
+                    public static final String ACTION_BOOT_COMPLETED =
+                            "android.intent.action.BOOT_COMPLETED";
+                    public static final int FLAG_ACTIVITY_NEW_TASK = 0x10000000;
+                    private ComponentName component;
+                    private String action;
+
+                    public Intent() {}
+                    public Intent(String action) { this.action = action; }
+                    public Intent(Context context, Class<?> cls) {
+                        component = new ComponentName("com.voyemu", cls.getName());
+                    }
+                    public Intent setClassName(String pkg, String name) {
+                        return setComponent(new ComponentName(pkg, name));
+                    }
+                    public Intent setComponent(ComponentName value) {
+                        component = value;
+                        return this;
+                    }
+                    public ComponentName getComponent() { return component; }
+                    public String getAction() { return action; }
+                    public Intent addFlags(int flags) { return this; }
+                }
+                """,
+                "android/app/Service.java",
+                """
+                package android.app;
+
+                public abstract class Service extends android.content.Context {
+                    public static final int START_NOT_STICKY = 2;
+                    public abstract android.os.IBinder onBind(android.content.Intent intent);
+                    public void onCreate() {}
+                    public void onDestroy() {}
+                    public int onStartCommand(android.content.Intent intent, int flags, int id) {
+                        return 0;
+                    }
+                    public void startActivity(android.content.Intent intent, android.os.Bundle options) {}
+                    public void stopSelf() {}
+                }
+                """,
+                "android/view/Display.java",
+                """
+                package android.view;
+
+                public class Display {
+                    public static final int DEFAULT_DISPLAY = 0;
+                    private final int id;
+
+                    public Display(int id) { this.id = id; }
+                    public int getDisplayId() { return id; }
+                    public String getName() { return id == 0 ? "Default" : "Emulator2D"; }
+                    public boolean isValid() { return true; }
+                    public Mode getMode() { return new Mode(); }
+
+                    public static class Mode {
+                        public int getPhysicalWidth() { return 1920; }
+                        public int getPhysicalHeight() { return 720; }
+                    }
+                }
+                """,
+                "com/voyemu/output/ActivationPublisher.java",
+                """
+                package com.voyemu.output;
+
+                final class ActivationPublisher {
+                    static void publish() {}
+                }
+                """);
     }
 
     private static void checkDisplaySelection(ClassLoader loader) throws Exception {

@@ -44,6 +44,17 @@ public class SecondScreenService extends Service {
     private int generation = 0; // protects against duplicate/expired callbacks
 
     @Override
+    public void onCreate() {
+        super.onCreate();
+        // The normal display bootstrap can run even if this APK missed BOOT_COMPLETED.
+        startService(
+                new Intent()
+                        .setClassName(
+                                "com.qinggan.app.setting",
+                                "com.qinggan.app.setting.service.MainSettingService"));
+    }
+
+    @Override
     public IBinder onBind(Intent intent) {
         return null;
     }
