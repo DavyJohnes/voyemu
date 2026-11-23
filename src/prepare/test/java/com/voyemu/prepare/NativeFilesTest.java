@@ -91,62 +91,7 @@ public final class NativeFilesTest {
                                         "property-contexts-api30.json",
                                         "can-early-property-contexts-api30.json")),
                 "Early property step order differs");
-        var observerData = new LinkedHashMap<String, Object>(featured.data());
-        observerData.put(
-                "features",
-                Map.of(
-                        "original_navi",
-                        true,
-                        "ui_observer_required",
-                        true,
-                        "ui_observer_root_accessibility",
-                        true));
-        observerData.put(
-                "android",
-                Map.of(
-                        "package",
-                        "system-images;android-30;default;arm64-v8a",
-                        "development_kernel",
-                        Map.of("abi", "arm64-v8a")));
-        var observerProfile =
-                new ProfileRegistry.Profile(TestProfiles.SYNTHETIC, "test", observerData, "");
-        var observerGraph = Api30NativeFiles.forProfile(observerProfile);
-        require(observerGraph.size() == graph731.size(), "Observer graph changed node inventory");
-        require(
-                observerGraph.stream()
-                        .filter(spec -> !graph731.contains(spec))
-                        .map(Api30NativeFiles.Spec::id)
-                        .toList()
-                        .equals(List.of("can-early-policy-api30", "selinux-hash-api30")),
-                "Observer graph changes only policy and derived digest");
-        for (int mutation = 0; mutation < 5; mutation++) {
-            var changed = new LinkedHashMap<>(observerData);
-            if (mutation == 0) {
-                changed.put("platform", "passion");
-            } else if (mutation == 1) {
-                changed.put("board", "nxp");
-            } else if (mutation == 2) {
-                changed.put(
-                        "features",
-                        Map.of(
-                                "ui_observer_root_accessibility",
-                                true,
-                                "ui_observer_required",
-                                true));
-            } else if (mutation == 3) {
-                changed.put("android", Map.of("package", "other"));
-            } else {
-                changed.put("features", Map.of("ui_observer_root_accessibility", "true"));
-            }
-            boolean rejected = false;
-            try {
-                Api30NativeFiles.forProfile(
-                        new ProfileRegistry.Profile(TestProfiles.SYNTHETIC, "test", changed, ""));
-            } catch (Failure failure) {
-                rejected = "SELINUX_PATCH_SCOPE".equals(failure.code);
-            }
-            require(rejected, "Observer graph accepted another scope or malformed opt-in");
-        }
+        checkObserverPolicy(featured, graph731);
         boolean denied;
 
         for (int count : List.of(0, 1, 7)) {
@@ -176,5 +121,69 @@ public final class NativeFilesTest {
                 !Api30NativeFiles.forPlatform("qinggan09", false).equals(graph611),
                 "Another platform selected the qinggan11 graph");
         System.out.println("qinggan11 native graph and negative selection checks passed");
+    }
+
+    private static void checkObserverPolicy(
+            ProfileRegistry.Profile featured, List<Api30NativeFiles.Spec> graph731) {
+        var observerData = new LinkedHashMap<String, Object>(featured.data());
+
+        observerData.put(
+                "features",
+                Map.of(
+                        "original_navi",
+                        true,
+                        "ui_observer_required",
+                        true,
+                        "ui_observer_root_accessibility",
+                        true));
+        observerData.put(
+                "android",
+                Map.of(
+                        "package",
+                        "system-images;android-30;default;arm64-v8a",
+                        "development_kernel",
+                        Map.of("abi", "arm64-v8a")));
+        var observerProfile =
+                new ProfileRegistry.Profile(TestProfiles.SYNTHETIC, "test", observerData, "");
+        var observerGraph = Api30NativeFiles.forProfile(observerProfile);
+        require(observerGraph.size() == graph731.size(), "Observer graph changed node inventory");
+        require(
+                observerGraph.stream()
+                        .filter(spec -> !graph731.contains(spec))
+                        .map(Api30NativeFiles.Spec::id)
+                        .toList()
+                        .equals(List.of("can-early-policy-api30", "selinux-hash-api30")),
+                "Observer graph changes only policy and derived digest");
+
+        for (int mutation = 0; mutation < 5; mutation++) {
+            var changed = new LinkedHashMap<>(observerData);
+
+            switch (mutation) {
+                case 0 -> changed.put("platform", "passion");
+                case 1 -> changed.put("board", "nxp");
+                case 2 ->
+                        changed.put(
+                                "features",
+                                Map.of(
+                                        "ui_observer_root_accessibility",
+                                        true,
+                                        "ui_observer_required",
+                                        true));
+                case 3 -> changed.put("android", Map.of("package", "other"));
+                default ->
+                        changed.put("features", Map.of("ui_observer_root_accessibility", "true"));
+            }
+
+            boolean rejected = false;
+
+            try {
+                Api30NativeFiles.forProfile(
+                        new ProfileRegistry.Profile(TestProfiles.SYNTHETIC, "test", changed, ""));
+            } catch (Failure failure) {
+                rejected = "SELINUX_PATCH_SCOPE".equals(failure.code);
+            }
+
+            require(rejected, "Observer graph accepted another scope or malformed opt-in");
+        }
     }
 }
