@@ -10,7 +10,7 @@ Beta2 adds the experimental Free Sport+ RC1 profile and a virtual USB drive with
 
 - Added the experimental `free-11-russian-20260318-rc1` profile with Android 11 multimedia.
 - The Passion cluster has a catalog of 1,598 OEM SOME/IP signals, including speed, gear and door status. The `vehicle.fields` API reports the signal description and format. Passion scenarios saved with the previous catalog need to be recreated.
-- Free 7.3.1: improved cold startup of multimedia and cluster, startup drive mode handling, and Android UI observation. The stock DVR can use the virtual rear camera, and stock Video and Gallery can discover the virtual USB drive.
+- Free 7.3.1: improved cold startup of multimedia and cluster, startup drive mode handling, and Android UI observation. The OEM DVR can use the virtual rear camera, and OEM Video and Gallery can discover the virtual USB drive.
 
 ### Multimedia
 
