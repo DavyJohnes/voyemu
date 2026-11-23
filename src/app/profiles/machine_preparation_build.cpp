@@ -359,6 +359,12 @@ std::uint64_t checked_add(std::uint64_t a, std::uint64_t b) {
     return a + b;
 }
 
+static LpScratchPlacement candidate_scratch_placement(const Json &profile) {
+    return record_declares(profile, ProfilePlatform::passion, ProfileBoard::sa8155)
+                   ? LpScratchPlacement::grow_terminal_super
+                   : LpScratchPlacement::within_super;
+}
+
 std::uint64_t android_candidate_peak_extra_bytes(const Json &profile, std::uint64_t base_bytes,
                                                  std::uint64_t payload_bytes,
                                                  std::string_view requested_profile) {
@@ -400,7 +406,13 @@ std::uint64_t android_candidate_peak_extra_bytes(const Json &profile, std::uint6
     // measured guest growth) written while base copy and scratch remain on disk.
     const auto export_raw = checked_add(checked_add(base_bytes, payload_bytes), guest_growth);
 
-    return checked_add(scratch, export_raw);
+    // Include the extended base and the raw export at the same time.
+    const auto growth = scratch && candidate_scratch_placement(profile) ==
+                                                LpScratchPlacement::grow_terminal_super
+                                ? 2 * lp_scratch_growth_limit
+                                : 0;
+
+    return checked_add(checked_add(scratch, export_raw), growth);
 }
 
 std::uint64_t android_candidate_reserve_bytes(const Json &profile,
@@ -940,7 +952,8 @@ Json build_android_candidate(const std::filesystem::path &root,
             need(source_pin == native_base_pin(profile.at("android"), "images", "system.img"),
                  "exact API30 clean dynamic SDK image required");
             auto scratch = seed_lp_overlay_scratch(candidate.machine / "base/system.img",
-                                                   source_pin, scratch_bytes);
+                                                   source_pin, scratch_bytes,
+                                                   candidate_scratch_placement(profile));
 
             if (android_candidate_api30_root_layout(profile)) {
                 prepare_api30_root_layout(candidate, profile,

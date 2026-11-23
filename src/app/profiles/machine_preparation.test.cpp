@@ -482,7 +482,7 @@ void verify_candidate_peak_formula() {
     check(android_candidate_peak_extra_bytes(Json{{"id", qinggan09_profile()}}, 1ULL << 30,
                                              512ULL << 20) ==
           (2ULL << 30) + (1ULL << 30) + (512ULL << 20));
-    // Passion media profile with a 1GiB payload: scratch 1792MiB plus 3GiB export+growth.
+    // Passion media covers the scratch, raw export and growth of both disk copies.
     Json passion_media = {
             {"id", "test-passion"},
             {"platform", "passion"},
@@ -500,7 +500,7 @@ void verify_candidate_peak_formula() {
     }
 
     check(android_candidate_peak_extra_bytes(passion_media, 3ULL << 30, 1ULL << 30) ==
-          (1792ULL << 20) + (3ULL << 30) + (1ULL << 30) + (2ULL << 30));
+          (1792ULL << 20) + (3ULL << 30) + (1ULL << 30) + (2ULL << 30) + (512ULL << 20));
     // Measured Passion build remains below the replaced flat12GiB term.
     check(android_candidate_peak_extra_bytes(passion_media, 3ULL << 30, 1ULL << 30) < 12ULL << 30);
 

@@ -26,6 +26,81 @@ void save(const std::filesystem::path &p, std::string_view s) {
     out.write(s.data(), s.size());
     check(bool(out));
 }
+
+std::uint64_t field_value(std::string_view data, std::size_t at, unsigned bytes) {
+    std::uint64_t value = 0;
+
+    for (unsigned i = 0; i < bytes; ++i) {
+        value |= std::uint64_t(static_cast<unsigned char>(data.at(at + i))) << (i * 8);
+    }
+
+    return value;
+}
+
+std::string mirrored_gpt(std::string disk, bool trailing_partition = false) {
+    const auto last = disk.size() / 512 - 1;
+    auto primary = disk.substr(512, 512), table = disk.substr(1024, 256);
+
+    if (trailing_partition) {
+        constexpr auto end_lba = (65536 + 131072) / 512;
+        table.resize(384, 0);
+        table.at(256) = 3;
+        field(table, 288, end_lba, 8);
+        field(table, 296, end_lba + 7, 8);
+        table.at(312) = 'p';
+        field(primary, 80, 3, 4);
+    }
+
+    field(disk, 450, 0xee, 1);
+    field(disk, 454, 1, 4);
+    field(disk, 458, last, 4);
+    field(disk, 510, 0xaa55, 2);
+    field(primary, 48, last - 2, 8);
+    field(primary, 88, crc(table), 4);
+    auto backup = primary;
+    field(backup, 24, last, 8);
+    field(backup, 32, 1, 8);
+    field(backup, 72, last - 1, 8);
+
+    for (auto *header : {&primary, &backup}) {
+        field(*header, 16, 0, 4);
+        field(*header, 16, crc(std::string_view(*header).substr(0, 92)), 4);
+    }
+
+    disk.replace(512, 512, primary);
+    disk.replace(1024, table.size(), table);
+    disk.replace((last - 1) * 512, table.size(), table);
+    disk.replace(last * 512, 512, backup);
+    disk.at(40 * 512) = 'v';
+
+    return disk;
+}
+
+void check_grown_gpt(const std::filesystem::path &file, const std::string &source,
+                     std::uint64_t growth) {
+    std::ifstream stream(file, std::ios::binary);
+    const std::string data((std::istreambuf_iterator<char>(stream)), {});
+    const auto old_last = source.size() / 512 - 1, last = data.size() / 512 - 1;
+    const auto primary = data.substr(512, 512), backup = data.substr(last * 512, 512);
+    const auto table = data.substr(1024, 256);
+
+    check(data.size() == source.size() + growth && field_value(data, 458, 4) == last &&
+          field_value(primary, 32, 8) == last && field_value(backup, 24, 8) == last &&
+          field_value(backup, 72, 8) == last - 1 && field_value(primary, 48, 8) == last - 2 &&
+          field_value(backup, 48, 8) == last - 2 &&
+          field_value(table, 168, 8) == field_value(source, 1024 + 168, 8) + growth / 512 &&
+          table.substr(0, 128) == source.substr(1024, 128) &&
+          data.substr((last - 1) * 512, 256) == table &&
+          data.substr((old_last - 1) * 512, 1024) == std::string(1024, 0) &&
+          data.substr(40 * 512, 8 * 512) == source.substr(40 * 512, 8 * 512));
+
+    for (auto header : {primary, backup}) {
+        const auto expected = field_value(header, 16, 4);
+        field(header, 16, 0, 4);
+        check(crc(std::string_view(header).substr(0, 92)) == expected &&
+              field_value(header, 88, 4) == crc(table));
+    }
+}
 } // namespace
 
 int main(int argc, char **argv) {
@@ -46,10 +121,15 @@ int main(int argc, char **argv) {
             return 0;
         }
 
-        if (argc == 6 && std::string(argv[1]) == "--copy-seed") {
+        if ((argc == 6 || argc == 7) && std::string(argv[1]) == "--copy-seed") {
+            const auto placement = argc == 7 ? LpScratchPlacement::grow_terminal_super
+                                             : LpScratchPlacement::within_super;
+            check(argc == 6 || std::string_view(argv[6]) == "--grow-terminal-super");
             const auto target = std::filesystem::absolute(argv[4]);
-            copy_portable_image(std::filesystem::absolute(argv[2]), argv[3], target, 20ULL << 30);
-            std::cout << seed_lp_overlay_scratch(target, argv[3], std::stoull(argv[5])).dump(2)
+            const std::uint64_t reserve = argc == 7 ? 8ULL << 30 : 20ULL << 30;
+            copy_portable_image(std::filesystem::absolute(argv[2]), argv[3], target, reserve);
+            std::cout << seed_lp_overlay_scratch(target, argv[3], std::stoull(argv[5]), placement)
+                                 .dump(2)
                       << '\n';
 
             return 0;
@@ -305,6 +385,75 @@ int main(int argc, char **argv) {
             }
 
             check(denied && sha256_file(file) == before);
+        }
+
+        auto gpt = mirrored_gpt(scratch_source);
+        gpt.at(98304) = 's';
+        gpt.at(106496) = 'e';
+        const auto growth_mode = LpScratchPlacement::grow_terminal_super;
+        constexpr std::uint64_t wanted = 131072, expansion = 45056;
+        save(file, gpt);
+        const auto fits = seed_lp_overlay_scratch(file, sha256_bytes(gpt), 8192, growth_mode);
+        check(!fits.at("image_grown").get<bool>() &&
+              std::filesystem::file_size(file) == gpt.size());
+
+        save(file, gpt);
+        const auto grown = seed_lp_overlay_scratch(file, sha256_bytes(gpt), wanted, growth_mode);
+        check(grown.at("image_grown") == true && grown.at("super_growth_bytes") == expansion &&
+              grown.at("payloads_unchanged") == true && grown.at("metadata_copies") == 4);
+        check_grown_gpt(file, gpt, expansion);
+        const auto grown_scratch = read_lp_partition(file, sha256_file(file), "scratch");
+        check(grown_scratch.offset == 110592 && grown_scratch.bytes == wanted &&
+              grown_scratch.super_bytes == 131072 + expansion &&
+              sha256_file_range(file, grown_scratch.offset, wanted) ==
+                      sha256_bytes(std::string(wanted, 0)));
+
+        for (const auto &part : {original_system, original_ext}) {
+            const auto actual = read_lp_partition(file, sha256_file(file), part.name);
+            check(actual.offset == part.offset && actual.bytes == part.bytes &&
+                  sha256_file_range(file, actual.offset, actual.bytes) ==
+                          sha256_bytes(std::string_view(gpt).substr(part.offset, part.bytes)));
+        }
+
+        constexpr std::string_view growth_errors[] = {"scratch growth requires terminal super",
+                                                      "bounded scratch super growth required",
+                                                      "GPT backup checksums or entries differ",
+                                                      "GPT backup checksums or entries differ",
+                                                      "protective MBR differs",
+                                                      "fresh scratch tail must be zero",
+                                                      "fresh scratch tail must be zero"};
+
+        for (unsigned mode = 0; mode < std::size(growth_errors); ++mode) {
+            auto invalid = gpt;
+            auto capacity = wanted;
+
+            if (mode == 0) {
+                invalid = mirrored_gpt(scratch_source, true);
+            } else if (mode == 1) {
+                capacity += lp_scratch_growth_limit;
+            } else if (mode == 2) {
+                invalid.at(invalid.size() - 512 + 16) ^= 1;
+            } else if (mode == 3) {
+                invalid.at(invalid.size() - 1024) ^= 1;
+            } else if (mode == 4) {
+                invalid.at(458) ^= 1;
+            } else if (mode == 5) {
+                invalid.at(65536 + 131072) ^= 1;
+            } else {
+                invalid.at(110592) ^= 1;
+            }
+
+            save(file, invalid);
+            const auto pin = sha256_bytes(invalid);
+            bool denied = false;
+            try {
+                seed_lp_overlay_scratch(file, pin, capacity, growth_mode);
+            } catch (const std::runtime_error &error) {
+                denied = std::string_view(error.what()).starts_with("LP_IMAGE: ") &&
+                         std::string_view(error.what()).ends_with(growth_errors[mode]);
+            }
+
+            check(denied && sha256_file(file) == pin);
         }
 
         std::cout << "LP10.0 GPT/checksum/copy/name/table/extent guards passed; no image copied\n";

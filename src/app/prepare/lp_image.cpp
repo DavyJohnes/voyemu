@@ -26,6 +26,12 @@ std::uint64_t number(std::string_view s, std::size_t at, unsigned count) {
     return v;
 }
 
+void put(std::string &s, std::size_t at, std::uint64_t value, unsigned bytes) {
+    for (unsigned i = 0; i < bytes; i++) {
+        s.at(at + i) = static_cast<char>(value >> (i * 8));
+    }
+}
+
 std::uint32_t crc(std::string_view s) {
     std::uint32_t v = 0xffffffff;
 
@@ -90,7 +96,13 @@ struct Reader {
     }
 };
 
-std::pair<std::uint64_t, std::uint64_t> super_partition(Reader &r) {
+struct GptSuper {
+    std::string primary, entries;
+    std::uint64_t offset = 0, bytes = 0, entry = 0;
+    bool terminal = false;
+};
+
+GptSuper super_partition(Reader &r) {
     auto h = r.read(512, 512);
 
     need(h.substr(0, 8) == "EFI PART" && number(h, 8, 4) == 0x10000 && number(h, 12, 4) >= 92 &&
@@ -108,7 +120,7 @@ std::pair<std::uint64_t, std::uint64_t> super_partition(Reader &r) {
     auto table = r.read(lba * 512, count * width);
     need(crc(table) == number(h, 88, 4), "GPT table CRC mismatch");
     std::vector<std::pair<std::uint64_t, std::uint64_t>> ranges;
-    std::pair<std::uint64_t, std::uint64_t> result{};
+    GptSuper result;
 
     for (std::uint64_t i = 0; i < count; i++) {
         auto e = std::string_view(table).substr(i * width, width);
@@ -135,8 +147,10 @@ std::pair<std::uint64_t, std::uint64_t> super_partition(Reader &r) {
         }
 
         if (label == "super") {
-            need(!result.second, "duplicate super partition");
-            result = {a * 512, (b - a + 1) * 512};
+            need(!result.bytes, "duplicate super partition");
+            result.offset = a * 512;
+            result.bytes = (b - a + 1) * 512;
+            result.entry = i * width;
         }
     }
 
@@ -146,9 +160,99 @@ std::pair<std::uint64_t, std::uint64_t> super_partition(Reader &r) {
         need(ranges[i].first > ranges[i - 1].second, "GPT partitions overlap");
     }
 
-    need(result.second >= 16384, "super partition missing");
+    need(result.bytes >= 16384, "super partition missing");
+    result.terminal = ranges.back().first * 512 == result.offset;
+    result.primary = std::move(h);
+    result.entries = std::move(table);
 
     return result;
+}
+
+struct GptBackup {
+    std::uint64_t entries_lba = 0, header_lba = 0;
+    std::string protective_mbr, header;
+};
+
+GptBackup read_gpt_backup(Reader &r, const GptSuper &super) {
+    const auto &primary = super.primary;
+    const auto last = number(primary, 32, 8), first_usable = number(primary, 40, 8);
+    const auto primary_entries = number(primary, 72, 8);
+    const auto entry_sectors = (super.entries.size() + 511) / 512;
+
+    need(r.bytes % 512 == 0 && last == r.bytes / 512 - 1 && last <= UINT32_MAX &&
+                 primary_entries >= 2 && primary_entries <= first_usable &&
+                 entry_sectors <= first_usable - primary_entries && entry_sectors < last &&
+                 number(primary, 48, 8) == last - entry_sectors - 1,
+         "GPT growth requires standard backup placement");
+    auto header = r.read(last * 512, 512);
+    const auto entries = last - entry_sectors;
+    need(header.substr(0, 16) == primary.substr(0, 16) && number(header, 24, 8) == last &&
+                 number(header, 32, 8) == 1 && header.substr(40, 32) == primary.substr(40, 32) &&
+                 number(header, 72, 8) == entries &&
+                 header.substr(80, 12) == primary.substr(80, 12),
+         "GPT backup header differs");
+    auto checked = header.substr(0, number(header, 12, 4));
+    std::fill(checked.begin() + 16, checked.begin() + 20, 0);
+    need(crc(checked) == number(header, 16, 4) &&
+                 r.read(entries * 512, super.entries.size()) == super.entries,
+         "GPT backup checksums or entries differ");
+    auto mbr = r.read(0, 512);
+    need(number(mbr, 450, 1) == 0xee && number(mbr, 454, 4) == 1 && number(mbr, 458, 4) == last &&
+                 mbr.substr(462, 48) == std::string(48, 0) && number(mbr, 510, 2) == 0xaa55,
+         "protective MBR differs");
+
+    return {entries, last, std::move(mbr), std::move(header)};
+}
+
+void require_zero(Reader &r, std::uint64_t offset, std::uint64_t bytes) {
+    for (std::uint64_t at = 0; at < bytes;) {
+        const auto count = std::min<std::uint64_t>(1ULL << 20, bytes - at);
+        const auto unused = r.read(offset + at, count);
+        need(std::all_of(unused.begin(), unused.end(),
+                         [](char c) {
+                             return c == 0;
+                         }),
+             "fresh scratch tail must be zero");
+        at += count;
+    }
+}
+
+void write_metadata(std::fstream &file, std::uint64_t offset, std::string_view metadata) {
+    file.seekp(offset);
+    file.write(metadata.data(), metadata.size());
+    need(bool(file), "scratch metadata write failed");
+}
+
+void expand_super(std::fstream &file, GptSuper disk, GptBackup backup, std::uint64_t bytes) {
+    const auto sectors = bytes / 512;
+    const auto entries_lba = backup.entries_lba + sectors, header_lba = backup.header_lba + sectors;
+    const auto primary_entries = number(disk.primary, 72, 8);
+
+    put(backup.protective_mbr, 458, header_lba, 4);
+    put(disk.entries, disk.entry + 40, number(disk.entries, disk.entry + 40, 8) + sectors, 8);
+    const auto table_crc = crc(disk.entries);
+
+    for (auto *header : {&disk.primary, &backup.header}) {
+        put(*header, 48, entries_lba - 1, 8);
+        put(*header, 88, table_crc, 4);
+    }
+
+    put(disk.primary, 32, header_lba, 8);
+    put(backup.header, 24, header_lba, 8);
+    put(backup.header, 72, entries_lba, 8);
+
+    for (auto *header : {&disk.primary, &backup.header}) {
+        put(*header, 16, 0, 4);
+        put(*header, 16, crc(std::string_view(*header).substr(0, number(*header, 12, 4))), 4);
+    }
+
+    const auto old_backup_bytes = (backup.header_lba - backup.entries_lba + 1) * 512;
+    write_metadata(file, backup.entries_lba * 512, std::string(old_backup_bytes, 0));
+    write_metadata(file, 0, backup.protective_mbr);
+    write_metadata(file, 512, disk.primary);
+    write_metadata(file, primary_entries * 512, disk.entries);
+    write_metadata(file, entries_lba * 512, disk.entries);
+    write_metadata(file, header_lba * 512, backup.header);
 }
 } // namespace
 
@@ -170,7 +274,8 @@ LpPartitionView read_lp_partition(const std::filesystem::path &image, const std:
     auto epoch = cache_file_identity(image);
     need(sha256_file(image) == pin, "image SHA mismatch");
     Reader reader(image);
-    auto [base, length] = super_partition(reader);
+    const auto partition = super_partition(reader);
+    const auto base = partition.offset, length = partition.bytes;
     auto read = [&](std::uint64_t at, std::size_t n) {
         need(at <= length && n <= length - at, "read outside super");
 
@@ -316,7 +421,7 @@ LpPartitionView read_lp_partition(const std::filesystem::path &image, const std:
 }
 
 Json seed_lp_overlay_scratch(const std::filesystem::path &image, const std::string &pin,
-                             std::uint64_t bytes) {
+                             std::uint64_t bytes, LpScratchPlacement placement) {
     need(bytes && bytes <= 2ULL << 30 && bytes % 4096 == 0,
          "bounded aligned scratch size required");
     const auto system = read_lp_partition(image, pin, "system");
@@ -370,24 +475,31 @@ Json seed_lp_overlay_scratch(const std::filesystem::path &image, const std::stri
                  number(tables[3], 12, 4) == 0,
          "scratch device alignment unsupported");
     end = (end + alignment - 1) / alignment * alignment;
-    need(end <= length && bytes <= length - end, "contiguous scratch would exceed super");
+    std::uint64_t growth = 0, preceding_offset = 0, preceding_bytes = 0;
+    std::string preceding_sha;
+    GptSuper disk;
+    GptBackup backup;
 
-    for (std::uint64_t at = 0; at < bytes;) {
-        const auto count = std::min<std::uint64_t>(1ULL << 20, bytes - at);
-        const auto unused = r.read(base + end + at, count);
-        need(std::all_of(unused.begin(), unused.end(),
-                         [](char c) {
-                             return c == 0;
-                         }),
-             "fresh scratch tail must be zero");
-        at += count;
+    if (end + bytes > length) {
+        need(placement == LpScratchPlacement::grow_terminal_super,
+             "contiguous scratch would exceed super");
+        growth = (end + bytes - length + alignment - 1) / alignment * alignment;
+        need(growth <= lp_scratch_growth_limit && r.bytes <= (4ULL << 30) - growth,
+             "bounded scratch super growth required");
+        disk = super_partition(r);
+        need(disk.terminal, "scratch growth requires terminal super");
+        backup = read_gpt_backup(r, disk);
+        require_zero(r, base + length, backup.entries_lba * 512 - (base + length));
+        preceding_offset = number(disk.primary, 40, 8) * 512;
+        preceding_bytes = base - preceding_offset;
+        preceding_sha = sha256_file_range(image, preceding_offset, preceding_bytes);
+        put(tables[3], 16, length + growth, 8);
     }
 
-    auto put = [](std::string &s, std::size_t at, std::uint64_t value, unsigned n) {
-        for (unsigned i = 0; i < n; i++) {
-            s.at(at + i) = static_cast<char>(value >> (i * 8));
-        }
-    };
+    if (end < length) {
+        require_zero(r, base + end, std::min(bytes, length - end));
+    }
+
     auto digest = [](std::string_view data) {
         const auto value = sha256_bytes(data);
         std::string raw;
@@ -428,13 +540,21 @@ Json seed_lp_overlay_scratch(const std::filesystem::path &image, const std::stri
     metadata.resize(maximum, 0);
     need(cache_file_identity(image) == epoch && sha256_file(image) == pin,
          "scratch source changed before write");
+    r.file.close();
+
+    if (growth) {
+        std::filesystem::resize_file(image, r.bytes + growth);
+    }
+
     std::fstream output(image, std::ios::binary | std::ios::in | std::ios::out);
     need(bool(output), "owned scratch image open failed");
 
+    if (growth) {
+        expand_super(output, std::move(disk), std::move(backup), growth);
+    }
+
     for (std::uint64_t i = 0; i < slots * 2; i++) {
-        output.seekp(base + 12288 + i * maximum);
-        output.write(metadata.data(), metadata.size());
-        need(bool(output), "scratch metadata write failed");
+        write_metadata(output, base + 12288 + i * maximum, metadata);
     }
 
     output.flush();
@@ -442,8 +562,18 @@ Json seed_lp_overlay_scratch(const std::filesystem::path &image, const std::stri
     output.close();
     const auto after = sha256_file(image);
     const auto scratch = read_lp_partition(image, after, "scratch");
-    need(scratch.offset == base + end && scratch.bytes == bytes,
+    need(scratch.super_bytes == length + growth && scratch.offset == base + end &&
+                 scratch.bytes == bytes,
          "scratch view differs after validation");
+
+    if (growth) {
+        Reader expanded(image);
+        read_gpt_backup(expanded, super_partition(expanded));
+        const auto new_scratch = std::max(base + length, scratch.offset);
+        require_zero(expanded, new_scratch, scratch.offset + scratch.bytes - new_scratch);
+        need(sha256_file_range(image, preceding_offset, preceding_bytes) == preceding_sha,
+             "preceding GPT partition payload changed");
+    }
 
     for (const auto &item : original) {
         need(sha256_file_range(image, item.at("offset").get<std::uint64_t>(),
@@ -463,6 +593,7 @@ Json seed_lp_overlay_scratch(const std::filesystem::path &image, const std::stri
             {"original_partitions", original},
             {"payloads_unchanged", true},
             {"scratch_formatted", false},
-            {"image_grown", false}};
+            {"image_grown", growth != 0},
+            {"super_growth_bytes", growth}};
 }
 } // namespace voyemu

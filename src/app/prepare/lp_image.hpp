@@ -13,7 +13,15 @@ struct LpPartitionView {
 // Returns a bounded view into the original pinned GPT image; never copies an image.
 LpPartitionView read_lp_partition(const std::filesystem::path &image, const std::string &sha256,
                                   std::string_view name = "system");
+enum class LpScratchPlacement {
+    within_super,
+    grow_terminal_super,
+};
+inline constexpr std::uint64_t lp_scratch_growth_limit = 256ULL << 20;
+
 // Preseed only a fresh unformatted scratch extent; never move existing payloads.
+// Growth is only for a private raw candidate and requires both GPT copies.
 Json seed_lp_overlay_scratch(const std::filesystem::path &image, const std::string &sha256,
-                             std::uint64_t bytes);
+                             std::uint64_t bytes,
+                             LpScratchPlacement placement = LpScratchPlacement::within_super);
 } // namespace voyemu
