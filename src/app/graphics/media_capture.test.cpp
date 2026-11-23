@@ -177,6 +177,9 @@ int main() try {
             {"status", "incomplete"},
             {"android", {{"package", "system-images;android-30;default;arm64-v8a"}}}};
     assert(voyemu::passion_startup_values(passion_source).empty());
+    auto ready_passion = passion_source;
+    ready_passion["status"] = "ready";
+    assert(voyemu::passion_startup_values(ready_passion).empty());
 
     for (const auto *field : {"schema", "platform", "status", "android"}) {
         auto invalid = passion_source;
@@ -191,6 +194,18 @@ int main() try {
         assert(denied);
     }
 
+    {
+        auto invalid = passion_source;
+        invalid["status"] = "unknown";
+        bool denied = false;
+        try {
+            voyemu::passion_startup_values(invalid);
+        } catch (...) {
+            denied = true;
+        }
+
+        assert(denied);
+    }
     {
         auto invalid = passion_source;
         invalid["android"]["package"] = "system-images;android-28;default;arm64-v8a";

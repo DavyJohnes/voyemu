@@ -112,14 +112,16 @@ inline constexpr const char *passion_secondary =
         "com.voyah.os.carlauncher/com.voyah.os.carlauncher.second.LauncherActivityMainSecond";
 
 inline Json passion_startup_values(const Json &definition) {
+    const auto status = definition.value("status", std::string{});
+
     if (definition.value("schema", 0) != 1 ||
         !record_declares(definition, ProfilePlatform::passion, ProfileBoard::sa8155) ||
-        definition.value("status", std::string{}) != "incomplete" ||
+        (status != "ready" && status != "incomplete") ||
         definition.value("android", Json::object()).value("package", std::string{}) !=
                 "system-images;android-30;default;arm64-v8a" ||
         definition.value("initial_state", Json::object()) != Json::object()) {
         throw VoyemuError("PASSION_PRESENTATION",
-                          "exact incomplete API30 source with unsupported vehicle state required");
+                          "exact API30 Passion profile with unsupported vehicle state required");
     }
 
     return Json::object();
