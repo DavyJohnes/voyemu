@@ -124,6 +124,10 @@ public final class OemArm64LibrariesTest {
         boolean dvrFramework =
                 recipe.getFileName().toString().equals("free-11-chinese-20260731-7.3.1")
                         && name.equals("Dvr");
+        boolean usbMedia =
+                data.get("features") instanceof Map<?, ?> features
+                        && Boolean.TRUE.equals(features.get("usb_test_volume_visibility"))
+                        && (name.equals("Video") || name.equals("Gallery"));
 
         need(
                 dvrFramework
@@ -132,7 +136,14 @@ public final class OemArm64LibrariesTest {
                                         "api30-dvr-arm64.json",
                                         "api30-framework-libraries.json",
                                         "api30-dvr-camera-virtual.json"))
-                        : steps.size() == 1);
+                        : usbMedia
+                                ? steps.equals(
+                                        List.of(
+                                                "api30-gallery-arm64.json",
+                                                name.equals("Video")
+                                                        ? "usb-video-port-metadata.json"
+                                                        : "usb-gallery-port-metadata.json"))
+                                : steps.size() == 1);
         String step = (String) steps.get(0);
         var metadata = Json.object(Json.parse(Files.readString(recipe.resolve("patches/" + step))));
         var constants = Json.obj(metadata, "constants");
@@ -212,6 +223,29 @@ public final class OemArm64LibrariesTest {
                     CameraVirtualGuard.classes(producedEntries.remove(helpers.getFirst()))
                             .keySet()
                             .equals(java.util.Set.of(DvrCameraVirtualGuard.HELPER)));
+        } else if (usbMedia) {
+            var layout =
+                    name.equals("Video")
+                            ? Free731UsbGuard.Layout.VIDEO
+                            : Free731UsbGuard.Layout.GALLERY;
+            String slot = layout == Free731UsbGuard.Layout.VIDEO ? "classes.dex" : "classes2.dex";
+            patched.put(slot, Free731UsbGuard.apply(baseline.get(slot), layout));
+            var extra = new java.util.TreeSet<>(producedEntries.keySet());
+            extra.removeAll(patched.keySet());
+            need(extra.size() == 1);
+            String helperDex = extra.first();
+            need(helperDex.matches("classes[2-9][0-9]*\\.dex"));
+            var classes =
+                    new org.jf.dexlib2.dexbacked.DexBackedDexFile(
+                                    org.jf.dexlib2.Opcodes.forApi(30),
+                                    producedEntries.remove(helperDex))
+                            .getClasses();
+            need(
+                    classes.size() == 1
+                            && classes.iterator()
+                                    .next()
+                                    .getType()
+                                    .equals("Lcom/voyemu/qgapi/VoyemuUsbPort;"));
         }
 
         need(GalleryArm64Libraries.same(patched, producedEntries));
@@ -253,6 +287,8 @@ public final class OemArm64LibrariesTest {
                         Map.of(
                                 "android",
                                 data.get("android"),
+                                "features",
+                                data.getOrDefault("features", Map.of()),
                                 "original",
                                 Map.of(name, Json.obj(data, "original").get(name)),
                                 "components",

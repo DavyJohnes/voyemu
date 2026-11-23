@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "api": 30,
+  "constants": {
+    "original_sha256_allowlist": ["11a3bd57f07d7d4757a904ee49eb7124663ea73d841e5c51e39f1207fc56feee"]
+  },
+  "calls": [{"operation": "guardFree731UsbVideoPort", "args": []}]
+}

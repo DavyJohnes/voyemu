@@ -899,7 +899,8 @@
         "component:gallery-arm64-libraries"
       ],
       "steps": [
-        "api30-gallery-arm64.json"
+        "api30-gallery-arm64.json",
+        "usb-gallery-port-metadata.json"
       ]
     },
     "Video": {
@@ -909,7 +910,8 @@
         "component:gallery-arm64-libraries"
       ],
       "steps": [
-        "api30-gallery-arm64.json"
+        "api30-gallery-arm64.json",
+        "usb-video-port-metadata.json"
       ]
     },
     "Dvr": {

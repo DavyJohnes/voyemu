@@ -822,6 +822,8 @@ int main(int argc, char **argv) {
                 "original-navi-vin.json",
                 "usb-mount-visibility.json",
                 "usb-port-metadata.json",
+                "usb-video-port-metadata.json",
+                "usb-gallery-port-metadata.json",
                 "api30-audio-policy.json",
                 "api30-audio-consumer.json",
                 "api30-media-notification-actions.json",

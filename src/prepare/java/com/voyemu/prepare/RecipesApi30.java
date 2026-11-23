@@ -805,17 +805,34 @@ final class RecipesApi30 {
                         "Exact original Navi EGL operation required");
                 target.guardOriginalNaviEgl(false);
             }
-            case "guardFree731UsbVisibility", "guardFree731UsbPort" -> {
-                boolean visibility = operation.equals("guardFree731UsbVisibility");
+            case "guardFree731UsbVisibility",
+                    "guardFree731UsbPort",
+                    "guardFree731UsbVideoPort",
+                    "guardFree731UsbGalleryPort" -> {
+                var layout = usbLayout(operation);
+                String recipe =
+                        switch (layout) {
+                            case SERVICES -> "usb-mount-visibility.json";
+                            case QGAPI -> "usb-port-metadata.json";
+                            case VIDEO -> "usb-video-port-metadata.json";
+                            case GALLERY -> "usb-gallery-port-metadata.json";
+                        };
+                List<String> expectedPins =
+                        switch (layout) {
+                            case SERVICES -> List.of();
+                            case QGAPI -> List.of(Free731UsbGuard.QGAPI_PIN);
+                            case VIDEO -> List.of(Free731UsbGuard.VIDEO_PIN);
+                            case GALLERY -> List.of(Free731UsbGuard.GALLERY_PIN);
+                        };
                 require(
-                        name.equals(visibility ? "usb-mount-visibility.json" : "usb-port-metadata.json")
+                        name.equals(recipe)
                                 && target.profile().equals(Free731UsbGuard.PROFILE)
                                 && target.abi().equals("arm64-v8a")
-                                && pins.equals(visibility ? List.of() : List.of(Free731UsbGuard.QGAPI_PIN))
+                                && pins.equals(expectedPins)
                                 && args.isEmpty()
                                 && calls.size() == 1,
                         "Exact Free 7.3.1 USB operation, profile and input required");
-                target.guardFree731Usb(visibility, false);
+                target.guardFree731Usb(layout, false);
             }
             case "guardOriginalNaviLibraries" -> {
                 require(
@@ -1184,8 +1201,11 @@ final class RecipesApi30 {
                 case "guardOriginalNaviVin" -> target.guardOriginalNaviVin(true);
                 case "guardOriginalNaviVehicle" -> target.guardOriginalNaviVehicle(true);
                 case "guardOriginalNaviEgl" -> target.guardOriginalNaviEgl(true);
-                case "guardFree731UsbVisibility" -> target.guardFree731Usb(true, true);
-                case "guardFree731UsbPort" -> target.guardFree731Usb(false, true);
+                case "guardFree731UsbVisibility",
+                        "guardFree731UsbPort",
+                        "guardFree731UsbVideoPort",
+                        "guardFree731UsbGalleryPort" ->
+                        target.guardFree731Usb(usbLayout(Json.str(call, "operation")), true);
                 case "guardOriginalNaviLibraries" -> target.guardOriginalNaviLibraries(true);
                 case "guardNaviEgl" -> target.guardNaviEgl(true);
                 case "guardNaviVin" -> target.guardNaviVin(true);
@@ -1209,5 +1229,15 @@ final class RecipesApi30 {
 
     private static void require(boolean condition, String message) {
         Recipes.require(condition, message);
+    }
+
+    private static Free731UsbGuard.Layout usbLayout(String operation) {
+        return switch (operation) {
+            case "guardFree731UsbVisibility" -> Free731UsbGuard.Layout.SERVICES;
+            case "guardFree731UsbPort" -> Free731UsbGuard.Layout.QGAPI;
+            case "guardFree731UsbVideoPort" -> Free731UsbGuard.Layout.VIDEO;
+            case "guardFree731UsbGalleryPort" -> Free731UsbGuard.Layout.GALLERY;
+            default -> throw new IllegalArgumentException("Unexpected USB patch operation");
+        };
     }
 }

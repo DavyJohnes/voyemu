@@ -428,30 +428,48 @@ final class PatchTarget implements Recipes.Target {
     }
 
     @Override
-    public void guardFree731Usb(boolean visibility, boolean apply) throws Exception {
-        String required = visibility ? "patched:api30-secondary-navigation" : "original:QGAPI";
+    public void guardFree731Usb(Free731UsbGuard.Layout layout, boolean apply) throws Exception {
+        boolean visibility = layout == Free731UsbGuard.Layout.SERVICES;
+        boolean media =
+                layout == Free731UsbGuard.Layout.VIDEO || layout == Free731UsbGuard.Layout.GALLERY;
+        String required =
+                switch (layout) {
+                    case SERVICES -> "patched:api30-secondary-navigation";
+                    case QGAPI -> "original:QGAPI";
+                    case VIDEO -> "original:Video";
+                    case GALLERY -> "original:Gallery";
+                };
         String helper = visibility ? "usb-mount-visibility/src" : "usb-port-metadata/src";
-        Set<String> files = visibility
-                ? Set.of("com/voyemu/storage/UsbMountVisibility.java",
-                        "compile-only/android/os/storage/VolumeInfo.java",
-                        "compile-only/android/os/storage/DiskInfo.java")
-                : Set.of("com/voyemu/qgapi/VoyemuUsbPort.java");
+        String slot = layout == Free731UsbGuard.Layout.GALLERY ? "classes2.dex" : "classes.dex";
+        Set<String> files =
+                visibility
+                        ? Set.of(
+                                "com/voyemu/storage/UsbMountVisibility.java",
+                                "compile-only/android/os/storage/VolumeInfo.java",
+                                "compile-only/android/os/storage/DiskInfo.java")
+                        : Set.of("com/voyemu/qgapi/VoyemuUsbPort.java");
+
         Failure.require(
                 Free731UsbGuard.PROFILE.equals(profile.referenceProfile())
                         && abi.equals("arm64-v8a")
                         && api == 30
-                        && type.equals("jar")
+                        && type.equals(media ? "apk" : "jar")
                         && reference.equals(required)
-                        && FilesSupport.tree(Storage.confined(stepRoot, helper)).keySet().equals(files),
+                        && profile.data().get("features") instanceof Map<?, ?> features
+                        && Boolean.TRUE.equals(features.get("usb_test_volume_visibility"))
+                        && FilesSupport.tree(Storage.confined(stepRoot, helper))
+                                .keySet()
+                                .equals(files),
                 "FREE731_USB",
                 "Exact Free 7.3.1 framework input and helper required",
                 3);
-        byte[] raw = entries.get("classes.dex");
+        byte[] raw = entries.get(slot);
+
         if (apply) {
-            entries.put("classes.dex", Free731UsbGuard.apply(raw, visibility));
+            entries.put(slot, Free731UsbGuard.apply(raw, layout));
             addDex(helper);
         } else {
-            Free731UsbGuard.checkInput(raw, visibility);
+            Free731UsbGuard.checkInput(raw, layout);
         }
     }
 

@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "api": 30,
+  "constants": {
+    "original_sha256_allowlist": ["c30633d39bb4127ac7fcd79300f00f2be608ff6b59cb24ebf855471e967be537"]
+  },
+  "calls": [{"operation": "guardFree731UsbGalleryPort", "args": []}]
+}

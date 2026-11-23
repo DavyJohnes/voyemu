@@ -1676,7 +1676,8 @@ int main(int argc, char **argv) {
                               Json{{"type", "apk"},
                                    {"input", "original:Gallery"},
                                    {"uses", Json::array({"component:gallery-arm64-libraries"})},
-                                   {"steps", Json::array({"api30-gallery-arm64.json"})}} &&
+                                   {"steps", Json::array({"api30-gallery-arm64.json",
+                                                          "usb-gallery-port-metadata.json"})}} &&
                       a11.at("components").at("gallery-arm64-libraries") ==
                               "components/gallery-arm64-libraries",
               "Gallery uses only its exact OEM original and explicit official ARM64 archive component");
@@ -1937,12 +1938,15 @@ int main(int argc, char **argv) {
                 bad["patches"]["Dvr"]["steps"] =
                         Json::array({"api30-framework-libraries.json", "api30-dvr-arm64.json"});
             }
+
             if (mode == 7) {
                 bad["patches"]["Dvr"]["steps"].push_back("framework-libraries.json");
             }
+
             if (mode == 8) {
                 bad["id"] = "free-11-chinese-20250710-6.11.1";
             }
+
             bool denied = false;
             try {
                 (void)qinggan11_wheel_capability(bad);
@@ -2132,13 +2136,11 @@ int main(int argc, char **argv) {
                                            : "original:QGVehicle";
                 const auto steps = it.key() == "original-navi-framework"
                                            ? Json::array({"original-navi-egl.json"})
-                                  : it.key() == "original-navi-services"
-                                          ? Json::array({"original-navi-libraries.json",
-                                                         "usb-mount-visibility.json"})
-                                          : Json::array({"original-navi-vehicle.json"});
-                check(it.value() == Json{{"type", "jar"},
-                                         {"input", input},
-                                         {"steps", steps}},
+                                   : it.key() == "original-navi-services"
+                                           ? Json::array({"original-navi-libraries.json",
+                                                          "usb-mount-visibility.json"})
+                                           : Json::array({"original-navi-vehicle.json"});
+                check(it.value() == Json{{"type", "jar"}, {"input", input}, {"steps", steps}},
                       "original Navi JAR recipe is exact");
                 continue;
             }
@@ -2246,8 +2248,12 @@ int main(int argc, char **argv) {
                                    : it.key() == "Camera"
                                            ? Json::array({"api30-navigation-camera-libraries.json",
                                                           "api30-camera-virtual.json"})
-                                   : (it.key() == "Gallery" || it.key() == "Video")
-                                           ? Json::array({"api30-gallery-arm64.json"})
+                                   : it.key() == "Gallery"
+                                           ? Json::array({"api30-gallery-arm64.json",
+                                                          "usb-gallery-port-metadata.json"})
+                                   : it.key() == "Video"
+                                           ? Json::array({"api30-gallery-arm64.json",
+                                                          "usb-video-port-metadata.json"})
                                    : it.key() == "Dvr"
                                            ? Json::array({"api30-dvr-arm64.json",
                                                           "api30-framework-libraries.json",
