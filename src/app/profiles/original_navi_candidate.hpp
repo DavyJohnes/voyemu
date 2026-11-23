@@ -1,6 +1,7 @@
 #pragma once
 #include "check.hpp"
 #include "model.hpp"
+#include "profile_identity.hpp"
 #include <algorithm>
 #include <array>
 #include <regex>
@@ -32,12 +33,11 @@ inline bool original_navi_requested(const Json &definition) {
 }
 
 inline bool free731_usb_test_volume_visibility(const Json &definition) {
-    const auto features = definition.value("features", Json::object());
-    const bool enabled = features.is_object() &&
-                         features.value("usb_test_volume_visibility", Json(false)) == true;
+    const bool enabled = profile_feature(definition, "usb_test_volume_visibility");
 
     original_navi_need(!enabled ||
-                       (definition.value("id", std::string{}) == "free-11-chinese-20260731-7.3.1" &&
+                       (profile_scope(definition) ==
+                                ProfileScope{ProfilePlatform::qinggan11, ProfileBoard::sa8155} &&
                         original_navi_requested(definition)));
 
     return enabled;

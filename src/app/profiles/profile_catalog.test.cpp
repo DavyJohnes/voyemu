@@ -1,6 +1,7 @@
 #include "profile_catalog.hpp"
 #include "can_model_candidate_binding.hpp"
 #include "model.hpp"
+#include "original_navi_candidate.hpp"
 #include "passion_presentation.hpp"
 #include "passion_wheel.hpp"
 #include "process.hpp"
@@ -1275,6 +1276,38 @@ int main(int argc, char **argv) {
         qinggan11_source >> a11;
         check(a11.at("schema") == 1 && a11.at("id") == qinggan11_id && a11.at("status") == "ready",
               "accepted A11 source profile identity/status required");
+        {
+            const auto profiles = std::filesystem::path(argv[1]);
+
+            for (const auto *id :
+                 {"free-11-chinese-20250710-6.11.1", "free-11-russian-20260318-rc1"}) {
+                std::ifstream source(profiles / id / "profile.json");
+                Json foreign;
+                source >> foreign;
+                check(!free731_usb_test_volume_visibility(foreign),
+                      "USB adaptation is disabled without a profile opt-in");
+                foreign["features"]["usb_test_volume_visibility"] = true;
+                bool denied = false;
+
+                try {
+                    (void)free731_usb_test_volume_visibility(foreign);
+                } catch (const VoyemuError &error) {
+                    denied = error.code() == "QINGGAN11_ORIGINAL_NAVI";
+                }
+
+                check(denied, "USB adaptation requires OEM Navi along with profile opt-in");
+            }
+
+            auto disabled = a11;
+            disabled["features"].erase("usb_test_volume_visibility");
+            check(!free731_usb_test_volume_visibility(disabled),
+                  "OEM Navi alone does not enable the USB adaptation");
+            auto alias = a11;
+            alias["id"] = "test-qinggan11-alias";
+            check(free731_usb_test_volume_visibility(alias),
+                  "USB selection follows profile features");
+        }
+
         check(a11.at("displays") == Json::array({{{"role", "primary"},
                                                   {"guest", "android"},
                                                   {"width", 1920},
@@ -1948,7 +1981,8 @@ int main(int argc, char **argv) {
             }
 
             if (mode == 8) {
-                bad["id"] = "free-11-chinese-20250710-6.11.1";
+                bad["original"]["Dvr"]["sha256"] =
+                        "6061242a4d7ffee196c11556e8794be94d155c48e4c66d1f03d38f74ff07c3e6";
             }
 
             bool denied = false;

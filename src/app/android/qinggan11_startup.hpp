@@ -279,18 +279,23 @@ inline Json qinggan11_wheel_capability(const Json &definition) {
     }
 
     if (declared.is_object() && declared.contains("dvr-arm64-libraries")) {
+        const auto dvr = definition.value("original", Json::object()).value("Dvr", Json{});
+        // Only the OEM donor pinned by api30-dvr-camera-virtual.json uses this camera layout.
+        const bool virtual_camera =
+                dvr.is_object() &&
+                dvr.value("sha256", Json{}) ==
+                        "2e21118dabce9f6a093f90dc2eaa84360ea7292873e784f285adce761a4caf84";
+
         if (declared.at("dvr-arm64-libraries") != "components/dvr-arm64-libraries" ||
-            !qinggan11_pinned_original(
-                    definition.value("original", Json::object()).value("Dvr", Json{}), "vendor") ||
+            !qinggan11_pinned_original(dvr, "vendor") ||
             definition.value("patches", Json::object()).value("Dvr", Json{}) !=
                     Json{{"type", "apk"},
                          {"input", "original:Dvr"},
                          {"uses", Json::array({"component:dvr-arm64-libraries"})},
-                         {"steps", profile_id == "free-11-chinese-20260731-7.3.1"
-                                           ? Json::array({"api30-dvr-arm64.json",
-                                                          "api30-framework-libraries.json",
-                                                          "api30-dvr-camera-virtual.json"})
-                                           : Json::array({"api30-dvr-arm64.json"})}} ||
+                         {"steps", virtual_camera ? Json::array({"api30-dvr-arm64.json",
+                                                                 "api30-framework-libraries.json",
+                                                                 "api30-dvr-camera-virtual.json"})
+                                                  : Json::array({"api30-dvr-arm64.json"})}} ||
             !definition.contains("install") || !definition.at("install").is_array() ||
             std::count(definition.at("install").begin(), definition.at("install").end(),
                        Json{{"artifact", "patched:Dvr"}, {"type", "apk"}}) != 1 ||
