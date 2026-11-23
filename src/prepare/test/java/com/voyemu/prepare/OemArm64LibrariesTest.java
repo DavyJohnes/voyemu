@@ -124,10 +124,14 @@ public final class OemArm64LibrariesTest {
         boolean dvrFramework =
                 recipe.getFileName().toString().equals("free-11-chinese-20260731-7.3.1")
                         && name.equals("Dvr");
+
         need(
                 dvrFramework
                         ? steps.equals(
-                                List.of("api30-dvr-arm64.json", "api30-framework-libraries.json"))
+                                List.of(
+                                        "api30-dvr-arm64.json",
+                                        "api30-framework-libraries.json",
+                                        "api30-dvr-camera-virtual.json"))
                         : steps.size() == 1);
         String step = (String) steps.get(0);
         var metadata = Json.object(Json.parse(Files.readString(recipe.resolve("patches/" + step))));
@@ -161,6 +165,7 @@ public final class OemArm64LibrariesTest {
                         GalleryArm64Libraries.remove(
                                 constants, api, "arm64-v8a", original, patched, archive, source)));
         Path produced = build(root, source, recipe, data, name);
+
         if (dvrFramework) {
             var libraries =
                     Json.object(
@@ -180,8 +185,35 @@ public final class OemArm64LibrariesTest {
                     "AndroidManifest.xml",
                     ManifestLibraries.add(patched.get("AndroidManifest.xml"), target.installed));
         }
+
         var producedEntries = NativeCore.entries(produced);
         producedEntries.keySet().removeIf(DexOperations::signatureEntry);
+
+        if (dvrFramework) {
+            Path cameraRecipe = recipe.resolve("patches/api30-dvr-camera-virtual.json");
+            var cameraConstants =
+                    Json.obj(Json.object(Json.parse(Files.readString(cameraRecipe))), "constants");
+            patched.put(
+                    "classes2.dex",
+                    DvrCameraVirtualGuard.patch(
+                            cameraConstants,
+                            api,
+                            "arm64-v8a",
+                            original,
+                            patched.get("classes2.dex"),
+                            true));
+            var helpers =
+                    producedEntries.keySet().stream()
+                            .filter(n ->
+                                    n.matches("classes[0-9]+\\.dex") && !patched.containsKey(n))
+                            .toList();
+            need(helpers.size() == 1);
+            need(
+                    CameraVirtualGuard.classes(producedEntries.remove(helpers.getFirst()))
+                            .keySet()
+                            .equals(java.util.Set.of(DvrCameraVirtualGuard.HELPER)));
+        }
+
         need(GalleryArm64Libraries.same(patched, producedEntries));
         System.out.println(
                 "PASS "
@@ -232,6 +264,7 @@ public final class OemArm64LibrariesTest {
                         "",
                         recipe.getParent().getParent());
         var recipeMetadata = new java.util.LinkedHashMap<String, Object>();
+
         for (Object declared : Json.list(Json.obj(Json.obj(data, "patches"), name).get("steps"))) {
             String declaredStep = (String) declared;
             Path stepFile = recipe.resolve("patches/" + declaredStep);
@@ -241,6 +274,7 @@ public final class OemArm64LibrariesTest {
             metadata.put("sourceSha256", FilesSupport.hash(stepFile));
             recipeMetadata.put(declaredStep, metadata);
         }
+
         var config =
                 Json.object(Json.parse(Files.readString(root.resolve("src/app/toolchain.json"))));
         var signing = Json.obj(Json.obj(config, "signing"), "platform");

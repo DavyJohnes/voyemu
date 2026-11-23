@@ -430,6 +430,10 @@ final class Recipes {
             throw new Failure("PATCH_OPERATION_UNSUPPORTED", "Network adapter missing", 5);
         }
 
+        default void guardDvrCameraVirtual(boolean apply) throws Exception {
+            throw new Failure("PATCH_OPERATION_UNSUPPORTED", "DVR camera adapter missing", 5);
+        }
+
         default void guardCameraVirtual(boolean apply) throws Exception {
             throw new Failure("PATCH_OPERATION_UNSUPPORTED", "Camera virtual adapter missing", 5);
         }

@@ -20,6 +20,18 @@ public final class Api30DvrFrameworkTest {
         }
     }
 
+    private static void rejectCameraPatch(
+            Map<String, Object> constants, int api, String abi, Path apk, byte[] dex)
+            throws Exception {
+        try {
+            DvrCameraVirtualGuard.patch(constants, api, abi, apk, dex, true);
+        } catch (Failure expected) {
+            return;
+        }
+
+        throw new AssertionError("Unsupported or already patched OEM DVR DEX accepted");
+    }
+
     public static void main(String[] args) throws Exception {
         Path root = Path.of(args[0]).toRealPath();
         String id = "free-11-chinese-20260731-7.3.1";
@@ -30,13 +42,31 @@ public final class Api30DvrFrameworkTest {
         var patch = Json.obj(Json.obj(profile, "patches"), "Dvr");
         check(
                 Json.list(patch.get("steps"))
-                        .equals(List.of("api30-dvr-arm64.json", "api30-framework-libraries.json")),
+                        .equals(
+                                List.of(
+                                        "api30-dvr-arm64.json",
+                                        "api30-framework-libraries.json",
+                                        "api30-dvr-camera-virtual.json")),
                 "Production DVR must restore its classloader after guarded native preparation");
         check(
                 Json.list(patch.get("uses")).equals(List.of("component:dvr-arm64-libraries")),
                 "Preserve native component");
         Path originals = root.resolve(".local/profiles/" + id + "/originals");
         Path apk = originals.resolve("Dvr.apk");
+        var cameraRecipe = metadata.resolve("patches/api30-dvr-camera-virtual.json");
+        var cameraConstants =
+                Json.obj(Json.object(Json.parse(Files.readString(cameraRecipe))), "constants");
+        byte[] originalDex;
+        try (var zip = new java.util.zip.ZipFile(apk.toFile())) {
+            originalDex = zip.getInputStream(zip.getEntry("classes2.dex")).readAllBytes();
+        }
+        byte[] cameraAdapted =
+                DvrCameraVirtualGuard.patch(
+                        cameraConstants, 30, "arm64-v8a", apk, originalDex, true);
+        check(!java.util.Arrays.equals(originalDex, cameraAdapted), "DVR hooks must change DEX");
+        rejectCameraPatch(cameraConstants, 28, "arm64-v8a", apk, originalDex);
+        rejectCameraPatch(cameraConstants, 30, "armeabi-v7a", apk, originalDex);
+        rejectCameraPatch(cameraConstants, 30, "arm64-v8a", apk, cameraAdapted);
         var definitions = new HashMap<String, TreeSet<String>>();
         var references = new TreeSet<String>();
         boolean application = false;
@@ -70,9 +100,11 @@ public final class Api30DvrFrameworkTest {
             }
             definitions.put(name, classes);
         }
+
         check(application, "OEM skin application must exist");
         references.removeAll(definitions.get("Dvr"));
         var owners = new ArrayList<String>();
+
         for (String name : List.of("QGAPI", "QGMOD", "QGVehicle")) {
             var used = new TreeSet<>(references);
             used.retainAll(definitions.get(name));
@@ -191,15 +223,16 @@ public final class Api30DvrFrameworkTest {
                 "OEM DVR QGAPI loader edge, secondary DEX ownership and optional libraries"
                         + " verified");
     }
-
     static String manifestText(Path aapt, byte[] manifest) throws Exception {
         Path temporary = Files.createTempFile("dvr-manifest-", ".apk");
+
         try {
             try (var zip = new java.util.zip.ZipOutputStream(Files.newOutputStream(temporary))) {
                 zip.putNextEntry(new java.util.zip.ZipEntry("AndroidManifest.xml"));
                 zip.write(manifest);
                 zip.closeEntry();
             }
+
             var process =
                     new ProcessBuilder(
                                     aapt.toString(),
@@ -215,6 +248,7 @@ public final class Api30DvrFrameworkTest {
                             process.getInputStream().readAllBytes(),
                             java.nio.charset.StandardCharsets.UTF_8);
             check(process.waitFor() == 0, "Actual binary Android manifest must remain readable");
+
             return result;
         } finally {
             Files.delete(temporary);

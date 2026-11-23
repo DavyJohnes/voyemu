@@ -308,6 +308,27 @@ final class PatchTarget implements Recipes.Target {
     }
 
     @Override
+    public void guardDvrCameraVirtual(boolean apply) throws Exception {
+        Path source = Storage.confined(stepRoot, DvrCameraVirtualGuard.HELPER_ROOT);
+
+        Failure.require(
+                FilesSupport.tree(source)
+                        .keySet()
+                        .equals(Set.of(DvrCameraVirtualGuard.HELPER_SOURCE)),
+                "DVR_CAMERA_VIRTUAL",
+                "Exact DVR camera helper source required",
+                3);
+        byte[] patched =
+                DvrCameraVirtualGuard.patch(
+                        constants, api, abi, input, entries.get("classes2.dex"), apply);
+
+        if (apply) {
+            entries.put("classes2.dex", patched);
+            addDex(DvrCameraVirtualGuard.HELPER_ROOT);
+        }
+    }
+
+    @Override
     public void guardCameraVirtual(boolean apply) throws Exception {
         Path source = Storage.confined(stepRoot, CameraVirtualGuard.HELPER_ROOT);
         var files = FilesSupport.tree(source);

@@ -2250,7 +2250,8 @@ int main(int argc, char **argv) {
                                            ? Json::array({"api30-gallery-arm64.json"})
                                    : it.key() == "Dvr"
                                            ? Json::array({"api30-dvr-arm64.json",
-                                                          "api30-framework-libraries.json"})
+                                                          "api30-framework-libraries.json",
+                                                          "api30-dvr-camera-virtual.json"})
                                    : (it.key() == "CloudApp" || it.key() == "WecarFlow" ||
                                       it.key() == "HiCar" || it.key() == "Bill" ||
                                       it.key() == "UserCenter")

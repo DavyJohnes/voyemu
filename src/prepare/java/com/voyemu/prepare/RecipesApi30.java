@@ -749,6 +749,18 @@ final class RecipesApi30 {
     private boolean validateCameraNaviOperations(String operation, List<Object> args)
             throws Exception {
         switch (operation) {
+            case "guardDvrCameraVirtual" -> {
+                require(
+                        name.equals(DvrCameraVirtualGuard.NAME + ".json")
+                                && args.isEmpty()
+                                && calls.size() == 1
+                                && (DvrCameraVirtualGuard.HELPER_ROOT
+                                                + "/"
+                                                + DvrCameraVirtualGuard.HELPER_SOURCE)
+                                        .equals(metadata.get("helper")),
+                        "Exact DVR camera operation and helper required");
+                target.guardDvrCameraVirtual(false);
+            }
             case "guardCameraVirtual" -> {
                 require(
                         name.equals(CameraVirtualGuard.NAME + ".json")
@@ -1167,6 +1179,7 @@ final class RecipesApi30 {
                 case "guardPassionBluetoothRole" -> target.guardPassionBluetoothRole(true);
                 case "guardPassionSidebars" -> target.guardPassionSidebars(true);
                 case "guardPassionDiagnostics" -> target.guardPassionDiagnostics(true);
+                case "guardDvrCameraVirtual" -> target.guardDvrCameraVirtual(true);
                 case "guardCameraVirtual" -> target.guardCameraVirtual(true);
                 case "guardOriginalNaviVin" -> target.guardOriginalNaviVin(true);
                 case "guardOriginalNaviVehicle" -> target.guardOriginalNaviVehicle(true);
