@@ -1906,7 +1906,7 @@ int main(int argc, char **argv) {
                   "Gallery cannot widen wheel routes, accept altered dependencies, duplicate APK or install build-only archive");
         }
 
-        for (int mode = 0; mode < 6; ++mode) {
+        for (int mode = 0; mode < 9; ++mode) {
             auto bad = a11;
 
             if (mode == 0) {
@@ -1933,6 +1933,16 @@ int main(int argc, char **argv) {
                 bad["install"].push_back(Json{{"artifact", "original:Dvr"}, {"type", "apk"}});
             }
 
+            if (mode == 6) {
+                bad["patches"]["Dvr"]["steps"] =
+                        Json::array({"api30-framework-libraries.json", "api30-dvr-arm64.json"});
+            }
+            if (mode == 7) {
+                bad["patches"]["Dvr"]["steps"].push_back("framework-libraries.json");
+            }
+            if (mode == 8) {
+                bad["id"] = "free-11-chinese-20250710-6.11.1";
+            }
             bool denied = false;
             try {
                 (void)qinggan11_wheel_capability(bad);
@@ -2235,7 +2245,9 @@ int main(int argc, char **argv) {
                                                           "api30-camera-virtual.json"})
                                    : (it.key() == "Gallery" || it.key() == "Video")
                                            ? Json::array({"api30-gallery-arm64.json"})
-                                   : it.key() == "Dvr" ? Json::array({"api30-dvr-arm64.json"})
+                                   : it.key() == "Dvr"
+                                           ? Json::array({"api30-dvr-arm64.json",
+                                                          "api30-framework-libraries.json"})
                                    : (it.key() == "CloudApp" || it.key() == "WecarFlow" ||
                                       it.key() == "HiCar" || it.key() == "Bill" ||
                                       it.key() == "UserCenter")

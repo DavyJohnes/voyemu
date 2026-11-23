@@ -918,7 +918,8 @@
         "component:dvr-arm64-libraries"
       ],
       "steps": [
-        "api30-dvr-arm64.json"
+        "api30-dvr-arm64.json",
+        "api30-framework-libraries.json"
       ]
     },
     "UserCenter": {

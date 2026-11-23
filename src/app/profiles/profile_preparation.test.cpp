@@ -826,6 +826,7 @@ int main(int argc, char **argv) {
                 "api30-usb-player.json",
                 "api30-gallery-arm64.json",
                 "api30-dvr-arm64.json",
+                "api30-framework-libraries.json",
                 "framework-libraries.json",
                 "api30-aqy-provider.json",
                 "api30-hiboard-libraries.json",

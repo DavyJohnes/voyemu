@@ -121,7 +121,14 @@ public final class OemArm64LibrariesTest {
         var patch = Json.obj(Json.obj(data, "patches"), name);
         var steps = Json.list(patch.get("steps"));
 
-        need(steps.size() == 1);
+        boolean dvrFramework =
+                recipe.getFileName().toString().equals("free-11-chinese-20260731-7.3.1")
+                        && name.equals("Dvr");
+        need(
+                dvrFramework
+                        ? steps.equals(
+                                List.of("api30-dvr-arm64.json", "api30-framework-libraries.json"))
+                        : steps.size() == 1);
         String step = (String) steps.get(0);
         var metadata = Json.object(Json.parse(Files.readString(recipe.resolve("patches/" + step))));
         var constants = Json.obj(metadata, "constants");
@@ -153,7 +160,26 @@ public final class OemArm64LibrariesTest {
                         baseline,
                         GalleryArm64Libraries.remove(
                                 constants, api, "arm64-v8a", original, patched, archive, source)));
-        Path produced = build(root, source, recipe, data, name, step);
+        Path produced = build(root, source, recipe, data, name);
+        if (dvrFramework) {
+            var libraries =
+                    Json.object(
+                            Json.parse(
+                                    Files.readString(
+                                            recipe.resolve(
+                                                    "patches/api30-framework-libraries.json"))));
+            libraries.put(
+                    "sourceSha256",
+                    FilesSupport.hash(recipe.resolve("patches/api30-framework-libraries.json")));
+            var target = new FrameworkLibrariesTest.Target();
+            target.profile = recipe.getFileName().toString();
+            target.pin = FilesSupport.hash(original);
+            Recipes.apply("api30-framework-libraries.json", libraries, target);
+            need(target.installed.equals(List.of("QGAPI")));
+            patched.put(
+                    "AndroidManifest.xml",
+                    ManifestLibraries.add(patched.get("AndroidManifest.xml"), target.installed));
+        }
         var producedEntries = NativeCore.entries(produced);
         producedEntries.keySet().removeIf(DexOperations::signatureEntry);
         need(GalleryArm64Libraries.same(patched, producedEntries));
@@ -169,8 +195,7 @@ public final class OemArm64LibrariesTest {
     }
 
     // Builds the patched APK through Artifacts from the declarations of the profile.
-    static Path build(
-            Path root, Path source, Path recipe, Map<String, Object> data, String name, String step)
+    static Path build(Path root, Path source, Path recipe, Map<String, Object> data, String name)
             throws Exception {
         Path out = source.getParent();
         String component =
@@ -206,10 +231,16 @@ public final class OemArm64LibrariesTest {
                                 List.of(Map.of("artifact", "patched:" + name, "type", "apk"))),
                         "",
                         recipe.getParent().getParent());
-        Path stepFile = recipe.resolve("patches/" + step);
-        var metadata =
-                new java.util.LinkedHashMap<>(Json.object(Json.parse(Files.readString(stepFile))));
-        metadata.put("sourceSha256", FilesSupport.hash(stepFile));
+        var recipeMetadata = new java.util.LinkedHashMap<String, Object>();
+        for (Object declared : Json.list(Json.obj(Json.obj(data, "patches"), name).get("steps"))) {
+            String declaredStep = (String) declared;
+            Path stepFile = recipe.resolve("patches/" + declaredStep);
+            var metadata =
+                    new java.util.LinkedHashMap<>(
+                            Json.object(Json.parse(Files.readString(stepFile))));
+            metadata.put("sourceSha256", FilesSupport.hash(stepFile));
+            recipeMetadata.put(declaredStep, metadata);
+        }
         var config =
                 Json.object(Json.parse(Files.readString(root.resolve("src/app/toolchain.json"))));
         var signing = Json.obj(Json.obj(config, "signing"), "platform");
@@ -238,7 +269,7 @@ public final class OemArm64LibrariesTest {
                                 ".local/toolchains/java-sdk/platforms/android-34/android.jar"));
         var engine =
                 new Artifacts(
-                        new Artifacts.PatchedProfile(selected, Map.of(step, metadata)),
+                        new Artifacts.PatchedProfile(selected, recipeMetadata),
                         storage,
                         tools,
                         recipe,

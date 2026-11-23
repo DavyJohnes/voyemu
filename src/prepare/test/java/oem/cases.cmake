@@ -54,6 +54,7 @@ set(CASES_qinggan11_611
 set(CASES_qinggan11_731
     "Api30AqyProviderGuardTest ROOT NEEDS:${F731}"
     "Api30FrameworkLibrariesTest ROOT NEEDS:${F731}"
+    "Api30DvrFrameworkTest ROOT WORK NEEDS:${F731}"
     "Api30LauncherPowerGuardTest ROOT NEEDS:${F731}"
     "Api30NetworkNullGuardTest ROOT NEEDS:${F731}"
     "Api30StrPowerGuardTest ROOT NEEDS:${F731}"

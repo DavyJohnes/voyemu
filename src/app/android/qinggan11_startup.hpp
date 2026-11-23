@@ -286,7 +286,10 @@ inline Json qinggan11_wheel_capability(const Json &definition) {
                     Json{{"type", "apk"},
                          {"input", "original:Dvr"},
                          {"uses", Json::array({"component:dvr-arm64-libraries"})},
-                         {"steps", Json::array({"api30-dvr-arm64.json"})}} ||
+                         {"steps", profile_id == "free-11-chinese-20260731-7.3.1"
+                                           ? Json::array({"api30-dvr-arm64.json",
+                                                          "api30-framework-libraries.json"})
+                                           : Json::array({"api30-dvr-arm64.json"})}} ||
             !definition.contains("install") || !definition.at("install").is_array() ||
             std::count(definition.at("install").begin(), definition.at("install").end(),
                        Json{{"artifact", "patched:Dvr"}, {"type", "apk"}}) != 1 ||
