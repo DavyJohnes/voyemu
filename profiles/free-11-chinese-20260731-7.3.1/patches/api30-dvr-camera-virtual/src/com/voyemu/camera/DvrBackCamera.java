@@ -47,8 +47,9 @@ public final class DvrBackCamera {
             }
 
             return selected == null ? original : Collections.singletonList(selected);
-        } catch (ReflectiveOperationException | RuntimeException unavailable) {
-            // checkstyle-allow IllegalCatch: CameraX ABI failure retains OEM selection.
+        } catch (ReflectiveOperationException
+                | IllegalArgumentException
+                | SecurityException unavailable) {
             return original;
         }
     }
@@ -98,8 +99,9 @@ public final class DvrBackCamera {
             return selected;
         } catch (ReflectiveOperationException
                 | CameraAccessException
-                | RuntimeException unavailable) {
-            // checkstyle-allow IllegalCatch: camera access failure is not a capability.
+                | IllegalArgumentException
+                | IllegalStateException
+                | SecurityException unavailable) {
             return null;
         }
     }
