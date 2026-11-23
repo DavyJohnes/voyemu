@@ -205,6 +205,13 @@ public class DongfengCanBusComponentImpl extends BaseCanBusComponent {
         Log.i(TAG, "profile ACC request=" + value + "; Binder retained");
     }
 
+    @Override
+    public void setHostAccStatus(int value) {
+        if (state().requestHostAcc(value)) {
+            mModel.setHostAccStatus(value);
+        }
+    }
+
     /**
      * Hands the model ACC to the OEM power mode handler as the bcm_pepsPowerMode of frame 0x2C1:
      * ACC OFF is power mode 1, ACC ON power mode 2; its commands come from the ACC ON handler.

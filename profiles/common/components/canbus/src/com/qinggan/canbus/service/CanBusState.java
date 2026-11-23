@@ -69,6 +69,8 @@ public final class CanBusState {
      */
     private int mAccRequest = 2;
 
+    private int mHostAccRequest = -1;
+
     private static final class VehicleSnapshot {
         final long sequence;
         final int speed, soc, doorFl, left, right;
@@ -392,6 +394,14 @@ public final class CanBusState {
     }
 
     boolean applyVehicleInputs(String encoded) {
+        return applyVehicleInputs(encoded, -1);
+    }
+
+    boolean applyVehicleInputs(String encoded, int acc) {
+        if (acc != -1 && acc != 0 && acc != 2) {
+            return false;
+        }
+
         VehicleInputSnapshot snapshot;
 
         try {
@@ -404,16 +414,28 @@ public final class CanBusState {
             return false;
         }
 
-        return queueVehicleInputs(snapshot, true);
+        return queueVehicleInputs(snapshot, true, acc);
     }
 
     private boolean queueVehicleInputs(
             final VehicleInputSnapshot snapshot, boolean allowIdempotent) {
+        return queueVehicleInputs(snapshot, allowIdempotent, -1);
+    }
+
+    private boolean queueVehicleInputs(
+            final VehicleInputSnapshot snapshot, boolean allowIdempotent, int acc) {
         synchronized (mLock) {
             if (snapshot.sequence <= mVehicleQueuedSequence) {
-                return allowIdempotent
-                        && snapshot.sequence == mVehicleQueuedSequence
-                        && snapshot.sameValues(mVehicleInputs);
+                boolean current =
+                        allowIdempotent
+                                && snapshot.sequence == mVehicleQueuedSequence
+                                && snapshot.sameValues(mVehicleInputs);
+
+                if (current && acc != -1) {
+                    mHandler.post(() -> applyAccForInputs(snapshot, acc));
+                }
+
+                return current;
             }
 
             mVehicleQueuedSequence = snapshot.sequence;
@@ -435,11 +457,23 @@ public final class CanBusState {
                 }
 
                 publish(() -> mVehicleInputs = snapshot);
+                applyAccForInputs(snapshot, acc);
                 Log.i(TAG, "complete vehicle revision applied: " + snapshot.sequence);
             });
         }
 
         return true;
+    }
+
+    /** Only a successfully persisted current full revision may request vehicle power. */
+    private void applyAccForInputs(VehicleInputSnapshot snapshot, int acc) {
+        synchronized (mLock) {
+            if (acc != -1
+                    && snapshot.sequence == mVehicleQueuedSequence
+                    && snapshot.sameValues(mVehicleInputs)) {
+                mComponent.setHostAccStatus(acc);
+            }
+        }
     }
 
     /** Applies a revision on the handler and reports each callback whose values changed. */
@@ -1004,6 +1038,24 @@ public final class CanBusState {
 
             record("state_requested", null, "acc", value, mAccRequest);
             mAccRequest = value;
+
+            return true;
+        }
+    }
+
+    /** The host has no implicit ON request before its first accepted full input. */
+    public boolean requestHostAcc(int value) {
+        if (value != 0 && value != 2) {
+            throw new IllegalArgumentException("unknown ACC state");
+        }
+
+        synchronized (mLock) {
+            if (value == mHostAccRequest) {
+                return false;
+            }
+
+            record("state_requested", null, "acc", value, mHostAccRequest);
+            mHostAccRequest = value;
 
             return true;
         }

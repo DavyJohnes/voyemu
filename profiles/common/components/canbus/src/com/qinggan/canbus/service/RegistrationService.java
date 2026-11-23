@@ -31,6 +31,11 @@ public class RegistrationService extends Service {
         return new BaseCanBusComponent();
     }
 
+    /** Whether vehicle power is supplied only by the complete host state. */
+    protected boolean hostControlsAcc() {
+        return false;
+    }
+
     static org.json.JSONObject currentObservation(String request) throws org.json.JSONException {
         CanObservationRequest parsed = CanObservationRequest.parse(request);
         CanBusStubService binder = sBinder;
@@ -81,7 +86,7 @@ public class RegistrationService extends Service {
             new BroadcastReceiver() {
                 @Override
                 public void onReceive(Context context, Intent intent) {
-                    if (sBinder == null || intent == null) {
+                    if (sBinder == null || intent == null || hostControlsAcc()) {
                         return;
                     }
 
@@ -158,21 +163,24 @@ public class RegistrationService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent != null
                 && "com.voyemu.canbus.APPLY_PERSISTENT_VEHICLE_STATE".equals(intent.getAction())) {
+            int acc = intent.getIntExtra("acc", -1);
             boolean applied =
                     sBinder != null
-                            && sBinder.applyVehicleInputs(intent.getStringExtra("state_json"));
+                            && (hostControlsAcc()
+                                    ? sBinder.applyVehicleInputs(
+                                            intent.getStringExtra("state_json"), acc)
+                                    : sBinder.applyVehicleInputs(
+                                            intent.getStringExtra("state_json")));
+
+            if (!hostControlsAcc() && sBinder != null && (acc == 0 || acc == 2)) {
+                sBinder.setAccStatus(acc);
+            }
+
             Log.i(
                     TAG,
                     applied
                             ? "complete vehicle input queued or already current"
                             : "complete vehicle input rejected");
-
-            // The host power state requests the ACC of the CAN model like the screen lifecycle.
-            int acc = intent.getIntExtra("acc", -1);
-
-            if (sBinder != null && (acc == 0 || acc == 2)) {
-                sBinder.setAccStatus(acc);
-            }
         }
 
         if (intent != null && "com.voyemu.canbus.APPLY_VEHICLE_STATE".equals(intent.getAction())) {

@@ -6,6 +6,7 @@ import java.util.Map;
 /** In-memory preferences; commit publishes the edits at once. */
 public class SharedPreferences {
     private final Map<String, Object> values = new HashMap<>();
+    public boolean failCommits;
 
     public synchronized int getInt(String name, int fallback) {
         Object value = values.get(name);
@@ -41,6 +42,10 @@ public class SharedPreferences {
 
         public boolean commit() {
             synchronized (SharedPreferences.this) {
+                if (failCommits) {
+                    return false;
+                }
+
                 values.putAll(pending);
             }
 

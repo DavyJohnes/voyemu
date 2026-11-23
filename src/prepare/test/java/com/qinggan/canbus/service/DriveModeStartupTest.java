@@ -150,9 +150,20 @@ public final class DriveModeStartupTest {
         component.attachObserver(observer.callback);
         Handler.drain();
         observer.take();
-        LocalSocket.available(true);
+        LocalSocket.available(!h97c);
         LocalSocket.acceptStates(true);
+
+        if (h97c) {
+            LocalSocket.initialAcc(0);
+            check(
+                    component.state().applyVehicleInputs(CanBusComponentTest.inputs(1, 0, 0), 2),
+                    "initial host READY rejected");
+            Handler.drain();
+            check(events(component).isEmpty(), "host READY emitted a mode without the model");
+        }
+
         component.start();
+        LocalSocket.available(true);
         awaitAcc(component, observer, 2);
         Map<String, Object> first = history(component, "{\"schema\":1}");
         List<Map<String, Object>> events = events(component);

@@ -52,8 +52,9 @@ foreach(NAME IN LISTS SEMANTIC)
 endforeach()
 file(GLOB_RECURSE MODEL_FIXTURES "${ROOT}/src/prepare/test/fixtures/canbus-model/*.java")
 compile("${WORK}/acc" ${MODEL_FIXTURES} "${SERVICE}/CanModelBridge.java" "${SERVICE}/CanModelClient.java"
-    "${TESTS}/CanBusAccStatusTest.java")
+    "${TESTS}/CanBusAccStatusTest.java" "${TESTS}/CanBusAccStartupTest.java")
 run_java("${WORK}/acc" com.qinggan.canbus.service.CanBusAccStatusTest)
+run_java("${WORK}/acc" com.qinggan.canbus.service.CanBusAccStartupTest)
 # The component with the qinggan09 theme variant and with each platform vehicle catalogue and BCM PEPS
 # power mode handler; its model socket is the canbus-model double.
 file(GLOB_RECURSE COMPONENT_FIXTURES "${ROOT}/src/prepare/test/fixtures/canbus-component/*.java")
@@ -73,9 +74,14 @@ foreach(PLATFORM qinggan09 qinggan11)
         "${COMPONENT}/${PLATFORM}/com/qinggan/canbus/service/VehicleSignalCatalog.java"
         "${COMPONENT}/${PLATFORM}/com/qinggan/canbus/service/PepsPowerMode.java"
         "${COMPONENT}/qinggan09/com/qinggan/canbus/service/ClusterTheme.java" "${TESTS}/CanBusComponentTest.java"
-        "${TESTS}/DriveModeStartupTest.java")
+        "${TESTS}/DriveModeStartupTest.java" "${TESTS}/HostAccInputsTest.java"
+        "${TESTS}/DriveModeColdOffTest.java")
     run_java("${WORK}/component-${PLATFORM}" com.qinggan.canbus.service.CanBusComponentTest)
     run_java("${WORK}/component-${PLATFORM}" com.qinggan.canbus.service.DriveModeStartupTest ${PLATFORM})
+    run_java("${WORK}/component-${PLATFORM}" com.qinggan.canbus.service.HostAccInputsTest)
+    if(PLATFORM STREQUAL "qinggan11")
+        run_java("${WORK}/component-${PLATFORM}" com.qinggan.canbus.service.DriveModeColdOffTest)
+    endif()
 endforeach()
 file(GLOB_RECURSE CLUSTER_FIXTURES "${ROOT}/src/prepare/test/fixtures/cluster-theme/*.java")
 compile("${WORK}/cluster" ${CLUSTER_FIXTURES} "${SERVICE}/ClusterThemeStore.java" "${SERVICE}/ClusterThemeBinder.java"

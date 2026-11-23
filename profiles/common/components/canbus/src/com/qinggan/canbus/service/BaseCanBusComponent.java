@@ -93,6 +93,11 @@ public class BaseCanBusComponent {
     /** Requests a head-unit power state from the screen lifecycle; the base has no model. */
     public void setAccStatus(int value) {}
 
+    /** Applies power from a persisted complete host input. */
+    public void setHostAccStatus(int value) {
+        setAccStatus(value);
+    }
+
     public void init(Context context) {
         synchronized (mObservers) {
             if (mState == null) {

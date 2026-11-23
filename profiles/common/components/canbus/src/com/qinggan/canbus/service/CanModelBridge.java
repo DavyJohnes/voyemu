@@ -48,6 +48,8 @@ public final class CanModelBridge {
     private Thread worker;
     private boolean recoveryOffAccepted, recoveryArmed, recoveryOnAccepted;
     private int deliveredAcc = -1;
+    private int startupAcc = -1;
+    private boolean observed;
     private long recoverySession, recoveryEpoch;
 
     private static final class Snapshot {
@@ -154,6 +156,21 @@ public final class CanModelBridge {
         enqueue(3, 0, value);
     }
 
+    /** Retains only an unsent initial host request until the first model lease is ready. */
+    public synchronized void setHostAccStatus(int value) {
+        if (value != 0 && value != 2) {
+            throw new IllegalArgumentException("unknown ACC state");
+        }
+
+        if (!observed) {
+            startupAcc = value;
+
+            return;
+        }
+
+        enqueue(3, 0, value);
+    }
+
     private void enqueue(int op, int state, int value) {
         Snapshot s = op == 3 ? freshSnapshot() : current();
 
@@ -178,6 +195,7 @@ public final class CanModelBridge {
         listener = next;
         snapshot = null;
         queue.clear();
+        observed = false;
         running = true;
         worker = new Thread(this::runWorker, "can-model-bridge");
         worker.start();
@@ -189,6 +207,8 @@ public final class CanModelBridge {
         listener = null;
         snapshot = null;
         queue.clear();
+        startupAcc = -1;
+        observed = true;
         accUncertain = true;
         client.close();
 
@@ -369,15 +389,31 @@ public final class CanModelBridge {
                         reply[3],
                         reply[5]);
 
+        if (!publishSnapshot(next)) {
+            return false;
+        }
+
+        if (!accUncertain) {
+            notifyModelState(old, next);
+            notifyAcc(next.acc);
+        }
+
+        return true;
+    }
+
+    /** Publishes the first leased snapshot and admits its retained, never-sent host request. */
+    private synchronized boolean publishSnapshot(Snapshot next) {
         if (!running) {
             return false;
         }
 
         snapshot = next;
+        observed = true;
 
-        if (!accUncertain) {
-            notifyModelState(old, next);
-            notifyAcc(next.acc);
+        if (startupAcc != -1) {
+            int value = startupAcc;
+            startupAcc = -1;
+            enqueue(3, 0, value);
         }
 
         return true;

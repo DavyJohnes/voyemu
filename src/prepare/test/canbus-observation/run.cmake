@@ -29,6 +29,13 @@ execute_process(COMMAND "${JAVAC}" -J-XX:ActiveProcessorCount=1 -J-Xmx128m --rel
 if(NOT RESULT EQUAL 0)
     message(FATAL_ERROR "Compilation: ${RESULT}\n${OUTPUT}\n${ERROR}; diagnostics: ${WORK}")
 endif()
+execute_process(COMMAND "${JAVA}" -XX:ActiveProcessorCount=1 -Xmx128m
+    -cp "${CLASSES}${CP_SEPARATOR}${PLATFORM}" com.qinggan.canbus.service.HostAccServiceProbe
+    TIMEOUT 15 RESULT_VARIABLE RESULT OUTPUT_VARIABLE OUTPUT ERROR_VARIABLE ERROR)
+if(NOT RESULT EQUAL 0)
+    message(FATAL_ERROR "Host ACC service: ${RESULT}\n${OUTPUT}\n${ERROR}; diagnostics: ${WORK}")
+endif()
+message(STATUS "${OUTPUT}")
 set(PRODUCED "${WORK}/observation.json")
 execute_process(COMMAND "${JAVA}" -XX:ActiveProcessorCount=1 -Xmx128m
     -cp "${CLASSES}${CP_SEPARATOR}${PLATFORM}" com.qinggan.canbus.service.CanObservationProducerProbe "${PRODUCED}"

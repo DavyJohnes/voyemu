@@ -211,6 +211,10 @@ public class CanBusStubService extends ICanBusService.Stub {
         return mState.applyVehicleInputs(encoded);
     }
 
+    public boolean applyVehicleInputs(String encoded, int acc) {
+        return mState.applyVehicleInputs(encoded, acc);
+    }
+
     public boolean applyVehicleSnapshot(
             long sequence, int speed, int soc, int doorFl, int left, int right) {
         return mState.applyVehicleSnapshot(sequence, speed, soc, doorFl, left, right);

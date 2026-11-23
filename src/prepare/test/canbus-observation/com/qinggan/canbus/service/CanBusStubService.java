@@ -1,9 +1,11 @@
 package com.qinggan.canbus.service;
 
 class CanBusStubService extends android.os.Binder {
-    CanBusStubService(Object c, BaseCanBusComponent component) {
-        throw new AssertionError();
-    }
+    boolean accept;
+    final java.util.List<Integer> power = new java.util.ArrayList<>();
+    final java.util.List<Integer> hostPower = new java.util.ArrayList<>();
+
+    CanBusStubService(Object c, BaseCanBusComponent component) {}
 
     org.json.JSONObject observe(CanObservationRequest r) {
         throw new AssertionError();
@@ -30,7 +32,7 @@ class CanBusStubService extends android.os.Binder {
     }
 
     void setAccStatus(int s) {
-        throw new AssertionError();
+        power.add(s);
     }
 
     void registrationObserved(boolean b) {
@@ -54,7 +56,15 @@ class CanBusStubService extends android.os.Binder {
     }
 
     boolean applyVehicleInputs(String s) {
-        throw new AssertionError();
+        return accept;
+    }
+
+    boolean applyVehicleInputs(String s, int acc) {
+        if (accept) {
+            hostPower.add(acc);
+        }
+
+        return accept;
     }
 
     boolean applyVehicleSnapshot(long a, int b, int c, int d, int e, int f) {

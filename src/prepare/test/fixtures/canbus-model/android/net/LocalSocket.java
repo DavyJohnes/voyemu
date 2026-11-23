@@ -28,6 +28,10 @@ public final class LocalSocket {
         }
     }
 
+    public static synchronized void initialAcc(int value) {
+        acc = value;
+    }
+
     public static synchronized void available(boolean value) {
         available = value;
     }

@@ -9,6 +9,15 @@
           "after": ""
         }
       ]
+    },
+    {
+      "path": "src/com/qinggan/canbus/service/CanBusService.java",
+      "replacements": [
+        {
+          "before": "    @Override\n    protected BaseCanBusComponent canBusComponent() {",
+          "after": "    @Override\n    protected boolean hostControlsAcc() {\n        return true;\n    }\n\n    @Override\n    protected BaseCanBusComponent canBusComponent() {"
+        }
+      ]
     }
   ]
 }
