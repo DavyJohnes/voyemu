@@ -116,7 +116,7 @@ int main(int argc, char **argv) {
                     } else if (variant == 1) {
                         invalid[0].scope = passion_scope;
                     } else if (variant == 2) {
-                        invalid[1].donor->sha256 = std::string(64, '0');
+                        invalid[1].donor.value().sha256 = std::string(64, '0');
                     } else if (variant == 3) {
                         invalid[0].api = 28;
                     } else {
