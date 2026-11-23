@@ -3,6 +3,7 @@
 #include "model.hpp"
 #include <filesystem>
 #include <optional>
+#include <sstream>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -121,5 +122,45 @@ inline std::optional<std::string> usb_volume_state(std::string_view listing,
     }
 
     return std::nullopt;
+}
+// /proc/mounts is authoritative when the restricted guest cannot enumerate public volumes via sm.
+inline std::optional<std::string> usb_volume_mount_state(std::string_view mounts,
+                                                         std::string_view uuid) {
+    const std::string target = "/mnt/media_rw/" + std::string(uuid);
+    constexpr std::string_view prefix = "/dev/block/vold/public:";
+    std::istringstream input{std::string(mounts)};
+    std::string line;
+    std::size_t matches = 0;
+
+    while (std::getline(input, line)) {
+        std::istringstream fields(line);
+        std::string source, point, filesystem, options, dump, pass, extra;
+
+        fields >> source >> point;
+        if (point != target) {
+            continue;
+        }
+        if (++matches != 1 || !(fields >> filesystem >> options >> dump >> pass) ||
+            fields >> extra || filesystem != "vfat" || !source.starts_with(prefix)) {
+            return std::nullopt;
+        }
+
+        const std::string_view device(source.data() + prefix.size(), source.size() - prefix.size());
+        const auto comma = device.find(',');
+        const auto major = device.substr(0, comma);
+        const auto minor = comma == std::string_view::npos ? std::string_view{}
+                                                           : device.substr(comma + 1);
+        const auto flags = "," + options + ",";
+
+        if (major.empty() || minor.empty() ||
+            major.find_first_not_of("0123456789") != std::string_view::npos ||
+            minor.find_first_not_of("0123456789") != std::string_view::npos ||
+            flags.find(",rw,") == std::string::npos || flags.find(",ro,") != std::string::npos ||
+            dump != "0" || pass != "0") {
+            return std::nullopt;
+        }
+    }
+
+    return matches == 1 ? std::optional<std::string>("mounted") : std::nullopt;
 }
 } // namespace voyemu

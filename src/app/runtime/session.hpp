@@ -369,7 +369,8 @@ private:
     Json usb_drive(bool attached);
     void plug_usb_drive(bool attached);
     // The state of the guest volume of the drive in vold; empty without a volume or transport.
-    std::optional<std::string> usb_drive_volume_state();
+    std::optional<std::string>
+    usb_drive_volume_state(std::chrono::steady_clock::time_point deadline);
     Json android_qmp_;
     bool usb_drive_attached_ = false;
     std::string phone_control_boot_;

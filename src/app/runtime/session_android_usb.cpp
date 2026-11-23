@@ -187,17 +187,31 @@ void Session::plug_usb_drive(bool attached) {
                    {{"generation", android_generation_}});
 }
 
-std::optional<std::string> Session::usb_drive_volume_state() {
-    if (!android_transport_ready_) {
+std::optional<std::string> Session::usb_drive_volume_state(Clock::time_point deadline) {
+    if (!android_transport_ready_ || Clock::now() >= deadline) {
         return std::nullopt;
     }
 
-    const auto listed = adb({"shell", "sm", "list-volumes", "public"}, 5000);
+    const auto listed = adb({"shell", "sm", "list-volumes", "public"},
+                            std::min(5000, remaining_ms(deadline)));
 
-    if (listed.timed_out || listed.exit_code) {
+    if (!listed.timed_out && !listed.exit_code) {
+        if (const auto state = usb_volume_state(listed.output, usb_drive_volume_uuid)) {
+            return state;
+        }
+    }
+
+    if (Clock::now() >= deadline) {
         return std::nullopt;
     }
 
-    return usb_volume_state(listed.output, usb_drive_volume_uuid);
+    const auto mounts = adb({"shell", "cat", "/proc/mounts"},
+                            std::min(5000, remaining_ms(deadline)));
+
+    if (mounts.timed_out || mounts.exit_code) {
+        return std::nullopt;
+    }
+
+    return usb_volume_mount_state(mounts.output, usb_drive_volume_uuid);
 }
 } // namespace voyemu

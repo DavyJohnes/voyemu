@@ -66,6 +66,40 @@ int main() {
         require(!usb_volume_state("private mounted null\nemulated mounted null\n", "2026-1122"),
                 "a non-public volume matched");
         require(!usb_volume_state("", "2026-1122"), "an empty listing matched");
+        const std::string mounted =
+                "/dev/block/vold/public:8,1 /mnt/media_rw/2026-1122 vfat "
+                "rw,dirsync,nosuid,nodev,noexec,noatime,gid=1077,fmask=0007,dmask=0007 "
+                "0 0\n";
+        require(usb_volume_mount_state(mounted, "2026-1122") == "mounted",
+                "the exact public vfat mount was not recognized");
+        require(!usb_volume_mount_state(mounted, "2026-1123"), "a foreign mount UUID matched");
+        require(!usb_volume_mount_state(mounted + mounted, "2026-1122"),
+                "duplicate mount evidence was accepted");
+        for (const auto &[before, after] : std::vector<std::pair<std::string, std::string>>{
+                     {"/2026-1122 ", "/2026-1122-other "},
+                     {"/2026-1122 ", "/2026-1122\\040 "},
+                     {"/mnt/media_rw/", "/mnt/foreign/"},
+                     {"vfat ", "tmpfs "},
+                     {"rw,", "ro,"},
+                     {"rw,", "rw,ro,"},
+                     {"public:8,1", "public:8,1,2"},
+                     {"public:8,1", "public:8,x"},
+                     {"public:8,1", "public:8,"},
+                     {"/dev/block/vold/public:8,1", "/dev/block/sda1"}}) {
+            auto wrong = mounted;
+            wrong.replace(wrong.find(before), before.size(), after);
+            require(!usb_volume_mount_state(wrong, "2026-1122"),
+                    "an unverified UUID, mount type, flags or public source matched");
+        }
+        require(!usb_volume_mount_state("", "2026-1122"), "an empty mount table matched");
+        require(!usb_volume_mount_state(mounted + "tmpfs /mnt/media_rw/2026-1122 tmpfs rw 0 0\n",
+                                        "2026-1122"),
+                "a later overmount at the exact UUID mount point was ignored");
+        require(!usb_volume_mount_state(
+                        mounted +
+                                "/dev/block/vold/public:8,2 /mnt/media_rw/2026-1122 vfat ro 0 0\n",
+                        "2026-1122"),
+                "a later read-only overmount was ignored");
     } catch (const std::exception &error) {
         std::cerr << error.what() << '\n';
 

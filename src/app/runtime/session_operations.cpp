@@ -277,7 +277,7 @@ Json Session::handle(const Json &operation) {
                 const auto deadline =
                         received + std::chrono::milliseconds(operation.value("timeout_ms", 20000));
                 const auto generation = android_generation_;
-                auto state = usb_drive_volume_state();
+                auto state = usb_drive_volume_state(deadline);
 
                 while ((attached ? state != "mounted" : state.has_value()) &&
                        std::chrono::steady_clock::now() + std::chrono::milliseconds(250) <
@@ -291,7 +291,7 @@ Json Session::handle(const Json &operation) {
                                           "multimedia restarted while the volume was awaited");
                     }
 
-                    state = usb_drive_volume_state();
+                    state = usb_drive_volume_state(deadline);
                 }
 
                 reply["ok"] = true;
