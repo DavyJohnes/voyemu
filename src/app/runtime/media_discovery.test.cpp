@@ -8,6 +8,15 @@
 #include <sys/stat.h>
 using namespace voyemu;
 
+static std::ofstream descriptor_output(const std::filesystem::path &path) {
+    // Windows can assign the token default owner instead of the current user.
+    if (os::host_windows && !std::filesystem::exists(path)) {
+        assert(os::create_private_file(path));
+    }
+
+    return std::ofstream(path);
+}
+
 static void warm_sdk_descriptor_binding() {
     const auto root = std::filesystem::current_path() / ".local/build/tmp" /
                       ("voyemu-sdk-warm-" + random_token());
@@ -20,7 +29,7 @@ static void warm_sdk_descriptor_binding() {
     const std::string descriptor =
             "grpc.port=45992\nport.serial=5566\ngrpc.token=private-fixture-token\n";
     {
-        std::ofstream(source) << descriptor;
+        descriptor_output(source) << descriptor;
         std::ofstream(log) << "Advertising in: " << source.string() << '\n';
     }
     SdkDescriptorCache cache;
@@ -62,7 +71,7 @@ static void warm_sdk_descriptor_binding() {
     {
         auto changed = descriptor;
         changed.replace(changed.find("private-fixture-token"), 21, "changed-fixture-token");
-        std::ofstream(source) << changed;
+        descriptor_output(source) << changed;
     }
     rejected(987, 5566, 45992);
     assert(cache.bearer() == "private-fixture-token");
@@ -126,7 +135,7 @@ int main() try {
                       ("voyemu-sdk-discovery-" + random_token());
     ensure_private_directory(root);
     auto log = root / "android.log", descriptor = root / "pid_123.ini";
-    { std::ofstream(descriptor) << "grpc.port=45992\n"; }
+    { descriptor_output(descriptor) << "grpc.port=45992\n"; }
     auto advertise = [&](const std::filesystem::path &path) {
         std::ofstream(log) << "INFO | Advertising in: " << path.string() << '\n';
     };
@@ -143,7 +152,7 @@ int main() try {
     auto other = root / "other";
     ensure_private_directory(other);
     {
-        std::ofstream(other / "pid_123.ini") << "grpc.port=45992\n";
+        descriptor_output(other / "pid_123.ini") << "grpc.port=45992\n";
         std::ofstream(log) << "Advertising in: " << descriptor.string()
                            << "\nAdvertising in: " << (other / "pid_123.ini").string() << '\n';
     }
@@ -153,7 +162,7 @@ int main() try {
     assert(!sdk_discovery(log, root, 123));
     std::filesystem::resize_file(descriptor, 0);
     assert(!sdk_discovery(log, root, 123));
-    { std::ofstream(descriptor) << "fixture"; }
+    { descriptor_output(descriptor) << "fixture"; }
     std::filesystem::create_hard_link(descriptor, root / "alias");
     assert(!sdk_discovery(log, root, 123));
     std::filesystem::remove(root / "alias");
@@ -167,7 +176,7 @@ int main() try {
 
     auto source = root / "pid_987.ini", target = other / "pid_987.ini";
     {
-        std::ofstream(source)
+        descriptor_output(source)
                 << "grpc.port=45992\nport.serial=5566\ngrpc.token=private-fixture-token\n";
     }
     assert(import_sdk_descriptor(source, target, 987, 5566, 45992) == target);
@@ -175,7 +184,7 @@ int main() try {
     assert(import_sdk_descriptor(source, target, 987, 5566, 45992) ==
            target); // Guest reboot keeps the same SDK process and descriptor.
     {
-        std::ofstream(source)
+        descriptor_output(source)
                 << "grpc.port=45992\nport.serial=5566\ngrpc.token=changed-private-fixture-token\n";
     }
     bool blocked = false;
@@ -187,7 +196,7 @@ int main() try {
 
     assert(blocked);
     {
-        std::ofstream(source)
+        descriptor_output(source)
                 << "grpc.port=45992\nport.serial=5566\ngrpc.token=private-fixture-token\n";
     }
 
@@ -228,13 +237,13 @@ int main() try {
     }
 
     assert(blocked && !std::filesystem::exists(target));
-    { std::ofstream(source) << "grpc.port=45992\nport.serial=5566\n"; }
+    { descriptor_output(source) << "grpc.port=45992\nport.serial=5566\n"; }
     assert(!import_sdk_descriptor(source, target, 987, 5566, 45992));
 
     // Windows guards the descriptor with ACLs, not mode bits.
     if (!voyemu::os::host_windows) {
         {
-            std::ofstream(source)
+            descriptor_output(source)
                     << "grpc.port=45992\nport.serial=5566\ngrpc.token=private-fixture-token\n";
         }
         assert(import_sdk_descriptor(source, target, 987, 5566, 45992));
