@@ -50,6 +50,8 @@ public final class VoyemuUsbPort {
                 && isReadableRemovable(volume);
     }
 
+    // Match the exact enumeration entry so a second, value-equal volume is rejected.
+    @SuppressWarnings("ReferenceEquality")
     private static boolean isUnique(StorageVolume candidate, Object[] enumerated) {
         int matchingEntries = 0;
 
