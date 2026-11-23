@@ -496,6 +496,15 @@ bool replace_file(const std::filesystem::path &from, const std::filesystem::path
     return ::rename(from.c_str(), to.c_str()) == 0;
 }
 
+std::error_code replace_mapped_file(const std::filesystem::path &from,
+                                    const std::filesystem::path &to) {
+    if (replace_file(from, to)) {
+        return {};
+    }
+
+    return {errno, std::generic_category()};
+}
+
 void resize_file(const std::filesystem::path &path, std::uint64_t bytes) {
     std::filesystem::resize_file(path, bytes);
 }

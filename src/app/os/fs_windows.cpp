@@ -3,6 +3,7 @@
 #include "os/current_user_windows.hpp"
 #include "os/private_state_security.hpp"
 #include <cstdlib>
+#include <cstring>
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
@@ -486,6 +487,46 @@ bool link_exclusive(const std::filesystem::path &existing, const std::filesystem
 bool replace_file(const std::filesystem::path &from, const std::filesystem::path &to) {
     return ::MoveFileExW(win32_file_path(from).c_str(), win32_file_path(to).c_str(),
                          MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH) != 0;
+}
+
+std::error_code replace_mapped_file(const std::filesystem::path &from,
+                                    const std::filesystem::path &to) {
+    if (replace_file(from, to)) {
+        return {};
+    }
+
+    // NTFS requires POSIX rename semantics to replace an open destination. Readers that still
+    // map the old file keep their view until they reopen the new name.
+    const auto destination = win32_file_path(std::filesystem::absolute(to).make_preferred());
+    const auto name_bytes = destination.size() * sizeof(wchar_t);
+
+    if (name_bytes > MAXDWORD - sizeof(FILE_RENAME_INFO)) {
+        return {ERROR_FILENAME_EXCED_RANGE, std::system_category()};
+    }
+
+    FILE_RENAME_INFO rename{};
+    rename.Flags = FILE_RENAME_FLAG_REPLACE_IF_EXISTS | FILE_RENAME_FLAG_POSIX_SEMANTICS;
+    rename.FileNameLength = static_cast<DWORD>(name_bytes);
+    std::vector<std::byte> buffer(sizeof(rename) + name_bytes);
+    constexpr auto name_offset = offsetof(FILE_RENAME_INFO, FileName);
+    std::memcpy(buffer.data(), &rename, name_offset);
+    std::memcpy(buffer.data() + name_offset, destination.data(), name_bytes);
+
+    const HANDLE source = CreateFileW(win32_file_path(from).c_str(), DELETE,
+                                      FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                                      nullptr, OPEN_EXISTING, FILE_FLAG_OPEN_REPARSE_POINT,
+                                      nullptr);
+
+    if (source == INVALID_HANDLE_VALUE) {
+        return {static_cast<int>(GetLastError()), std::system_category()};
+    }
+
+    const bool replaced = SetFileInformationByHandle(source, FileRenameInfoEx, buffer.data(),
+                                                     static_cast<DWORD>(buffer.size())) != 0;
+    const auto error = replaced ? ERROR_SUCCESS : GetLastError();
+    CloseHandle(source);
+
+    return {static_cast<int>(error), std::system_category()};
 }
 
 void resize_file(const std::filesystem::path &path, std::uint64_t bytes) {

@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <optional>
 #include <string>
+#include <system_error>
 #include <vector>
 
 namespace voyemu::os {
@@ -189,6 +190,9 @@ Publication publish_new_name(const std::filesystem::path &from, const std::files
 bool link_exclusive(const std::filesystem::path &existing, const std::filesystem::path &link);
 // Atomically replaces to with from, durably where the host supports it; false on failure.
 bool replace_file(const std::filesystem::path &from, const std::filesystem::path &to);
+// Replaces the name while existing mappings of both files stay valid.
+std::error_code replace_mapped_file(const std::filesystem::path &from,
+                                    const std::filesystem::path &to);
 // Sets the size of an existing file to bytes, as std::filesystem::resize_file does, throwing
 // std::filesystem::filesystem_error on failure; growth leaves a sparse zero-filled hole where the
 // filesystem supports one. The libc++ resize_file narrows the size to a 32-bit off_t on Windows.

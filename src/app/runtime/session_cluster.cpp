@@ -144,8 +144,9 @@ void Session::promote_live_screen(
             terminal_path_guard(frame_path);
 
             // Readers detect the replaced inode. The successor retains its existing mapping.
-            if (!os::replace_file(candidate, frame_path)) {
-                throw VoyemuError("QNX_FRAME_OWNER", "cannot publish the live Screen backing");
+            if (const auto error = os::replace_mapped_file(candidate, frame_path)) {
+                throw VoyemuError("QNX_FRAME_OWNER",
+                                  "cannot publish the live Screen backing: " + error.message());
             }
         }
 
