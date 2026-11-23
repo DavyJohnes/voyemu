@@ -1,4 +1,5 @@
 #include "machine_preparation_internal.hpp"
+#include "selinux_patch.hpp"
 
 // Verifies a prepared candidate by a cold boot, captures its frames and exports its images.
 namespace voyemu {
