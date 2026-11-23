@@ -180,8 +180,8 @@
         }
     },
     "androidJava": {
-        "url": "https://github.com/voyemu/voyemu-deps/releases/download/android-java-c892d3a0/android-java.zip",
-        "sha256": "ae9730b2df93984f07be17a34d7842a9b30154f7c45ed3d895ceae59911086c3"
+        "url": "https://github.com/voyemu/voyemu-deps/releases/download/android-java-b3a424f7/android-java.zip",
+        "sha256": "da3c72f1029300993f73baecc1c3577853abe4886ee1b00e2597fe53c2a241fb"
     },
     "androidNativeComponents": {
         "free-09-chinese-20221230-nxp-rc45/qg-runtime": {
@@ -274,8 +274,8 @@
         "release": 8
     },
     "javaHelper": {
-        "url": "https://github.com/voyemu/voyemu-deps/releases/download/java-helper-e9588232/java-helper.zip",
-        "sha256": "e3d5a9687f6f7580e783db4b0d69dd2a57c5849adcf49a28b3a83f1d95ed051b"
+        "url": "https://github.com/voyemu/voyemu-deps/releases/download/java-helper-e6f330b7/java-helper.zip",
+        "sha256": "1d22dec2fd54c59cdc65e3ab6fc9cd68cd5f891d393dedac3721ea72638861c0"
     },
     "javaRuntime": {
         "version": "25.0.5+8",
