@@ -52,10 +52,18 @@ bool rename_exclusive(const std::filesystem::path &from, const std::filesystem::
                          MOVEFILE_WRITE_THROUGH) != 0;
 }
 
-ExclusiveFile::ExclusiveFile(const std::filesystem::path &path, bool share_read)
-    : handle_(reinterpret_cast<std::intptr_t>(::CreateFileW(
-              win32_file_path(path).c_str(), GENERIC_WRITE, share_read ? FILE_SHARE_READ : 0,
-              nullptr, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, nullptr))) {
+ExclusiveFile::ExclusiveFile(const std::filesystem::path &path, bool share_read, Owner owner) {
+    std::optional<detail::PrivateStateSecurity> security;
+
+    if (owner == Owner::current_user) {
+        security.emplace();
+    }
+
+    handle_ = reinterpret_cast<std::intptr_t>(::CreateFileW(
+            win32_file_path(path).c_str(), GENERIC_WRITE, share_read ? FILE_SHARE_READ : 0,
+            security ? &security.value().attributes : nullptr, CREATE_NEW, FILE_ATTRIBUTE_NORMAL,
+            nullptr));
+
     if (!open()) {
         const auto error = ::GetLastError();
         exists_ = error == ERROR_FILE_EXISTS || error == ERROR_ALREADY_EXISTS;

@@ -189,7 +189,8 @@ import_sdk_descriptor(const std::filesystem::path &source, const std::filesystem
         *bearer = fields.at("grpc.token");
     }
 
-    os::ExclusiveFile output(target);
+    // Reopening a retained descriptor requires the user SID, including under an elevated token.
+    os::ExclusiveFile output(target, false, os::ExclusiveFile::Owner::current_user);
 
     if (!output.open()) {
         if (!output.already_exists()) {

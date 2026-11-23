@@ -25,7 +25,7 @@ namespace {
 }
 } // namespace
 
-ExclusiveFile::ExclusiveFile(const std::filesystem::path &path, bool share_read)
+ExclusiveFile::ExclusiveFile(const std::filesystem::path &path, bool share_read, Owner)
     : handle_(::open(path.c_str(), O_CREAT | O_EXCL | O_WRONLY | O_NOFOLLOW | O_CLOEXEC, 0600)),
       exists_(handle_ < 0 && errno == EEXIST) {
     (void)share_read; // POSIX does not exclude readers of an open file.

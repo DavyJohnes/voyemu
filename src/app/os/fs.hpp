@@ -25,7 +25,13 @@ bool exchange_paths(const std::filesystem::path &first, const std::filesystem::p
 // created. The destructor closes a file that close() did not.
 class ExclusiveFile {
 public:
-    explicit ExclusiveFile(const std::filesystem::path &path, bool share_read = false);
+    enum class Owner {
+        default_owner,
+        current_user
+    };
+
+    explicit ExclusiveFile(const std::filesystem::path &path, bool share_read = false,
+                           Owner owner = Owner::default_owner);
     ~ExclusiveFile();
     ExclusiveFile(const ExclusiveFile &) = delete;
     ExclusiveFile &operator=(const ExclusiveFile &) = delete;
