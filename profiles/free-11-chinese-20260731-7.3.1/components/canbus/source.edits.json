@@ -18,6 +18,19 @@
           "after": "    @Override\n    protected boolean hostControlsAcc() {\n        return true;\n    }\n\n    @Override\n    protected BaseCanBusComponent canBusComponent() {"
         }
       ]
+    },
+    {
+      "path": "src/com/qinggan/canbus/service/BaseCanBusComponent.java",
+      "replacements": [
+        {
+          "before": "    private volatile int mMuFd;\n",
+          "after": "    private volatile int mMuFd;\n    private SeatBelt mSeatbeltState;\n"
+        },
+        {
+          "before": "    /** Only the generic CAN box message 0x33 fills it; the Dongfeng protocol has no seat belts. */\n    public SeatBelt getSeatBeltStatus() {\n        return null;\n    }",
+          "after": "    /** OEM general CAN pre-frame cache, inherited by the original Dongfeng component. */\n    public SeatBelt getSeatBeltStatus() {\n        if (mSeatbeltState == null) {\n            mSeatbeltState = new SeatBelt();\n        }\n\n        return mSeatbeltState;\n    }"
+        }
+      ]
     }
   ]
 }

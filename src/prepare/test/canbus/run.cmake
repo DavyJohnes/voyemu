@@ -106,6 +106,7 @@ file(GLOB_RECURSE PREPARE "${ROOT}/src/prepare/java/*.java")
 compile("${WORK}/host" CLASSPATH "${JAVA_SOURCE_CLASSPATH}" ${PREPARE}
     "${ROOT}/src/prepare/test/java/com/voyemu/prepare/CanbusComponentRegression.java"
     "${ROOT}/src/prepare/test/java/com/voyemu/prepare/CanbusApiParity.java"
+    "${ROOT}/src/prepare/test/java/com/voyemu/prepare/CanbusSeatBeltTest.java"
     "${ROOT}/src/prepare/test/java/com/voyemu/prepare/CanbusPersistentStartTest.java"
     "${ROOT}/src/prepare/test/java/com/voyemu/prepare/ClusterThemeAbiTest.java")
 run_java("${WORK}/host${CP_SEPARATOR}${JAVA_SOURCE_CLASSPATH}" com.voyemu.prepare.CanbusComponentRegression
@@ -115,6 +116,9 @@ run_java("${WORK}/host${CP_SEPARATOR}${JAVA_SOURCE_CLASSPATH}" com.voyemu.prepar
 if(TEST_OEM)
     run_java("${WORK}/host${CP_SEPARATOR}${JAVA_SOURCE_CLASSPATH}" com.voyemu.prepare.ClusterThemeAbiTest "${QGAPI}")
 endif()
+# Production source-edit behavior runs in the always-registered source fixture, without OEM caches.
+run_java("${WORK}/host${CP_SEPARATOR}${JAVA_SOURCE_CLASSPATH}" com.voyemu.prepare.CanbusSeatBeltTest
+    "${ROOT}" "${WORK}/seatbelt" "${WORK}/component-qinggan11" "${WORK}/component-qinggan09")
 # OEM API of the component classes in the APK each profile produces from its imported donor.
 if(TEST_OEM)
     foreach(PROFILE IN ITEMS free-09-chinese-20260106-6.0.3 free-11-chinese-20250710-6.11.1 free-11-chinese-20260731-7.3.1)

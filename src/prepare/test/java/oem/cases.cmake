@@ -52,6 +52,7 @@ set(CASES_qinggan11_611
     "StartupVolumeGuardTest ${F611} ANDROID:${F611}/system/system/framework/services.jar NEW"
     "Api30SystemPolicyCarLibraryTest ROOT ANDROID:${F611}/system/system/framework/framework.jar ORIGINAL:${F611}/SystemPolicy-release.apk ORIGINAL:${F611}/framework/QGAPI.jar ORIGINAL:${F611}/framework/QGMOD.jar ORIGINAL:${F611}/framework/android.car.jar ORIGINAL:${F611}/framework/framework.jar ORIGINAL:${F731}/SystemPolicy-release.apk ORIGINAL:${F731}/framework/QGAPI.jar ORIGINAL:${F731}/framework/QGMOD.jar ORIGINAL:${F731}/framework/android.car.jar ORIGINAL:${F731}/framework/framework.jar")
 set(CASES_qinggan11_731
+    "CanbusSeatBeltTest --oem ROOT ORIGINAL:${F731}/CanBusService-release.apk"
     "Api30AqyProviderGuardTest ROOT NEEDS:${F731}"
     "Api30FrameworkLibrariesTest ROOT NEEDS:${F731}"
     "Api30DvrFrameworkTest ROOT WORK NEEDS:${F731}"
