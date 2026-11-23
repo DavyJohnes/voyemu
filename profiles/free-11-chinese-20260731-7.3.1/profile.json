@@ -6,6 +6,7 @@
   "board": "8155",
   "features": {
     "original_navi": true,
+    "usb_test_volume_visibility": true,
     "system_upgrade": true,
     "ui_observer_required": true,
     "ui_observer_root_accessibility": true
@@ -946,7 +947,8 @@
       "type": "jar",
       "steps": [
         "api30-audio-consumer.json",
-        "original-navi-vin.json"
+        "original-navi-vin.json",
+        "usb-port-metadata.json"
       ]
     },
     "api30-stock-statusbar": {
@@ -975,7 +977,8 @@
       "type": "jar",
       "input": "patched:api30-secondary-navigation",
       "steps": [
-        "original-navi-libraries.json"
+        "original-navi-libraries.json",
+        "usb-mount-visibility.json"
       ]
     },
     "original-navi-vehicle": {

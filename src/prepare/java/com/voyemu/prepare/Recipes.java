@@ -449,6 +449,10 @@ final class Recipes {
                     "PATCH_OPERATION_UNSUPPORTED", "Original Navi EGL adapter missing", 5);
         }
 
+        default void guardFree731Usb(boolean visibility, boolean apply) throws Exception {
+            throw new Failure("PATCH_OPERATION_UNSUPPORTED", "Free 7.3.1 USB adapter missing", 5);
+        }
+
         default void guardOriginalNaviLibraries(boolean apply) throws Exception {
             throw new Failure(
                     "PATCH_OPERATION_UNSUPPORTED", "Original Navi libraries adapter missing", 5);

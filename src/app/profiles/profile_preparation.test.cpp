@@ -820,6 +820,8 @@ int main(int argc, char **argv) {
                 "original-navi-selinux.json",
                 "original-navi-vehicle.json",
                 "original-navi-vin.json",
+                "usb-mount-visibility.json",
+                "usb-port-metadata.json",
                 "api30-audio-policy.json",
                 "api30-audio-consumer.json",
                 "api30-media-notification-actions.json",

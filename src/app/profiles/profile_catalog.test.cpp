@@ -2130,13 +2130,15 @@ int main(int argc, char **argv) {
                                    : it.key() == "original-navi-services"
                                            ? "patched:api30-secondary-navigation"
                                            : "original:QGVehicle";
-                const auto step = it.key() == "original-navi-framework" ? "original-navi-egl.json"
+                const auto steps = it.key() == "original-navi-framework"
+                                           ? Json::array({"original-navi-egl.json"})
                                   : it.key() == "original-navi-services"
-                                          ? "original-navi-libraries.json"
-                                          : "original-navi-vehicle.json";
+                                          ? Json::array({"original-navi-libraries.json",
+                                                         "usb-mount-visibility.json"})
+                                          : Json::array({"original-navi-vehicle.json"});
                 check(it.value() == Json{{"type", "jar"},
                                          {"input", input},
-                                         {"steps", Json::array({step})}},
+                                         {"steps", steps}},
                       "original Navi JAR recipe is exact");
                 continue;
             }
@@ -2174,7 +2176,8 @@ int main(int argc, char **argv) {
                 check(it.value() == Json{{"type", "jar"},
                                          {"input", "original:QGAPI"},
                                          {"steps", Json::array({"api30-audio-consumer.json",
-                                                                "original-navi-vin.json"})}},
+                                                                "original-navi-vin.json",
+                                                                "usb-port-metadata.json"})}},
                       "Free QGAPI audio guard uses exact acquired JAR recipe");
                 continue;
             }

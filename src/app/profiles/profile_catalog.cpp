@@ -91,7 +91,7 @@ Json declared_patch_plan(const Json &definition) {
             android.value("package", std::string{}).starts_with("system-images;android-28;");
     const bool original_navi = original_navi_requested(definition);
 
-    if (original_navi) {
+    if (original_navi || free731_usb_test_volume_visibility(definition)) {
         original_navi_preflight(definition, 30);
     }
 
@@ -156,13 +156,12 @@ Json declared_patch_plan(const Json &definition) {
                                {"steps", Json::array({"original-navi-egl.json"})}} ||
                  patch == Json{{"type", "jar"},
                                {"input", "patched:api30-secondary-navigation"},
-                               {"steps", Json::array({"original-navi-libraries.json"})}} ||
+                               {"steps", original_navi_services_steps(definition)}} ||
                  (qinggan11_pinned_original(definition.value("original", Json::object())
                                                     .value("QGAPI", Json::object())) &&
                   patch == Json{{"type", "jar"},
                                 {"input", "original:QGAPI"},
-                                {"steps", Json::array({"api30-audio-consumer.json",
-                                                       "original-navi-vin.json"})}}) ||
+                                {"steps", original_navi_qgapi_steps(definition)}}) ||
                  patch == Json{{"type", "jar"},
                                {"input", "original:QGVehicle"},
                                {"steps", Json::array({"original-navi-vehicle.json"})}});

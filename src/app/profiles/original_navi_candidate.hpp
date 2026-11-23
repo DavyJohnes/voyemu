@@ -31,6 +31,39 @@ inline bool original_navi_requested(const Json &definition) {
     return features.is_object() && features.value("original_navi", Json(false)) == true;
 }
 
+inline bool free731_usb_test_volume_visibility(const Json &definition) {
+    const auto features = definition.value("features", Json::object());
+    const bool enabled = features.is_object() &&
+                         features.value("usb_test_volume_visibility", Json(false)) == true;
+
+    original_navi_need(!enabled ||
+                       (definition.value("id", std::string{}) ==
+                                "free-11-chinese-20260731-7.3.1" &&
+                        original_navi_requested(definition)));
+
+    return enabled;
+}
+
+inline Json original_navi_services_steps(const Json &definition) {
+    auto steps = Json::array({"original-navi-libraries.json"});
+
+    if (free731_usb_test_volume_visibility(definition)) {
+        steps.push_back("usb-mount-visibility.json");
+    }
+
+    return steps;
+}
+
+inline Json original_navi_qgapi_steps(const Json &definition) {
+    auto steps = Json::array({"api30-audio-consumer.json", "original-navi-vin.json"});
+
+    if (free731_usb_test_volume_visibility(definition)) {
+        steps.push_back("usb-port-metadata.json");
+    }
+
+    return steps;
+}
+
 inline Json original_navi_marker() {
     return {{"schema", 1},
             {"artifact", "original:Navi"},
@@ -121,10 +154,10 @@ inline void original_navi_preflight(const Json &definition, int api) {
     const std::array<std::tuple<std::string, Json, std::string>, 4> graph = {
             {{"component:view-observation", Json::array({"original-navi-egl.json"}),
               "/system/framework/framework.jar"},
-             {"patched:api30-secondary-navigation", Json::array({"original-navi-libraries.json"}),
+             {"patched:api30-secondary-navigation", original_navi_services_steps(definition),
               "/system/framework/services.jar"},
              {"original:QGAPI",
-              Json::array({"api30-audio-consumer.json", "original-navi-vin.json"}),
+              original_navi_qgapi_steps(definition),
               "/system/framework/QGAPI.jar"},
              {"original:QGVehicle", Json::array({"original-navi-vehicle.json"}),
               "/system/framework/QGVehicle.jar"}}};
@@ -224,9 +257,9 @@ inline void original_navi_candidate(const Json &definition, int api, const Json 
             {{"component:view-observation", "jar", Json::array({"original-navi-egl.json"}),
               "/system/framework/framework.jar"},
              {"patched:api30-secondary-navigation", "jar",
-              Json::array({"original-navi-libraries.json"}), "/system/framework/services.jar"},
+              original_navi_services_steps(definition), "/system/framework/services.jar"},
              {"original:QGAPI", "jar",
-              Json::array({"api30-audio-consumer.json", "original-navi-vin.json"}),
+              original_navi_qgapi_steps(definition),
               "/system/framework/QGAPI.jar"},
              {"original:QGVehicle", "jar", Json::array({"original-navi-vehicle.json"}),
               "/system/framework/QGVehicle.jar"}}};

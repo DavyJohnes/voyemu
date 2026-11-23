@@ -793,6 +793,18 @@ final class RecipesApi30 {
                         "Exact original Navi EGL operation required");
                 target.guardOriginalNaviEgl(false);
             }
+            case "guardFree731UsbVisibility", "guardFree731UsbPort" -> {
+                boolean visibility = operation.equals("guardFree731UsbVisibility");
+                require(
+                        name.equals(visibility ? "usb-mount-visibility.json" : "usb-port-metadata.json")
+                                && target.profile().equals(Free731UsbGuard.PROFILE)
+                                && target.abi().equals("arm64-v8a")
+                                && pins.equals(visibility ? List.of() : List.of(Free731UsbGuard.QGAPI_PIN))
+                                && args.isEmpty()
+                                && calls.size() == 1,
+                        "Exact Free 7.3.1 USB operation, profile and input required");
+                target.guardFree731Usb(visibility, false);
+            }
             case "guardOriginalNaviLibraries" -> {
                 require(
                         name.equals("original-navi-libraries.json")
@@ -1159,6 +1171,8 @@ final class RecipesApi30 {
                 case "guardOriginalNaviVin" -> target.guardOriginalNaviVin(true);
                 case "guardOriginalNaviVehicle" -> target.guardOriginalNaviVehicle(true);
                 case "guardOriginalNaviEgl" -> target.guardOriginalNaviEgl(true);
+                case "guardFree731UsbVisibility" -> target.guardFree731Usb(true, true);
+                case "guardFree731UsbPort" -> target.guardFree731Usb(false, true);
                 case "guardOriginalNaviLibraries" -> target.guardOriginalNaviLibraries(true);
                 case "guardNaviEgl" -> target.guardNaviEgl(true);
                 case "guardNaviVin" -> target.guardNaviVin(true);
