@@ -8,7 +8,7 @@ project(voyemu_native LANGUAGES C CXX)
 # A release sets its version and release date here, the only place that names them; only core/version.cpp
 # and src/dev/release/archive.sh read them.
 set(VOYEMU_VERSION "1.0.0-beta2")
-set(VOYEMU_RELEASE_DATE "2026-11-18")
+set(VOYEMU_RELEASE_DATE "2026-11-23")
 # Release optimizes for size: outside the per-frame window path the launcher waits on I/O, Java and the
 # guests. Sources that touch every pixel or byte of a frame take -O2 (voyemu_frame_path_sources and the
 # SDL3 pixel sources below). Own sections let ld.lld and lld-link drop unreferenced code and data; the
