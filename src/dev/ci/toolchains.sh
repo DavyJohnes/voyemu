@@ -26,8 +26,21 @@ check() {
 }
 
 fetch() {
-    curl -fsSL --retry 3 -o "$3" "$1"
-    check "$2" "$3"
+    local url=$1 sha=$2 destination=$3
+    shift 3
+    curl -fsSL --retry 3 "$@" -o "$destination" "$url"
+    check "$sha" "$destination"
+}
+
+java_libraries() {
+    local library
+    mkdir -p .local/toolchains/java/libraries
+    jq -c '.[]' src/prepare/libraries.json | while read -r library; do
+        # Allow Maven time to lift rate limits. curl observes Retry-After within the retry budget.
+        fetch "$(jq -er .url <<< "$library")" "$(jq -er .sha256 <<< "$library")" \
+            ".local/toolchains/java/libraries/$(jq -er .filename <<< "$library")" \
+            --retry 6 --retry-max-time 90 --max-time 60
+    done
 }
 
 # Archive tool of optionalTools.<host>: Zig, CMake, Ninja or the JDK.
@@ -77,7 +90,7 @@ native_sources() {
 
 # Formatters, Checkstyle, Error Prone, Java libraries, D8, apksigner and android.jar of the lint job.
 lint_tools() {
-    local url sha dir file archive library
+    local url sha dir file archive
     wheel_tool clangFormat
     wheel_tool clangTidy
     url=$(jq -er '.optionalTools.googleJavaFormat.binaries."linux-x64".url' "$pins")
@@ -98,11 +111,7 @@ lint_tools() {
             "$(jq -er ".optionalTools.errorProne.jars.$jar.sha256" "$pins")" \
             "$dir/$(jq -er ".optionalTools.errorProne.jars.$jar.jar" "$pins")"
     done
-    mkdir -p .local/toolchains/java/libraries
-    jq -c '.[]' src/prepare/libraries.json | while read -r library; do
-        fetch "$(jq -er .url <<< "$library")" "$(jq -er .sha256 <<< "$library")" \
-            ".local/toolchains/java/libraries/$(jq -er .filename <<< "$library")"
-    done
+    java_libraries
     url=$(jq -er .sdk.archives.linux.buildTools.url "$pins")
     archive="$downloads/${url##*/}"
     fetch "$url" "$(jq -er .sdk.archives.linux.buildTools.sha256 "$pins")" "$archive"
@@ -163,7 +172,7 @@ add_path() {
 # Public source-fixture prerequisites only: never OEM fetch, emulator or QEMU installation.
 # Existing lint/kernel installers own the same archive pins and canonical destinations.
 fixture_tools() {
-    local host=$1 url archive dir library
+    local host=$1 url archive dir
     # SigningIntermediateTest creates an own APK and uses the public AOSP test key/certificate.
     # The repository pins decoded bytes, matching DownloadEncoding::base64 in production.
     mkdir -p "$downloads/native"
@@ -174,11 +183,7 @@ fixture_tools() {
         curl -fsSL --retry 3 "$url" | base64 -d > "$downloads/native/$sha.blob"
         check "$sha" "$downloads/native/$sha.blob"
     done
-    mkdir -p .local/toolchains/java/libraries
-    jq -c '.[]' src/prepare/libraries.json | while read -r library; do
-        fetch "$(jq -er .url <<< "$library")" "$(jq -er .sha256 <<< "$library")" \
-            ".local/toolchains/java/libraries/$(jq -er .filename <<< "$library")"
-    done
+    java_libraries
     url=$(jq -er ".sdk.archives.$host.buildTools.url" "$pins")
     archive="$downloads/${url##*/}"
     fetch "$url" "$(jq -er ".sdk.archives.$host.buildTools.sha256" "$pins")" "$archive"

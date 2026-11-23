@@ -89,7 +89,7 @@ runs:
               New-Item -ItemType Directory -Force .local/toolchains/java/libraries | Out-Null
               foreach ($pin in $libraries) {
                   $destination = ".local/toolchains/java/libraries/$($pin.filename)"
-                  curl.exe -fsSL --retry 3 -o $destination $pin.url
+                  curl.exe -fsSL --retry 6 --retry-max-time 90 --max-time 60 -o $destination $pin.url
                   if ($LASTEXITCODE -ne 0) { throw "Download failed: $($pin.url)" }
                   if ((Get-FileHash -Algorithm SHA256 $destination).Hash -ne $pin.sha256) { throw "SHA-256 mismatch: $destination" }
               }
