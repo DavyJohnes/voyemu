@@ -33,7 +33,6 @@ import java.util.Map;
 import java.util.TreeMap;
 
 final class Free731UsbGuard {
-    static final String PROFILE = "free-11-chinese-20260731-7.3.1";
     static final String QGAPI_PIN =
             "c178682be164be4872697dbb5accdc6ea28446941b6d681ddb736f2fdb627c07";
     static final String VIDEO_PIN =

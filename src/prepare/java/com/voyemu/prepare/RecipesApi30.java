@@ -826,12 +826,11 @@ final class RecipesApi30 {
                         };
                 require(
                         name.equals(recipe)
-                                && target.profile().equals(Free731UsbGuard.PROFILE)
                                 && target.abi().equals("arm64-v8a")
                                 && pins.equals(expectedPins)
                                 && args.isEmpty()
                                 && calls.size() == 1,
-                        "Exact Free 7.3.1 USB operation, profile and input required");
+                        "Exact USB operation, ABI and input required");
                 target.guardFree731Usb(layout, false);
             }
             case "guardOriginalNaviLibraries" -> {

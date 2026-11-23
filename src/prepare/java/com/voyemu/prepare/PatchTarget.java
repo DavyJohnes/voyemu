@@ -450,7 +450,9 @@ final class PatchTarget implements Recipes.Target {
                         : Set.of("com/voyemu/qgapi/VoyemuUsbPort.java");
 
         Failure.require(
-                Free731UsbGuard.PROFILE.equals(profile.referenceProfile())
+                "qinggan11".equals(profile.platform())
+                        && "8155".equals(profile.board())
+                        && profile.originalNavi()
                         && abi.equals("arm64-v8a")
                         && api == 30
                         && type.equals(media ? "apk" : "jar")
@@ -461,7 +463,7 @@ final class PatchTarget implements Recipes.Target {
                                 .keySet()
                                 .equals(files),
                 "FREE731_USB",
-                "Exact Free 7.3.1 framework input and helper required",
+                "Exact USB profile scope, framework input and helper required",
                 3);
         byte[] raw = entries.get(slot);
 
