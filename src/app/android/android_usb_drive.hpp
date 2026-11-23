@@ -123,6 +123,7 @@ inline std::optional<std::string> usb_volume_state(std::string_view listing,
 
     return std::nullopt;
 }
+
 // /proc/mounts is authoritative when the restricted guest cannot enumerate public volumes via sm.
 inline std::optional<std::string> usb_volume_mount_state(std::string_view mounts,
                                                          std::string_view uuid) {
@@ -137,9 +138,11 @@ inline std::optional<std::string> usb_volume_mount_state(std::string_view mounts
         std::string source, point, filesystem, options, dump, pass, extra;
 
         fields >> source >> point;
+
         if (point != target) {
             continue;
         }
+
         if (++matches != 1 || !(fields >> filesystem >> options >> dump >> pass) ||
             fields >> extra || filesystem != "vfat" || !source.starts_with(prefix)) {
             return std::nullopt;

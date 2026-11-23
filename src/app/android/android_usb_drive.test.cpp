@@ -75,6 +75,7 @@ int main() {
         require(!usb_volume_mount_state(mounted, "2026-1123"), "a foreign mount UUID matched");
         require(!usb_volume_mount_state(mounted + mounted, "2026-1122"),
                 "duplicate mount evidence was accepted");
+
         for (const auto &[before, after] : std::vector<std::pair<std::string, std::string>>{
                      {"/2026-1122 ", "/2026-1122-other "},
                      {"/2026-1122 ", "/2026-1122\\040 "},
@@ -91,6 +92,7 @@ int main() {
             require(!usb_volume_mount_state(wrong, "2026-1122"),
                     "an unverified UUID, mount type, flags or public source matched");
         }
+
         require(!usb_volume_mount_state("", "2026-1122"), "an empty mount table matched");
         require(!usb_volume_mount_state(mounted + "tmpfs /mnt/media_rw/2026-1122 tmpfs rw 0 0\n",
                                         "2026-1122"),
