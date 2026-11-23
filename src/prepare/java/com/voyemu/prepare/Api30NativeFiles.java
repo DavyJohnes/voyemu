@@ -166,19 +166,23 @@ final class Api30NativeFiles {
 
     static List<Spec> forProfile(ProfileRegistry.Profile profile) {
         var selected = forPlatform(profile.data().get("platform"), profile.originalNavi());
+
         if (!(profile.data().get("features") instanceof java.util.Map<?, ?> features)
                 || !features.containsKey("ui_observer_root_accessibility")) {
             return selected;
         }
+
         var enabled = features.get("ui_observer_root_accessibility");
         Failure.require(
                 enabled instanceof Boolean,
                 "SELINUX_PATCH_SCOPE",
                 "Rooted UI observer feature must be boolean",
                 2);
+
         if (!Boolean.TRUE.equals(enabled)) {
             return selected;
         }
+
         Failure.require(
                 "qinggan11".equals(profile.platform())
                         && "8155".equals(profile.board())
@@ -191,6 +195,7 @@ final class Api30NativeFiles {
                 "SELINUX_PATCH_SCOPE",
                 "Rooted UI observer policy baseline differs",
                 2);
+
         return selected.stream()
                 .map(spec ->
                         switch (spec.id()) {
