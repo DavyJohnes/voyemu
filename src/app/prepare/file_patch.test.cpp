@@ -92,6 +92,43 @@ int main(int argc, char **argv) {
             check(output.size() == 2 && output[1] == expected_file,
                   "registered early graph publishes exact derived hash-file bytes");
 
+            if (!older) {
+                auto observed = nodes;
+                observed[0].ui_observer_root_accessibility = true;
+                observed[0].output_sha256 = qinggan11_ui_observer_policy_sha256;
+                observed[1].ui_observer_root_accessibility = true;
+                observed[1].output_sha256 = qinggan11_ui_observer_policy_hash_file_sha256;
+                observed[1].dependency_sha256 = qinggan11_ui_observer_policy_sha256;
+                const auto output_observer = prepare_file_patches(observed);
+                check(output_observer[0] ==
+                                      policy_bytes +
+                                              "(allow su accessibility_service (service_manager (find)))\n" &&
+                              output_observer[1] ==
+                                      std::string(qinggan11_ui_observer_policy_mapping_sha256) +
+                                              "\n",
+                      "rooted observer adds only one service lookup and its derived digest");
+                for (unsigned variant = 0; variant < 5; ++variant) {
+                    auto invalid = observed;
+                    if (variant == 0) {
+                        invalid[0].original_navi = false;
+                    } else if (variant == 1) {
+                        invalid[0].scope = passion_scope;
+                    } else if (variant == 2) {
+                        invalid[1].donor->sha256 = std::string(64, '0');
+                    } else if (variant == 3) {
+                        invalid[0].api = 28;
+                    } else {
+                        invalid[0].input_sha256 = qinggan11_ui_observer_policy_sha256;
+                    }
+                    bool rejected = false;
+                    try {
+                        (void)prepare_file_patches(invalid);
+                    } catch (const VoyemuError &) {
+                        rejected = true;
+                    }
+                    check(rejected, "observer policy rejects foreign scope and changed inputs");
+                }
+            }
             for (unsigned variant = 0; variant < 11; ++variant) {
                 auto bad = nodes;
 

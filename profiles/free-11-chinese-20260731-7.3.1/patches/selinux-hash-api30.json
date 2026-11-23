@@ -3,7 +3,7 @@
   "api": 30,
   "native": true,
   "input_sha256": "391829e0167f44415e54ba64692ad410b1398b16263869beb22e427130eae766",
-  "output_sha256": "7293ab8b5ff6f3890a7f60b158e6bf28c882896c755edf1e996c9231519c37de",
+  "output_sha256": "2898463b62e7ef558d3915a362128e8e1776c472efea4f95fe4d894f004e7df5",
   "description": "Exact pinned API30 native early can policy hash; hash of the patched early CAN policy CIL plus the unchanged mapping/30.0.cil with final LF.",
   "mapping_sha256": "c14ab911584595a94e6783600371fed23cec1d56b8001383584a3192d028eb60",
   "algorithm": "sha256(patched plat_sepolicy.cil || unchanged mapping/30.0.cil) with final LF"

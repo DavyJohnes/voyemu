@@ -7,7 +7,8 @@
   "features": {
     "original_navi": true,
     "system_upgrade": true,
-    "ui_observer_required": true
+    "ui_observer_required": true,
+    "ui_observer_root_accessibility": true
   },
   "status": "ready",
   "initial_state": {

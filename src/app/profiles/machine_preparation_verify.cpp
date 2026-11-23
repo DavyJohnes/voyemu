@@ -325,6 +325,15 @@ void verify_cold(Candidate &c, const Json &profile, const std::vector<Installed>
     equal("abi", c.shell({"getprop", "ro.product.cpu.abi"}), "arm64-v8a");
     equal("selinux", c.shell({"getenforce"}), "Enforcing");
 
+    if (qinggan11_ui_observer_policy_requested(profile)) {
+        equal("ui-observer-root-uid", c.shell({"id", "-u"}), "0");
+        equal("ui-observer-root-context", c.shell({"id", "-Z"}), "u:r:su:s0");
+        equal("ui-observer-accessibility", c.shell({"service", "check", "accessibility"}),
+              "Service accessibility: found");
+        equal("ui-observer-accessibility-boot", c.shell({"cat", "/proc/sys/kernel/random/boot_id"}),
+              cold_boot_id);
+    }
+
     if (profile.at("android").contains("offline_selinux_labels")) {
         const auto cold_option =
                 profile.at("android").at("offline_selinux_labels").get<std::string>();

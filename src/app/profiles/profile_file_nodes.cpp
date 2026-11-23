@@ -190,14 +190,14 @@ ProfileFileNodes plan_profile_file_nodes(const std::filesystem::path &root,
                profile_file = directory / "profile.json";
     const auto profile_bytes = read(profile_file, 512 * 1024);
     const auto definition = Json::parse(profile_bytes);
+    const bool rooted_observer = qinggan11_ui_observer_policy_requested(definition);
 
     if (native_base_api(definition.at("android")) == 30) {
         const bool passion = record_declares(definition, ProfilePlatform::passion,
                                              ProfileBoard::sa8155),
                    qinggan11 = record_declares(definition, ProfilePlatform::qinggan11,
                                                ProfileBoard::sa8155);
-        const auto recipes = api30_file_recipes_for(definition.value("platform", std::string{}),
-                                                    original_navi_requested(definition));
+        const auto recipes = api30_file_recipes_for_profile(definition);
         std::size_t policy_index = passion ? 0U : 1U;
 
         for (std::size_t i = 0; i < recipes.size(); ++i) {
@@ -255,7 +255,17 @@ ProfileFileNodes plan_profile_file_nodes(const std::filesystem::path &root,
 
             need(definition.at("patches").at(name) == expected,
                  "API30 native node declaration differs");
-            (void)read(directory / "patches" / step, 128 * 1024);
+            const auto step_bytes = read(directory / "patches" / step, 128 * 1024);
+            const bool observer_node = rooted_observer && (name == "can-early-policy-api30" ||
+                                                           name == "selinux-hash-api30");
+
+            if (observer_node) {
+                const auto recipe = Json::parse(step_bytes);
+                need(recipe.at("schema") == 1 && recipe.at("api") == 30 &&
+                             recipe.at("native") == true &&
+                             recipe.at("output_sha256") == spec.output_sha256,
+                     "rooted UI observer recipe output pin differs");
+            }
             const auto input = read(system / member, 4ULL << 20);
             need(sha256_bytes(input) == spec.input_sha256 &&
                          receipt.at("files").at(member).at("sha256") == spec.input_sha256 &&
@@ -280,6 +290,7 @@ ProfileFileNodes plan_profile_file_nodes(const std::filesystem::path &root,
             PinnedFilePatch patch{name, 30, system / member, std::string(spec.input_sha256),
                                   std::string(spec.output_sha256)};
             patch.original_navi = original_navi_requested(definition);
+            patch.ui_observer_root_accessibility = observer_node;
 
             if (bounded) {
                 auto donor = [&](const char *role, const char *file) {

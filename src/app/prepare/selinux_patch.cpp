@@ -1,5 +1,6 @@
 #include "selinux_patch.hpp"
 #include "error.hpp"
+#include "portable_runtime.hpp"
 #include "process.hpp"
 #include <array>
 #include <regex>
@@ -352,6 +353,38 @@ std::string apply_qinggan11_can_simulator_policy_patch(ProfileScope scope, unsig
     return output;
 }
 
+bool qinggan11_ui_observer_policy_requested(const Json &profile) {
+    const auto features = profile.value("features", Json::object());
+
+    if (!features.is_object() || !features.contains("ui_observer_root_accessibility")) {
+        return false;
+    }
+
+    const auto &enabled = features.at("ui_observer_root_accessibility");
+
+    if (!enabled.is_boolean()) {
+        throw VoyemuError("SELINUX_PATCH_SCOPE", "rooted UI observer feature must be boolean");
+    }
+
+    if (!enabled.get<bool>()) {
+        return false;
+    }
+
+    const auto android = profile.value("android", Json::object());
+
+    if (profile_scope(profile) != qinggan11_scope || !android.is_object() ||
+        android.value("package", std::string{}) != "system-images;android-30;default;arm64-v8a" ||
+        !profile_feature(profile, "ui_observer_required") ||
+        !profile_feature(profile, "original_navi") ||
+        portable_development_kernel(profile).is_null()) {
+        throw VoyemuError(
+                "SELINUX_PATCH_SCOPE",
+                "rooted UI observer requires the exact API30 Free development policy baseline");
+    }
+
+    return true;
+}
+
 std::string apply_qinggan11_can_early_policy_patch(ProfileScope scope, unsigned api,
                                                    std::string_view input, bool original_navi) {
     if (scope != qinggan11_scope || api != 30 ||
@@ -466,14 +499,22 @@ std::string apply_qinggan11_can_early_property_patch(ProfileScope scope, unsigne
 
 std::string apply_selinux_context_patch(std::string_view id, unsigned api, std::string_view input,
                                         bool qinggan11, std::string_view dependency,
-                                        bool original_navi) {
+                                        bool original_navi, bool ui_observer_root_accessibility) {
+    if (ui_observer_root_accessibility &&
+        (api != 30 || id != "selinux-hash-api30" || !qinggan11 || !original_navi ||
+         dependency != "can-early-policy-api30")) {
+        throw VoyemuError("SELINUX_PATCH_SCOPE",
+                          "rooted UI observer hash has a different policy scope");
+    }
+
     if (api == 30 && id == "selinux-hash-api30") {
         auto pin = std::string_view{
                 "f1e41e034fbb8e72dbafd180f86188cee6e04facde570982f199160079bfe04f"};
 
         if (qinggan11) {
             if (dependency == "can-early-policy-api30") {
-                pin = original_navi
+                pin = ui_observer_root_accessibility ? qinggan11_ui_observer_policy_mapping_sha256
+                      : original_navi
                               ? "8b7d6819e4429cec7a98a86d31366d6b7fc75ae03033d418b15f84ec1f9161c3"
                               : "38be4a4cdae3f201ae05de187700538cb460ff7958025ac1066208018c388387";
             } else {

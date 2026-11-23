@@ -3,6 +3,6 @@
   "api": 30,
   "native": true,
   "input_sha256": "da0a10c128b5c52c67e52795090755fd97fc5d02999c26d150bd9afa27d6fdb1",
-  "output_sha256": "e8f3b8cb54b3ec09280cf5c630f495b3202f1c9994e796c5a1cf707a5dcd6cf6",
-  "description": "Exact pinned API30 native early input policy; appends the registered early input domain on top of the patched CAN simulator policy."
+  "output_sha256": "aca4ba2c70dd9e8449684d35b9db6d12b2e68a3c3cccfcd509616cc2c8f1c4ba",
+  "description": "Exact pinned API30 native early input policy; appends the registered early input domain on top of the patched CAN simulator policy and bounds the rooted UI observer lookup to accessibility_service."
 }

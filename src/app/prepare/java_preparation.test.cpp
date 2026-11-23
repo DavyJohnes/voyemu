@@ -281,9 +281,7 @@ int main(int argc, char **argv) {
                         base.at("files").at("system.img").at("sha256").get<std::string>();
                 std::vector<std::string> selected{"/system/etc/selinux/mapping/30.0.cil"};
 
-                for (const auto &recipe :
-                     api30_file_recipes_for(definition.value("platform", std::string{}),
-                                            original_navi_requested(definition))) {
+                for (const auto &recipe : api30_file_recipes_for_profile(definition)) {
                     selected.emplace_back(recipe.target);
                 }
 

@@ -23,7 +23,8 @@ std::string apply_can_simulator_context_patch(ProfileScope scope, unsigned api,
 // node, and original_navi selects the early policy with the su read of mac_perms_file.
 std::string apply_selinux_context_patch(std::string_view id, unsigned api, std::string_view input,
                                         bool qinggan11 = false, std::string_view dependency = {},
-                                        bool original_navi = false);
+                                        bool original_navi = false,
+                                        bool ui_observer_root_accessibility = false);
 std::string apply_qinggan11_can_simulator_context_patch(ProfileScope scope, unsigned api,
                                                         std::string_view input);
 std::string apply_qinggan11_can_early_context_patch(ProfileScope scope, unsigned api,
@@ -115,10 +116,35 @@ inline constexpr std::array<Api30FileRecipe, 6> passion_api30_file_recipes = {
           "391829e0167f44415e54ba64692ad410b1398b16263869beb22e427130eae766",
           "aa150c95b8e4f51d3c648273f1eb36d42d2aad9f7f3860e09648633484550bda"}}};
 
-// The API30 native file recipes of a profile platform; on qinggan11 the original_navi feature of
-// the profile selects the Navi graph.
-inline std::span<const Api30FileRecipe> api30_file_recipes_for(std::string_view platform,
-                                                               bool original_navi = false) {
+inline constexpr std::string_view qinggan11_ui_observer_policy_sha256 =
+        "aca4ba2c70dd9e8449684d35b9db6d12b2e68a3c3cccfcd509616cc2c8f1c4ba";
+inline constexpr std::string_view qinggan11_ui_observer_policy_mapping_sha256 =
+        "9a40ab229b5d4486228069f397fc7710ec07c53aedcb92d41dee6c8b27e22819";
+inline constexpr std::string_view qinggan11_ui_observer_policy_hash_file_sha256 =
+        "2898463b62e7ef558d3915a362128e8e1776c472efea4f95fe4d894f004e7df5";
+
+inline constexpr auto qinggan11_ui_observer_api30_file_recipes = [] {
+    auto recipes = qinggan11_original_navi_api30_file_recipes;
+    recipes[6].output_sha256 = qinggan11_ui_observer_policy_sha256;
+    recipes[8].output_sha256 = qinggan11_ui_observer_policy_hash_file_sha256;
+    return recipes;
+}();
+
+// The rooted observer uses a separately opted-in, exactly pinned development policy variant.
+bool qinggan11_ui_observer_policy_requested(const Json &profile);
+
+inline std::span<const Api30FileRecipe>
+api30_file_recipes_for(std::string_view platform, bool original_navi = false,
+                       bool ui_observer_root_accessibility = false) {
+    if (ui_observer_root_accessibility) {
+        if (platform != "qinggan11" || !original_navi) {
+            throw VoyemuError("SELINUX_PATCH_SCOPE",
+                              "rooted UI observer requires the exact API30 Free policy baseline");
+        }
+
+        return qinggan11_ui_observer_api30_file_recipes;
+    }
+
     if (platform == "qinggan11") {
         return original_navi ? std::span<const Api30FileRecipe>(
                                        qinggan11_original_navi_api30_file_recipes)
@@ -135,6 +161,12 @@ inline std::span<const Api30FileRecipe> api30_file_recipes_for(std::string_view 
     }
 
     return api30_file_recipes;
+}
+
+inline std::span<const Api30FileRecipe> api30_file_recipes_for_profile(const Json &profile) {
+    return api30_file_recipes_for(profile.value("platform", std::string{}),
+                                  profile_feature(profile, "original_navi"),
+                                  qinggan11_ui_observer_policy_requested(profile));
 }
 
 struct BoundedCanbusPolicy {

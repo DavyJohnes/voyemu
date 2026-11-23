@@ -2110,8 +2110,7 @@ int main(int argc, char **argv) {
             check(denied, "foreign JAR route must fail closed");
         }
 
-        const auto qinggan11_recipes = api30_file_recipes_for("qinggan11",
-                                                              original_navi_requested(a11));
+        const auto qinggan11_recipes = api30_file_recipes_for_profile(a11);
 
         for (auto it = a11.at("patches").begin(); it != a11.at("patches").end(); ++it) {
             if (it.key() == "original-navi-framework" || it.key() == "original-navi-services" ||

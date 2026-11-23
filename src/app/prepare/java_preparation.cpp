@@ -343,8 +343,7 @@ Json java_preparation_native_files(const std::filesystem::path &root,
     }
 
     const bool passion = record_declares(profile, ProfilePlatform::passion, ProfileBoard::sa8155);
-    const auto recipes = api30_file_recipes_for(profile.value("platform", std::string{}),
-                                                original_navi_requested(profile));
+    const auto recipes = api30_file_recipes_for_profile(profile);
     std::size_t native_nodes = 0;
 
     if (guest_api == 30) {

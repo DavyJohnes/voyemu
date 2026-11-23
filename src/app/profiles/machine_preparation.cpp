@@ -1,4 +1,5 @@
 #include "machine_preparation_internal.hpp"
+#include "selinux_patch.hpp"
 
 namespace voyemu {
 using namespace machine_preparation_detail;
@@ -1220,7 +1221,10 @@ void android_candidate_offline_policy_pin(const std::string &artifact, const std
                    original_navi = qinggan11 && original_navi_requested(profile),
                    shared = qinggan11 && !original_navi;
         need((original_navi &&
-              expected == "e8f3b8cb54b3ec09280cf5c630f495b3202f1c9994e796c5a1cf707a5dcd6cf6") ||
+              expected ==
+                      (qinggan11_ui_observer_policy_requested(profile)
+                               ? qinggan11_ui_observer_policy_sha256
+                               : "e8f3b8cb54b3ec09280cf5c630f495b3202f1c9994e796c5a1cf707a5dcd6cf6")) ||
                      (shared &&
                       expected ==
                               "50e7563396d73b053a36a9022d31807121731ecc0ce51b695df65ec7d6838db6"),

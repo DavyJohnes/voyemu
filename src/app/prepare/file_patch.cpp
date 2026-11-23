@@ -214,6 +214,12 @@ std::vector<std::string> prepare_file_patches(std::span<const PinnedFilePatch> p
         const bool bounded_api30 = patch.id == "can-simulator-policy-api30" ||
                                    patch.id == "can-early-policy-api30";
 
+        if (patch.ui_observer_root_accessibility &&
+            (patch.api != 30 || patch.scope != qinggan11_scope || !patch.original_navi ||
+             (patch.id != "can-early-policy-api30" && patch.id != "selinux-hash-api30"))) {
+            throw VoyemuError("FILE_PATCH_PROFILE", "rooted UI observer policy scope differs");
+        }
+
         if (patch.vendor_donor && !bounded && !bounded_api30) {
             throw VoyemuError("FILE_PATCH_DEPENDENCY",
                               "vendor donor is restricted to the bounded su policies");
@@ -373,6 +379,10 @@ std::vector<std::string> prepare_file_patches(std::span<const PinnedFilePatch> p
             if (patch.id == "can-early-policy-api30") {
                 output = apply_qinggan11_can_early_policy_patch(*patch.scope, patch.api, output,
                                                                 patch.original_navi);
+
+                if (patch.ui_observer_root_accessibility) {
+                    output += "(allow su accessibility_service (service_manager (find)))\n";
+                }
             }
         } else if (patch.id == "can-early-property-contexts-api30") {
             if (patch.donor || !patch.patched_dependency.empty() ||
@@ -521,7 +531,8 @@ std::vector<std::string> prepare_file_patches(std::span<const PinnedFilePatch> p
 
             const auto mapping = read_pinned(patch.donor->input, patch.donor->sha256, 1024 * 1024);
             output = apply_selinux_context_patch(patch.id, patch.api, cil + mapping, free_policy,
-                                                 patch.patched_dependency, patch.original_navi);
+                                                 patch.patched_dependency, patch.original_navi,
+                                                 patch.ui_observer_root_accessibility);
         } else if (patch.id == "selinux-hash-a9") {
             if (patch.donor || patch.patched_dependency.empty() ||
                 !valid_pin(patch.dependency_sha256)) {

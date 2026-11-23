@@ -165,7 +165,46 @@ final class Api30NativeFiles {
     }
 
     static List<Spec> forProfile(ProfileRegistry.Profile profile) {
-        return forPlatform(profile.data().get("platform"), profile.originalNavi());
+        var selected = forPlatform(profile.data().get("platform"), profile.originalNavi());
+        if (!(profile.data().get("features") instanceof java.util.Map<?, ?> features)
+                || !features.containsKey("ui_observer_root_accessibility")) {
+            return selected;
+        }
+        var enabled = features.get("ui_observer_root_accessibility");
+        Failure.require(
+                enabled instanceof Boolean,
+                "SELINUX_PATCH_SCOPE",
+                "Rooted UI observer feature must be boolean",
+                2);
+        if (!Boolean.TRUE.equals(enabled)) {
+            return selected;
+        }
+        Failure.require(
+                "qinggan11".equals(profile.platform())
+                        && "8155".equals(profile.board())
+                        && profile.originalNavi()
+                        && Boolean.TRUE.equals(features.get("ui_observer_required"))
+                        && profile.data().get("android") instanceof java.util.Map<?, ?> android
+                        && "system-images;android-30;default;arm64-v8a"
+                                .equals(android.get("package"))
+                        && android.get("development_kernel") instanceof java.util.Map<?, ?>,
+                "SELINUX_PATCH_SCOPE",
+                "Rooted UI observer policy baseline differs",
+                2);
+        return selected.stream()
+                .map(spec ->
+                        switch (spec.id()) {
+                            case "can-early-policy-api30" ->
+                                    withOutput(
+                                            spec,
+                                            "aca4ba2c70dd9e8449684d35b9db6d12b2e68a3c3cccfcd509616cc2c8f1c4ba");
+                            case "selinux-hash-api30" ->
+                                    withOutput(
+                                            spec,
+                                            "2898463b62e7ef558d3915a362128e8e1776c472efea4f95fe4d894f004e7df5");
+                            default -> spec;
+                        })
+                .toList();
     }
 
     static final String MAPPING = "/system/etc/selinux/mapping/30.0.cil",

@@ -232,7 +232,30 @@ int main(int argc, char **argv) {
                       api30_file_recipes_for("qinggan11").size() == 8 &&
                       api30_file_recipes_for("passion").size() == 6,
               "profile-specific API30 graph inventories preserved");
+        const auto observer_recipes = api30_file_recipes_for("qinggan11", true, true);
+        check(observer_recipes.size() == 9 &&
+                      observer_recipes[6].output_sha256 == qinggan11_ui_observer_policy_sha256 &&
+                      observer_recipes[8].output_sha256 ==
+                              qinggan11_ui_observer_policy_hash_file_sha256,
+              "observer policy and digest are selected together");
+        for (const auto platform : {"qinggan09", "passion", "api30-fixture"}) {
+            bool rejected = false;
+            try {
+                (void)api30_file_recipes_for(platform, true, true);
+            } catch (const VoyemuError &error) {
+                rejected = error.code() == "SELINUX_PATCH_SCOPE";
+            }
+            check(rejected, "observer variant rejects an unrelated platform");
+        }
+        bool missing_baseline = false;
+        try {
+            (void)api30_file_recipes_for("qinggan11", false, true);
+        } catch (const VoyemuError &error) {
+            missing_baseline = error.code() == "SELINUX_PATCH_SCOPE";
+        }
+        check(missing_baseline, "observer variant rejects another policy baseline");
         const auto original_recipes = api30_file_recipes_for("qinggan11", true);
+
         check(original_recipes.size() == 9 && original_recipes[2].id == "original-navi-selinux" &&
                       original_recipes[8].id == "selinux-hash-api30" &&
                       original_recipes[6].id == "can-early-policy-api30",
