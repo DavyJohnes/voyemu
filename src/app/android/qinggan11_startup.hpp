@@ -318,7 +318,10 @@ inline Json qinggan11_wheel_capability(const Json &definition) {
                     Json{{"type", "apk"},
                          {"input", "original:Gallery"},
                          {"uses", Json::array({"component:gallery-arm64-libraries"})},
-                         {"steps", Json::array({"api30-gallery-arm64.json"})}} ||
+                         {"steps", profile_feature(definition, "usb_test_volume_visibility")
+                                           ? Json::array({"api30-gallery-arm64.json",
+                                                          "usb-gallery-port-metadata.json"})
+                                           : Json::array({"api30-gallery-arm64.json"})}} ||
             !definition.contains("install") || !definition.at("install").is_array() ||
             std::count(definition.at("install").begin(), definition.at("install").end(),
                        Json{{"artifact", "patched:Gallery"}, {"type", "apk"}}) != 1 ||

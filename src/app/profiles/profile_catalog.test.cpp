@@ -1838,7 +1838,7 @@ int main(int argc, char **argv) {
             check(denied, "OEM wheel graph pin/dependency/target/backup negatives reject");
         }
 
-        for (int mode = 0; mode < 11; ++mode) {
+        for (int mode = 0; mode < 12; ++mode) {
             auto bad = a11;
 
             if (mode == 0) {
@@ -1894,6 +1894,10 @@ int main(int argc, char **argv) {
 
             if (mode == 10) {
                 bad["install"].push_back(Json{{"artifact", "original:Gallery"}, {"type", "apk"}});
+            }
+
+            if (mode == 11) {
+                bad["features"]["usb_test_volume_visibility"] = false;
             }
 
             bool denied = false;
