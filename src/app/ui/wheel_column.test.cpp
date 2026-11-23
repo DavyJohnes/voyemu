@@ -94,14 +94,14 @@ int main() {
                              16),
                 "multimedia restart sits 16 points above power, mirroring the cluster pair");
         require(near(column.usb_toggle.x + 40 * side - (stack_left + glyph), 16) &&
-                        near(column.usb_toggle.y, column.media_restart.y) &&
-                        near(column.usb_toggle.width, column.media_restart.width),
-                "the USB drive toggle sits 16 points right of multimedia restart");
+                        near(column.usb_toggle.y, column.media_power.y) &&
+                        near(column.usb_toggle.width, column.media_power.width),
+                "the USB drive toggle sits 16 points right of multimedia power");
         require(near(column.screens_toggle.x - (column.usb_toggle.x + glyph), 16) &&
                         near(column.screens_toggle.y, column.usb_toggle.y) &&
                         near(column.screens_toggle.width, column.usb_toggle.width),
                 "the screens toggle sits 16 points right of USB on the same row");
-        require(near(column.usb_toggle.x - column.media_restart.x, 2 * column.button_hit_radius) &&
+        require(near(column.usb_toggle.x - column.media_power.x, 2 * column.button_hit_radius) &&
                         near(column.screens_toggle.x - column.usb_toggle.x,
                              2 * column.button_hit_radius) &&
                         column.cluster_restart.y - column.cluster_power.y >=

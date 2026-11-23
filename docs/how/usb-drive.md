@@ -6,7 +6,7 @@ The multimedia of every profile has a USB port with a virtual USB drive, as the 
 
 The drive is plugged in and out while the multimedia runs:
 
-- in [the window](window.md#controls-next-to-the-wheel), by the USB button right of the multimedia restart button; its icon is white while the drive is plugged in and gray while it is out;
+- in [the window](window.md#controls-next-to-the-wheel), by the USB button right of the multimedia power button; its icon is white while the drive is plugged in and gray while it is out;
 - through the [Voyemu API](api.md#usb-drive), by `multimedia.usb.attach` and `multimedia.usb.detach`.
 
 Every multimedia start begins with the drive out: a new session, `multimedia.power` and a reboot. Unplugging is like pulling a stick out of the vehicle without ejecting it first. Before the session saves the multimedia [checkpoint](../GLOSSARY.md#sessions-and-api), it syncs the guest and unplugs the drive, so the next start restores the checkpoint without it.

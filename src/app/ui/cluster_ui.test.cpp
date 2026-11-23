@@ -876,11 +876,11 @@ void parameter_layout_guards() {
 
         check(column.cluster_restart.y > column.cluster_power.y &&
                       column.media_restart.y < column.media_power.y &&
-                      column.media_restart.x < column.usb_toggle.x &&
+                      column.media_power.x < column.usb_toggle.x &&
                       column.usb_toggle.x < column.screens_toggle.x &&
                       column.cluster_power.bottom() < view.wheel.bottom() &&
                       column.media_power.y > view.wheel.y,
-              "multimedia restart stacks above power and is followed by USB and screens");
+              "multimedia restart sits above power, with USB and screens to the right of power");
     }
 
     const auto fifty = parameters_layout(0, 0, 0, canonical_ui_scale);
@@ -2036,12 +2036,12 @@ void wheel_column_controls(const std::filesystem::path &assets) {
         check(inks("screens_toggle", true) == inks("cluster_restart", false) &&
                       inks("cluster_restart", false).size() == 1,
               "the closed screens toggle takes the inactive ink of the restart glyph");
-        const auto restart_point = center("media_restart"), usb_point = center("usb"),
+        const auto power_point = center("media_power"), usb_point = center("usb"),
                    screens_point = center("screens");
-        check(restart_point.x < usb_point.x && usb_point.x < screens_point.x &&
-                      std::abs(restart_point.y - usb_point.y) < .001f &&
+        check(power_point.x < usb_point.x && usb_point.x < screens_point.x &&
+                      std::abs(power_point.y - usb_point.y) < .001f &&
                       std::abs(usb_point.y - screens_point.y) < .001f,
-              "the drawn multimedia row places USB and screens to the right of restart");
+              "the drawn multimedia row places USB and screens to the right of power");
         media_powered = true;
         wait(
                 [&] {

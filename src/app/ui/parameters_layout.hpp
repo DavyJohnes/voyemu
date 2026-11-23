@@ -397,7 +397,7 @@ struct WheelColumn {
 // The scale and language choices share the gear row of the current form: top, height and caption
 // size; their cell is the segment of every radio, the P/R/N/D radio included. The cluster power
 // glyph starts, and the multimedia power glyph ends, the edge margin of the gear row from the area
-// edges. Multimedia power sits below restart; USB and additional screens follow restart in the
+// edges. Multimedia power sits below restart; USB and additional screens follow power in the
 // same row.
 // The wheel rectangle at a scale: horizontally where view_layout puts it; vertically the visible
 // bottom of the wheel photos ends 40 physical pixels at 100 percent above the gear row, which ends
@@ -549,7 +549,7 @@ inline WheelColumn wheel_column(unsigned screen_scale, const WheelInk &left, con
             cell * k,
             gear_font_size(screen_scale),
             (button * (.5f - side) + gap / 2) * k,
-            scaled({box_x + button_pitch, restart_y, button, button}),
-            scaled({box_x + 2 * button_pitch, restart_y, button, button})};
+            scaled({box_x + button_pitch, media_y, button, button}),
+            scaled({box_x + 2 * button_pitch, media_y, button, button})};
 }
 } // namespace voyemu::cluster
