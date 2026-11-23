@@ -266,6 +266,7 @@ ProfileFileNodes plan_profile_file_nodes(const std::filesystem::path &root,
                              recipe.at("output_sha256") == spec.output_sha256,
                      "rooted UI observer recipe output pin differs");
             }
+
             const auto input = read(system / member, 4ULL << 20);
             need(sha256_bytes(input) == spec.input_sha256 &&
                          receipt.at("files").at(member).at("sha256") == spec.input_sha256 &&

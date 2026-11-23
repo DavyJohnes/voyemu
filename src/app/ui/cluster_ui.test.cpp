@@ -3484,8 +3484,8 @@ void editor_sections_fill_available_height(const std::filesystem::path &assets,
                         const auto rect = item.at("rect_points").get<std::array<float, 4>>();
 
                         // Wheel column controls are outside the parameter form.
-                        if (kind == "lifecycle" || kind == "about" ||
-                            kind == "usb" || kind == "screens" ||
+                        if (kind == "lifecycle" || kind == "about" || kind == "usb" ||
+                            kind == "screens" ||
                             (kind == "choice" &&
                              item.at("name").get<std::string>().rfind("gear_", 0) != 0)) {
                             continue;

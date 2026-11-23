@@ -238,6 +238,7 @@ int main(int argc, char **argv) {
                       observer_recipes[8].output_sha256 ==
                               qinggan11_ui_observer_policy_hash_file_sha256,
               "observer policy and digest are selected together");
+
         for (const auto platform : {"qinggan09", "passion", "api30-fixture"}) {
             bool rejected = false;
             try {
@@ -245,14 +246,17 @@ int main(int argc, char **argv) {
             } catch (const VoyemuError &error) {
                 rejected = error.code() == "SELINUX_PATCH_SCOPE";
             }
+
             check(rejected, "observer variant rejects an unrelated platform");
         }
+
         bool missing_baseline = false;
         try {
             (void)api30_file_recipes_for("qinggan11", false, true);
         } catch (const VoyemuError &error) {
             missing_baseline = error.code() == "SELINUX_PATCH_SCOPE";
         }
+
         check(missing_baseline, "observer variant rejects another policy baseline");
         const auto original_recipes = api30_file_recipes_for("qinggan11", true);
 

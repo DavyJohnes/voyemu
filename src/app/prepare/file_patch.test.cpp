@@ -107,8 +107,10 @@ int main(int argc, char **argv) {
                                       std::string(qinggan11_ui_observer_policy_mapping_sha256) +
                                               "\n",
                       "rooted observer adds only one service lookup and its derived digest");
+
                 for (unsigned variant = 0; variant < 5; ++variant) {
                     auto invalid = observed;
+
                     if (variant == 0) {
                         invalid[0].original_navi = false;
                     } else if (variant == 1) {
@@ -120,15 +122,18 @@ int main(int argc, char **argv) {
                     } else {
                         invalid[0].input_sha256 = qinggan11_ui_observer_policy_sha256;
                     }
+
                     bool rejected = false;
                     try {
                         (void)prepare_file_patches(invalid);
                     } catch (const VoyemuError &) {
                         rejected = true;
                     }
+
                     check(rejected, "observer policy rejects foreign scope and changed inputs");
                 }
             }
+
             for (unsigned variant = 0; variant < 11; ++variant) {
                 auto bad = nodes;
 

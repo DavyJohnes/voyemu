@@ -127,6 +127,7 @@ inline constexpr auto qinggan11_ui_observer_api30_file_recipes = [] {
     auto recipes = qinggan11_original_navi_api30_file_recipes;
     recipes[6].output_sha256 = qinggan11_ui_observer_policy_sha256;
     recipes[8].output_sha256 = qinggan11_ui_observer_policy_hash_file_sha256;
+
     return recipes;
 }();
 
