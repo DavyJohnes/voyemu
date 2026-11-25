@@ -1,8 +1,10 @@
 #include "error.hpp"
+#include "os/platform.hpp"
 #include "os/process.hpp"
 #include "os/stat_time.hpp"
 #include "session.hpp"
 #include "session_internal.hpp"
+#include "session_process_identity.hpp"
 #include <cerrno>
 #include <chrono>
 #include <csignal>
@@ -20,6 +22,19 @@
 namespace voyemu {
 namespace {
 using Clock = std::chrono::steady_clock;
+
+session_detail::ProcessIdentityReader process_identity_reader() {
+    return {os::process_start_identity, os::process_executable, os::process_arguments};
+}
+
+Json process_identity_record(std::int64_t pid, const std::string &start,
+                             const std::filesystem::path &executable,
+                             const std::vector<std::string> &arguments) {
+    return {{"pid", pid},
+            {"start", start},
+            {"executable", executable.string()},
+            {"arguments_sha256", sha256_bytes(Json(arguments).dump())}};
+}
 
 bool carries(const std::vector<std::string> &arguments, const std::string &text) {
     for (const auto &argument : arguments) {
@@ -207,6 +222,46 @@ void retire_endpoint(const std::filesystem::path &directory, const std::string &
 }
 } // namespace
 
+Json session_detail::read_launch_process_identity(
+        std::int64_t pid, const ProcessIdentityReader &reader,
+        const std::optional<std::string> &expected_start) {
+    const auto start = reader.start(pid);
+
+    if (expected_start && start != expected_start) {
+        throw VoyemuError("SESSION_PROCESS_IDENTITY_UNKNOWN",
+                          "launched process birth lost or changed");
+    }
+
+    if (!start) {
+        throw VoyemuError("SESSION_PROCESS_IDENTITY_UNKNOWN", "launched process birth unavailable");
+    }
+
+    using namespace std::chrono_literals;
+    const auto deadline = Clock::now() + 50ms;
+    // Linux can publish the PID before /proc exposes the executable and argv of its new image.
+    std::string_view unavailable;
+
+    do {
+        const auto executable = reader.executable(pid);
+        const auto arguments = reader.arguments(pid);
+
+        if (reader.start(pid) != start) {
+            throw VoyemuError("SESSION_PROCESS_IDENTITY_UNKNOWN",
+                              "launched process birth lost or changed");
+        }
+
+        if (!executable.empty() && !arguments.empty()) {
+            return process_identity_record(pid, *start, executable, arguments);
+        }
+
+        unavailable = executable.empty() ? "launched process executable unavailable"
+                                         : "launched process arguments unavailable";
+        std::this_thread::sleep_for(1ms);
+    } while (Clock::now() < deadline);
+
+    throw VoyemuError("SESSION_PROCESS_IDENTITY_UNKNOWN", std::string(unavailable));
+}
+
 Json session_process_identity(std::int64_t pid) {
     const auto start = os::process_start_identity(pid);
     const auto executable = os::process_executable(pid);
@@ -218,10 +273,7 @@ Json session_process_identity(std::int64_t pid) {
                           "launched process identity unavailable");
     }
 
-    return {{"pid", pid},
-            {"start", *start},
-            {"executable", executable.string()},
-            {"arguments_sha256", sha256_bytes(Json(arguments).dump())}};
+    return process_identity_record(pid, *start, executable, arguments);
 }
 
 void record_session_process(const std::filesystem::path &directory, const std::string &session_id,
@@ -245,7 +297,10 @@ void record_session_process(const std::filesystem::path &directory, const std::s
         throw VoyemuError("SESSION_PROCESS_PENDING_UNKNOWN", "launch registration intent differs");
     }
 
-    auto identity = session_process_identity(pid);
+    auto identity =
+            os::platform_name == "Linux" && !launch_intent.empty()
+                    ? session_detail::read_launch_process_identity(pid, process_identity_reader())
+                    : session_process_identity(pid);
     identity["nonce"] = nonce;
     auto &processes = receipt["processes"];
     processes.erase(std::remove_if(processes.begin(), processes.end(),
@@ -310,8 +365,15 @@ Json android_launch_identity(std::int64_t pid) {
     // An SDK that already exited has no identity to record; recovery then never signals its PID.
     const auto start = os::process_start_identity(pid);
 
-    return start ? Json{{"sdk_start", *start}, {"sdk_identity", session_process_identity(pid)}}
-                 : Json::object();
+    if (!start) {
+        return Json::object();
+    }
+
+    auto identity = os::platform_name == "Linux" ? session_detail::read_launch_process_identity(
+                                                           pid, process_identity_reader(), start)
+                                                 : session_process_identity(pid);
+
+    return {{"sdk_start", *start}, {"sdk_identity", std::move(identity)}};
 }
 
 static void update_android_launch_identity(const std::filesystem::path &directory,
