@@ -61,6 +61,10 @@ VehicleCatalog vehicle_catalog(std::string_view platform) {
         return VehicleCatalog::passion;
     }
 
+    if (platform == "aosp") {
+        return VehicleCatalog::none;
+    }
+
     throw VoyemuError("VEHICLE_CATALOG", "unknown platform");
 }
 
@@ -70,11 +74,20 @@ VehicleCatalog profile_vehicle_catalog(const Json &definition) {
         throw VoyemuError("PROFILE_INVALID", "profile platform required");
     }
 
-    return vehicle_catalog(definition.at("platform").get<std::string>());
+    const auto catalog = vehicle_catalog(definition.at("platform").get<std::string>());
+    const bool ranchu = definition.contains("board") && definition.at("board") == "ranchu";
+
+    if (ranchu != (catalog == VehicleCatalog::none)) {
+        throw VoyemuError("PROFILE_INVALID", "AOSP requires the ranchu board");
+    }
+
+    return catalog;
 }
 
 const char *catalog_map_sha256(VehicleCatalog catalog) {
     switch (catalog) {
+    case VehicleCatalog::none:
+        return empty_map_sha256;
     case VehicleCatalog::qinggan11:
         return qinggan11_map_sha256;
     case VehicleCatalog::passion:
@@ -87,8 +100,8 @@ const char *catalog_map_sha256(VehicleCatalog catalog) {
 VehicleCatalog state_catalog(const Json &state) {
     const auto map = state.is_object() ? state.find("map_sha256") : state.end();
 
-    for (const auto catalog :
-         {VehicleCatalog::qinggan09, VehicleCatalog::qinggan11, VehicleCatalog::passion}) {
+    for (const auto catalog : {VehicleCatalog::qinggan09, VehicleCatalog::qinggan11,
+                               VehicleCatalog::passion, VehicleCatalog::none}) {
         if (map != state.end() && *map == catalog_map_sha256(catalog)) {
             return catalog;
         }
@@ -685,6 +698,11 @@ static const std::vector<Field> &qinggan09_catalog() {
 
 const std::vector<Field> &catalog(VehicleCatalog catalog) {
     switch (catalog) {
+    case VehicleCatalog::none: {
+        static const std::vector<Field> empty;
+
+        return empty;
+    }
     case VehicleCatalog::qinggan11:
         return detail::qinggan11_catalog();
     case VehicleCatalog::passion:
@@ -696,7 +714,7 @@ const std::vector<Field> &catalog(VehicleCatalog catalog) {
 
 const Field *catalog_field(VehicleCatalog catalog, std::string_view name) {
     static const auto indexes = [] {
-        std::array<std::map<std::string, const Field *, std::less<>>, 3> result;
+        std::array<std::map<std::string, const Field *, std::less<>>, 4> result;
 
         for (const auto which :
              {VehicleCatalog::qinggan09, VehicleCatalog::qinggan11, VehicleCatalog::passion}) {
@@ -812,6 +830,11 @@ void validate_state(const Json &state) {
 
 Json normal_initial_values(VehicleCatalog catalog) {
     using enum VehicleConcept;
+
+    if (catalog == VehicleCatalog::none) {
+        return Json::object();
+    }
+
     // Emulator fixture values; SOC, fuel and tyre readings are not OEM recommended defaults.
     Json values{{"vcu_ExhibitionSts", 0}, {"ambient_temp", 120},  {"fuel_percent", 50},
                 {"fuel_cap", 0},          {"fuel_cap_err", 0},    {"dcdc_systemSts", 2},

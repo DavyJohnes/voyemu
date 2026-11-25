@@ -3,6 +3,7 @@
 #include "error.hpp"
 #include "os/fs.hpp"
 #include "passion_power_owner.hpp"
+#include "passion_prepared_guest.hpp"
 #include "process.hpp"
 #include "quickboot.hpp"
 #include "zip_archive.hpp"
@@ -32,6 +33,11 @@ inline bool passion_power_requested(const Json &definition) {
     power_need(sdk == oem, "partial power graph rejected");
 
     return sdk;
+}
+
+inline bool passion_power_runtime_requested(const Json &definition) {
+    return passion_power_requested(definition) &&
+           definition.value("features", Json::object()).value("display_power_runtime", true);
 }
 
 inline Json passion_power_csv() {
@@ -163,20 +169,18 @@ inline void passion_power_helper_artifact(const std::filesystem::path &root,
 
 inline Json passion_power_contract(const Json &definition, const Json &candidate, const Json &pins,
                                    const Json &helpers) {
-    power_need(passion_power_requested(definition), "power graph not requested");
+    power_need(passion_power_runtime_requested(definition), "power graph not requested");
     power_need(candidate.at("schema") == 1 && candidate.at("kind") == "android-candidate" &&
                        candidate.at("profile") == definition.at("id") &&
                        candidate.at("prepared_VM") == true && candidate.at("stopped") == true &&
                        candidate.at("cold_boot_verified") == true,
                "accepted stopped cold candidate required");
-    power_need(definition.at("android").at("package") ==
-                               "system-images;android-30;default;arm64-v8a" &&
-                       candidate.at("clean_base_archive_sha256") ==
-                               definition.at("android").at("sha256"),
+    power_need(candidate.at("clean_base_archive_sha256") == definition.at("android").at("sha256"),
                "exact registered API30 clean source required");
+    const auto abi = passion_prepared_guest_abi(definition, candidate, power_need);
 
     for (const auto &pair : std::vector<std::pair<std::string, std::string>>{
-                 {"boot", "1"}, {"api", "30"}, {"abi", "arm64-v8a"}, {"selinux", "Enforcing"}}) {
+                 {"boot", "1"}, {"api", "30"}, {"abi", abi}, {"selinux", "Enforcing"}}) {
         unsigned count = 0;
 
         for (const auto &check : candidate.at("checks")) {
@@ -284,7 +288,7 @@ inline Json validate_passion_power_candidate(const Json &definition, const Json 
 inline Json export_passion_power(const Json &definition, const Json &candidate,
                                  const std::filesystem::path &stage,
                                  const std::string &profile_pin) {
-    if (!passion_power_requested(definition)) {
+    if (!passion_power_runtime_requested(definition)) {
         return Json::object();
     }
 

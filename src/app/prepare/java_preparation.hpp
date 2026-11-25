@@ -42,6 +42,7 @@ struct JavaPreparationRequest {
     std::string profile, profile_sha256;
     JavaPreparationOperation operation = JavaPreparationOperation::plan;
     std::optional<JavaPreparationBuildInputs> build;
+    std::string target;
     // In-memory invocation guard; never serialized into a request or result receipt.
     std::string source_snapshot;
 };

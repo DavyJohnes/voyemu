@@ -107,6 +107,60 @@ Json export_candidate_image(Candidate &c, const std::string &name,
 } // namespace
 
 namespace machine_preparation_detail {
+bool CandidateAvbConsole::rejected(const std::filesystem::path &log) {
+    std::error_code error;
+    const auto size = std::filesystem::file_size(log, error);
+
+    if (error || size <= offset) {
+        return false;
+    }
+
+    std::ifstream stream(log, std::ios::binary);
+    stream.seekg(static_cast<std::streamoff>(offset));
+    std::string bytes(std::min<std::uintmax_t>(size - offset, 256 * 1024), '\0');
+    stream.read(bytes.data(), static_cast<std::streamsize>(bytes.size()));
+    bytes.resize(static_cast<std::size_t>(stream.gcount()));
+    offset += bytes.size();
+    incomplete += bytes;
+    std::size_t start = 0;
+
+    for (;;) {
+        const auto end = incomplete.find('\n', start);
+
+        if (end == std::string::npos) {
+            break;
+        }
+
+        std::string_view line(incomplete.data() + start, end - start);
+        start = end + 1;
+
+        if (!line.starts_with("[")) {
+            continue;
+        }
+
+        if (line.find("] Linux version ") != std::string_view::npos) {
+            stage = 0;
+        } else if (line.find("] init: [libfs_avb]vbmeta digest mismatch") !=
+                   std::string_view::npos) {
+            stage = 1;
+        } else if (stage == 1 && line.find("] init: [libfs_avb]VerifyVbmetaImages failed") !=
+                                         std::string_view::npos) {
+            stage = 2;
+        } else if (stage == 2 &&
+                   line.find("] init: InitFatalReboot: signal ") != std::string_view::npos) {
+            return true;
+        }
+    }
+
+    incomplete.erase(0, start);
+
+    if (incomplete.size() > 4096) {
+        incomplete.clear();
+    }
+
+    return false;
+}
+
 void record_cold_check(Json &checks, const std::string &id, const std::string &actual,
                        const std::string &expected) {
     checks.push_back({{"id", id},
@@ -338,7 +392,8 @@ void verify_cold(Candidate &c, const Json &profile, const std::vector<Installed>
     equal("boot", c.shell({"getprop", "sys.boot_completed"}), "1");
     equal("api", c.shell({"getprop", "ro.build.version.sdk"}),
           std::to_string(android_candidate_api(profile)));
-    equal("abi", c.shell({"getprop", "ro.product.cpu.abi"}), "arm64-v8a");
+    equal("abi", c.shell({"getprop", "ro.product.cpu.abi"}),
+          std::string(native_base_identity(profile.at("android")).abi));
     equal("selinux", c.shell({"getenforce"}), "Enforcing");
 
     if (qinggan11_ui_observer_policy_requested(profile)) {
@@ -787,14 +842,15 @@ std::string avd_config(const Json &profile, const std::filesystem::path &base,
                        const std::string &avd) {
     const auto emulator = profile.at("emulator");
     const auto screens = android_screens(profile.at("displays"));
+    const bool x86 = android_kvm(profile);
     std::map<std::string, std::string> values = {
             {"AvdId", avd},
             {"avd.ini.displayname", "Voyemu preparation"},
             {"image.sysdir.1",
              base.string() + std::string(1, std::filesystem::path::preferred_separator)},
-            {"abi.type", "arm64-v8a"},
+            {"abi.type", x86 ? "x86_64" : "arm64-v8a"},
             {"tag.id", "default"},
-            {"hw.cpu.arch", "arm64"},
+            {"hw.cpu.arch", x86 ? "x86_64" : "arm64"},
             {"hw.ramSize", std::to_string(emulator.value("memory", 4096U))},
             {"hw.gpu.enabled", "yes"},
             {"hw.gpu.mode", emulator.value("gpuMode", std::string("auto"))},

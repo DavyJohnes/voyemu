@@ -2,6 +2,7 @@
 #include "model.hpp"
 #include "os/platform.hpp"
 #include "process.hpp"
+#include "session_internal.hpp"
 #include <cassert>
 #include <exception>
 #include <iostream>
@@ -115,6 +116,15 @@ static void warm_sdk_descriptor_binding() {
 
 int main() try {
     warm_sdk_descriptor_binding();
+
+    if constexpr (os::platform_name == "Linux") {
+        const auto session = std::filesystem::absolute("isolated-session");
+        ProcessSpec sdk;
+        android_session_environment(sdk, session);
+        assert(session_detail::session_sdk_registration_directory(session, false) ==
+               std::filesystem::path(sdk.environment.at("XDG_RUNTIME_DIR")) / "avd/running");
+    }
+
     const auto os_root = std::filesystem::absolute("sdk-user"),
                home = std::filesystem::absolute("project/emulator-home");
     assert(sdk_registration_directory(os_root, home) ==

@@ -435,14 +435,14 @@ int main() try {
         assert(!key.contains("backend_arguments"));
     }
 
-    // macOS identifies guest storage by its volume UUID.
-    if (voyemu::os::platform_name == "macOS") {
+    // POSIX storage identity includes the filesystem UUID in lowercase hex.
+    if (!voyemu::os::host_windows) {
         const auto identity = read_private_json(machine / "voyemu-quickboot.json");
         const auto volume =
                 identity.at("disks").at("userdata-qemu.img").at("volume_uuid").get<std::string>();
-        assert(volume.size() == 32 &&
+        assert((voyemu::os::platform_name != "macOS" || volume.size() == 32) &&
                volume.find_first_not_of("0123456789abcdef") == std::string::npos &&
-               volume != std::string(32, '0'));
+               volume.find_first_not_of('0') != std::string::npos);
 
         for (const auto &group : {"disks", "snapshot"}) {
             for (const auto &item : identity.at(group).items()) {
@@ -461,7 +461,9 @@ int main() try {
         old_volume["disks"]["userdata-qemu.img"].erase("volume_uuid");
         old_volume["disks"]["userdata-qemu.img"]["device"] = 123;
         write_private_json(machine / "voyemu-quickboot.json", old_volume);
-        assert(cache.inspect().reason == "storage_identity_format_changed");
+        const auto reason = voyemu::os::platform_name == "macOS" ? "storage_identity_format_changed"
+                                                                 : "guest_storage_changed";
+        assert(cache.inspect().reason == reason);
         write_private_json(machine / "voyemu-quickboot.json", identity);
         assert(cache.inspect().resume);
     }

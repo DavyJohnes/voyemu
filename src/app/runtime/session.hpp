@@ -135,6 +135,7 @@ struct ThemeState {
 };
 int binder_integer(const std::string &reply);
 Json parse_android_provider_reply(const std::string &reply);
+bool sdk_display_ready(std::string_view dump, unsigned id, unsigned width, unsigned height);
 std::optional<unsigned> secondary_display_ready(const std::string &displays,
                                                 const std::string &windows);
 std::optional<unsigned> passion_secondary_display_ready(const std::string &displays,
@@ -156,7 +157,8 @@ void prepare_android_avd_version_marker(const std::filesystem::path &content,
                                         bool required);
 void normalize_android_disk_backings(const std::filesystem::path &machine,
                                      const std::filesystem::path &qemu_img,
-                                     const Json &system_binding = Json());
+                                     const Json &system_binding = Json(),
+                                     bool signed_system = false);
 std::filesystem::path
 prepare_android_avd(const std::filesystem::path &home, const std::filesystem::path &machine,
                     const std::string &avd, const std::filesystem::path &source,
@@ -412,6 +414,7 @@ private:
     std::int64_t test_ui_sampled_ms_ = 0;
     bool android_resume_ = false, android_powered_ = false;
     std::uint64_t android_generation_ = 0;
+    bool android_sdk_headless_ = false;
     VehicleModel model_;
     EventQueue events_;
     AdasEcu adas_;

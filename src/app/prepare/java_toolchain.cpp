@@ -698,6 +698,25 @@ std::filesystem::path java_helper_recipe_jdk(const std::filesystem::path &root,
     return home;
 }
 
+std::filesystem::path profile_preparation_jdk(const std::filesystem::path &root,
+                                              const std::filesystem::path &requested, bool variant,
+                                              const Json &helper_pin, bool target) {
+    if (target ? helper_pin.value("profileTargetSchema", Json{}) == 1
+               : !variant || helper_pin.value("profileVariantSchema", Json{}) == 1) {
+        return requested;
+    }
+
+    if (!project_source_checkout(root)) {
+        const auto feature = target ? "profile build targets" : "vehicle variants";
+        throw VoyemuError(
+                "JAVA_HELPER_ASSET_MISSING",
+                std::string("the pinned release helper does not support ") + feature +
+                        "; build the machine from the Voyemu source checkout with its developer JDK");
+    }
+
+    return java_helper_recipe_jdk(root, requested);
+}
+
 std::filesystem::path java_preparation_java(const std::filesystem::path &root,
                                             const std::filesystem::path &jdk, const Json &runtime,
                                             bool offline, std::uint64_t reserve,

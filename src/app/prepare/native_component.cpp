@@ -1,4 +1,5 @@
 #include "native_component.hpp"
+#include "base_image.hpp"
 #include "check.hpp"
 #include "deps.hpp"
 #include "download.hpp"
@@ -7,6 +8,7 @@
 #include "ordinary_path.hpp"
 #include "os/fs.hpp"
 #include "process.hpp"
+#include "profile_catalog.hpp"
 #include "quickboot.hpp"
 #include "source_edits.hpp"
 #include <algorithm>
@@ -68,7 +70,14 @@ Json source_inventory(const std::filesystem::path &source) {
     return files;
 }
 
-void elf(const std::filesystem::path &file, bool executable = false) {
+void valid_output_name(const std::string &output, bool executable) {
+    if (executable ? (!std::regex_match(output, std::regex(R"(^[A-Za-z0-9_][A-Za-z0-9_-]*$)")))
+                   : (!std::regex_match(output, std::regex(R"(^lib[A-Za-z0-9_]+\.so$)")))) {
+        throw VoyemuError("COMPONENT_OUTPUT", "invalid native output name");
+    }
+}
+
+void elf(const std::filesystem::path &file, std::string_view abi, bool executable) {
     if (!std::filesystem::is_regular_file(std::filesystem::symlink_status(file)) ||
         std::filesystem::file_size(file) < 64 || std::filesystem::file_size(file) > 128ULL << 20) {
         throw VoyemuError("COMPONENT_ELF", "bounded output required");
@@ -79,8 +88,9 @@ void elf(const std::filesystem::path &file, bool executable = false) {
     input.read(reinterpret_cast<char *>(h), sizeof h);
 
     if (!input || h[0] != 127 || h[1] != 'E' || h[2] != 'L' || h[3] != 'F' || h[4] != 2 ||
-        h[5] != 1 || h[16] != 3 || h[17] != 0 || h[18] != 183 || h[19] != 0) {
-        throw VoyemuError("COMPONENT_ELF", "API28 ARM64 ELF required");
+        h[5] != 1 || h[16] != 3 || h[17] != 0 || h[18] != (abi == "x86_64" ? 62 : 183) ||
+        h[19] != 0) {
+        throw VoyemuError("COMPONENT_ELF", std::string(abi) + " ELF required");
     }
 
     if (executable) {
@@ -275,7 +285,8 @@ std::filesystem::path native_component_sources(const std::filesystem::path &root
 Json build_native_component(const std::filesystem::path &source,
                             const std::filesystem::path &compiler, const std::string &compiler_pin,
                             const std::filesystem::path &destination, std::uint64_t reserve,
-                            std::function<std::uint64_t()> available_space) {
+                            std::function<std::uint64_t()> available_space,
+                            std::string_view guest_abi) {
     const auto sources = source_inventory(source);
     const auto definition = read_private_json(source / "component.json");
     const auto recipe_api = definition.at("minSdk").get<int>();
@@ -284,6 +295,9 @@ Json build_native_component(const std::filesystem::path &source,
         throw VoyemuError("COMPONENT_RECIPE", "native API28/API30 recipe required");
     }
 
+    const auto abi = native_component_abi(definition, guest_abi);
+    const auto target = "--target=" + std::string(abi == "x86_64" ? "x86_64" : "aarch64") +
+                        "-linux-android" + std::to_string(recipe_api);
     Json materialized = Json::object();
     std::set<std::string> guest_sonames;
 
@@ -330,7 +344,7 @@ Json build_native_component(const std::filesystem::path &source,
         if (!std::regex_match(name, std::regex(R"(^/system/lib64/lib[A-Za-z0-9_.]+\.so$)")) ||
             !guest_sonames.insert(std::filesystem::path(name).filename().string()).second) {
             throw VoyemuError("COMPONENT_INPUTS",
-                              "unique API28 system ARM64 shared library path required");
+                              "unique 64-bit system shared library path required");
         }
     }
 
@@ -343,10 +357,7 @@ Json build_native_component(const std::filesystem::path &source,
     const bool executable = output_type == "executable";
     const auto output = definition.at("output").get<std::string>();
 
-    if (executable ? (!std::regex_match(output, std::regex(R"(^[A-Za-z0-9_][A-Za-z0-9_-]*$)")))
-                   : (!std::regex_match(output, std::regex(R"(^lib[A-Za-z0-9_]+\.so$)")))) {
-        throw VoyemuError("COMPONENT_OUTPUT", "invalid native output name");
-    }
+    valid_output_name(output, executable);
 
     ordinary(compiler);
 
@@ -449,13 +460,9 @@ Json build_native_component(const std::filesystem::path &source,
                            {"TMPDIR", destination.string()},
                            {"TMP", destination.string()},
                            {"TEMP", destination.string()}};
-    command.arguments = {"--target=aarch64-linux-android" + std::to_string(recipe_api),
-                         executable ? "-pie" : "-shared",
-                         executable ? "-fPIE" : "-fPIC",
-                         "-O2",
-                         "-g0",
-                         cxx ? "-std=c++17" : "-std=c11",
-                         "-I" + (source / "src").string()};
+    command.arguments = {
+            target, executable ? "-pie" : "-shared", executable ? "-fPIE" : "-fPIC",  "-O2",
+            "-g0",  cxx ? "-std=c++17" : "-std=c11", "-I" + (source / "src").string()};
 
     if (guest_sonames.empty()) {
         command.arguments.insert(command.arguments.end() - 1, "-Wl,--no-undefined");
@@ -497,7 +504,7 @@ Json build_native_component(const std::filesystem::path &source,
 
         for (const auto &soname : guest_sonames) {
             ProcessSpec stub = command;
-            stub.arguments = {"--target=aarch64-linux-android" + std::to_string(recipe_api),
+            stub.arguments = {target,
                               "-shared",
                               "-nostdlib",
                               "-Wl,-soname," + soname,
@@ -534,7 +541,7 @@ Json build_native_component(const std::filesystem::path &source,
         throw VoyemuError("COMPONENT_COMPILE", "native clang compilation failed");
     }
 
-    elf(destination / output, executable);
+    elf(destination / output, abi, executable);
     std::filesystem::remove_all(destination / "guest-stubs");
     std::filesystem::remove(script);
 
@@ -548,7 +555,7 @@ Json build_native_component(const std::filesystem::path &source,
     Json result = {{"schema", 1},
                    {"type", "native"},
                    {"api", recipe_api},
-                   {"abi", "arm64-v8a"},
+                   {"abi", abi},
                    {"output", output},
                    {"bytes", std::filesystem::file_size(destination / output)},
                    {"sha256", sha256_file(destination / output)},
@@ -577,23 +584,62 @@ std::string native_component_pin(const std::string &profile, const std::string &
     return definition.value("pin", profile + "/" + component);
 }
 
+std::string native_component_abi(const Json &definition, std::string_view guest) {
+    const auto abi = definition.value("abi", std::string(guest));
+
+    if (abi != "arm64-v8a" && abi != "x86_64") {
+        throw VoyemuError("COMPONENT_RECIPE", "unsupported native component ABI");
+    }
+
+    return abi;
+}
+
+Json native_component_origin(const Json &pins, const std::string &key, const Json &definition) {
+    const bool local = definition.contains("sourceBuildSha256");
+
+    if (local && (definition.contains("pin") || pins.contains(key))) {
+        throw VoyemuError("COMPONENT_PIN", "ambiguous native component source");
+    }
+
+    if (!local && !pins.contains(key)) {
+        throw VoyemuError("COMPONENT_PIN", "missing native component pin: " + key);
+    }
+
+    auto origin = local ? Json{{"source", "recipe"}, {"sha256", definition.at("sourceBuildSha256")}}
+                        : Json{{"asset", pins.at(key).at("url")},
+                               {"sha256", pins.at(key).at("sha256")}};
+
+    if (!origin.at("sha256").is_string() || !sha256_text(origin.at("sha256").get<std::string>())) {
+        throw VoyemuError("COMPONENT_PIN", "invalid native component SHA-256: " + key);
+    }
+
+    return origin;
+}
+
 namespace {
+std::string_view profile_guest_abi(const std::filesystem::path &root, const std::string &profile) {
+    const auto definition = authoring_profile(root, profile);
+
+    if (!definition.contains("android")) {
+        return "arm64-v8a";
+    }
+
+    return android_package_identity(definition.at("android").value("package", std::string{})).abi;
+}
+
 // The declared native component source of a profile and its definition.
 std::pair<std::filesystem::path, Json> profile_native_component(const std::filesystem::path &root,
                                                                 const std::string &profile,
                                                                 const std::string &component) {
-    const auto profile_file = root / "profiles" / profile / "profile.json";
-    const auto relative = read_private_json(profile_file, 4 << 20)
-                                  .at("components")
-                                  .at(component)
-                                  .get<std::string>();
+    const auto relative =
+            authoring_profile(root, profile).at("components").at(component).get<std::string>();
     const std::filesystem::path path = relative;
 
     if (path.is_absolute() || path.lexically_normal() != path || *path.begin() == "..") {
         throw VoyemuError("COMPONENT_PATH", "profile-relative component required");
     }
 
-    const auto source = root / "profiles" / profile / path;
+    const auto source = profile_recipe_directory(root, profile) / path;
     const auto definition = read_private_json(source / "component.json");
 
     if (definition.value("type", std::string{}) != "native") {
@@ -640,7 +686,8 @@ build_profile_native_component(const std::filesystem::path &root, const std::str
         source = work / (component + "-sources");
     }
 
-    build_native_component(source, compiler, compiler_pin, work / component, 0);
+    build_native_component(source, compiler, compiler_pin, work / component, 0, {},
+                           profile_guest_abi(root, profile));
 
     return work / component / definition.at("output").get<std::string>();
 }
@@ -689,7 +736,8 @@ Json build_native_component_recipe(const std::filesystem::path &root,
             const auto component = read_private_json(definition_file);
 
             // A component that names a pin of another profile publishes no asset of its own.
-            if (component.value("type", std::string{}) != "native" || component.contains("pin")) {
+            if (component.value("type", std::string{}) != "native" || component.contains("pin") ||
+                component.contains("sourceBuildSha256")) {
                 continue;
             }
 
@@ -710,15 +758,17 @@ std::filesystem::path
 install_native_component(const std::filesystem::path &root, const std::string &profile,
                          const std::string &component, const Json &pins, bool offline,
                          const DownloadTransport &transport,
-                         const std::function<void(const std::filesystem::path &)> &build) {
-    const std::regex keys(R"(^[a-z0-9][a-z0-9.-]*/[a-z0-9][a-z0-9-]*$)");
+                         const std::function<void(const std::filesystem::path &)> &build,
+                         std::string_view guest_abi) {
+    const std::regex keys(R"(^[a-z0-9][a-z0-9_.-]*/[a-z0-9][a-z0-9-]*$)");
 
     if (!std::regex_match(profile + "/" + component, keys)) {
         throw VoyemuError("COMPONENT_PATH", "invalid native component key");
     }
 
     const auto [source, definition] = profile_native_component(root, profile, component);
-    const auto key = native_component_pin(profile, component, definition);
+    const auto key = native_component_pin(
+            profile_recipe_directory(root, profile).filename().string(), component, definition);
 
     if (!std::regex_match(key, keys)) {
         throw VoyemuError("COMPONENT_PIN", "invalid native component pin");
@@ -727,13 +777,17 @@ install_native_component(const std::filesystem::path &root, const std::string &p
     const auto output = definition.at("output").get<std::string>();
     const auto api = definition.at("minSdk").get<int>();
     const auto output_type = definition.value("outputType", std::string("shared-library"));
-    const auto &pin = pins.at(key);
-    const auto sha = pin.at("sha256").get<std::string>(), url = pin.at("url").get<std::string>();
+    valid_output_name(output, output_type == "executable");
+    const auto origin = native_component_origin(pins, key, definition);
+    const auto sha = origin.at("sha256").get<std::string>(),
+               url = origin.value("asset", std::string{});
+    const auto abi = native_component_abi(
+            definition, guest_abi.empty() ? profile_guest_abi(root, profile) : guest_abi);
 
     auto asset = key;
     asset[key.find('/')] = '-';
 
-    if (!url.ends_with("/" + asset + "-" + output)) {
+    if (origin.contains("asset") && !url.ends_with("/" + asset + "-" + output)) {
         throw VoyemuError("COMPONENT_PIN", "asset name differs from the component");
     }
 
@@ -748,22 +802,28 @@ install_native_component(const std::filesystem::path &root, const std::string &p
         ensure_private_directory(folder);
         const auto temporary = folder / (".part-" + random_token());
 
-        try {
-            const auto blob = download_pinned({url, sha, 64ULL << 20},
-                                              root / ".local/toolchains/downloads/android-native",
-                                              offline, 0, transport)
-                                      .file;
-            std::filesystem::copy_file(blob, temporary);
-            logging::write(logging::Level::debug, "prepare", "native component downloaded",
-                           {{"component", key}, {"sha256", sha}});
-        } catch (const std::runtime_error &error) {
-            const std::string message = error.what();
+        bool from_recipe = origin.contains("source");
 
-            // Only an asset that is not published falls back; a network failure stays an error.
-            if (offline || !download_unpublished(std::current_exception())) {
-                throw;
+        if (!from_recipe) {
+            try {
+                const auto blob =
+                        download_pinned({url, sha, 64ULL << 20},
+                                        root / ".local/toolchains/downloads/android-native",
+                                        offline, 0, transport)
+                                .file;
+                std::filesystem::copy_file(blob, temporary);
+                logging::write(logging::Level::debug, "prepare", "native component downloaded",
+                               {{"component", key}, {"sha256", sha}});
+            } catch (const std::runtime_error &) {
+                if (offline || !download_unpublished(std::current_exception())) {
+                    throw;
+                }
+
+                from_recipe = true;
             }
+        }
 
+        if (from_recipe) {
             const auto job = root / ".local/build/jobs" / ("native-component-" + random_token());
             struct Job {
                 std::filesystem::path path;
@@ -786,19 +846,16 @@ install_native_component(const std::filesystem::path &root, const std::string &p
                 const auto clang = ndk / native_ndk_tool("clang");
 
                 if (!std::filesystem::exists(clang)) {
-                    throw VoyemuError(
-                            "ANDROID_NATIVE_ASSET_MISSING",
-                            "the " + key + " asset cannot be downloaded (" + message +
-                                    ") and the pinned NDK of the developer tools that builds it is not "
-                                    "installed");
+                    throw VoyemuError("ANDROID_NATIVE_ASSET_MISSING",
+                                      "building " + key + " requires the pinned developer NDK");
                 }
 
                 logging::write(logging::Level::info, "prepare",
                                "native component built from the recipe",
-                               {{"component", key}, {"download", message}});
+                               {{"component", key}, {"abi", abi}});
                 const auto compiler = std::filesystem::canonical(clang);
                 built = build_profile_native_component(root, profile, component, compiler,
-                                                       sha256_file(compiler), job, false);
+                                                       sha256_file(compiler), job, offline);
             }
 
             std::filesystem::copy_file(built, temporary);
@@ -810,7 +867,13 @@ install_native_component(const std::filesystem::path &root, const std::string &p
             throw VoyemuError("COMPONENT_PIN", "native component differs from its pin: " + key);
         }
 
-        std::filesystem::rename(temporary, installed);
+        try {
+            elf(temporary, abi, output_type == "executable");
+            std::filesystem::rename(temporary, installed);
+        } catch (...) {
+            std::filesystem::remove(temporary);
+            throw;
+        }
     }
 
     if (!pinned(installed)) {
@@ -818,7 +881,7 @@ install_native_component(const std::filesystem::path &root, const std::string &p
                           "installed native component differs from its pin: " + installed.string());
     }
 
-    elf(installed, output_type == "executable");
+    elf(installed, abi, output_type == "executable");
     const auto handoff = root / ".local/build" / ("native-component-" + random_token());
     ensure_private_directory(handoff);
     std::filesystem::copy_file(installed, handoff / output);
@@ -828,16 +891,16 @@ install_native_component(const std::filesystem::path &root, const std::string &p
                                      std::filesystem::perm_options::add);
     }
 
-    write_private_json(handoff / "receipt.json",
-                       {{"schema", 1},
-                        {"type", "native"},
-                        {"output_type", output_type},
-                        {"api", api},
-                        {"abi", "arm64-v8a"},
-                        {"output", output},
-                        {"bytes", std::filesystem::file_size(handoff / output)},
-                        {"sha256", sha},
-                        {"asset", url}});
+    Json receipt = {{"schema", 1},
+                    {"type", "native"},
+                    {"output_type", output_type},
+                    {"api", api},
+                    {"abi", abi},
+                    {"output", output},
+                    {"bytes", std::filesystem::file_size(handoff / output)},
+                    {"sha256", sha}};
+    receipt.update(origin);
+    write_private_json(handoff / "receipt.json", receipt);
 
     return handoff / "receipt.json";
 }

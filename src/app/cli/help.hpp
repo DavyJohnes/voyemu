@@ -49,6 +49,9 @@ inline std::string cli_help(cli::Language language = cli::Language::english) {
              {"status MACHINE_PATH", "help.status", {}},
              {"stop MACHINE_PATH", "help.stop", {}},
              {"check MACHINE_PATH", "help.check", {}},
+             {"trust-android-key --android-public-key FILE --android-public-key-sha256 SHA256",
+              "help.trust_android_key",
+              {}},
              {"patch MACHINE_PATH --values JSON",
               "help.patch",
               {{"example", R"('{"speed":80}')"}}}});
@@ -58,7 +61,11 @@ inline std::string cli_help(cli::Language language = cli::Language::english) {
              {"fetch PROFILE", "help.fetch", {}},
              {"fetch PROFILE --source=FILE", "help.fetch_archive", {}},
              {"fetch PROFILE --source=adb --serial SERIAL", "help.fetch_adb", {}},
-             {"build PROFILE [MACHINE_PATH]", "help.build", {{"default", "machines/PROFILE"}}}});
+             {"build PROFILE [MACHINE_PATH] [--target=arm|x86]",
+              "help.build",
+              {{"default", "machines/PROFILE"},
+               {"arm", "machines/PROFILE-arm"},
+               {"x_path", "machines/PROFILE-x86"}}}});
     heading("help.subsystems");
     entries({{"--cluster=on|off", "help.cluster", {}},
              {"--multimedia=on|off", "help.multimedia", {}}});
@@ -75,6 +82,10 @@ inline std::string cli_help(cli::Language language = cli::Language::english) {
     note("help.preparation_note", "  ");
     entries({{"--reuse-qnx FILE --reuse-qnx-sha256 SHA256", "help.reuse_qnx", {}},
              {"--reuse-qnx-source PATH", "help.reuse_qnx_source", {}},
+             {"--signed-android PATH", "help.signed_android", {}},
+             {"--android-public-key FILE --android-public-key-sha256 SHA256",
+              "help.signed_android_key",
+              {}},
              {"--force", "help.force", {}},
              {"--offline", "help.offline", {}},
              {"--jdk PATH", "help.jdk", {}}});

@@ -187,7 +187,16 @@ if(APPLE)
     target_link_libraries(voyemu_zip PRIVATE voyemu_frame)
 endif()
 target_compile_options(voyemu_zip PRIVATE -Wall -Wextra -Wpedantic)
+# Linux development tool for preparing an independently signed emulator image.
+add_executable(voyemu_avd_layout EXCLUDE_FROM_ALL ../dev/avd/layout.cpp)
+target_link_libraries(voyemu_avd_layout PRIVATE voyemu_zip)
+add_executable(voyemu_avd_filesystem_inputs EXCLUDE_FROM_ALL ../dev/avd/filesystem-inputs.cpp)
+target_link_libraries(voyemu_avd_filesystem_inputs PRIVATE voyemu_zip)
+
 add_executable(voyemu cli/main.cpp cli/main_${voyemu_host_backend}.cpp cli/cli_commands.cpp cli/cli_session.cpp cli/cli_session_${voyemu_host_backend}.cpp)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    add_dependencies(voyemu voyemu_avd_layout voyemu_avd_filesystem_inputs)
+endif()
 get_filename_component(voyemu_project_root "${CMAKE_CURRENT_SOURCE_DIR}/../.." REALPATH)
 set(VOYEMU_CLANG_FORMAT "" CACHE FILEPATH "clang-format 23.1.3 for the format targets; empty selects the pinned tool")
 set(VOYEMU_GOOGLE_JAVA_FORMAT "" CACHE FILEPATH "google-java-format 2.0.0 for the format targets; empty selects the pinned tool")
@@ -660,6 +669,7 @@ if(BUILD_TESTING)
     target_link_libraries(root_layout_test PRIVATE voyemu_core)
     voyemu_add_test(root_layout LABELS host TIMEOUT 60 COMMAND root_layout_test $<TARGET_FILE:voyemu>)
     if(VOYEMU_LINUX)
+        voyemu_add_test(avd_build_display_id LABELS host TIMEOUT 60 COMMAND bash "${voyemu_project_root}/src/dev/avd/build-display-id.test.sh" "${voyemu_project_root}/src/dev/avd/set-build-display-id.sh")
         # The release workflow packs every archive on Linux with git, GNU tar, xz and the jar of the pinned JDK.
         voyemu_add_test(release_archive LABELS host TIMEOUT 300 COMMAND bash "${voyemu_project_root}/src/dev/release/archive.test.sh" "${CMAKE_COMMAND}" "${CMAKE_BINARY_DIR}" "${voyemu_jdk}/bin/jar")
     endif()
@@ -1216,6 +1226,16 @@ install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../../profiles/common/icons/" DES
 install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/../licenses/lzokay.txt" "${CMAKE_CURRENT_SOURCE_DIR}/../licenses/SDL3.txt" "${CMAKE_CURRENT_SOURCE_DIR}/../licenses/SDL3-bundled.txt" "${CMAKE_CURRENT_SOURCE_DIR}/../licenses/stb.txt" DESTINATION notices COMPONENT Runtime)
 if(VOYEMU_LINUX)
     install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/../licenses/SDL3-xdg-user-dirs.txt" "${CMAKE_CURRENT_SOURCE_DIR}/../licenses/SDL3-x11-wayland.txt" DESTINATION notices COMPONENT Runtime)
+    install(TARGETS voyemu_avd_layout voyemu_avd_filesystem_inputs
+            RUNTIME DESTINATION libexec/voyemu/avd COMPONENT Runtime)
+    set(voyemu_avd_dir "${CMAKE_CURRENT_SOURCE_DIR}/../dev/avd")
+    install(PROGRAMS "${voyemu_avd_dir}/apply-native-bridge.sh" "${voyemu_avd_dir}/build-filesystems.sh"
+            "${voyemu_avd_dir}/build-image.sh" "${voyemu_avd_dir}/pack-disks.sh"
+            "${voyemu_avd_dir}/prepare-tools.sh" "${voyemu_avd_dir}/set-build-display-id.sh"
+            "${voyemu_avd_dir}/verify-image.sh"
+            DESTINATION libexec/voyemu/avd COMPONENT Runtime)
+    install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/../../config/config-avd-tools.tsv"
+            DESTINATION libexec/voyemu/avd COMPONENT Runtime)
 endif()
 install(FILES dependencies.lock.json "${VOYEMU_VENDOR_ROOT}/imgui/LICENSE.txt" "${VOYEMU_VENDOR_ROOT}/json/LICENSE.MIT" "${CMAKE_CURRENT_SOURCE_DIR}/../../LICENSE" DESTINATION notices COMPONENT Runtime)
 install(FILES "${VOYEMU_VENDOR_ROOT}/miniz/LICENSE" DESTINATION notices RENAME miniz-LICENSE.txt COMPONENT Runtime)

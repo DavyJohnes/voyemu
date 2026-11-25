@@ -464,9 +464,11 @@ static Json import_selected(const std::filesystem::path &file, const Json &owner
     need(!std::filesystem::exists(output) && std::filesystem::is_directory(output.parent_path()),
          "fresh output required");
     const auto source_identity = cache_file_identity(file);
-    const auto archive_sha = owner.at("sha256").get<std::string>();
-    const auto archive_bytes = owner.at("bytes").get<std::uint64_t>();
     const auto &inner = owner.at("inner");
+    const bool direct = file.filename() == inner.at("file").get<std::string>();
+    const auto &source = direct ? inner : owner;
+    const auto archive_sha = source.at("sha256").get<std::string>();
+    const auto archive_bytes = source.at("bytes").get<std::uint64_t>();
     const auto inner_name = inner.at("file").get<std::string>(),
                inner_sha = inner.at("sha256").get<std::string>();
     const auto inner_bytes = inner.at("bytes").get<std::uint64_t>();
@@ -523,9 +525,10 @@ static Json import_selected(const std::filesystem::path &file, const Json &owner
         total += size;
     }
 
-    need(members.size() <= 64 && reserve <= UINT64_MAX - inner_bytes - 2 * total - bytes,
+    need(members.size() <= 64 &&
+                 reserve <= UINT64_MAX - (direct ? 0 : inner_bytes) - 2 * total - bytes,
          "disk bound overflow");
-    space(output.parent_path(), reserve + inner_bytes + 2 * total + bytes);
+    space(output.parent_path(), reserve + (direct ? 0 : inner_bytes) + 2 * total + bytes);
     need(std::filesystem::create_directory(output), "exclusive output create failed");
     ensure_private_directory(output);
     const auto identity = directory_identity(output);
@@ -553,7 +556,7 @@ static Json import_selected(const std::filesystem::path &file, const Json &owner
     ensure_private_directory(output / "qnx");
     // The nested archive, its members and the assembled segments pass in turn; their bytes advance
     // in proportion to the extent of system.img.
-    std::uint64_t passed = inner_bytes + total, processed = 0, shown = 0;
+    std::uint64_t passed = (direct ? 0 : inner_bytes) + total, processed = 0, shown = 0;
 
     for (std::size_t i = 0; i < offsets.size(); ++i) {
         passed += members[i].bytes;
@@ -573,9 +576,14 @@ static Json import_selected(const std::filesystem::path &file, const Json &owner
             shown = reached;
         }
     };
-    const Member nested_member{inner_name, inner_sha, inner_bytes, stage / "update.tgz"};
-    extract_pinned_zip_members(file, archive_sha, {{inner_name, 0, inner_bytes}},
-                               nested_member.file, inner_bytes, reserve, {}, step);
+    const Member nested_member{inner_name, inner_sha, inner_bytes,
+                               direct ? file : stage / "update.tgz"};
+
+    if (!direct) {
+        extract_pinned_zip_members(file, archive_sha, {{inner_name, 0, inner_bytes}},
+                                   nested_member.file, inner_bytes, reserve, {}, step);
+    }
+
     exact(nested_member);
 
     for (std::size_t i = 0; i < members.size(); ++i) {
@@ -613,15 +621,16 @@ static Json import_selected(const std::filesystem::path &file, const Json &owner
     need(cache_file_identity(file) == source_identity && pinned_file_sha256(file) == archive_sha,
          "owner archive changed");
     std::filesystem::remove_all(stage);
-    Json receipt = {{"schema", 1},
-                    {"kind", "native-owner-zip-tgz-raw-scatter"},
-                    {"archive_sha256", archive_sha},
-                    {"inner_sha256", inner_sha},
-                    {"system", {{"file", "system.img"}, {"bytes", bytes}, {"sha256", system_sha}}},
-                    {"qnx", raw},
-                    {"native", true},
-                    {"guest_started", false},
-                    {"vehicle_modified", false}};
+    Json receipt = {
+            {"schema", 1},
+            {"kind", direct ? "native-owner-tgz-raw-scatter" : "native-owner-zip-tgz-raw-scatter"},
+            {"archive_sha256", archive_sha},
+            {"inner_sha256", inner_sha},
+            {"system", {{"file", "system.img"}, {"bytes", bytes}, {"sha256", system_sha}}},
+            {"qnx", raw},
+            {"native", true},
+            {"guest_started", false},
+            {"vehicle_modified", false}};
     write_private_json(output / "receipt.json", receipt);
     published = true;
 

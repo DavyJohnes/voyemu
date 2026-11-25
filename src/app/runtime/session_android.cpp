@@ -123,6 +123,11 @@ Json launch_android_app(
 void Session::attach_android(const Json &input, bool explicit_cold_boot) {
     auto specification = input;
 
+    if (specification.value("guest_arch", std::string{}) == "x86_64" && !os::host_kvm_available()) {
+        throw VoyemuError("ANDROID_ACCELERATION",
+                          "x86_64 Android requires Linux x64 with access to /dev/kvm");
+    }
+
     if (machine_start_ && !machine_program_.empty() && specification.contains("frontend")) {
         auto &frontend = specification["frontend"];
 
@@ -273,7 +278,8 @@ void Session::attach_android(const Json &input, bool explicit_cold_boot) {
                 machine,
                 std::filesystem::path(specification.at("android_sdk_root").get<std::string>()) /
                         "emulator" / ("qemu-img" + std::string(os::executable_suffix)),
-                specification.value("system_binding", Json()));
+                specification.value("system_binding", Json()),
+                specification.value("signed_system", false));
     }
 
     const auto content = directory_.parent_path().parent_path() / "android";
@@ -314,7 +320,8 @@ void Session::attach_android(const Json &input, bool explicit_cold_boot) {
     prepare_android_avd_impl(home, machine, avd, config_template, config_sha256, base,
                              machine_start_, specification.value("api", 28u), diagnostic_native,
                              content, specification.value("system_binding", Json()),
-                             specification.value("previous_machine", std::string{}));
+                             specification.value("previous_machine", std::string{}),
+                             specification.value("signed_system", false));
     android_quickboot_ = std::move(quickboot);
     android_resume_ = resume;
     android_boot_nonce_ = boot_nonce;
@@ -356,6 +363,14 @@ void Session::attach_android(const Json &input, bool explicit_cold_boot) {
                       "-no-boot-anim",
                       "-prop",
                       "qemu.voyemu.token=" + session_id_};
+
+    if (specification.value("signed_system", false)) {
+        if (specification.contains("system_binding") || diagnostic_native) {
+            throw VoyemuError("SIGNED_ANDROID", "signed system cannot use a replacement base");
+        }
+
+        std::erase(spec.arguments, "-writable-system");
+    }
 
     if (specification.contains("system_binding")) {
         const auto system = android_system_binding(specification);
@@ -471,13 +486,13 @@ void Session::attach_android(const Json &input, bool explicit_cold_boot) {
         throw VoyemuError("ANDROID_AUDIO_DIAGNOSTIC", "direct SDK route required");
     }
 
-    configure_android_audio(spec, audio_output, specification.value("diagnostic_audio", Json()),
-                            directory_, generation);
-    configure_android_native_backend(spec, specification, port, generation, audio_output);
-    logging::write(
-            logging::Level::info, "android", "audio.configured",
-            {{"output", audio_output ? spec.environment.at("QEMU_AUDIO_OUT_DRV") : "disabled"},
-             {"input", "disabled"}});
+    const bool playback = configure_android_audio(spec, audio_output,
+                                                  specification.value("diagnostic_audio", Json()),
+                                                  directory_, generation);
+    configure_android_native_backend(spec, specification, port, generation, playback);
+    logging::write(logging::Level::info, "android", "audio.configured",
+                   {{"output", playback ? spec.environment.at("QEMU_AUDIO_OUT_DRV") : "disabled"},
+                    {"input", "disabled"}});
     // Keep backend board arguments last, after every owned emulator option.
     const auto machine_arguments = android_sdk_machine_arguments(os::host_windows,
                                                                  diagnostic_native);
@@ -544,6 +559,8 @@ void Session::attach_android(const Json &input, bool explicit_cold_boot) {
     spec.environment["ADB_VENDOR_KEYS"] = "";
     android_spec_["owned_adb"] = {
             {"schema", 1}, {"owner", session_id_}, {"console_port", port}, {"adbd_port", port + 1}};
+    // The SDK selects its backend from the arguments, independently of VoyEmu presentation.
+    android_sdk_headless_ = android_sdk_headless_backend(spec.arguments);
     record_android_processes(true);
     try {
         android_ = ChildProcess::launch(spec);
@@ -1209,7 +1226,8 @@ void Session::stop_android(std::unique_lock<std::recursive_mutex> &state, bool s
                 android_spec_.at("machine").get<std::string>(),
                 std::filesystem::path(android_spec_.at("android_sdk_root").get<std::string>()) /
                         "emulator" / ("qemu-img" + std::string(os::executable_suffix)),
-                android_spec_.value("system_binding", Json()));
+                android_spec_.value("system_binding", Json()),
+                android_spec_.value("signed_system", false));
     }
 
     if (snapshot_saved && guest_synced && kill_submitted && owned_shutdown && clean_exit) {

@@ -8,12 +8,14 @@ namespace voyemu {
 enum class ProfilePlatform {
     qinggan09,
     qinggan11,
-    passion
+    passion,
+    aosp
 };
 // "8155" is the Qualcomm SA8155 board, "nxp" the NXP i.MX 8QuadMax board.
 enum class ProfileBoard {
     sa8155,
-    nxp
+    nxp,
+    ranchu
 };
 
 inline ProfilePlatform profile_platform(const Json &definition) {
@@ -33,8 +35,11 @@ inline ProfilePlatform profile_platform(const Json &definition) {
         return ProfilePlatform::passion;
     }
 
-    throw VoyemuError("PROFILE_INVALID",
-                      "profile platform must be qinggan09, qinggan11 or passion");
+    if (value == "aosp" && definition.value("board", std::string{}) == "ranchu") {
+        return ProfilePlatform::aosp;
+    }
+
+    throw VoyemuError("PROFILE_INVALID", "unsupported profile platform");
 }
 
 inline ProfileBoard profile_board(const Json &definition) {
@@ -50,7 +55,17 @@ inline ProfileBoard profile_board(const Json &definition) {
         return ProfileBoard::nxp;
     }
 
-    throw VoyemuError("PROFILE_INVALID", "profile board must be 8155 or nxp");
+    if (value == "ranchu" && definition.value("platform", std::string{}) == "aosp") {
+        return ProfileBoard::ranchu;
+    }
+
+    throw VoyemuError("PROFILE_INVALID", "unsupported profile board");
+}
+
+// The clean SDK guest has no OEM vehicle adapters.
+inline bool android_sdk_profile(const Json &definition) {
+    return definition.is_object() && definition.value("platform", std::string{}) == "aosp" &&
+           definition.value("board", std::string{}) == "ranchu";
 }
 
 // The platform and board of a profile, which scope its recipes.
@@ -97,6 +112,13 @@ inline std::string runtime_profile_reference(const Json &definition,
 
     if (id.empty() || (!verified_profile.empty() && id != verified_profile)) {
         return {};
+    }
+
+    if (definition.contains("variant")) {
+        const auto &variant = definition.at("variant");
+        const auto reference = variant.value("recipeProfile", std::string{});
+
+        return valid_profile_name(reference) && reference != id ? reference : std::string{};
     }
 
     if (!definition.contains("capture") || !definition.at("capture").is_object()) {

@@ -13,6 +13,7 @@
 #include "passion_presentation.hpp"
 #include "passion_wheel.hpp"
 #include "phone_control.hpp"
+#include "portable_runtime_internal.hpp"
 #include "process.hpp"
 #include "profile_catalog.hpp"
 #include "profile_runtime.hpp"
@@ -23,6 +24,7 @@
 #include "qnx_process_ram.hpp"
 #include "qnx_runtime_layout.hpp"
 #include "quickboot.hpp"
+#include "signed_android.hpp"
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
@@ -1658,9 +1660,10 @@ void passion_system_upgrade_checks(const std::filesystem::path &stage,
                                         {"mode", "0644"},
                                         {"mutable", false}}})},
             {"checks", Json::array()},
-            {"events", Json::array({{{"phase", "boot-art-compiled"},
-                                     {"files", 18},
-                                     {"command", api30_framework_boot::command(definition)}}})}};
+            {"events",
+             Json::array({{{"phase", "boot-art-compiled"},
+                           {"files", 18},
+                           {"command", api30_framework_boot::command(definition, "arm64")}}})}};
 
     for (const auto &path : api30_framework_boot::paths(definition)) {
         candidate["installed"].push_back({{"artifact", "compiled-boot-image"}, {"target", path}});
@@ -5185,6 +5188,207 @@ int main(int argc, char **argv) {
             auto nxp_definition = definition30;
             nxp_definition["id"] = "test-nxp";
             nxp_definition["platform"] = "qinggan09";
+            {
+                Json sdk = {
+                        {"schema", 1},
+                        {"id", "sample-sdk"},
+                        {"title", "SDK test"},
+                        {"platform", "aosp"},
+                        {"board", "ranchu"},
+                        {"emulator",
+                         {{"acceleration", "kvm"}, {"gpuMode", "host"}, {"audioOutput", false}}},
+                        {"displays", Json::array({{{"role", "primary"},
+                                                   {"guest", "android"},
+                                                   {"width", 800},
+                                                   {"height", 600},
+                                                   {"density", 160}},
+                                                  {{"role", "secondary"},
+                                                   {"guest", "android"},
+                                                   {"width", 800},
+                                                   {"height", 600},
+                                                   {"density", 160}}})},
+                        {"android",
+                         {{"package", "system-images;android-30;default;x86_64"},
+                          {"revision", "10"},
+                          {"url",
+                           "https://dl.google.com/android/repository/sys-img/android/x86_64-30_r11.zip"},
+                          {"sha256", std::string(64, 'a')},
+                          {"features", {{"MultiDisplay", "on"}}}}}};
+                auto launch = [&]() {
+                    return portable_android_launch(
+                            app, PortableRuntimeHostBindings{}, seed30 / "android", clean30,
+                            bound30 / "config-template.ini", "sample-sdk", Json::array(), sdk);
+                };
+
+                auto selected = sdk;
+                selected["target"] = {{"name", "x86"}, {"guestAbi", "x86_64"}};
+                Json prepared = {{"android",
+                                  {{"api", 30},
+                                   {"abi", "x86_64"},
+                                   {"target", "x86"},
+                                   {"base_archive_sha256", sdk.at("android").at("sha256")}}}};
+                portable_detail::check_android_guest_identity(selected, prepared);
+                const auto bad_target = [&](const Json &definition, const Json &machine) {
+                    try {
+                        portable_detail::check_android_guest_identity(definition, machine);
+                    } catch (const VoyemuError &) {
+                        return true;
+                    }
+
+                    return false;
+                };
+
+                for (const auto &[field, wrong] : std::map<std::string, std::string>{
+                             {"target", "arm"},
+                             {"abi", "arm64-v8a"},
+                             {"base_archive_sha256", std::string(64, 'b')}}) {
+                    auto mismatched = prepared;
+                    mismatched["android"][field] = wrong;
+                    check(bad_target(selected, mismatched),
+                          "prepared Android target binding was relaxed");
+                }
+
+                prepared["android"].erase("target");
+                check(bad_target(selected, prepared),
+                      "targeted x86 manifest lost its target silently");
+                portable_detail::check_android_guest_identity(sdk, prepared);
+
+                auto clean_sdk = sdk;
+                clean_sdk["android"]["clean_base"] = android_base(30).at("clean_base");
+                const auto clean_pins = portable_clean_boot_pins(clean_sdk.at("android"));
+                check(checked_signed_android_boot_pins(app, seed30, clean_sdk, prepared) ==
+                              clean_pins,
+                      "clean x86 SDK machine unexpectedly required a local signature");
+                check(checked_signed_android_boot_pins(app, seed30, definition30,
+                                                       seed_metadata30) ==
+                              portable_clean_boot_pins(definition30.at("android")),
+                      "legacy ARM machine unexpectedly required a local signature");
+                auto signed_target = clean_sdk;
+                signed_target["target"] = {{"name", "x86"},
+                                           {"guestAbi", "x86_64"},
+                                           {"preparation", "signed-offline"},
+                                           {"androidBase", "synthetic-base"}};
+                auto legacy_vehicle = clean_sdk;
+                legacy_vehicle["platform"] = "passion";
+                legacy_vehicle["board"] = "8155";
+
+                for (const auto &requires_signature : {signed_target, legacy_vehicle}) {
+                    bool rejected = false;
+                    try {
+                        (void)checked_signed_android_boot_pins(app, seed30, requires_signature,
+                                                               prepared);
+                    } catch (const VoyemuError &error) {
+                        rejected = error.code() == "SIGNED_ANDROID";
+                    }
+
+                    check(rejected, "portable Android boot checks accepted missing signing proof");
+                }
+
+                auto bundled_machine = prepared;
+                bundled_machine["profile"] = embedded_profile_names(ProfilePlatform::passion,
+                                                                    ProfileBoard::sa8155)
+                                                     .at(0);
+                auto claimed_sdk = clean_sdk;
+                claimed_sdk["id"] = bundled_machine.at("profile");
+                bool bundled_rejected = false;
+                try {
+                    (void)checked_signed_android_boot_pins(app, seed30, claimed_sdk,
+                                                           bundled_machine);
+                } catch (const VoyemuError &error) {
+                    bundled_rejected = error.code() == "SIGNED_ANDROID";
+                }
+
+                check(bundled_rejected, "bundled vehicle identity did not enforce signing proof");
+
+                if (os::dependency_host == "linux/x64") {
+                    const auto actual = launch();
+                    check(actual.at("guest_arch") == "x86_64" &&
+                                  actual.at("args").at(0) == "-accel" &&
+                                  actual.at("args").at(1) == "on" &&
+                                  actual.at("gpuMode") == "host" &&
+                                  actual.at("audioOutput") == false && !actual.contains("home") &&
+                                  !actual.contains("vehicle_adapter") &&
+                                  !actual.contains("wheel_adapter"),
+                          "SDK guest requires KVM, host graphics and its own Android HOME");
+                    sdk["emulator"]["audioOutput"] = true;
+                    check(launch().at("audioOutput") == true,
+                          "an x86 Android variant can enable host audio output");
+                    sdk["emulator"].erase("audioOutput");
+                    check(launch().at("audioOutput") == false,
+                          "KVM guest with unspecified audio must start silently on Linux");
+                    const auto clean_seed = root / "sdk-origin-check";
+                    auto &descriptor = sdk["android"];
+                    descriptor["clean_base"] = android_base(30).at("clean_base");
+                    auto &clean = descriptor["clean_base"];
+                    Json published = {{"scope", "android"},
+                                      {"android",
+                                       {{"api", 30},
+                                        {"abi", "x86_64"},
+                                        {"base_archive_sha256", descriptor.at("sha256")}}}};
+                    Json receipt = {{"archive_sha256", descriptor.at("sha256")},
+                                    {"package", descriptor.at("package")},
+                                    {"revision", descriptor.at("revision")},
+                                    {"prepared_VM", false}};
+
+                    for (auto &[name, pin] : clean["boot_files"].items()) {
+                        put(clean_seed / "android" / name, name);
+                        pin = sha256_bytes(name);
+                        receipt["files"][name] = {{"sha256", pin}, {"bytes", name.size()}};
+                        published["android"]["boot_files"][name] = {{"file", "android/" + name},
+                                                                    {"sha256", pin},
+                                                                    {"bytes", name.size()}};
+                    }
+
+                    for (const auto &[name, pin] : clean.at("images").items()) {
+                        receipt["files"][name] = {{"sha256", pin}, {"bytes", 42}};
+                        published["android"]["images"][name] = {
+                                {"file", "android/" + name}, {"sha256", pin}, {"bytes", 42}};
+                    }
+
+                    ensure_private_directory(clean_seed / "evidence");
+                    const auto origin = clean_seed / "evidence/candidate.json";
+                    write_private_json(origin, receipt);
+                    clean["receipt_sha256"] = published["candidate_receipt_sha256"] =
+                            sha256_file(origin);
+                    portable_detail::check_sdk_seed(clean_seed, sdk, published);
+
+                    for (const auto *field : {"system", "abi", "receipt", "boot"}) {
+                        auto mixed = published;
+                        const std::string_view which(field);
+
+                        if (which == "system") {
+                            mixed["android"]["images"]["system.img"]["sha256"] = std::string(64,
+                                                                                             '0');
+                        } else if (which == "abi") {
+                            mixed["android"]["abi"] = "arm64-v8a";
+                        } else if (which == "receipt") {
+                            mixed["candidate_receipt_sha256"] = std::string(64, '0');
+                        } else {
+                            put(clean_seed / "android/kernel-ranchu", "changed kernel");
+                        }
+
+                        bool denied = false;
+                        try {
+                            portable_detail::check_sdk_seed(clean_seed, sdk, mixed);
+                        } catch (const std::exception &) {
+                            denied = true;
+                        }
+
+                        check(denied, "mixed stock SDK seed was accepted");
+                    }
+
+                    sdk["emulator"]["gpuMode"] = "swiftshader_indirect";
+                }
+
+                bool rejected = false;
+                try {
+                    (void)launch();
+                } catch (const VoyemuError &) {
+                    rejected = true;
+                }
+
+                check(rejected, "incompatible host or renderer accepted for KVM SDK guest");
+            }
             nxp_definition["board"] = "nxp";
             nxp_definition["android"] = {
                     {"package", "system-images;android-28;default;arm64-v8a"},

@@ -13,6 +13,201 @@ public final class PreparationMainTest {
         }
     }
 
+    private static void checkVariant(Path root, Path recipe, Map<String, Object> original)
+            throws Exception {
+        String parent = recipe.getFileName().toString(), id = "test-profile-x86_64";
+        Map<String, Object> definition = new LinkedHashMap<>(original);
+
+        definition.putAll(
+                Map.of(
+                        "id",
+                        parent,
+                        "platform",
+                        "passion",
+                        "board",
+                        "8155",
+                        "original",
+                        Map.of(),
+                        "verify",
+                        Map.of("services", List.of("stock.service")),
+                        "android",
+                        Map.of(
+                                "package",
+                                "system-images;android-30;default;arm64-v8a",
+                                "features",
+                                Map.of("VirtioInput", "on")),
+                        "emulator",
+                        Map.of("memory", 2048)));
+        Files.writeString(recipe.resolve("profile.json"), Json.write(definition));
+        Path directory = Files.createDirectory(root.resolve("profiles/" + id));
+        Files.writeString(
+                directory.resolve("profile.json"),
+                Json.write(
+                        Map.of(
+                                "id",
+                                id,
+                                "schema",
+                                1,
+                                "title",
+                                "Test vehicle",
+                                "status",
+                                "incomplete",
+                                "features",
+                                Map.of(
+                                        "mcu_property_runtime",
+                                        false,
+                                        "display_power_runtime",
+                                        false),
+                                "emulator",
+                                Map.of(
+                                        "acceleration",
+                                        "kvm",
+                                        "gpuMode",
+                                        "host",
+                                        "memory",
+                                        4096,
+                                        "audioOutput",
+                                        true),
+                                "variant",
+                                Map.of("recipeProfile", parent, "androidBase", "test-base"))));
+        Path descriptor =
+                Files.createDirectories(root.resolve("profiles/common/android-bases"))
+                        .resolve("test-base.json");
+        check(
+                Artifacts.nativeComponentAbi(Map.of("abi", "arm64-v8a"), "x86_64")
+                                .equals("arm64-v8a")
+                        && Artifacts.nativeComponentAbi(Map.of(), "x86_64").equals("x86_64"),
+                "OEM library must match the consuming executable");
+        var base =
+                Map.of(
+                        "package",
+                        "system-images;android-30;default;x86_64",
+                        "clean_base",
+                        Map.of(),
+                        "features",
+                        Map.of("MultiDisplay", "on"));
+        Files.writeString(descriptor, Json.write(base));
+        var registry = new ProfileRegistry(root, id);
+        var variant = registry.get(id);
+        var effective = variant.data();
+        check(
+                registry.sourceDirectory(variant).equals(recipe)
+                        && variant.referenceProfile().equals(parent),
+                "variant recipe path");
+        check(
+                Json.obj(Json.obj(effective, "android"), "features")
+                                .equals(Map.of("VirtioInput", "on", "MultiDisplay", "on"))
+                        && Json.integer(Json.obj(effective, "emulator"), "memory") == 4096
+                        && Boolean.TRUE.equals(Json.obj(effective, "emulator").get("audioOutput"))
+                        && Json.obj(effective, "features")
+                                .equals(
+                                        Map.of(
+                                                "mcu_property_runtime",
+                                                false,
+                                                "display_power_runtime",
+                                                false))
+                        && Json.obj(effective, "original").isEmpty(),
+                "variant resolved Android and vehicle settings");
+        String payload = Json.write(effective) + "\n";
+        var request =
+                new LinkedHashMap<String, Object>(
+                        Map.of(
+                                "schema",
+                                1,
+                                "operation",
+                                "plan",
+                                "root",
+                                root.toString(),
+                                "profile",
+                                id,
+                                "profile_sha256",
+                                NativeCore.hash(
+                                        payload.getBytes(java.nio.charset.StandardCharsets.UTF_8)),
+                                "resolved_profile",
+                                payload));
+        check(PreparationMain.run(request).get("profile").equals(id), "variant plan");
+        Files.writeString(
+                descriptor,
+                Json.write(
+                        Map.of(
+                                "package",
+                                "system-images;android-30;default;x86_64",
+                                "clean_base",
+                                Map.of("sha", "changed"))));
+        boolean rejected = false;
+
+        try {
+            registry.verifySource(variant);
+        } catch (Failure failure) {
+            rejected = failure.code.equals("PROFILE_RESOURCE_MODIFIED");
+        }
+
+        check(rejected, "change to SDK descriptor escaped source check");
+        rejected = false;
+
+        try {
+            PreparationMain.run(request);
+        } catch (Failure failure) {
+            rejected = failure.code.equals("PREPARATION_PROFILE_PIN");
+        }
+
+        check(rejected, "stale effective descriptor accepted");
+        checkTarget(root, recipe, definition, descriptor, base, request);
+    }
+
+    private static void checkTarget(
+            Path root,
+            Path recipe,
+            Map<String, Object> definition,
+            Path descriptor,
+            Map<String, ?> base,
+            Map<String, Object> request)
+            throws Exception {
+        String parent = recipe.getFileName().toString();
+
+        definition.put(
+                "targets",
+                Map.of(
+                        "arm", Map.of("guestAbi", "arm64-v8a", "preparation", "sdk"),
+                        "x86",
+                                Map.of(
+                                        "guestAbi", "x86_64",
+                                        "preparation", "signed-offline",
+                                        "androidBase", "test-base",
+                                        "emulator",
+                                                Map.of("acceleration", "kvm", "gpuMode", "host"))));
+        Files.writeString(recipe.resolve("profile.json"), Json.write(definition));
+        var pinnedBase = new LinkedHashMap<String, Object>(base);
+        pinnedBase.put("sha256", "1".repeat(64));
+        Files.writeString(descriptor, Json.write(pinnedBase));
+        var targetRegistry = new ProfileRegistry(root, parent, "x86");
+        var selected = targetRegistry.get(parent).data();
+        check(
+                targetRegistry.sourceDirectory(targetRegistry.get(parent)).equals(recipe)
+                        && selected.get("original").equals(definition.get("original")),
+                "resolved target retains the canonical OEM source");
+        var targetIdentity = Map.of("name", "x86", "abi", "x86_64", "base_sha256", "1".repeat(64));
+        var resolved = Json.write(selected);
+        request.put("profile", parent);
+        request.put("resolved_profile", resolved);
+        request.put(
+                "profile_sha256",
+                NativeCore.hash(resolved.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        request.put("target", targetIdentity);
+        request.put("android_base", Json.obj(selected, "android"));
+        check(PreparationMain.run(request).get("target").equals(targetIdentity), "target plan");
+        request.put("android_base", Json.obj(definition, "android"));
+        boolean rejected = false;
+
+        try {
+            PreparationMain.run(request);
+        } catch (Failure failure) {
+            rejected = failure.code.equals("PREPARATION_PROFILE_PIN");
+        }
+
+        check(rejected, "selected ABI cannot reuse another target's Android base");
+    }
+
     public static void main(String[] args) throws Exception {
         Path project =
                 Path.of(System.getProperty("voyemu.project.root", System.getProperty("user.dir")))
@@ -107,6 +302,7 @@ public final class PreparationMainTest {
             }
 
             check(refused, "guest launch accepted by preparation helper");
+            checkVariant(root, profile, definition);
             Path separatePlatform = root.resolve("java-sdk/android.jar");
             Storage.directory(separatePlatform.getParent());
             Files.writeString(separatePlatform, "pinned platform fixture");

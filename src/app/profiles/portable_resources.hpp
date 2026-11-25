@@ -4,6 +4,7 @@
 #include "os/fs.hpp"
 #include "portable_runtime.hpp"
 #include "process.hpp"
+#include "profile_catalog.hpp"
 #include "profile_originals.hpp"
 #include "project_files.hpp"
 #include "qnx_imagefs.hpp"
@@ -83,8 +84,8 @@ inline StartupVideoPin startup_video_pin(const Json &video) {
 inline std::string portable_startup_video(const std::filesystem::path &root,
                                           std::string_view profile, const StartupVideoPin &video) {
     const auto &image = video.image, &nested = video.nested;
-    const auto qnx = read_private_json(
-            root / "profiles" / std::string(profile) / "profile-qnx.json", 128 * 1024);
+    const auto recipe = profile_recipe_directory(root, profile);
+    const auto qnx = read_private_json(recipe / "profile-qnx.json", 128 * 1024);
     const auto &original = qnx.at("originals").at(image);
     auto key = image;
 
@@ -99,7 +100,7 @@ inline std::string portable_startup_video(const std::filesystem::path &root,
 
     portable_resource_need(original.at("file") == image && region != nullptr,
                            "declared nested QNX image required");
-    const auto file = qnx_originals_directory(root, profile) / image;
+    const auto file = qnx_originals_directory(root, recipe.filename().string()) / image;
     portable_resource_need(std::filesystem::is_regular_file(file) &&
                                    std::filesystem::file_size(file) == original.at("bytes"),
                            "imported QNX image required; fetch the profile");

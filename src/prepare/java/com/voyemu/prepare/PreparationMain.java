@@ -19,9 +19,11 @@ public final class PreparationMain {
         Path verify(Path path, String sha256);
     }
 
-    // profile.json pins the archive and the contents of each supported clean ARM64 image.
+    // The vehicle definition pins the SDK archive and the clean image contents.
     private static boolean registeredApi30Base(Map<String, Object> base) {
-        boolean api30 = "system-images;android-30;default;arm64-v8a".equals(base.get("package"));
+        boolean api30 =
+                "system-images;android-30;default;arm64-v8a".equals(base.get("package"))
+                        || "system-images;android-30;default;x86_64".equals(base.get("package"));
 
         Failure.require(
                 (api30 || "system-images;android-28;default;arm64-v8a".equals(base.get("package")))
@@ -350,7 +352,7 @@ public final class PreparationMain {
                                 || id.equals("property-contexts-api30")
                                 || id.equals("keymanager-contexts-api30")
                                 || id.equals("original-navi-selinux"))
-                        ? profile.id().equals(output.get("profile"))
+                        ? profile.referenceProfile().equals(output.get("profile"))
                         : !output.containsKey("profile"),
                 "PREPARATION_NATIVE_FILE",
                 "Native output profile differs",
@@ -397,7 +399,7 @@ public final class PreparationMain {
         Path originals =
                 absolute(Json.str(request, "root"))
                         .resolve(".local/profiles")
-                        .resolve(profile.id())
+                        .resolve(profile.recipeId())
                         .resolve("originals");
         Map<String, Object> declared = Json.obj(profile.data(), "original");
 
@@ -434,7 +436,7 @@ public final class PreparationMain {
         Path apk =
                 absolute(Json.str(request, "root"))
                         .resolve(".local/profiles")
-                        .resolve(profile.id())
+                        .resolve(profile.recipeId())
                         .resolve("originals/Navi.apk");
 
         Failure.require(
@@ -472,7 +474,7 @@ public final class PreparationMain {
             String id = entry.getKey();
             Path source =
                     Storage.confined(
-                            root.resolve("profiles").resolve(profile.id()),
+                            root.resolve("profiles").resolve(profile.recipeId()),
                             (String) entry.getValue());
             Map<String, Object> definition =
                     Json.object(Json.parse(Files.readString(source.resolve("component.json"))));
@@ -514,23 +516,40 @@ public final class PreparationMain {
                     "Owned receipt required",
                     3);
             Map<String, Object> proof = Json.object(Json.parse(Files.readString(receipt)));
+            var android = Json.obj(profile.data(), "android");
+            registeredApi30Base(android);
+            String sdkPackage = Json.str(android, "package");
+            String abi =
+                    Artifacts.nativeComponentAbi(
+                            definition, sdkPackage.substring(sdkPackage.lastIndexOf(';') + 1));
             Failure.require(
                     Json.integer(proof, "schema") == 1
                             && "native".equals(proof.get("type"))
                             && type.equals(proof.get("output_type"))
                             && Json.integer(proof, "api") == recipeApi
-                            && "arm64-v8a".equals(proof.get("abi"))
+                            && abi.equals(proof.get("abi"))
                             && name.equals(proof.get("output"))
                             && hash.equals(proof.get("sha256")),
                     "PREPARATION_NATIVE_COMPONENT",
                     "Native component receipt differs",
                     3);
+
+            if (definition.containsKey("sourceBuildSha256")) {
+                Failure.require(
+                        "recipe".equals(proof.get("source"))
+                                && hash.equals(Json.str(definition, "sourceBuildSha256")),
+                        "PREPARATION_NATIVE_COMPONENT",
+                        "Native source build differs from its declared recipe pin",
+                        3);
+            }
+
             Path output = pinned.verify(Storage.confined(receipt.getParent(), name), hash);
             Failure.require(
                     Files.size(output) == Json.integer(proof, "bytes"),
                     "PREPARATION_NATIVE_COMPONENT",
                     "Native component extent differs",
                     3);
+            Artifacts.elf(output, abi);
             result.put("component:" + id, output);
         }
 
@@ -556,6 +575,77 @@ public final class PreparationMain {
         return path;
     }
 
+    private static void verifyRequestedProfile(
+            Path root,
+            ProfileRegistry.Profile profile,
+            Map<String, Object> request,
+            String operation)
+            throws Exception {
+        Failure.require(
+                !operation.equals("build-artifacts") || !profile.data().containsKey("targets"),
+                "PROFILE_TARGET",
+                "Artifact preparation requires an explicit resolved target",
+                2);
+        String profileSha;
+
+        var target = targetIdentity(profile);
+
+        if (!target.isEmpty()) {
+            Failure.require(
+                    target.equals(Json.obj(request, "target"))
+                            && Json.obj(profile.data(), "android")
+                                    .equals(Json.obj(request, "android_base")),
+                    "PREPARATION_PROFILE_PIN",
+                    "Requested target, ABI or Android base differs from profile",
+                    3);
+        } else {
+            Failure.require(
+                    !request.containsKey("target") && !request.containsKey("android_base"),
+                    "PREPARATION_PROFILE_PIN",
+                    "Unexpected target or Android base",
+                    3);
+        }
+
+        if (profile.data().containsKey("variant") || !target.isEmpty()) {
+            String effective = Json.str(request, "resolved_profile");
+            byte[] bytes = effective.getBytes(StandardCharsets.UTF_8);
+            Failure.require(
+                    bytes.length <= 1024 * 1024
+                            && profile.data().equals(Json.object(Json.parse(effective))),
+                    "PREPARATION_PROFILE_PIN",
+                    "Resolved profile differs from selected recipe or SDK base",
+                    3);
+            profileSha = NativeCore.hash(bytes);
+        } else {
+            Failure.require(
+                    !request.containsKey("resolved_profile"),
+                    "PREPARATION_PROFILE_PIN",
+                    "Unexpected resolved profile",
+                    3);
+            profileSha =
+                    FilesSupport.hash(root.resolve("profiles/" + profile.id() + "/profile.json"));
+        }
+
+        Failure.require(
+                profileSha.equals(Json.str(request, "profile_sha256")),
+                "PREPARATION_PROFILE_PIN",
+                "Profile differs from request pin",
+                3);
+    }
+
+    private static Map<String, Object> targetIdentity(ProfileRegistry.Profile profile) {
+        if (!profile.data().containsKey("target")) {
+            return Map.of();
+        }
+
+        var target = Json.obj(profile.data(), "target");
+
+        return Map.of(
+                "name", Json.str(target, "name"),
+                "abi", Json.str(target, "guestAbi"),
+                "base_sha256", Json.str(Json.obj(profile.data(), "android"), "sha256"));
+    }
+
     static Map<String, Object> run(Map<String, Object> request) throws Exception {
         Failure.require(
                 Json.integer(request, "schema") == 1,
@@ -569,18 +659,22 @@ public final class PreparationMain {
                 "Expected plan or build-artifacts",
                 2);
         Path root = absolute(Json.str(request, "root"));
-        ProfileRegistry registry = new ProfileRegistry(root, Json.str(request, "profile"));
+        String target =
+                request.containsKey("target")
+                        ? Json.str(Json.obj(request, "target"), "name")
+                        : null;
+        ProfileRegistry registry = new ProfileRegistry(root, Json.str(request, "profile"), target);
         ProfileRegistry.Profile profile = registry.get(Json.str(request, "profile"));
-        Failure.require(
-                FilesSupport.hash(root.resolve("profiles/" + profile.id() + "/profile.json"))
-                        .equals(Json.str(request, "profile_sha256")),
-                "PREPARATION_PROFILE_PIN",
-                "Profile differs from request pin",
-                3);
+        verifyRequestedProfile(root, profile, request, operation);
         Map<String, Object> plan = new LinkedHashMap<>();
         plan.put("schema", 1);
         plan.put("operation", operation);
         plan.put("profile", profile.id());
+
+        if (target != null) {
+            plan.put("target", targetIdentity(profile));
+        }
+
         plan.put(
                 "components",
                 Json.obj(profile.data(), "components").keySet().stream().sorted().toList());
@@ -750,7 +844,7 @@ public final class PreparationMain {
                         name,
                         FilesSupport.hash(
                                 Storage.confined(
-                                        root.resolve("profiles/" + profile.id() + "/patches"),
+                                        root.resolve("profiles/" + profile.recipeId() + "/patches"),
                                         name)));
             }
         }
@@ -894,7 +988,7 @@ public final class PreparationMain {
                             Json.parse(
                                     Files.readString(
                                             Storage.confined(
-                                                    root.resolve("profiles/" + profile.id()),
+                                                    root.resolve("profiles/" + profile.recipeId()),
                                                     value + "/component.json"))));
 
             if (component.containsKey("externalSources")) {

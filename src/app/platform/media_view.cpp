@@ -187,7 +187,8 @@ struct MediaView::Impl {
     std::vector<Screen> screens;
     // The Android screens as emulator displays; the multimedia screens come first.
     std::vector<GuestDisplay> displays;
-    bool require_oem{}, presentation_only_mode{};
+    bool require_oem{};
+    std::string expected_presentation_family;
     mutable std::mutex mutex;
     std::condition_variable wake;
     std::atomic<bool> stopped{}, shown{true};
@@ -205,7 +206,11 @@ struct MediaView::Impl {
           id(options.session.filename().string()) {
         const auto owner = read_private_json(options.session / "media-view-owner.json", 4096);
         require_oem = require_oem_systemui(owner, id);
-        presentation_only_mode = presentation_only(owner, id);
+
+        if (presentation_only(owner, id)) {
+            expected_presentation_family = owner.at("presentation_family").get<std::string>();
+        }
+
         screens = owner_screens(owner, id);
         std::size_t multimedia = 0;
 
@@ -366,8 +371,11 @@ struct MediaView::Impl {
 
                     const auto android = runtime.at("deliveries").at("android");
                     const bool powered = android.value("powered", true),
-                               ready = powered && presentation_ready(android, require_oem,
-                                                                     presentation_only_mode);
+                               ready = powered &&
+                                       android.value("presentation_family", std::string{}) ==
+                                               expected_presentation_family &&
+                                       presentation_ready(android, require_oem,
+                                                          !expected_presentation_family.empty());
                     {
                         std::lock_guard lock(mutex);
                         state.powered = powered;

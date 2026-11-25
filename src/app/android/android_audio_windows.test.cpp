@@ -20,3 +20,5 @@ void wine_volume_root_case(const std::filesystem::path &directory) {
         }
     }
 }
+
+void linux_pulse_audio_case() {}

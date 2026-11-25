@@ -257,8 +257,12 @@ Json AndroidQuickBoot::disks() const {
 
     result["encryptionkey.img"] = avd_disk_stamp(machine_ / "encryptionkey.img",
                                                  "encryptionkey.img");
-    result["system.img.qcow2"] = avd_disk_stamp(system.overlay, "system.img.qcow2");
-    result["vendor.img.qcow2"] = avd_disk_stamp(machine_ / "vendor.img.qcow2", "vendor.img.qcow2");
+
+    if (!key_.value("prepared", Json::object()).value("signed_system", false)) {
+        result["system.img.qcow2"] = avd_disk_stamp(system.overlay, "system.img.qcow2");
+        result["vendor.img.qcow2"] = avd_disk_stamp(machine_ / "vendor.img.qcow2",
+                                                    "vendor.img.qcow2");
+    }
 
     const auto base =
             key_.value("prepared", Json::object()).value("base", (machine_ / "base").string());

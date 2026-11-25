@@ -3,9 +3,33 @@
 #include <cstdint>
 #include <map>
 #include <string>
+#include <string_view>
 namespace voyemu {
-// Validates the descriptor of a supported clean ARM64 image, the android object of profile.json
-// with its revision, URL and archive pin, and returns its API.
+struct AndroidBaseIdentity {
+    unsigned api;
+    std::string_view abi;
+};
+
+inline AndroidBaseIdentity android_package_identity(std::string_view package) {
+    if (package == "system-images;android-30;default;x86_64") {
+        return {30, "x86_64"};
+    }
+
+    if (package == "system-images;android-30;default;arm64-v8a") {
+        return {30, "arm64-v8a"};
+    }
+
+    if (package == "system-images;android-28;default;arm64-v8a") {
+        return {28, "arm64-v8a"};
+    }
+
+    return {};
+}
+
+// Verifies the SDK package, revision, URL and archive pin declared by the profile.
+AndroidBaseIdentity native_base_identity(const Json &descriptor);
+// Validates the guest accelerator contract independently of the current host.
+bool android_kvm(const Json &definition);
 unsigned native_base_api(const Json &descriptor);
 struct CleanBasePartition {
     std::uint64_t offset{}, bytes{};

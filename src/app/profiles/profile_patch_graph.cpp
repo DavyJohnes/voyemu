@@ -125,10 +125,18 @@ std::string file_pin(const std::filesystem::path &p, std::size_t bound) {
 Json plan_profile_patch_graph(const std::filesystem::path &root, std::string_view profile) {
     ordinary(root);
     need(valid_profile_name(profile), "safe profile name required");
-    const auto directory = root / "profiles" / std::string(profile),
-               definition_file = directory / "profile.json";
-    const auto definition_pin = file_pin(definition_file, 512 * 1024);
-    const auto definition = read_private_json(definition_file, 512 * 1024);
+    const auto directory = profile_recipe_directory(root, profile);
+    const auto checked_definition = [&] {
+        return authoring_profile_bytes(root, profile, [&](const auto &path) {
+            const auto pin = file_pin(path, 512 * 1024);
+            const auto bytes = read_private_json_bytes(path, 512 * 1024);
+            need(pin == sha256_bytes(bytes), "profile changed during read");
+
+            return bytes;
+        });
+    };
+    const auto definition_bytes = checked_definition();
+    const auto definition = Json::parse(definition_bytes);
     need(definition.at("schema") == 1 && definition.at("patches").is_object() &&
                  definition.at("patches").size() <= 256,
          "bounded patch map required");
@@ -363,8 +371,7 @@ Json plan_profile_patch_graph(const std::filesystem::path &root, std::string_vie
                          {"supported", complete}});
     }
 
-    need(file_pin(definition_file, 512 * 1024) == definition_pin,
-         "profile changed during planning");
+    need(checked_definition() == definition_bytes, "profile changed during planning");
 
     for (auto it = all_source_pins.begin(); it != all_source_pins.end(); ++it) {
         need(file_pin(directory / "patches" / it.key(), 1024 * 1024) ==

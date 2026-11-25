@@ -90,10 +90,11 @@ ProfileFileNodes plan_profile_codec_file_node(const std::filesystem::path &root,
 
         return bytes;
     };
-    const auto directory = root / "profiles" / std::string(profile),
-               profile_file = directory / "profile.json";
-    const auto profile_bytes = read(profile_file, 512 * 1024);
-    const auto definition = Json::parse(profile_bytes);
+    const auto definition =
+            Json::parse(authoring_profile_bytes(root, profile, [&](const auto &path) {
+                return read(path, 512 * 1024);
+            }));
+    const auto directory = profile_recipe_directory(root, profile);
     need(profile_scope(definition) == qinggan09_scope && definition.at("schema") == 1 &&
                  native_base_api(definition.at("android")) == 28,
          "registered clean A9 codec base required");
@@ -165,7 +166,8 @@ ProfileFileNodes plan_profile_codec_file_node(const std::filesystem::path &root,
 ProfileFileNodes plan_profile_file_nodes(const std::filesystem::path &root,
                                          std::string_view profile,
                                          const std::filesystem::path &system,
-                                         const std::filesystem::path &vendor) {
+                                         const std::filesystem::path &vendor,
+                                         std::string_view build_target) {
     ordinary(root);
     need(valid_profile_name(profile), "safe profile name required");
     ordinary(system);
@@ -186,10 +188,13 @@ ProfileFileNodes plan_profile_file_nodes(const std::filesystem::path &root,
 
         return bytes;
     };
-    const auto directory = root / "profiles" / std::string(profile),
-               profile_file = directory / "profile.json";
-    const auto profile_bytes = read(profile_file, 512 * 1024);
-    const auto definition = Json::parse(profile_bytes);
+    const auto definition = Json::parse(authoring_profile_bytes(
+            root, profile,
+            [&](const auto &path) {
+                return read(path, 512 * 1024);
+            },
+            build_target));
+    const auto directory = profile_recipe_directory(root, profile);
     const bool rooted_observer = qinggan11_ui_observer_policy_requested(definition);
 
     if (native_base_api(definition.at("android")) == 30) {

@@ -1,6 +1,7 @@
 #include "native_component.hpp"
 #include "deps.hpp"
 #include "process.hpp"
+#include "profile_catalog.hpp"
 #include "qnx_link_interface.hpp"
 #include "source_edits.hpp"
 #include "toolchain_manifest.hpp"
@@ -19,7 +20,8 @@ static void check(bool value, const char *message) {
 
 int main(int argc, char **argv) {
     try {
-        if (argc > 1 && std::string_view(argv[1]) == "--target=aarch64-linux-android28") {
+        if (argc > 1 && (std::string_view(argv[1]) == "--target=aarch64-linux-android28" ||
+                         std::string_view(argv[1]) == "--target=x86_64-linux-android28")) {
             std::filesystem::path fixture, output;
             std::vector<std::string> args;
 
@@ -50,7 +52,8 @@ int main(int argc, char **argv) {
 
             const bool executable = read_private_json(fixture.parent_path() / "component.json")
                                             .value("outputType", std::string{}) == "executable";
-            check(has("--target=aarch64-linux-android28") &&
+            check((has("--target=aarch64-linux-android28") ||
+                   has("--target=x86_64-linux-android28")) &&
                           (executable ? (has("-pie") && has("-fPIE") && !has("-shared"))
                                       : (has("-shared") && has("-fPIC") && !has("-pie"))),
                   "native compiler arguments match output type");
@@ -95,9 +98,8 @@ int main(int argc, char **argv) {
         if (argc == 5 && std::string_view(argv[1]) == "--recipe-pin") {
             const auto root = std::filesystem::canonical(argv[2]);
             const std::string profile = argv[3], component = argv[4];
-            const auto source = root / "profiles" / profile /
-                                read_private_json(root / "profiles" / profile / "profile.json",
-                                                  4 << 20)
+            const auto source = profile_recipe_directory(root, profile) /
+                                authoring_profile(root, profile)
                                         .at("components")
                                         .at(component)
                                         .get<std::string>();
@@ -123,13 +125,13 @@ int main(int argc, char **argv) {
                 check(section.name != ".comment", "native component kept the host tool identity");
             }
 
-            check(receipt.at("sha256") ==
-                          embedded_toolchain_manifest()
-                                  .at("androidNativeComponents")
-                                  .at(native_component_pin(
-                                          profile, component,
-                                          read_private_json(source / "component.json")))
-                                  .at("sha256"),
+            const auto definition = read_private_json(source / "component.json");
+            const auto key = native_component_pin(
+                    profile_recipe_directory(root, profile).filename().string(), component,
+                    definition);
+            const auto origin = native_component_origin(
+                    embedded_toolchain_manifest().at("androidNativeComponents"), key, definition);
+            check(receipt.at("sha256") == origin.at("sha256"),
                   "native component recipe differs from its pin");
             std::cout << "native component recipe matches its pin: " << profile << '/' << component
                       << '\n';
@@ -142,12 +144,10 @@ int main(int argc, char **argv) {
             const auto root = std::filesystem::canonical(argv[2]);
             const std::string profile = argv[3];
             Json handoff = Json::object();
-            const auto components = read_private_json(root / "profiles" / profile / "profile.json",
-                                                      4 << 20)
-                                            .at("components");
+            const auto components = authoring_profile(root, profile).at("components");
 
             for (auto it = components.begin(); it != components.end(); ++it) {
-                const auto definition = read_private_json(root / "profiles" / profile /
+                const auto definition = read_private_json(profile_recipe_directory(root, profile) /
                                                           it.value().get<std::string>() /
                                                           "component.json");
 
@@ -591,6 +591,57 @@ int main(int argc, char **argv) {
         const auto direct = install_native_component(root, "private", "own", private_pins, true);
         check(std::filesystem::is_regular_file(direct.parent_path() / "libown.so"),
               "local profile remains directly buildable and installable");
+        // Materialize a different output with the same SONAME, for a process running x86_64.
+        const auto x86_component = root / "profiles/p_x86_64/components/own";
+        ensure_private_directory(x86_component / "src");
+        std::filesystem::copy_file(private_binary, x86_component / "src/fixture.elf");
+        {
+            std::fstream file(x86_component / "src/fixture.elf",
+                              std::ios::binary | std::ios::out | std::ios::in);
+            file.seekp(18);
+            file.put(62);
+        }
+        std::filesystem::copy_file(component / "src/own.c", x86_component / "src/own.c");
+        const auto x86_sha = sha256_file(x86_component / "src/fixture.elf");
+        const auto x86_definition = Json{{"type", "native"},
+                                         {"minSdk", 28},
+                                         {"output", "libown.so"},
+                                         {"abi", "x86_64"},
+                                         {"sourceBuildSha256", x86_sha}};
+        write_private_json(x86_component / "component.json", x86_definition);
+        write_private_json(root / "profiles/p_x86_64/profile.json",
+                           {{"local", true}, {"components", {{"own", "components/own"}}}});
+        const auto x86 = build_native_component(x86_component, compiler, pin, root / "x86-compiler",
+                                                0);
+        check(x86.at("abi") == "x86_64" &&
+                      x86.at("command").at(0) == "--target=x86_64-linux-android28",
+              "compiler target and ELF ABI of declared process");
+        unsigned built = 0;
+        const auto source_build = [&](const std::filesystem::path &job) {
+            ++built;
+            std::filesystem::copy_file(root / "x86-compiler/libown.so", job / "libown.so");
+        };
+        const auto install_x86 = [&] {
+            return read_private_json(install_native_component(
+                    root, "p_x86_64", "own", Json::object(), true, {}, source_build));
+        };
+        const auto source_receipt = install_x86();
+        check(source_receipt.at("source") == "recipe" && !source_receipt.contains("asset") &&
+                      source_receipt.at("abi") == "x86_64" &&
+                      source_receipt.at("sha256") == x86_sha && install_x86() == source_receipt &&
+                      built == 1,
+              "offline source recipe uses measured pin and reuses validated cache");
+        auto wrong_consumer = x86_definition;
+        wrong_consumer["abi"] = "arm64-v8a";
+        write_private_json(x86_component / "component.json", wrong_consumer);
+        bool mismatch = false;
+        try {
+            (void)install_x86();
+        } catch (const VoyemuError &error) {
+            mismatch = std::string_view(error.what()).starts_with("COMPONENT_ELF:");
+        }
+
+        check(mismatch && built == 1, "cached x86 DSO rejected for ARM consumer");
         // A component that names the pin of another profile installs that published asset.
         const auto reuse_component = root / "profiles/reuse/components/own";
         ensure_private_directory(reuse_component / "src");

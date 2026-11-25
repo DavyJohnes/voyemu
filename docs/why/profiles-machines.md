@@ -16,7 +16,11 @@ A profile describes OEM inputs, recipes, components and pins for one firmware. A
 
 ## Argument
 
+The SDK archive digest identifies the files supplied by Google. When distributing a locally signed Android system image, the recipient also needs the public key of its builder and a signed record of the boot files used by the emulator. That record authenticates the inputs on the host. Inside Android, dm-verity checks blocks as the guest reads the system partition.
+
 One copy of the source removes the question of which profile is current. Embedding everything a launch needs makes the machine self-contained: after a clean stop, copying the whole directory is enough to move it. The profile identity in the machine manifest still tells which profile it came from.
+
+Targets share a firmware profile because its OEM checks and most adaptation recipes describe the same inputs. Preparation keeps the selected Android base and ABI with its results. This lets builds share the OEM import while keeping artifacts of different architectures or SDK revisions distinct. A copied machine retains its guest ABI and runs on a backend compatible with that ABI.
 
 ## Consequences
 

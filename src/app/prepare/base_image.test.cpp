@@ -60,6 +60,40 @@ int main(int argc, char **argv) {
             return 0;
         }
 
+        auto x86 = api30;
+        x86["package"] = "system-images;android-30;default;x86_64";
+        x86["url"] = "https://dl.google.com/android/repository/sys-img/android/x86_64-30_r11.zip";
+
+        if (native_base_identity(x86).abi != "x86_64" || native_base_api(x86) != 30 ||
+            native_base_identity(api30).abi != "arm64-v8a") {
+            throw std::runtime_error("clean Android API/ABI mismatch");
+        }
+
+        const auto kvm_profile = [](const Json &image) {
+            return Json{{"android", image}, {"emulator", {{"acceleration", "kvm"}}}};
+        };
+
+        if (android_kvm({{"android", api30}})) {
+            throw std::runtime_error("ARM profile unexpectedly selected KVM");
+        }
+
+        if (!android_kvm(kvm_profile(x86))) {
+            throw std::runtime_error("valid x86_64 guest contract rejected");
+        }
+
+        for (const auto &profile : {kvm_profile(api30), Json{{"android", x86}}}) {
+            bool refused = false;
+            try {
+                (void)android_kvm(profile);
+            } catch (const VoyemuError &) {
+                refused = true;
+            }
+
+            if (!refused) {
+                throw std::runtime_error("incompatible or implicit KVM profile accepted");
+            }
+        }
+
         if (native_base_api(api30) != 30) {
             throw std::runtime_error("registered API30 descriptor rejected");
         }

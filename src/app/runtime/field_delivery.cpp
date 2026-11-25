@@ -2,6 +2,7 @@
 #include "nxp_presentation.hpp"
 #include "passion_mcu_property.hpp"
 #include "passion_presentation.hpp"
+#include "profile_identity.hpp"
 #include "project_files.hpp"
 #include "qnx_mcu_projection.hpp"
 #include <algorithm>
@@ -76,7 +77,8 @@ std::set<std::string> cluster_fields(const Json &cluster) {
 }
 
 std::set<std::string> multimedia_fields(const Json &android) {
-    if (!android.is_object() || android.empty() || nxp_presentation(android)) {
+    if (!android.is_object() || android.empty() || android_sdk_profile(android) ||
+        nxp_presentation(android)) {
         return {};
     }
 

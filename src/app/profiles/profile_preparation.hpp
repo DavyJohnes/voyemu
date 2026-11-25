@@ -26,5 +26,6 @@ std::filesystem::path cached_native_android_inputs(const std::filesystem::path &
 ProfilePreparationArtifacts prepare_profile_artifacts(const std::filesystem::path &root,
                                                       std::string_view profile,
                                                       bool offline = false,
-                                                      const std::filesystem::path &jdk = {});
+                                                      const std::filesystem::path &jdk = {},
+                                                      std::string_view target = {});
 } // namespace voyemu

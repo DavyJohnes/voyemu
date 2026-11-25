@@ -4,6 +4,7 @@
 #include "portable_runtime.hpp"
 #include "process.hpp"
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <filesystem>
 #include <fstream>
@@ -391,6 +392,26 @@ int main(int argc, char **argv) {
         gpt.at(98304) = 's';
         gpt.at(106496) = 'e';
         const auto growth_mode = LpScratchPlacement::grow_terminal_super;
+        // Actual API30 x86_64 geometry: the two-GiB scratch lacks 418 MiB on the pinned disk.
+        constexpr std::uint64_t mib = 1ULL << 20;
+        check(lp_scratch_growth_bytes((2048ULL - 1630) * mib, mib, 3083 * mib,
+                                      lp_scratch_max_growth) == 418 * mib);
+
+        for (const auto [deficit, disk, limit] : std::vector<std::array<std::uint64_t, 3>>{
+                     {418 * mib, 3083 * mib, lp_scratch_growth_limit},
+                     {lp_scratch_max_growth + 1, 3083 * mib, lp_scratch_max_growth},
+                     {418 * mib, 3800 * mib, lp_scratch_max_growth}}) {
+            bool rejected = false;
+            try {
+                lp_scratch_growth_bytes(deficit, mib, disk, limit);
+            } catch (const std::runtime_error &error) {
+                rejected = std::string_view(error.what())
+                                   .ends_with("bounded scratch super growth required");
+            }
+
+            check(rejected);
+        }
+
         constexpr std::uint64_t wanted = 131072, expansion = 45056;
         save(file, gpt);
         const auto fits = seed_lp_overlay_scratch(file, sha256_bytes(gpt), 8192, growth_mode);

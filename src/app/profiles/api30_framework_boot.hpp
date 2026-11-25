@@ -1,4 +1,5 @@
 #pragma once
+#include "base_image.hpp"
 #include "error.hpp"
 #include "model.hpp"
 #include "original_navi_candidate.hpp"
@@ -11,6 +12,15 @@ inline constexpr std::array<const char *, 6> core = {"core-oj", "core-libart",  
 inline constexpr std::array<const char *, 6> extension = {
         "framework",   "ext",        "telephony-common",
         "voip-common", "ims-common", "framework-atb-backward-compatibility"};
+
+inline std::vector<std::string> instruction_sets(const Json &profile) {
+    if (android_package_identity(profile.at("android").value("package", std::string{})).abi ==
+        "x86_64") {
+        return {"x86", "x86_64"};
+    }
+
+    return {"arm64"};
+}
 
 inline void verify(const Json &profile) {
     Json install = {{"artifact", "component:view-observation"},
@@ -33,10 +43,13 @@ inline void verify(const Json &profile) {
 
     const auto entries = profile.value("install", Json::array());
 
+    const auto identity =
+            android_package_identity(profile.at("android").value("package", std::string{}));
+
     if ((profile.value("platform", Json()) != "qinggan11" &&
          profile.value("platform", Json()) != "passion") ||
-        profile.at("android").value("package", std::string{}) !=
-                "system-images;android-30;default;arm64-v8a" ||
+        (identity.api != 30 ||
+         (identity.abi == "x86_64" && profile.value("platform", Json()) != "passion")) ||
         profile.value("components", Json::object()).value("view-observation", std::string{}) !=
                 "components/view-observation" ||
         std::count(entries.begin(), entries.end(), install) != 1) {
@@ -67,24 +80,34 @@ inline std::vector<std::string> paths(const Json &profile) {
     verify(profile);
     std::vector<std::string> result;
 
-    for (const auto *name : extension) {
-        for (const auto *suffix : {".art", ".oat", ".vdex"}) {
-            result.push_back("/system/framework/arm64/boot-" + std::string(name) + suffix);
+    for (const auto &isa : instruction_sets(profile)) {
+        for (const auto *name : extension) {
+            for (const auto *suffix : {".art", ".oat", ".vdex"}) {
+                result.push_back("/system/framework/" + isa + "/boot-" + name + suffix);
+            }
         }
     }
 
     return result;
 }
 
-inline std::vector<std::string> command(const Json &profile) {
+inline std::vector<std::string> command(const Json &profile, const std::string &isa) {
     verify(profile);
-    std::vector<std::string> result = {"/apex/com.android.art/bin/dex2oat64",
-                                       "--image=/system/framework/arm64/boot.art",
-                                       "--oat-file=/system/framework/arm64/boot.oat",
-                                       "--oat-location=/system/framework/arm64/boot.oat",
+    const auto expected = instruction_sets(profile);
+
+    if (std::find(expected.begin(), expected.end(), isa) == expected.end()) {
+        throw VoyemuError("ANDROID_CANDIDATE", "unregistered ART instruction set");
+    }
+
+    const auto directory = "/system/framework/" + isa;
+    std::vector<std::string> result = {isa == "x86" ? "/apex/com.android.art/bin/dex2oat32"
+                                                    : "/apex/com.android.art/bin/dex2oat64",
+                                       "--image=" + directory + "/boot.art",
+                                       "--oat-file=" + directory + "/boot.oat",
+                                       "--oat-location=" + directory + "/boot.oat",
                                        "--boot-image=/apex/com.android.art/javalib/boot.art",
                                        "--multi-image",
-                                       "--instruction-set=arm64",
+                                       "--instruction-set=" + isa,
                                        "--instruction-set-variant=generic",
                                        "--instruction-set-features=default",
                                        "--compiler-filter=speed",
@@ -109,5 +132,27 @@ inline std::vector<std::string> command(const Json &profile) {
     }
 
     return result;
+}
+
+inline bool compiled(const Json &profile, const Json &events) {
+    if (!events.is_array()) {
+        return false;
+    }
+
+    const auto expected = instruction_sets(profile);
+    std::size_t next = 0;
+
+    for (const auto &event : events) {
+        if (event.at("phase") == "boot-art-compiled") {
+            if (next == expected.size() || event.at("files") != extension.size() * 3 ||
+                event.at("command") != command(profile, expected[next])) {
+                return false;
+            }
+
+            ++next;
+        }
+    }
+
+    return next == expected.size();
 }
 } // namespace voyemu::api30_framework_boot

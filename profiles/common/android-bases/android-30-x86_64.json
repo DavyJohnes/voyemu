@@ -1,0 +1,38 @@
+{
+  "package": "system-images;android-30;default;x86_64",
+  "url": "https://dl.google.com/android/repository/sys-img/android/x86_64-30_r11.zip",
+  "revision": "10",
+  "sha256": "8d591034a4244a920d7a3ec274bb1734dd6474a3d8c11d0fce902010db3a13aa",
+  "clean_base": {
+    "receipt_sha256": "e6acb711775eb47c0ed9dfee792cb830a2dd99b7ebcda8fec4c973c5e448196d",
+    "boot_files": {
+      "VerifiedBootParams.textproto": "9dbc7febf80ef421f1d80d939e8b89ce84d6a06ae04289664cd46bb4295ad903",
+      "advancedFeatures.ini": "a00d90a17e68a18c581a8e5675d86d079806293690c7bff3d571df15d6c3350d",
+      "build.prop": "d023a6596f9dca1735f348666462d5dbbe68419197caacd888166d12f55b7157",
+      "kernel-ranchu": "86abd44f85e432b0a9f0ad5b46817771dc6d386f6f30f69bfffc676425dea564",
+      "ramdisk.img": "77f5ba1cbbcd744c1eb205570096598ac1d30b3a870889e8bd004155707335ae",
+      "source.properties": "38908033e6c529a998fff729b01c44eb698bf0520f465e82d2608f5594ae7bf0"
+    },
+    "images": {
+      "system.img": "27038e8e516c98878fb9d392b87232ce3adbd9fc175421c979aed392963996d1",
+      "vendor.img": "f10ec76736373faa745489169fffadf571102b24928f554db1c2b98206062d92"
+    },
+    "logical_partitions": {
+      "metadata_sha256": "a5b597247b6cfd00e544c851d641115615ecbb3d7df186e231217082f17cda0c",
+      "system": {
+        "bytes": 1078669312,
+        "offset": 3145728
+      },
+      "system_ext": {
+        "bytes": 106766336,
+        "offset": 1082130432
+      }
+    },
+    "files": {
+      "/system/etc/selinux/mapping/30.0.cil": "c14ab911584595a94e6783600371fed23cec1d56b8001383584a3192d028eb60"
+    }
+  },
+  "features": {
+    "MultiDisplay": "on"
+  }
+}

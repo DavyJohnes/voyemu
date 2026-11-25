@@ -133,7 +133,7 @@ Json load_profile(const std::filesystem::path &root, std::string_view name) {
     const auto source = root / "profiles" / std::string(name) / "profile.json";
 
     if (std::filesystem::exists(source) || std::filesystem::is_symlink(source)) {
-        return read_private_json(source, 512 * 1024);
+        return authoring_profile(root, name);
     }
 
     return embedded_profile(name).at("definition");
@@ -559,6 +559,15 @@ Json fetch_nxp_update(const std::filesystem::path &root, std::string_view profil
     return receipt;
 }
 
+bool owner_archive_matches(const Json &receipt, const Json &owner) {
+    const auto container = receipt.value("source_container", std::string("zip"));
+    const auto &pin = container == "inner-tgz" ? owner.at("inner") : owner;
+
+    return (container == "zip" || container == "inner-tgz") &&
+           receipt.at("owner_archive").at("sha256") == pin.at("sha256") &&
+           receipt.at("owner_archive").at("bytes") == pin.at("bytes");
+}
+
 Json fetch_update(const std::filesystem::path &root, std::string_view profile,
                   const std::filesystem::path &archive, std::uint64_t reserve) {
     const auto started = std::chrono::steady_clock::now();
@@ -588,10 +597,12 @@ Json fetch_update(const std::filesystem::path &root, std::string_view profile,
         throw VoyemuError("FETCH_UPDATE", "exact shared Android/QNX owner recipe required");
     }
 
-    const auto archive_sha = pinned_sha(owner.at("sha256"));
+    const bool direct = archive.filename() == owner.at("inner").at("file").get<std::string>();
+    const auto &source_pin = direct ? owner.at("inner") : owner;
+    const auto archive_sha = pinned_sha(source_pin.at("sha256"));
 
     ordinary_ancestors(archive);
-    verify_owner_archive(root, profile, archive, owner.at("bytes").get<std::uint64_t>(),
+    verify_owner_archive(root, profile, archive, source_pin.at("bytes").get<std::uint64_t>(),
                          archive_sha, true, "FETCH_FILE", "FETCH_SHA");
 
     const auto archive_identity = cache_file_identity(archive);
@@ -662,9 +673,8 @@ Json fetch_update(const std::filesystem::path &root, std::string_view profile,
         if (receipt.at("schema") != 1 || receipt.at("profile") != profile ||
             receipt.at("source") != "owner-update" ||
             receipt.at("acquisition_sha256") != expected_sha ||
-            receipt.at("owner_archive").at("sha256") != archive_sha ||
-            receipt.at("native") != true || receipt.at("frame_verified") != false ||
-            receipt.at("preparation_ready") != false) {
+            !owner_archive_matches(receipt, owner) || receipt.at("native") != true ||
+            receipt.at("frame_verified") != false || receipt.at("preparation_ready") != false) {
             throw VoyemuError("FETCH_UPDATE", "retained acquisition receipt differs");
         }
 
@@ -1367,7 +1377,8 @@ Json fetch_update(const std::filesystem::path &root, std::string_view profile,
             {"profile", profile},
             {"source", "owner-update"},
             {"acquisition_sha256", acquisition_sha},
-            {"owner_archive", {{"sha256", archive_sha}, {"bytes", owner.at("bytes")}}},
+            {"owner_archive", {{"sha256", archive_sha}, {"bytes", source_pin.at("bytes")}}},
+            {"source_container", direct ? "inner-tgz" : "zip"},
             {"originals", {{"files", original_files}, {"verified", true}}},
             {"qnx", {{"files", raw_files}, {"verified", true}}},
             {"owner_update_receipt_sha256", sha256_file(pending / "owner-update.json")},
@@ -1434,8 +1445,7 @@ void bind_owner_inputs(const std::filesystem::path &root, std::string_view profi
             owner.at("source") != "owner-update" || owner.at("native") != true ||
             owner.at("frame_verified") != false || owner.at("preparation_ready") != false ||
             owner.at("acquisition_sha256") != acquisition_identity(definition, config) ||
-            owner.at("owner_archive").at("sha256") != definition.at("ownerUpdate").at("sha256") ||
-            owner.at("owner_archive").at("bytes") != definition.at("ownerUpdate").at("bytes") ||
+            !owner_archive_matches(owner, definition.at("ownerUpdate")) ||
             sha256_bytes(owner.at("originals").at("files").dump()) !=
                     result.at("originals").at("inputs_sha256").get<std::string>() ||
             owner.at("qnx").at("files") != result.at("qnx").at("files")) {
@@ -1819,12 +1829,15 @@ Json verify_original_inputs(const std::filesystem::path &root, std::string_view 
 
 Json fetch_native_inputs(const std::filesystem::path &root, std::string_view profile, bool offline,
                          const std::string &serial, std::uint64_t reserve,
-                         const std::filesystem::path &jdk, const std::filesystem::path &update) {
+                         const std::filesystem::path &jdk, const std::filesystem::path &update,
+                         std::string_view target) {
     if (!valid_profile_name(profile) || !root.is_absolute() ||
         std::filesystem::canonical(root) != root) {
         throw VoyemuError("FETCH_ROOT", "canonical root and safe profile required");
     }
 
+    const auto recipe = profile_recipe_directory(root, profile);
+    const auto input_profile = recipe.filename().string();
     Json imported;
 
     if (!update.empty()) {
@@ -1832,7 +1845,7 @@ Json fetch_native_inputs(const std::filesystem::path &root, std::string_view pro
             throw VoyemuError("FETCH_UPDATE", "archive source and serial are mutually exclusive");
         }
 
-        imported = import_owner_profile_inputs(root, profile, update, reserve);
+        imported = import_owner_profile_inputs(root, input_profile, update, reserve);
     }
 
     if (!serial.empty() &&
@@ -1863,10 +1876,12 @@ Json fetch_native_inputs(const std::filesystem::path &root, std::string_view pro
         verify_original_inputs(root, profile, retained);
     }
 
-    const auto definition = load_profile(root, profile);
+    const auto definition = target.empty() ? load_profile(root, profile)
+                                           : authoring_profile(root, profile, target);
+    const auto multimedia_only = profile_multimedia_only(definition);
     const auto profile_name = profile_display_name(root, profile);
     const auto inputs = original_input_plan(definition);
-    const auto own_originals = root / ".local/profiles" / std::string(profile) / "originals";
+    const auto own_originals = root / ".local/profiles" / input_profile / "originals";
     const auto originals = serial.empty() && update.empty()
                                    ? profile_originals_directory(root, profile)
                                    : own_originals;
@@ -2042,6 +2057,22 @@ Json fetch_native_inputs(const std::filesystem::path &root, std::string_view pro
     }
 
     const auto original_result = verify_original_inputs(root, profile, inputs);
+
+    if (definition.contains("targets")) {
+        Json result{{"schema", 1},
+                    {"profile", profile},
+                    {"originals", original_result},
+                    {"vehicle_modified", false},
+                    {"native", true},
+                    {"preparation_ready", false}};
+
+        if (!imported.is_null()) {
+            result["owner_update"] = imported;
+        }
+
+        return result;
+    }
+
     const auto &image = definition.at("android");
     DownloadPin image_pin{image.at("url").get<std::string>(), pinned_sha(image.at("sha256")),
                           8ULL << 30};
@@ -2100,11 +2131,11 @@ Json fetch_native_inputs(const std::filesystem::path &root, std::string_view pro
         result["android_archive"] = {{"file", archive.string()}, {"sha256", image_pin.sha256}};
     }
 
-    const auto native_qnx = root / "profiles" / std::string(profile) / "profile-qnx.json";
+    const auto native_qnx = recipe / "profile-qnx.json";
 
-    if (std::filesystem::exists(native_qnx)) {
+    if (!multimedia_only && std::filesystem::exists(native_qnx)) {
         if (update.empty()) {
-            materialize_qnx_originals(root, profile, jdk, offline);
+            materialize_qnx_originals(root, input_profile, jdk, offline);
         }
 
         const auto config = read_private_json(native_qnx, 128 * 1024);
@@ -2112,7 +2143,7 @@ Json fetch_native_inputs(const std::filesystem::path &root, std::string_view pro
         std::uint64_t qnx_bytes = 0;
 
         for (const auto &item : config.at("originals")) {
-            qnx_bytes += present_bytes(qnx_originals_directory(root, profile) /
+            qnx_bytes += present_bytes(qnx_originals_directory(root, input_profile) /
                                        relative_path(item.at("file").get<std::string>()));
         }
 
@@ -2121,7 +2152,7 @@ Json fetch_native_inputs(const std::filesystem::path &root, std::string_view pro
         for (auto it = config.at("originals").begin(); it != config.at("originals").end(); ++it) {
             const auto name = relative_path(it.value().at("file").get<std::string>());
             const auto pin = pinned_sha(it.value().at("sha256"));
-            const auto bytes = verify_file(qnx_originals_directory(root, profile) / name, pin,
+            const auto bytes = verify_file(qnx_originals_directory(root, input_profile) / name, pin,
                                            4ULL << 30, [&qnx_meter](std::uint64_t block) {
                                                if (qnx_meter) {
                                                    qnx_meter->advance(block);
@@ -2144,8 +2175,7 @@ Json fetch_native_inputs(const std::filesystem::path &root, std::string_view pro
 
     for (auto it = components.begin(); it != components.end(); ++it) {
         const auto relative = relative_path(it.value().get<std::string>());
-        const auto metadata = root / "profiles" / std::string(profile) / relative /
-                              "component.json";
+        const auto metadata = recipe / relative / "component.json";
 
         if (!std::filesystem::exists(metadata)) {
             throw VoyemuError("FETCH_COMPONENT",
@@ -2252,14 +2282,21 @@ Json fetch_native_inputs(const std::filesystem::path &root, std::string_view pro
     result["external_sources"] = {{"files", source_count},
                                   {"pins_sha256", sha256_bytes(source_pins.dump())},
                                   {"verified", true}};
-    fetch_detail::bind_owner_inputs(root, profile, definition, imported, result);
+
+    if (!multimedia_only) {
+        fetch_detail::bind_owner_inputs(root, input_profile, definition, imported, result);
+    }
 
     if (!imported.is_null()) {
         result["owner_update"] = imported;
     }
 
-    write_private_json(root / ".local/profiles" / std::string(profile) / "native-inputs.json",
-                       result);
+    // The shared owner cache accepts only its bound native-inputs receipt. A signed target
+    // records its selected inputs in the separate Android preparation stage.
+    if (target.empty() || !multimedia_only) {
+        write_private_json(root / ".local/profiles" / std::string(profile) / "native-inputs.json",
+                           result);
+    }
 
     return result;
 }

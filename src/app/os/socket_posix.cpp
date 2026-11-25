@@ -62,6 +62,23 @@ SocketHandle open_unix_listener(std::string_view path, int backlog) {
     return socket;
 }
 
+bool unix_socket_listening(std::string_view path) {
+    sockaddr_un address{};
+
+    if (!path.starts_with('/') || path.find('\0') != path.npos ||
+        path.size() >= sizeof(address.sun_path)) {
+        return false;
+    }
+
+    address.sun_family = AF_UNIX;
+    path.copy(address.sun_path, path.size());
+    const SocketCloser probe{open_stream_socket(AF_UNIX)};
+
+    return probe.socket != no_socket && set_nonblocking_socket(probe.socket) &&
+           connect_socket(probe.socket, reinterpret_cast<const sockaddr *>(&address),
+                          sizeof(address));
+}
+
 SocketHandle open_private_tcp_socket() {
     const int fd = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     bool configured = fd >= 0 && fcntl(fd, F_SETFD, FD_CLOEXEC) == 0 &&

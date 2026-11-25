@@ -3,6 +3,7 @@
 #include "process.hpp"
 #include "profile_catalog.hpp"
 #include "selinux_patch.hpp"
+#include <algorithm>
 #include <fstream>
 #include <iostream>
 using namespace voyemu;
@@ -121,6 +122,94 @@ int main(int argc, char **argv) {
         ensure_private_directory(directory / "patches");
         ensure_private_directory(system);
         ensure_private_directory(vendor);
+        {
+            const std::string id = "test-vehicle-x86_64", recipe = "test-vehicle",
+                              base = "test-android";
+            const auto sources = root / "profiles";
+            ensure_private_directory(sources / id);
+            ensure_private_directory(sources / recipe);
+            ensure_private_directory(sources / "common/android-bases");
+            write_private_json(
+                    sources / recipe / "profile.json",
+                    {{"schema", 1},
+                     {"id", recipe},
+                     {"platform", "passion"},
+                     {"board", "8155"},
+                     {"original", Json::object()},
+                     {"verify", Json::object()},
+                     {"patches", Json::object()},
+                     {"android", {{"package", "system-images;android-30;default;arm64-v8a"}}},
+                     {"emulator", Json::object()}});
+            write_private_json(sources / id / "profile.json",
+                               {{"schema", 1},
+                                {"id", id},
+                                {"title", "Test vehicle"},
+                                {"status", "incomplete"},
+                                {"variant", {{"recipeProfile", recipe}, {"androidBase", base}}},
+                                {"emulator", {{"acceleration", "kvm"}, {"gpuMode", "host"}}}});
+            write_private_json(
+                    sources / "common/android-bases" / (base + ".json"),
+                    {{"package", "system-images;android-30;default;x86_64"},
+                     {"url",
+                      "https://dl.google.com/android/repository/sys-img/android/x86_64-30_r11.zip"},
+                     {"sha256", std::string(64, 'a')},
+                     {"revision", "10"},
+                     {"clean_base", Json::object()},
+                     {"features", Json::object()}});
+            bool rejected = false;
+            try {
+                plan_profile_file_nodes(root, id, system, vendor);
+            } catch (const std::exception &error) {
+                rejected = std::string(error.what()).find("API30 native file graph") !=
+                           std::string::npos;
+            }
+
+            check(rejected, "variant omitted the OEM file graph check after resolving the x86 SDK");
+        }
+        {
+            const auto &catalog = embedded_profile_catalog();
+            const auto targeted =
+                    std::find_if(catalog.begin(), catalog.end(), [](const auto &entry) {
+                        return entry.at("definition").contains("targets") &&
+                               profile_platform(entry.at("definition")) == ProfilePlatform::passion;
+                    });
+            check(targeted != catalog.end(), "registered Passion target fixture missing");
+            const std::string id = "test-file-node-target";
+            auto definition = targeted->at("definition");
+            definition["id"] = id;
+            const auto first = api30_file_recipes_for_profile(definition).front().id;
+            definition["patches"][first]["input"] = "android:/system/foreign";
+            write_private_json(root / "profiles" / id / "profile.json", definition);
+            const auto base_name =
+                    definition.at("targets").at("x86").at("androidBase").get<std::string>();
+            const auto relative = std::filesystem::path("profiles/common/android-bases") /
+                                  (base_name + ".json");
+            const auto base = read_private_json(repository / relative);
+            write_private_json(root / relative, base);
+            const auto &clean = base.at("clean_base");
+            const auto &partitions = clean.at("logical_partitions");
+            write_private_json(system / "receipt.json",
+                               {{"schema", 1},
+                                {"native", true},
+                                {"filesystem_mounted", false},
+                                {"image_sha256", clean.at("images").at("system.img")},
+                                {"logical_partition", "system"},
+                                {"lp_metadata_sha256", partitions.at("metadata_sha256")},
+                                {"partition_offset", partitions.at("system").at("offset")},
+                                {"logical_partition_bytes", partitions.at("system").at("bytes")}});
+            const auto rejects_at = [&](std::string_view target, std::string_view message) {
+                try {
+                    (void)plan_profile_file_nodes(root, id, system, vendor, target);
+                } catch (const VoyemuError &error) {
+                    return std::string_view(error.what()).find(message) != std::string_view::npos;
+                }
+
+                return false;
+            };
+            check(rejects_at("arm", "API30 logical platform extraction receipt required") &&
+                          rejects_at("x86", "API30 native node declaration differs"),
+                  "only the selected x86 descriptor accepts the x86 extraction receipt");
+        }
         auto definition = read_private_json(repository / "profiles" / profile / "profile.json",
                                             512 * 1024);
         const Json java_shutdown = {{"type", "file"},

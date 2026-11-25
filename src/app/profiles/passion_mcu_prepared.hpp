@@ -2,6 +2,7 @@
 #include "check.hpp"
 #include "os/fs.hpp"
 #include "passion_mcu_property.hpp"
+#include "passion_prepared_guest.hpp"
 #include "quickboot.hpp"
 #include "zip_archive.hpp"
 #include <algorithm>
@@ -29,6 +30,11 @@ inline bool passion_mcu_requested(const Json &definition) {
 
 inline bool passion_mcu_pin(const std::string &pin) {
     return sha256_text(pin);
+}
+
+inline bool passion_mcu_runtime_requested(const Json &definition) {
+    return passion_mcu_requested(definition) &&
+           definition.value("features", Json::object()).value("mcu_property_runtime", true);
 }
 
 inline void passion_mcu_helper_receipt(const std::string &apk, const Json &helper) {
@@ -101,7 +107,7 @@ inline void passion_mcu_helper_graph(const std::filesystem::path &root, const Js
 
 inline Json passion_mcu_contract(const Json &definition, const Json &candidate,
                                  const std::string &apk, const Json &helper) {
-    passion_mcu_need(passion_mcu_requested(definition) && passion_mcu_pin(apk),
+    passion_mcu_need(passion_mcu_runtime_requested(definition) && passion_mcu_pin(apk),
                      "requested graph and APK pin required");
     passion_mcu_need(
             candidate.at("schema") == 1 && candidate.at("kind") == "android-candidate" &&
@@ -113,8 +119,10 @@ inline Json passion_mcu_contract(const Json &definition, const Json &candidate,
                     passion_mcu_pin(candidate.at("artifact_result_sha256").get<std::string>()),
             "stopped source-bound cold candidate required");
 
+    const auto abi = passion_prepared_guest_abi(definition, candidate, passion_mcu_need);
+
     for (const auto &pair : std::vector<std::pair<std::string, std::string>>{
-                 {"boot", "1"}, {"api", "30"}, {"abi", "arm64-v8a"}, {"selinux", "Enforcing"}}) {
+                 {"boot", "1"}, {"api", "30"}, {"abi", abi}, {"selinux", "Enforcing"}}) {
         unsigned found = 0;
 
         for (const auto &row : candidate.at("checks")) {
