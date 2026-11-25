@@ -95,6 +95,7 @@
     "help.automation_note": "其他所有命令和错误均输出普通文本。",
     "help.background": "让窗口和音频保持在后台",
     "help.build": "准备新机器。默认路径为 {default}。对应构建目标的默认路径为 {arm} 和 {x_path}。",
+    "help.guest_home": "由 Android 选择并启动主屏幕",
     "help.check": "检查已存储的输入和准备结果；不会启动",
     "help.cluster": "仪表（QNX）；默认：build 时为 on，start 时取决于是否已准备",
     "help.deps": "安装固定版本的工具和可选的配置文件基础",

@@ -95,6 +95,7 @@
     "help.automation_note": "All other commands and errors use ordinary text.",
     "help.background": "Keep windows and audio in the background",
     "help.build": "Prepare a new machine. The default path is {default}. Targets arm and x86 use {arm} and {x_path}, respectively.",
+    "help.guest_home": "Leave HOME selection and startup to Android",
     "help.check": "Verify stored inputs and preparation; never launch",
     "help.cluster": "QNX; default: on for build, when prepared for start",
     "help.deps": "Install pinned tools and optional profile base",

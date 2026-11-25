@@ -410,8 +410,10 @@ int main(int argc, char **argv) try {
         return reply;
     };
     bool created_background = false;
+    std::string created_home_policy;
     transport.create = [&](const Json &value) {
         created_background = value.at("background").get<bool>();
+        created_home_policy = value.value("home_policy", std::string{});
         ++creates;
 
         return Json{{"ok", true}, {"session_id", id}};
@@ -3346,6 +3348,26 @@ int main(int argc, char **argv) try {
     auto foreground_start = api.call(create);
     assert(foreground_start.at("ok") == true && !created_background &&
            foreground_start.at("result").at("background") == false);
+    assert(foreground_start.at("result").at("home_policy") == "profile" &&
+           created_home_policy == "profile");
+    {
+        auto guest_start = create;
+        guest_start["request_id"] = random_token();
+        guest_start["home_policy"] = "guest";
+        const auto response = api.call(guest_start);
+        assert(response.at("ok") == true && response.at("result").at("home_policy") == "guest" &&
+               created_home_policy == "guest");
+
+        const auto before_bad_policy = creates;
+        guest_start["request_id"] = random_token();
+        guest_start["home_policy"] = "auto";
+        assert(api.call(guest_start).at("error").at("code") == "TEST_ARGUMENT" &&
+               creates == before_bad_policy);
+        guest_start["request_id"] = random_token();
+        guest_start["home_policy"] = true;
+        assert(api.call(guest_start).at("error").at("code") == "TEST_ARGUMENT" &&
+               creates == before_bad_policy);
+    }
     const auto before_invalid_background = creates;
     create["request_id"] = random_token();
     create["background"] = "false";

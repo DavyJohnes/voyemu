@@ -1252,10 +1252,23 @@ int main(int argc, char **argv) try {
                                            {"machine", qinggan09_profile()},
                                            {"background", true},
                                            {"with_cluster", false}});
+                const auto invalid_input = root / ".local/build/invalid-home-policy.json";
+                auto invalid = read_private_json(input);
+                invalid["request_id"] = random_token();
+                invalid["home_policy"] = "automatic";
+                write_private_json(invalid_input, invalid);
+                const auto rejected = run({"test", "--request", invalid_input.string()});
+                require(rejected.exit_code != 0 &&
+                                Json::parse(rejected.output).at("error").at("code") ==
+                                        "TEST_ARGUMENT",
+                        "the API did not reject an invalid HOME policy: " + rejected.output);
+
                 const auto started = run({"test", "--request", input.string()});
                 require(started.exit_code == 0, "canonical API machine failed: " + started.output);
                 const auto response = Json::parse(started.output);
-                require(response.at("ok") == true, "canonical API start not accepted");
+                require(response.at("ok") == true &&
+                                response.at("result").at("home_policy") == "profile",
+                        "canonical API start or its default HOME policy not accepted");
 
                 if (!api_first_bind) {
                     // The USB drive reaches the SDK process over its QMP channel and the guest
@@ -1322,6 +1335,8 @@ int main(int argc, char **argv) try {
                 }
 
                 const auto observed = json({"status"});
+                require(observed.at("deliveries").at("android").at("home_policy") == "profile",
+                        "the supervisor did not report the active default HOME policy");
                 require(observed.at("machine") == qinggan09_profile() &&
                                 observed.at("machine_seed") == selected_machine.string() &&
                                 observed.at("android_pid").get<int>() > 0,
