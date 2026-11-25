@@ -1,5 +1,7 @@
 #include "error.hpp"
 #include "session_internal.hpp"
+#include <charconv>
+#include <cstdio>
 
 namespace voyemu {
 using namespace session_detail;
@@ -632,7 +634,103 @@ void Session::record_android_processes(bool launch_pending) {
     write_private_json(path, owner);
 }
 
+namespace {
+constexpr unsigned local_adb_server_port = 5037;
+
+bool register_emulator_with_adb(android_console_detail::Socket &server, unsigned console_port) {
+    using namespace std::chrono_literals;
+    const auto deadline = std::chrono::steady_clock::now() + 500ms;
+    const auto ports = std::to_string(console_port) + "," + std::to_string(console_port + 1);
+    const auto request = "host:connect:emu:" + ports;
+    char size[5]{};
+    std::snprintf(size, sizeof(size), "%04x", static_cast<unsigned>(request.size()));
+    server.send(size + request, deadline);
+
+    std::string response;
+    const auto connected = "Connected to emulator on ports " + ports;
+    const auto registered = "Emulator already registered on port " +
+                            std::to_string(console_port + 1);
+
+    while (response.size() < 8) {
+        response += server.receive(deadline);
+    }
+
+    if (!response.starts_with("OKAY")) {
+        return false;
+    }
+
+    std::size_t length = 0;
+    const auto size_end = response.data() + 8;
+    const auto [end, error] = std::from_chars(response.data() + 4, size_end, length, 16);
+
+    if (error != std::errc{} || end != size_end || length > 4096) {
+        return false;
+    }
+
+    while (response.size() < 8 + length) {
+        response += server.receive(deadline);
+    }
+
+    const auto payload = std::string_view(response).substr(8, length);
+
+    return payload == connected || payload == registered;
+}
+} // namespace
+
+void Session::publish_android_to_local_adb(std::chrono::steady_clock::time_point now) {
+    if (android_adb_published_ || !android_identity_ || now < next_local_adb_publish_) {
+        return;
+    }
+
+    using namespace std::chrono_literals;
+    next_local_adb_publish_ = now + 5s;
+    const auto port = android_adb_console_port_;
+
+    if (!android_adb_sink_ || !android_.alive() || !android_.owns_tcp_listener(port) ||
+        !android_.owns_tcp_listener(port + 1)) {
+        return;
+    }
+
+    try {
+        std::optional<android_console_detail::Socket> server(std::in_place);
+        try {
+            server->connect(local_adb_server_port, std::chrono::steady_clock::now() + 100ms);
+        } catch (const android_console_detail::Disconnected &) {
+            const auto sdk = android_spec_.at("android_sdk_root").get<std::string>();
+            ProcessSpec starter;
+            starter.executable = std::filesystem::path(sdk) / "platform-tools" /
+                                 (os::host_windows ? "adb.exe" : "adb");
+            starter.arguments = {"start-server"};
+            starter.environment["ADB_SERVER_SOCKET"] = "tcp:127.0.0.1:5037";
+            const auto result = execute(starter, 3000, 4096);
+
+            if (result.timed_out || result.exit_code != 0) {
+                throw VoyemuError("ANDROID_ADB_SERVER", "local ADB server could not be started");
+            }
+
+            // A failed connect leaves the original socket unusable on some hosts.
+            server.emplace();
+            server->connect(local_adb_server_port, std::chrono::steady_clock::now() + 100ms);
+        }
+
+        if (!register_emulator_with_adb(*server, port)) {
+            throw VoyemuError("ANDROID_ADB_SERVER",
+                              "local ADB server rejected emulator registration");
+        }
+
+        android_adb_published_ = true;
+    } catch (const std::exception &error) {
+        logging::try_write(android_adb_registration_warned_ ? logging::Level::debug
+                                                            : logging::Level::info,
+                           "android", "local_adb.registration_failed", "reason", error.what());
+        android_adb_registration_warned_ = true;
+    }
+}
+
 void Session::stop_owned_android_adb() {
+    android_adb_published_ = false;
+    android_adb_registration_warned_ = false;
+    next_local_adb_publish_ = {};
     cancel_android_identity_probe();
     android_identity_proof_operation_ = 0;
 

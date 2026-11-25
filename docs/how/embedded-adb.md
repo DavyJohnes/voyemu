@@ -2,6 +2,8 @@
 
 The supervisor talks to the Android guest of a session through its own ADB client, built into the launcher. It connects over loopback to the `adbd` endpoint of the emulator that this session started and uses no ADB server shared with other programs. The reasons are in [embedded ADB](../why/embedded-adb.md).
 
+Voyemu also registers its Android guest on the standard local ADB server when the session starts. The guest appears as `emulator-<console-port>` in `adb devices` and disappears when Android stops. The supervisor keeps using its embedded client for its own operations.
+
 ## What goes through it
 
 The shell commands and long-running shell streams that the session runs inside Android use this transport; before each use the supervisor checks that the emulator process and the guest generation are still the ones it owns. A launch of a prepared machine always selects the embedded transport.

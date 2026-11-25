@@ -561,6 +561,10 @@ void Session::tick() {
         advance_android(android_guest_possible, now);
     } // Disable cooperative unlock before cleanup bookkeeping.
 
+    if (android_guest_possible) {
+        publish_android_to_local_adb(now);
+    }
+
     if (android_possible_pressed_.empty() && android_events_.empty() &&
         deliveries_["android"].contains("press_cleanup") &&
         deliveries_["android"]["press_cleanup"].value("status", std::string{}) ==

@@ -442,6 +442,10 @@ private:
     std::shared_ptr<AndroidEmbeddedAdb> android_adb_;
     std::unique_ptr<AndroidSdkAdbSink> android_adb_sink_;
     unsigned android_adb_console_port_ = 0;
+    bool android_adb_published_ = false;
+    bool android_adb_registration_warned_ = false;
+    std::chrono::steady_clock::time_point next_local_adb_publish_{};
+    void publish_android_to_local_adb(std::chrono::steady_clock::time_point now);
     class RetainedAndroidAction {
     public:
         using Clock = std::chrono::steady_clock;
