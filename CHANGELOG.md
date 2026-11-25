@@ -2,6 +2,26 @@
 
 English | [Русский](CHANGELOG.ru.md) | [README](README.md)
 
+## 1.0.0-beta3 — 2026-11-25
+
+### Command line
+
+- Voyemu automatically registers the Android emulator with ADB at startup. It appears in `adb devices` without a manual `adb connect` and disappears when the machine stops.
+
+### Known limitations
+
+- The QNX instrument cluster is currently unavailable in the Passion profile.
+- Android UI observations can be incomplete.
+- Voyemu does not support real calls, host microphone input or OEM cloud services.
+
+### Known issues
+
+- On Free 6.0.3 (`free-09-chinese-20260106-6.0.3`), the QNX cluster shows the wrong startup animation.
+- On Free 6.11.1 and 7.3.1, a factory build can exit with code `4` if ADB disconnects while applying the Android wallpaper. A reliable fix has yet to be confirmed.
+- On Free 6.11.1 and 7.3.1, the rear-screen app (ThirdScreen) may crash if SELinux denies a write to the Android property `qinggan.thirdscreen.standby`.
+- Free 7.3.1: continuous video playback, photo display and DVR preview are not yet consistently verified in a combined cold session. The Android UI observer can reject the current UI tree with `TREE_REJECTED`, leaving the application state unconfirmed.
+- A clean Passion 2.1.4.80 multimedia build fails because the release lacks the native `hab-socket` component.
+
 ## 1.0.0-beta2 — 2026-11-23
 
 Beta2 adds the experimental Free Sport+ RC1 profile and a virtual USB drive with test music, videos and photos. It improves Android startup, the interface and machine preparation. On Windows, `deps` now installs the QNX cluster engine.
