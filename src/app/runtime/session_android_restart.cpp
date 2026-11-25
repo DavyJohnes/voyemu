@@ -588,6 +588,29 @@ Json Session::reboot_android(const std::string &mode) {
                 android_events_.pop_front();
             }
 
+            // A failed reply can mean the command reached the guest. Withdraw the old evidence
+            // before submission and let the next verified boot reestablish readiness.
+            auto &android = deliveries_["android"];
+            android["status"] = "rebooting";
+            android["guest_acknowledged"] = false;
+
+            for (const char *field :
+                 {"displays", "host_canvas", "systemui", "startup_services", "reboot"}) {
+                android.erase(field);
+            }
+
+            clear_android_home_delivery(android);
+            android_identity_ = false;
+            android_revision_ = 0;
+            android_boot_completed_ = false;
+            android_displays_ready_ = false;
+            android_display_activated_ = false;
+            android_canvas_refreshed_ = false;
+            primary_home_ready_ = false;
+            next_android_ = {};
+            next_display_observation_ = {};
+            next_display_activation_ = {};
+
             // The command is fixed, never a shell fragment or caller-supplied executable.
             const auto submitted = adb({"reboot"}, 5000);
 
@@ -595,10 +618,12 @@ Json Session::reboot_android(const std::string &mode) {
                 throw VoyemuError("ANDROID_REBOOT_UNKNOWN", "SDK reboot may have been submitted");
             }
 
+            // The retained SDK process must authorize the new generation before boot readmission.
+            advance_android_launch_generation(directory_, session_id_, old_pid, old_generation);
             reset_android_transaction();
             android_identity_mismatch_ = false;
             ++android_generation_;
-            android_identity_ = false;
+            android["generation"] = android_generation_;
             android_clock_observed_ = false;
             android_clock_correction_attempted_ = false;
             android_clock_exit_code_ = -1;
@@ -607,20 +632,10 @@ Json Session::reboot_android(const std::string &mode) {
             android_transport_attempted_ = false;
             android_transport_boot_.clear();
             wheel_provisioned_ = false;
-            android_revision_ = 0;
-            android_boot_completed_ = false;
-            android_displays_ready_ = false;
-            android_display_activated_ = false;
-            android_canvas_refreshed_ = false;
-            primary_home_ready_ = false;
-            clear_android_home_delivery(deliveries_["android"]);
             clear_android_camera_delivery(deliveries_["android"]);
             theme_.reset();
             oem_language_.reset();
-            next_android_ = {};
             next_oem_settings_ = {};
-            next_display_observation_ = {};
-            next_display_activation_ = {};
             media_connection_written_ = false;
             std::filesystem::remove(directory_ / "media-connection.json");
         }
