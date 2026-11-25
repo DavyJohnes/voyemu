@@ -1,4 +1,5 @@
 #include "portable_runtime_internal.hpp"
+#include "signed_android.hpp"
 
 // Binds a prepared machine configuration to this host: seed, SDK, ports and launch files.
 namespace voyemu {
@@ -91,11 +92,16 @@ std::filesystem::path bind_machine_configuration(const std::filesystem::path &ro
                  manifest.value("schema", 0) == 1,
          "portable machine configuration required");
     const auto retained_definition = portable_profile_definition(root, profile, machine, seed);
+    check_sdk_seed(seed, retained_definition, manifest);
+    const auto launch_boot_pins = checked_signed_android_boot_pins(root, seed, retained_definition,
+                                                                   manifest);
+    const bool signed_system = manifest.at("android").contains("signed_android");
     const auto family = runtime_profile_reference(retained_definition, profile);
     const auto development_kernel = checked_development_kernel(seed, retained_definition, manifest);
     const auto can_model_sha = checked_can_model_receipt(seed, manifest);
 
     if (multimedia) {
+        check_android_guest_identity(retained_definition, manifest);
         (void)portable_resource_path(seed, "ui/splash.png");
     }
 
@@ -145,6 +151,8 @@ std::filesystem::path bind_machine_configuration(const std::filesystem::path &ro
     }
 
     const auto desired_diagnostic = wine_native_diagnostic_binding();
+    need(!signed_system || desired_diagnostic.empty(),
+         "signed Android must boot with its approved base");
     // A scoped API30 WAV diagnostic run is bound to one private activation record inside the
     // configured machine directory. It is never derived from ambient state and never persists after
     // the owner removes the record, so ordinary launches keep the normal host audio backend.
@@ -387,7 +395,19 @@ std::filesystem::path bind_machine_configuration(const std::filesystem::path &ro
 
         const auto launch = read_private_json(directory / "android-launch.json");
 
-        if (launch.value("can_model_observer_sha256", std::string{}) != can_model_sha) {
+        if (android_kvm(retained_definition) &&
+            (launch.value("guest_arch", std::string{}) != "x86_64" ||
+             launch.value("audioOutput", true) !=
+                     android_launch_audio_output(retained_definition.at("emulator"), true) ||
+             launch.value("gpuMode", std::string{}) !=
+                     retained_definition.at("emulator").value("gpuMode", std::string("host")) ||
+             !launch.contains("args") || launch.at("args").size() < 2 ||
+             launch.at("args")[0] != "-accel" || launch.at("args")[1] != "on")) {
+            return false;
+        }
+
+        if (launch.value("can_model_observer_sha256", std::string{}) != can_model_sha ||
+            launch.value("signed_system", false) != signed_system) {
             return false;
         }
 
@@ -452,7 +472,8 @@ std::filesystem::path bind_machine_configuration(const std::filesystem::path &ro
             }
         }
 
-        if (!qinggan11_wheel_provider_profile(family) &&
+        if (!android_sdk_profile(retained_definition) &&
+            !qinggan11_wheel_provider_profile(family) &&
             !record_declares(retained_definition, ProfilePlatform::passion, ProfileBoard::sa8155) &&
             (!record_declares(retained_definition, ProfilePlatform::qinggan09, ProfileBoard::nxp) ||
              retained_definition.value("components", Json::object()).contains("wheel"))) {
@@ -1171,9 +1192,7 @@ std::filesystem::path bind_machine_configuration(const std::filesystem::path &ro
             const auto definition = portable_profile_definition(root, profile, machine, seed);
             const auto api = android.value("api", 0);
             const auto archive = android.at("base_archive_sha256").get<std::string>();
-            need(android.value("abi", std::string{}) == "arm64-v8a" && (api == 28 || api == 30) &&
-                         sha256_text(archive),
-                 "API28/API30 arm64 configuration required");
+            const auto abi = android.at("abi").get<std::string>();
 
             if (record_declares(definition, ProfilePlatform::passion, ProfileBoard::sa8155)) {
                 host.android_port = 5590;
@@ -1252,6 +1271,11 @@ std::filesystem::path bind_machine_configuration(const std::filesystem::path &ro
             require_stopped_profile();
             require_file(android_sdk_program(host.sdk, !suffix.empty()));
 
+            if (abi == "x86_64") {
+                require_file(host.sdk / "emulator/qemu" / std::string(os::emulator_host) /
+                             "qemu-system-x86_64-headless");
+            }
+
             for (const auto &[name, sha] : portable_clean_boot_pins(definition.at("android"))) {
                 require_file(host.clean_base / name);
             }
@@ -1288,6 +1312,12 @@ std::filesystem::path bind_machine_configuration(const std::filesystem::path &ro
             for (const auto &backing : {userdata, encryption, system, vendor}) {
                 const auto output = backing.parent_path() /
                                     (backing.filename().string() + ".qcow2");
+
+                if (signed_system && (backing == system || backing == vendor)) {
+                    need(!std::filesystem::exists(std::filesystem::symlink_status(output)),
+                         "signed Android cannot use writable system/vendor overlays");
+                    continue;
+                }
 
                 if (std::filesystem::exists(output)) {
                     require_file(output);
@@ -1359,6 +1389,14 @@ std::filesystem::path bind_machine_configuration(const std::filesystem::path &ro
                                                   scoped / "config-template.ini", avd,
                                                   Json::array(), definition, desired_audio,
                                                   manifest.at("profile").get<std::string>());
+
+            if (signed_system) {
+                launch["signed_system"] = true;
+
+                for (const auto &[name, pin] : launch_boot_pins) {
+                    add_pin(launch["pins"], launch_base / name, pin);
+                }
+            }
 
             if (!relocated_from.empty()) {
                 launch["previous_machine"] = (relocated_from / "android").string();

@@ -286,6 +286,43 @@ static void owner_fetch_sequence(const std::filesystem::path &project) {
                   cache_file_identity(destination / "originals/own.jar") == old_id &&
                   cache_file_identity(destination / "owner-inputs.json") == owner_id,
           "update ordinary cached-update sequence preserves acquired inputs");
+    auto targeted = definition;
+    targeted["id"] = "owner-sequence";
+    targeted["android"]["package"] = "system-images;android-30;default;arm64-v8a";
+    targeted["targets"] = {{"arm", {{"guestAbi", "arm64-v8a"}, {"preparation", "sdk"}}},
+                           {"x86",
+                            {{"guestAbi", "x86_64"},
+                             {"preparation", "signed-offline"},
+                             {"androidBase", "owner-sequence-x86"},
+                             {"emulator", {{"acceleration", "kvm"}, {"gpuMode", "host"}}}}}};
+    write_private_json(selected / "profile.json", targeted);
+    const auto x86_pin = sha256_bytes("x86-archive");
+    write_private_json(root / "profiles/common/android-bases/owner-sequence-x86.json",
+                       {{"package", "system-images;android-30;default;x86_64"},
+                        {"url", targeted.at("android").at("url")},
+                        {"sha256", x86_pin},
+                        {"clean_base", Json::object()}});
+    {
+        std::ofstream out(root / ".local/toolchains/downloads/native" / (x86_pin + ".blob"));
+        out << "x86-archive";
+    }
+    const auto owner_inventory_pin = sha256_file(destination / "native-inputs.json");
+    const auto x86 = fetch_native_inputs(root, "owner-sequence", true, "", 0, {}, {}, "x86");
+    check(x86.at("android_archive").at("sha256") == x86_pin && !x86.contains("qnx") &&
+                  sha256_file(destination / "native-inputs.json") == owner_inventory_pin &&
+                  fetch_native_inputs(root, "owner-sequence", true, "", 0, {}, zip)
+                                  .at("owner_update")
+                                  .at("cached") == true,
+          "preparing x86 leaves the shared owner import reusable");
+    const auto arm = fetch_native_inputs(root, "owner-sequence", true, "", 0, {}, {}, "arm");
+    check(arm.at("android_archive").at("sha256") == definition.at("android").at("sha256") &&
+                  arm.contains("qnx") &&
+                  fetch_native_inputs(root, "owner-sequence", true, "", 0, {}, zip)
+                                  .at("owner_update")
+                                  .at("cached") == true &&
+                  cache_file_identity(destination / "owner-inputs.json") == owner_id,
+          "preparing ARM publishes the shared receipt and leaves the import reusable");
+    write_private_json(selected / "profile.json", definition);
     const std::string aar(1024 * 1024 + 1, 'A');
     const auto aar_sha = sha256_bytes(aar);
     ensure_private_directory(root / ".local/toolchains/downloads/sources");

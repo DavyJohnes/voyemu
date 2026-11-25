@@ -1,5 +1,6 @@
 #include "java_toolchain.hpp"
 #include "error.hpp"
+#include "java_runtime.hpp"
 #include "os/https.hpp"
 #include "os/platform.hpp"
 #include "process.hpp"
@@ -385,6 +386,25 @@ void selection_checks(const std::filesystem::path &scratch, const std::filesyste
     check(failure([&] {
               java_helper_recipe_jdk(installation, jdk);
           }).starts_with("JAVA_HELPER_ASSET_MISSING:"));
+    const Json legacy_helper = Json::object();
+    auto compatible_helper = legacy_helper;
+    compatible_helper["profileVariantSchema"] = 1;
+    check(profile_preparation_jdk(installation, {}, true, compatible_helper).empty());
+    check(profile_preparation_jdk(installation, {}, false, legacy_helper).empty());
+    check(profile_preparation_jdk(root, jdk, true, legacy_helper) == jdk);
+    check(failure([&] {
+              profile_preparation_jdk(installation, jdk, true, legacy_helper);
+          }).find("does not support vehicle variants") != std::string::npos);
+    check(failure([&] {
+              profile_preparation_jdk(installation, {}, false, compatible_helper, true);
+          }).find("does not support profile build targets") != std::string::npos);
+    check(profile_preparation_jdk(root, jdk, false, legacy_helper, true) == jdk);
+    compatible_helper["profileTargetSchema"] = 1;
+    check(profile_preparation_jdk(installation, {}, false, compatible_helper, true).empty());
+    const auto local_jdk = java_developer_jdk(root);
+    ensure_private_directory(local_jdk / "bin");
+    std::ofstream(local_jdk / "bin" / ("javac" + std::string(os::executable_suffix))) << "fixture";
+    check(profile_preparation_jdk(root, {}, true, legacy_helper) == local_jdk);
     std::cout << "PASS --jdk selects its java; missing runtime and helper assets reported\n";
 }
 } // namespace

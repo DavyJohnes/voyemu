@@ -18,23 +18,45 @@ bool sha256_pin(const Json &value) {
 }
 } // namespace
 
-unsigned native_base_api(const Json &descriptor) {
+AndroidBaseIdentity native_base_identity(const Json &descriptor) {
     const auto package = descriptor.value("package", std::string{}),
                revision = descriptor.value("revision", std::string{}),
                url = descriptor.value("url", std::string{});
-    // The clean ARM64 AOSP images Voyemu supports; profile.json pins the archive of each.
-    const unsigned api = package == "system-images;android-28;default;arm64-v8a"   ? 28
-                         : package == "system-images;android-30;default;arm64-v8a" ? 30
-                                                                                   : 0;
+    const auto identity = android_package_identity(package);
+    const bool x86 = identity.abi == "x86_64";
 
-    if (api == 0 || revision.empty() ||
+    if (identity.api == 0 || revision.empty() ||
         revision.find_first_not_of("0123456789") != std::string::npos ||
         !url.starts_with("https://dl.google.com/android/repository/sys-img/android/") ||
+        (x86 &&
+         !url.starts_with("https://dl.google.com/android/repository/sys-img/android/x86_64-30_")) ||
         !sha256_pin(descriptor.value("sha256", Json()))) {
-        throw VoyemuError("BASE_DESCRIPTOR", "pinned API28/API30 ARM64 image required");
+        throw VoyemuError("BASE_DESCRIPTOR", "unsupported or unpinned Android system image");
     }
 
-    return api;
+    return identity;
+}
+
+bool android_kvm(const Json &definition) {
+    const auto android = definition.value("android", Json::object());
+    const auto emulator = definition.value("emulator", Json::object());
+    const bool x86 = android_package_identity(android.value("package", std::string{})).abi ==
+                     "x86_64";
+
+    if (!x86 && !emulator.contains("acceleration")) {
+        return false;
+    }
+
+    if (!x86 || emulator.value("acceleration", Json{}) != "kvm") {
+        throw VoyemuError("ANDROID_ACCELERATION",
+                          "x86_64 Android requires emulator.acceleration=kvm");
+    }
+
+    return true;
+}
+
+unsigned native_base_api(const Json &descriptor) {
+    return native_base_identity(descriptor).api;
 }
 
 CleanBase native_clean_base(const Json &descriptor) {
@@ -193,7 +215,7 @@ Json prepare_native_base_image(const Json &descriptor, const std::filesystem::pa
     const auto package = descriptor.at("package").get<std::string>(),
                revision = descriptor.at("revision").get<std::string>(),
                sha = descriptor.at("sha256").get<std::string>();
-    const auto api = native_base_api(descriptor);
+    const auto identity = native_base_identity(descriptor);
 
     if (!archive.is_absolute() || !destination.is_absolute() ||
         std::filesystem::exists(destination) || std::filesystem::is_symlink(destination)) {
@@ -247,8 +269,8 @@ Json prepare_native_base_image(const Json &descriptor, const std::filesystem::pa
         }
     }
 
-    if (values["AndroidVersion.ApiLevel"] != std::to_string(api) ||
-        values["SystemImage.Abi"] != "arm64-v8a" || values["Pkg.Revision"] != revision ||
+    if (values["AndroidVersion.ApiLevel"] != std::to_string(identity.api) ||
+        values["SystemImage.Abi"] != identity.abi || values["Pkg.Revision"] != revision ||
         values["SystemImage.TagId"] != "default") {
         throw VoyemuError("BASE_META", "image identity differs from descriptor");
     }

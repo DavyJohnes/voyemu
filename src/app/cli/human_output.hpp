@@ -120,6 +120,12 @@ inline std::string human_cli_error(const std::exception_ptr &failure, cli::Langu
             return human_cli_error(uncoded) + log_line;
         }
 
+        if (message_code(error.what()) == "ANDROID_VERIFIED_BOOT") {
+            return human_cli_error("ANDROID_VERIFIED_BOOT: " +
+                                   cli::message(language, "error.android_verified_boot")) +
+                   log_line;
+        }
+
         if (log.empty()) {
             return human_cli_error(error.what());
         }

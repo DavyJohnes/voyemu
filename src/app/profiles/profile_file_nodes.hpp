@@ -21,5 +21,6 @@ const std::set<std::string> &file_steps();
 ProfileFileNodes plan_profile_file_nodes(const std::filesystem::path &root,
                                          std::string_view profile,
                                          const std::filesystem::path &system_extraction,
-                                         const std::filesystem::path &vendor_extraction);
+                                         const std::filesystem::path &vendor_extraction,
+                                         std::string_view target = {});
 } // namespace voyemu

@@ -113,12 +113,14 @@ inline constexpr const char *passion_secondary =
 
 inline Json passion_startup_values(const Json &definition) {
     const auto status = definition.value("status", std::string{});
+    const auto package =
+            definition.value("android", Json::object()).value("package", std::string{});
 
     if (definition.value("schema", 0) != 1 ||
         !record_declares(definition, ProfilePlatform::passion, ProfileBoard::sa8155) ||
         (status != "ready" && status != "incomplete") ||
-        definition.value("android", Json::object()).value("package", std::string{}) !=
-                "system-images;android-30;default;arm64-v8a" ||
+        (package != "system-images;android-30;default;arm64-v8a" &&
+         package != "system-images;android-30;default;x86_64") ||
         definition.value("initial_state", Json::object()) != Json::object()) {
         throw VoyemuError("PASSION_PRESENTATION",
                           "exact API30 Passion profile with unsupported vehicle state required");

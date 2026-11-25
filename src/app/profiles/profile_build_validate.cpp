@@ -1,4 +1,5 @@
 #include "profile_build_internal.hpp"
+#include "profile_catalog.hpp"
 #include "project_files.hpp"
 
 // Validates built Android candidates and the artifacts that a resumed build reuses.
@@ -53,17 +54,17 @@ static Json validate_plain_android_system_candidate(const std::filesystem::path 
                                                     const std::string &receipt_pin,
                                                     bool require_package) {
     root_profile(root, profile);
-    const auto definition_file = authoring_definition(root, profile);
-    const auto definition = read_private_json(definition_file, 1 << 20);
-    need(profile_feature(definition, "system_upgrade"),
-         "system-only upgrade requires a profile with the system_upgrade feature");
     ordinary(android);
     inside(root / ".local", android);
-    api30_framework_boot::verify(definition);
-    need(native_base_api(definition.at("android")) == 30, "API30 system recipe required");
     const auto receipt = android / "receipt.json";
     need(hash(receipt, 1 << 20) == receipt_pin, "Android system candidate receipt pin differs");
     const auto candidate = read_private_json(receipt, 1 << 20);
+    const auto target = candidate.value("target", Json::object()).value("name", std::string{});
+    const auto definition = authoring_profile(root, profile, target);
+    need(!profile_multimedia_only(definition) && profile_feature(definition, "system_upgrade"),
+         "system-only upgrade requires a supported profile");
+    api30_framework_boot::verify(definition);
+    need(native_base_api(definition.at("android")) == 30, "API30 system recipe required");
     need(candidate.at("schema") == 1 && candidate.at("kind") == "android-candidate" &&
                  candidate.at("profile") == profile && candidate.at("stopped") == true &&
                  candidate.at("cold_boot_verified") == true &&
@@ -72,7 +73,9 @@ static Json validate_plain_android_system_candidate(const std::filesystem::path 
          "source-matched stopped cold Android system candidate required");
     validate_accepted_android_profile(android, candidate, profile, definition);
     need(candidate.at("clean_base_archive_sha256") == definition.at("android").at("sha256") &&
-                 candidate.at("android").at("abi") == "arm64-v8a",
+                 candidate.at("android").at("abi") ==
+                         native_base_identity(definition.at("android")).abi &&
+                 candidate.value("target", Json{}) == profile_target_identity(definition),
          "system candidate base/ABI differs");
 
     if (const auto development = portable_development_kernel(definition); !development.is_null()) {
@@ -107,18 +110,8 @@ static Json validate_plain_android_system_candidate(const std::filesystem::path 
     const auto paths = api30_framework_boot::paths(definition);
     need(bridge == 1 && compiled == std::set<std::string>(paths.begin(), paths.end()),
          "complete API30 bridge and boot extension required");
-    unsigned boot = 0;
-
-    for (const auto &event : candidate.at("events")) {
-        if (event.at("phase") == "boot-art-compiled") {
-            need(event.at("files") == 18 &&
-                         event.at("command") == api30_framework_boot::command(definition),
-                 "API30 boot compiler recipe differs");
-            ++boot;
-        }
-    }
-
-    need(boot == 1, "one verified API30 boot compilation required");
+    need(api30_framework_boot::compiled(definition, candidate.at("events")),
+         "complete verified API30 boot compilation required");
 
     if (require_package || candidate.contains("owned_package")) {
         const auto &package = candidate.at("owned_package");
@@ -292,7 +285,7 @@ Json upgrade_pinned_json(const std::filesystem::path &root, const Json &descript
 } // namespace profile_build_detail
 
 std::string current_profile_revision(const std::filesystem::path &root, std::string_view profile) {
-    const auto directory = root / "profiles" / std::string(profile);
+    const auto directory = profile_recipe_directory(root, profile);
     Json files = Json::object();
     std::uint64_t total = 0;
 
@@ -319,8 +312,8 @@ static void validate_qinggan09_equipment_artifact(const std::filesystem::path &r
                                                   std::string_view profile,
                                                   const std::filesystem::path &work,
                                                   const Json &artifact) {
-    const auto directory = root / "profiles" / std::string(profile);
-    const auto definition = read_private_json(directory / "profile.json", 1 << 20);
+    const auto directory = profile_recipe_directory(root, profile);
+    const auto definition = authoring_profile(root, profile);
 
     need(record_declares(definition, ProfilePlatform::qinggan09, ProfileBoard::sa8155) &&
                  definition.at("android").at("package") ==
@@ -377,8 +370,11 @@ static void validate_qinggan09_equipment_artifact(const std::filesystem::path &r
 }
 
 Json validate_profile_artifact_resume(const std::filesystem::path &root, std::string_view profile,
-                                      const std::filesystem::path &file, const std::string &pin) {
+                                      const std::filesystem::path &file, const std::string &pin,
+                                      std::string_view target) {
     root_profile(root, profile);
+    const auto definition = authoring_profile(root, profile, target);
+    const auto identity = profile_target_identity(definition);
     const auto artifact_lease = artifact_reader(root, file, pin);
     ordinary(file);
     inside(root / ".local", file);
@@ -387,7 +383,8 @@ Json validate_profile_artifact_resume(const std::filesystem::path &root, std::st
     const auto receipt = read_private_json(file, 1 << 20);
     need(receipt.at("schema") == 1 && receipt.at("kind") == "native-profile-artifacts" &&
                  receipt.at("profile") == profile && receipt.at("machine_ready") == false &&
-                 receipt.at("guest_started") == false,
+                 receipt.at("guest_started") == false &&
+                 receipt.value("target", Json{}) == identity,
          "artifact preparation epoch differs");
     const std::filesystem::path transport = receipt.at("transport").get<std::string>(),
                                 base = receipt.at("base").get<std::string>(),
@@ -409,8 +406,18 @@ Json validate_profile_artifact_resume(const std::filesystem::path &root, std::st
     need(result.at("schema") == 1 && result.at("operation") == "build-artifacts" &&
                  result.at("artifacts_built") == true && result.at("machine_ready") == false &&
                  result.at("guest_started") == false && result.at("artifacts").is_object() &&
-                 result.at("profile") == profile,
+                 result.at("profile") == profile && result.value("target", Json{}) == identity,
          "prepared artifact profile source closure changed");
+
+    if (!target.empty()) {
+        const auto base_pin = identity.at("base_sha256").get<std::string>();
+        const auto base_receipt = read_private_json(base / "base.json", 512 * 1024);
+        need(receipt.contains("android_inputs") &&
+                     base == root / ".local/profiles/common/android-base" / base_pin &&
+                     base_receipt.at("archive_sha256") == base_pin &&
+                     base_receipt.at("package") == definition.at("android").at("package"),
+             "prepared base does not match selected target");
+    }
 
     if (receipt.contains("android_inputs")) {
         need(receipt.contains("invocation_sha256") == receipt.contains("request_sha256"),
@@ -444,6 +451,15 @@ Json validate_profile_artifact_resume(const std::filesystem::path &root, std::st
                      request.at("android_inputs").is_object() &&
                      receipt.at("android_inputs").is_array(),
              "prepared request identity differs");
+
+        if (!target.empty()) {
+            need(request.at("target") == identity &&
+                         request.at("android_base") == definition.at("android") &&
+                         request.at("profile_sha256") ==
+                                 sha256_bytes(authoring_profile_bytes(root, profile, target)),
+                 "prepared request target or pinned Android base differs");
+        }
+
         std::set<std::string> selected;
 
         for (const auto &item : receipt.at("android_inputs")) {
@@ -556,26 +572,21 @@ Json validate_profile_artifact_resume(const std::filesystem::path &root, std::st
         }
     }
 
-    passion_mcu_helper_graph(root, read_private_json(authoring_definition(root, profile), 1 << 20),
-                             result.at("artifacts"));
+    passion_mcu_helper_graph(root, definition, result.at("artifacts"));
 
-    passion_generated_helper_graph(root,
-                                   read_private_json(authoring_definition(root, profile), 1 << 20),
-                                   result.at("artifacts"));
+    passion_generated_helper_graph(root, definition, result.at("artifacts"));
 
     for (auto at = result.at("artifacts").begin(); at != result.at("artifacts").end(); ++at) {
         const auto &artifact = at.value();
 
         if (artifact.contains("file") && at.key().starts_with("files:")) {
-            const auto definition = read_private_json(authoring_definition(root, profile), 1 << 20);
-
             if (at.key() == "files:hybrid-nvram" && definition.contains("files") &&
                 definition.at("files").contains("hybrid-nvram") &&
                 definition.at("files").at("hybrid-nvram").contains("simulation")) {
                 validate_qinggan09_equipment_artifact(root, profile, work, artifact);
             } else {
                 const std::filesystem::path source = artifact.at("file").get<std::string>();
-                inside(root / "profiles" / std::string(profile) / "files", source);
+                inside(profile_recipe_directory(root, profile) / "files", source);
                 need(hash(source) == artifact.at("sha256").get<std::string>() &&
                              std::filesystem::file_size(source) ==
                                      artifact.at("bytes").get<std::uint64_t>(),
@@ -785,7 +796,7 @@ static Json validate_android_package_upgrade(const std::filesystem::path &root,
                                              const std::filesystem::path &capsule,
                                              const std::string &receipt_pin) {
     root_profile(root, profile);
-    need(qinggan11_wheel_provider(read_private_json(authoring_definition(root, profile), 1 << 20)),
+    need(qinggan11_wheel_provider(authoring_profile(root, profile)),
          "owned package lineage requires the qinggan11 wheel provider");
     ordinary(capsule);
     inside(root / ".local", capsule);
@@ -881,8 +892,8 @@ Json validate_profile_android_system_candidate(const std::filesystem::path &root
 
     return validate_plain_android_system_candidate(
             root, profile, android, receipt_pin,
-            !record_declares(read_private_json(authoring_definition(root, profile), 1 << 20),
-                             ProfilePlatform::passion, ProfileBoard::sa8155));
+            !record_declares(authoring_profile(root, profile), ProfilePlatform::passion,
+                             ProfileBoard::sa8155));
 }
 
 namespace profile_build_detail {
@@ -897,7 +908,7 @@ Json source_system_media_artifact(const std::filesystem::path &root, std::string
     Json media = Json();
     std::filesystem::path media_origin = artifact_receipt;
     std::string media_origin_pin = artifact_receipt_pin;
-    const auto source_definition = read_private_json(authoring_definition(root, profile), 1 << 20);
+    const auto source_definition = authoring_profile(root, profile);
     const auto media_steps = source_definition.value("patches", Json::object())
                                      .value("QGMedia", Json::object())
                                      .value("steps", Json::array());
@@ -992,8 +1003,7 @@ Json source_camera_artifact(const std::filesystem::path &root, std::string_view 
         return Json();
     }
 
-    need(qinggan11_package_delivery(
-                 read_private_json(authoring_definition(root, profile), 1 << 20)) &&
+    need(qinggan11_package_delivery(authoring_profile(root, profile)) &&
                  candidate.at("kind") == "android-candidate",
          "Camera artifact requires exact cold Free A11 candidate");
     auto origin = artifact_receipt;
@@ -1042,7 +1052,7 @@ Json source_navi_artifact(const std::filesystem::path &root, std::string_view pr
                           const std::string &artifact_receipt_pin) {
     const auto candidate = read_private_json(android / "receipt.json", 1 << 20);
 
-    const auto definition = read_private_json(authoring_definition(root, profile), 1 << 20);
+    const auto definition = authoring_profile(root, profile);
 
     // Only a profile with a Navi patch prepares a Navi package.
     if (!candidate.contains("prepared_packages") || !definition.at("patches").contains("Navi")) {

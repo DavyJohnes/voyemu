@@ -1,5 +1,6 @@
 #pragma once
 #include "model.hpp"
+#include "signed_android.hpp"
 #include <functional>
 #include <map>
 namespace voyemu {
@@ -9,7 +10,8 @@ Json profile_source_graphics_bindings(const std::filesystem::path &root, const J
                                       const std::filesystem::path &current_program);
 // Public boot dependencies for an imported prepared guest; no owner originals required.
 Json prepare_portable_base(const std::filesystem::path &root, std::string_view profile,
-                           bool offline = false, std::uint64_t reserve = 20ULL << 30);
+                           bool offline = false, std::uint64_t reserve = 20ULL << 30,
+                           std::string_view target = {});
 // Read-only genuine accepted QNX closure reuse; original acceptance remains immutable.
 Json validate_accepted_qnx_reuse(const std::filesystem::path &root, std::string_view profile,
                                  const std::filesystem::path &receipt, const std::string &sha256,
@@ -22,19 +24,23 @@ Json build_profile(const std::filesystem::path &root, std::string_view profile,
                    const std::filesystem::path &current_program = {},
                    const std::filesystem::path &reuse_qnx = {},
                    const std::string &reuse_qnx_sha256 = {},
-                   const std::filesystem::path &reuse_qnx_source = {});
+                   const std::filesystem::path &reuse_qnx_source = {},
+                   const SignedAndroidInput &signed_android = {}, std::string_view target = {});
 // Read-only validation of a pinned stopped artifact preparation epoch.
 std::string current_profile_revision(const std::filesystem::path &root, std::string_view profile);
 Json validate_profile_artifact_resume(const std::filesystem::path &root, std::string_view profile,
                                       const std::filesystem::path &receipt,
-                                      const std::string &receipt_sha256);
+                                      const std::string &receipt_sha256,
+                                      std::string_view target = {});
 // Android preparation stage only; never publishes an Android-only final profile.
 Json build_profile_android(const std::filesystem::path &root, std::string_view profile,
                            const MachineIdentity &machine, bool offline = false,
                            const std::filesystem::path &jdk = {},
                            std::function<bool()> cancelled = {},
                            const std::filesystem::path &artifact_receipt = {},
-                           const std::string &artifact_receipt_sha256 = {});
+                           const std::string &artifact_receipt_sha256 = {},
+                           const SignedAndroidInput &signed_android = {},
+                           std::string_view target = {});
 // Finalizer consumes an already stopped/cold-verified Android candidate and an
 // explicit accepted QNX seed receipt. It never reruns Android or replaces a profile.
 // Upgrade stopped QNX boot files; preserve Android and existing Free A9 persistent storage.

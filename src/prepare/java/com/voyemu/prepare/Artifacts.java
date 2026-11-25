@@ -126,13 +126,13 @@ final class Artifacts {
         Map<String, Object> definition =
                 Json.object(Json.parse(Files.readString(source.resolve("component.json"))));
         long recipeApi = Json.integer(definition, "minSdk");
+        elf(file, nativeComponentAbi(definition, abi));
         Failure.require(
                 "native".equals(definition.get("type"))
                         && (recipeApi == 28 || recipeApi == 30)
                         && ("executable".equals(definition.get("outputType"))
                                 ? api == recipeApi
                                 : api >= recipeApi)
-                        && abi.equals("arm64-v8a")
                         && file.getFileName().toString().equals(Json.str(definition, "output"))
                         && produced.putIfAbsent(reference, file) == null,
                 "PREPARATION_NATIVE_COMPONENT",
@@ -1209,6 +1209,26 @@ final class Artifacts {
         }
 
         return result;
+    }
+
+    // A shared library must match the ABI of the process that loads it, including OEM binaries.
+    static String nativeComponentAbi(Map<String, Object> definition, String guestAbi) {
+        String wanted = Json.str(definition, "abi", guestAbi);
+
+        Failure.require(
+                (wanted.equals("arm64-v8a") || wanted.equals("x86_64"))
+                        && (wanted.equals(guestAbi)
+                                || ("x86_64".equals(guestAbi)
+                                        && "arm64-v8a".equals(wanted)
+                                        && "shared-library"
+                                                .equals(
+                                                        definition.getOrDefault(
+                                                                "outputType", "shared-library")))),
+                "PREPARATION_NATIVE_COMPONENT",
+                "Unsupported native component ABI for this guest",
+                3);
+
+        return wanted;
     }
 
     static void elf(Path path, String abi) throws Exception {

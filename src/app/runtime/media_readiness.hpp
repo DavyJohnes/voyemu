@@ -10,6 +10,10 @@ namespace voyemu::media {
 // The presentation family of a machine whose OEM screens are presented as they are, by the platform
 // or board it belongs to; empty for a machine that acknowledges vehicle state.
 inline std::string presentation_family(const Json &android_spec) {
+    if (android_sdk_profile(android_spec)) {
+        return "aosp";
+    }
+
     if (passion_presentation(android_spec)) {
         return "passion";
     }
@@ -22,7 +26,7 @@ inline std::string presentation_family(const Json &android_spec) {
 }
 
 inline bool presentation_family_known(const Json &value) {
-    return value == "passion" || value == "nxp";
+    return value == "passion" || value == "nxp" || value == "aosp";
 }
 
 // Written once by the session owner before launching its frontend; never inferred from deliveries.
@@ -86,6 +90,12 @@ inline bool presentation_ready(const Json &android, bool require_oem,
             android.value("status", std::string{}) == "presentation_ready" &&
             presentation_family_known(android.value("presentation_family", Json{})) &&
             !android.value("guest_acknowledged", false);
+
+    if (presentation_only && android.value("presentation_family", std::string{}) == "aosp") {
+        return presented && !require_oem &&
+               android.value("displays", Json::object()).value("status", std::string{}) ==
+                       "both_guest_displays_ready";
+    }
 
     return (presentation_only ? presented : acknowledged) &&
            android.value("home", Json::object()).value("status", std::string{}) ==

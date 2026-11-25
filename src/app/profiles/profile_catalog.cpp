@@ -1,13 +1,294 @@
 #include "profile_catalog.hpp"
+#include "check.hpp"
+#include "cli_messages.hpp"
 #include "embedded_data.hpp"
 #include "error.hpp"
 #include "file_patch.hpp"
+#include "process.hpp"
 #include "qinggan11_startup.hpp"
+#include "quickboot.hpp"
+#include <algorithm>
 #include <functional>
 #include <map>
 #include <stdexcept>
 namespace voyemu {
 #include "profile_catalog.inc"
+
+namespace {
+constexpr std::size_t max_profile_bytes = 1 << 20;
+
+std::string profile_bytes(const std::filesystem::path &file) {
+    const auto epoch = cache_file_identity(file);
+    const auto bytes = read_private_json_bytes(file, max_profile_bytes);
+
+    if (cache_file_identity(file) != epoch) {
+        throw VoyemuError("PROFILE_VARIANT", "profile input changed while reading");
+    }
+
+    return bytes;
+}
+
+std::string variant_source(const Json &variant, const char *key) {
+    if (!variant.is_object() || variant.size() != 2 || !variant.contains(key) ||
+        !variant.at(key).is_string() || !valid_profile_name(variant.at(key).get<std::string>())) {
+        throw VoyemuError("PROFILE_VARIANT",
+                          "confined recipe profile and Android base names required");
+    }
+
+    return variant.at(key).get<std::string>();
+}
+
+Json resolve_variant(const Json &source, std::string_view id, Json recipe, const Json &base) {
+    const auto &variant = source.at("variant");
+    const auto config = source.value("emulator", Json{});
+    const auto memory = config.is_object() ? config.value("memory", Json(4096)) : Json{};
+    const auto features = source.value("features", Json::object());
+    const auto reference = variant_source(variant, "recipeProfile");
+
+    (void)variant_source(variant, "androidBase");
+
+    if (source.size() != (source.contains("features") ? 7 : 6) || !features.is_object() ||
+        features.size() !=
+                static_cast<unsigned>(features.contains("mcu_property_runtime")) +
+                        static_cast<unsigned>(features.contains("display_power_runtime")) ||
+        std::any_of(features.begin(), features.end(),
+                    [](const auto &v) {
+                        return v != false;
+                    }) ||
+        source.value("schema", Json{}) != 1 || source.value("id", Json{}) != id ||
+        !source.contains("title") || !source.at("title").is_string() || source.at("title") == "" ||
+        !source.contains("status") || reference == id || !recipe.is_object() ||
+        recipe.value("schema", Json{}) != 1 || recipe.contains("variant") ||
+        recipe.contains("capture") || recipe.value("local", Json(false)) != false ||
+        recipe.value("id", Json(reference)) != reference || !recipe.contains("android") ||
+        !recipe.at("android").is_object() || !recipe.contains("original") ||
+        !recipe.contains("verify") || !config.is_object() ||
+        config.size() != 2U + config.contains("memory") + config.contains("audioOutput") ||
+        config.value("acceleration", Json{}) != "kvm" ||
+        config.value("gpuMode", Json{}) != "host" ||
+        !config.value("audioOutput", Json(false)).is_boolean() || !memory.is_number_integer() ||
+        memory < 512 || memory > 16384 || !base.is_object() ||
+        base.value("package", Json{}) != "system-images;android-30;default;x86_64" ||
+        base.contains("development_kernel") || !base.contains("clean_base") ||
+        recipe.at("android").value("package", Json{}) !=
+                "system-images;android-30;default;arm64-v8a") {
+        throw VoyemuError("PROFILE_VARIANT", "incompatible vehicle recipe or Android SDK variant");
+    }
+
+    const auto status = source.at("status");
+
+    if (status != "incomplete" && status != "ready") {
+        throw VoyemuError("PROFILE_VARIANT", "invalid variant status");
+    }
+
+    recipe["variant"] = variant;
+    recipe["id"] = id;
+    recipe["title"] = profile_title(source);
+    recipe["status"] = status;
+
+    if (!features.empty()) {
+        recipe["features"].update(features);
+    }
+
+    const auto guest_features = recipe.at("android").value("features", Json::object());
+    recipe["android"] = base;
+    recipe["android"]["features"].update(guest_features);
+    recipe["emulator"].update(source.at("emulator"));
+
+    return recipe;
+}
+
+Json resolve_target(Json definition, std::string_view name,
+                    const std::function<Json(const std::string &)> &read_base) {
+    const Check need{"PROFILE_TARGET"};
+    const auto &targets = definition.at("targets");
+
+    need(targets.is_object() && targets.size() == 2 && targets.contains("arm") &&
+                 targets.contains("x86") && (name == "arm" || name == "x86") &&
+                 !definition.contains("variant") && !definition.contains("target") &&
+                 definition.at("android").value("package", std::string{}) ==
+                         "system-images;android-30;default;arm64-v8a",
+         "invalid Android target catalogue");
+    const auto entry = targets.at(name);
+    const bool x86 = name == "x86";
+    const auto abi = x86 ? "x86_64" : "arm64-v8a";
+    const auto preparation = x86 ? "signed-offline" : "sdk";
+    need(entry.is_object() && entry.size() == (x86 ? 4U : 2U) &&
+                 entry.value("guestAbi", std::string{}) == abi &&
+                 entry.value("preparation", std::string{}) == preparation,
+         "target ABI or preparation differs");
+    Json target = {{"name", name}, {"guestAbi", abi}, {"preparation", preparation}};
+
+    if (x86) {
+        const auto base_name = entry.value("androidBase", std::string{});
+        const auto emulator = entry.value("emulator", Json::object());
+        const auto memory = emulator.is_object() ? emulator.value("memory", Json(4096)) : Json{};
+        need(valid_profile_name(base_name) && emulator.is_object() &&
+                     emulator.size() ==
+                             2U + emulator.contains("memory") + emulator.contains("audioOutput") &&
+                     emulator.value("acceleration", std::string{}) == "kvm" &&
+                     emulator.value("gpuMode", std::string{}) == "host" &&
+                     emulator.value("audioOutput", Json(false)).is_boolean() &&
+                     memory.is_number_integer() && memory >= 512 && memory <= 16384,
+             "invalid x86 base or emulator settings");
+        auto base = read_base(base_name);
+        need(base.is_object() &&
+                     base.value("package", std::string{}) ==
+                             "system-images;android-30;default;x86_64" &&
+                     base.contains("clean_base") && !base.contains("development_kernel"),
+             "x86 target requires a pinned API30 SDK base");
+        const auto features = definition.at("android").value("features", Json::object());
+
+        if (!features.empty()) {
+            base["features"].update(features);
+        }
+
+        definition["android"] = std::move(base);
+        definition["emulator"].update(emulator);
+        target["androidBase"] = base_name;
+    }
+
+    definition.erase("targets");
+    definition["target"] = std::move(target);
+
+    return definition;
+}
+
+std::filesystem::path authoring_directory(const std::filesystem::path &root,
+                                          std::string_view name) {
+    if (!valid_profile_name(name)) {
+        throw VoyemuError("PROFILE_VARIANT", "valid profile id required");
+    }
+
+    return root / "profiles" / std::string(name);
+}
+} // namespace
+
+std::string authoring_profile_bytes(const std::filesystem::path &root, std::string_view name,
+                                    std::string_view target) {
+    return authoring_profile_bytes(root, name, profile_bytes, target);
+}
+
+std::string
+authoring_profile_bytes(const std::filesystem::path &root, std::string_view name,
+                        const std::function<std::string(const std::filesystem::path &)> &read,
+                        std::string_view target) {
+    const auto bytes = read(authoring_directory(root, name) / "profile.json");
+    const auto source = Json::parse(bytes);
+
+    if (!target.empty()) {
+        if (!source.contains("targets") || source.value("id", std::string{}) != name) {
+            throw VoyemuError("PROFILE_TARGET",
+                              "profile does not declare the selected build target");
+        }
+
+        return resolve_target(source, target,
+                              [&](const std::string &base) {
+                                  return Json::parse(read(root / "profiles/common/android-bases" /
+                                                          (base + ".json")));
+                              })
+                       .dump(2) +
+               "\n";
+    }
+
+    if (!source.contains("variant")) {
+        return bytes;
+    }
+
+    const auto &variant = source.at("variant");
+    const auto recipe = authoring_directory(root, variant_source(variant, "recipeProfile")) /
+                        "profile.json";
+    const auto base = root / "profiles/common/android-bases" /
+                      (variant_source(variant, "androidBase") + ".json");
+
+    return resolve_variant(source, name, Json::parse(read(recipe)), Json::parse(read(base)))
+                   .dump(2) +
+           "\n";
+}
+
+Json authoring_profile(const std::filesystem::path &root, std::string_view name,
+                       std::string_view target) {
+    return Json::parse(authoring_profile_bytes(root, name, target));
+}
+
+std::string select_profile_target(const Json &definition, std::string_view requested,
+                                  std::string_view host, bool kvm_available) {
+    if (!definition.contains("targets")) {
+        if (!requested.empty()) {
+            throw cli::LocalizedError("PROFILE_TARGET", "error.profile_target_single");
+        }
+
+        return {};
+    }
+
+    const auto &targets = definition.at("targets");
+    const auto selected = requested.empty() ? (host == "darwin/arm64" ? "arm" : "x86") : requested;
+
+    if (!targets.is_object() || !targets.contains(selected)) {
+        throw cli::LocalizedError("PROFILE_TARGET", "error.profile_target_missing",
+                                  {{"target", std::string(selected)}});
+    }
+
+    if (selected == "arm" && host == "darwin/arm64") {
+        return "arm";
+    }
+
+    if (selected == "x86" && host == "linux/x64") {
+        if (!kvm_available) {
+            throw cli::LocalizedError("PROFILE_TARGET", "error.profile_target_kvm");
+        }
+
+        return "x86";
+    }
+
+    throw cli::LocalizedError("PROFILE_TARGET", "error.profile_target_host",
+                              {{"target", std::string(selected)}, {"host", std::string(host)}});
+}
+
+Json profile_target_identity(const Json &definition) {
+    if (!definition.contains("target")) {
+        return nullptr;
+    }
+
+    const auto &target = definition.at("target");
+
+    return {{"name", target.at("name")},
+            {"abi", target.at("guestAbi")},
+            {"base_sha256", definition.at("android").at("sha256")}};
+}
+
+bool profile_multimedia_only(const Json &definition) {
+    if (definition.contains("variant")) {
+        return !variant_source(definition.at("variant"), "androidBase").empty();
+    }
+
+    const auto target = definition.value("target", Json::object());
+
+    return target.value("name", std::string{}) == "x86" &&
+           target.value("guestAbi", std::string{}) == "x86_64" &&
+           target.value("preparation", std::string{}) == "signed-offline" &&
+           valid_profile_name(target.value("androidBase", std::string{}));
+}
+
+std::filesystem::path profile_recipe_directory(const std::filesystem::path &root,
+                                               std::string_view name) {
+    const auto directory = authoring_directory(root, name);
+    const auto file = directory / "profile.json";
+
+    if (!std::filesystem::exists(file)) {
+        return directory;
+    }
+
+    const auto source = Json::parse(profile_bytes(file));
+
+    if (!source.contains("variant")) {
+        return directory;
+    }
+
+    (void)authoring_profile(root, name);
+
+    return authoring_directory(root, variant_source(source.at("variant"), "recipeProfile"));
+}
 
 const Json &embedded_profile_catalog() {
     static const Json catalog = [] {
@@ -120,10 +401,16 @@ Json declared_patch_plan(const Json &definition) {
                                              ProfileBoard::sa8155);
         const bool secondary_binding = (qinggan11 && id == "api30-secondary-navigation") ||
                                        (passion && id == "passion-api30-secondary-navigation");
+        const auto package = android.value("package", std::string{});
+        const bool secondary_sdk =
+                package == "system-images;android-30;default;arm64-v8a" ||
+                (passion && package == "system-images;android-30;default;x86_64" &&
+                 profile_multimedia_only(definition) &&
+                 !runtime_profile_reference(definition).empty() &&
+                 definition.at("emulator").value("acceleration", std::string{}) == "kvm" &&
+                 definition.at("emulator").value("gpuMode", std::string{}) == "host");
         const bool secondary_jar =
-                secondary_binding &&
-                android.value("package", std::string{}) ==
-                        "system-images;android-30;default;arm64-v8a" &&
+                secondary_binding && secondary_sdk &&
                 (patch == Json{{"type", "jar"},
                                {"input", "android:/system/framework/services.jar"},
                                {"steps", Json::array({id + ".json"})}} ||

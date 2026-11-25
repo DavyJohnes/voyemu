@@ -67,14 +67,15 @@ std::string hash(const std::filesystem::path &file, std::uint64_t maximum = 4ULL
     return pin;
 }
 
-Json profile_definition(const std::filesystem::path &root, std::string_view name) {
+Json profile_definition(const std::filesystem::path &root, std::string_view name,
+                        std::string_view target = {}) {
     ordinary(root);
     need(std::filesystem::is_directory(root) && std::filesystem::canonical(root) == root &&
                  valid_profile_name(name),
          "canonical project root and safe profile required");
     const auto file = root / "profiles" / std::string(name) / "profile.json";
     hash(file, 512 * 1024);
-    auto profile = read_private_json(file, 512 * 1024);
+    auto profile = authoring_profile(root, name, target);
     need(profile.at("schema") == 1, "registered profile schema required");
     native_base_api(profile.at("android"));
 
@@ -266,7 +267,7 @@ std::vector<std::string> native_profile_android_inputs(const std::filesystem::pa
     for (auto it = profile.at("components").begin(); it != profile.at("components").end(); ++it) {
         const auto relative_name = it.value().get<std::string>();
         relative(relative_name);
-        const auto file = root / "profiles" / std::string(name) / relative_name / "component.json";
+        const auto file = profile_recipe_directory(root, name) / relative_name / "component.json";
         hash(file, 512 * 1024);
         const auto component = read_private_json(file, 512 * 1024);
 
@@ -313,7 +314,7 @@ std::vector<std::string> native_profile_android_inputs(const std::filesystem::pa
 Json profile_patch_metadata(const std::filesystem::path &root, std::string_view name) {
     const auto definition = profile_definition(root, name);
     Json result = Json::object();
-    const auto directory = root / "profiles" / std::string(name) / "patches";
+    const auto directory = profile_recipe_directory(root, name) / "patches";
 
     for (const auto &node : definition.at("patches")) {
         for (const auto &item : node.at("steps")) {
@@ -364,10 +365,13 @@ std::uint64_t native_profile_executable_reserve(const Json &profile, std::string
 
 ProfilePreparationArtifacts prepare_profile_artifacts(const std::filesystem::path &root,
                                                       std::string_view name, bool offline,
-                                                      const std::filesystem::path &jdk) {
-    const auto profile = profile_definition(root, name);
-    const auto source = root / "profiles" / std::string(name) / "profile.json";
-    const auto profile_pin = hash(source, 512 * 1024);
+                                                      const std::filesystem::path &requested_jdk,
+                                                      std::string_view target) {
+    const auto profile = profile_definition(root, name, target);
+    const auto jdk = profile_preparation_jdk(root, requested_jdk, profile.contains("variant"),
+                                             embedded_toolchain_manifest().at("javaHelper"),
+                                             !target.empty());
+    const auto profile_pin = sha256_bytes(authoring_profile_bytes(root, name, target));
     const auto logical = native_profile_android_inputs(root, name);
 
     ensure_private_directory(root / ".local/build");
@@ -380,7 +384,7 @@ ProfilePreparationArtifacts prepare_profile_artifacts(const std::filesystem::pat
     }
 
     const auto dependencies = install_native_dependencies(root, offline);
-    const auto fetched = fetch_native_inputs(root, name, offline);
+    const auto fetched = fetch_native_inputs(root, name, offline, "", 20ULL << 30, {}, {}, target);
     const auto tools = ensure_java_preparation_tools(
             root, jdk, offline, android_candidate_reserve_bytes(profile, name));
     ProfilePreparationArtifacts output;
@@ -552,7 +556,7 @@ ProfilePreparationArtifacts prepare_profile_artifacts(const std::filesystem::pat
 
         if (has_files) {
             native_files = plan_profile_file_nodes(root, name, output.system_inputs,
-                                                   output.vendor_inputs);
+                                                   output.vendor_inputs, target);
         }
     }
 
@@ -572,7 +576,7 @@ ProfilePreparationArtifacts prepare_profile_artifacts(const std::filesystem::pat
         const auto relative_name = it.value().get<std::string>();
         relative(relative_name);
         relative(it.key());
-        const auto component_source = root / "profiles" / std::string(name) / relative_name;
+        const auto component_source = profile_recipe_directory(root, name) / relative_name;
         const auto definition = read_private_json(component_source / "component.json");
 
         if (definition.value("type", std::string{}) != "native") {
@@ -588,7 +592,8 @@ ProfilePreparationArtifacts prepare_profile_artifacts(const std::filesystem::pat
         // Native components are CI-built release assets; nothing is compiled here.
         const auto receipt = install_native_component(
                 root, std::string(name), it.key(),
-                embedded_toolchain_manifest().at("androidNativeComponents"), offline);
+                embedded_toolchain_manifest().at("androidNativeComponents"), offline, {}, {},
+                native_base_identity(profile.at("android")).abi);
         const auto module = read_private_json(receipt, 1 << 20);
         const auto file = receipt.parent_path() / module.at("output").get<std::string>();
 
@@ -635,10 +640,12 @@ ProfilePreparationArtifacts prepare_profile_artifacts(const std::filesystem::pat
     inputs.work = output.work;
     JavaPreparationRequest request;
     request.profile = name;
+    request.target = target;
     request.profile_sha256 = profile_pin;
     request.operation = JavaPreparationOperation::build_artifacts;
     request.build = inputs;
-    need(hash(source, 512 * 1024) == profile_pin, "profile changed before artifact preparation");
+    need(sha256_bytes(authoring_profile_bytes(root, name, target)) == profile_pin,
+         "profile changed before artifact preparation");
     progress::report("build_components",
                      {{"count", std::to_string(profile.at("components").size())}});
     output.result = prepare_java_artifacts(root, tools.runtime, request, output.transport,
@@ -667,6 +674,10 @@ ProfilePreparationArtifacts prepare_profile_artifacts(const std::filesystem::pat
                       {"request_sha256", hash(output.transport / "request.json", 2ULL << 20)},
                       {"machine_ready", false},
                       {"guest_started", false}};
+
+    if (!target.empty()) {
+        output.receipt["target"] = profile_target_identity(profile);
+    }
 
     if (native_files) {
         output.receipt["native_files"] = {{"receipt", inputs.native_files_receipt.string()},

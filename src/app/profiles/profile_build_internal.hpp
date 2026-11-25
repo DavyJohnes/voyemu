@@ -81,7 +81,8 @@ std::string exe();
 std::string backend_host();
 std::filesystem::path build_target(const std::filesystem::path &root, std::string_view profile,
                                    const MachineIdentity &machine);
-std::map<std::string, std::string> host_pins(const std::filesystem::path &sdk);
+std::map<std::string, std::string> host_pins(const std::filesystem::path &sdk,
+                                             const Json &definition);
 void publish(const std::filesystem::path &from, const std::filesystem::path &to);
 // Copies the pinned guest images of group into stage; meter counts their bytes.
 Json copy_images(const std::filesystem::path &root, const std::filesystem::path &source,
@@ -91,7 +92,9 @@ Json copy_images(const std::filesystem::path &root, const std::filesystem::path 
 // The bytes of the pinned guest images that copy_images copies.
 std::uint64_t image_bytes(const Json &images);
 Json export_portable_boot_files(const std::filesystem::path &root, const Json &definition,
-                                const std::filesystem::path &stage, std::uint64_t reserve);
+                                const std::filesystem::path &stage, std::uint64_t reserve,
+                                const std::filesystem::path &verified_boot_parameters = {},
+                                const std::string &verified_boot_sha256 = {});
 std::unique_ptr<os::FileLock> artifact_reader(const std::filesystem::path &root,
                                               const std::filesystem::path &receipt,
                                               const std::string &pin);

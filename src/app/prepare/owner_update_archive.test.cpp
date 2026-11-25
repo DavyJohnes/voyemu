@@ -444,6 +444,18 @@ int main() {
               "native two-layer scatter/raw exact");
         const auto only_system = import_owner_update_system(zip, owner, system,
                                                             root / "system-only", 0);
+        std::uint64_t direct_advanced = 0;
+        const auto direct = import_owner_update_archive(
+                tgz, owner, system, originals, root / "inner-only", 0, [&](std::uint64_t block) {
+                    direct_advanced += block;
+                });
+        check(direct_advanced == system.at("bytes").get<std::uint64_t>(),
+              "direct archive reports the complete system extent");
+        check(direct.at("archive_sha256") == owner.at("inner").at("sha256") &&
+                      direct.at("kind") == "native-owner-tgz-raw-scatter" &&
+                      bytes(root / "inner-only/system.img") == expected &&
+                      bytes(root / "inner-only/qnx/role.img") == "raw",
+              "direct pinned inner archive verifies scatter and records its actual origin");
         check(bytes(root / "system-only/system.img") == expected &&
                       std::filesystem::is_empty(root / "system-only/qnx") &&
                       only_system.at("qnx").empty(),
@@ -480,6 +492,19 @@ int main() {
         bad_owner = owner;
         bad_owner["inner"]["sha256"] = std::string(64, 'f');
         reject(zip, bad_owner, system, originals);
+        reject(tgz, bad_owner, system, originals);
+        auto renamed = root / "renamed.tgz";
+        std::filesystem::copy_file(tgz, renamed);
+        reject(renamed, owner, system, originals);
+        bad_owner = owner;
+        bad_owner["inner"]["bytes"] = std::filesystem::file_size(tgz) + 1;
+        reject(tgz, bad_owner, system, originals);
+        const auto changed_dir = root / "changed";
+        std::filesystem::create_directory(changed_dir);
+        auto changed = bytes(tgz);
+        changed.front() ^= 1;
+        std::ofstream(changed_dir / "update.tgz", std::ios::binary) << changed;
+        reject(changed_dir / "update.tgz", owner, system, originals);
         reject(zip, owner, system, Json::object());
         auto bad = system;
         bad["segments"][1]["offset"] = 2u;

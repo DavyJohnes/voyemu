@@ -75,6 +75,11 @@
 // Helpers shared by the parts of the portable runtime; each part includes this header.
 namespace voyemu::portable_detail {
 inline constexpr Check need{"PORTABLE_RUNTIME"};
+
+inline bool android_launch_audio_output(const Json &emulator, bool kvm) {
+    return emulator.value("audioOutput", !kvm);
+}
+
 void ordinary(const std::filesystem::path &path, bool allow_windows_spelling = false);
 void inside(const std::filesystem::path &root, const std::filesystem::path &path);
 Json checked_file(const std::filesystem::path &file, const std::string &sha,
@@ -106,6 +111,9 @@ Json portable_passion_power(const std::filesystem::path &seed, const Json &manif
                             const Json &definition);
 Json portable_passion_mcu(const std::filesystem::path &seed, const Json &manifest,
                           const Json &definition);
+void check_android_guest_identity(const Json &definition, const Json &manifest);
+void check_sdk_seed(const std::filesystem::path &seed, const Json &definition,
+                    const Json &manifest);
 std::string checked_can_model_receipt(const std::filesystem::path &seed, const Json &manifest);
 Json checked_development_kernel(const std::filesystem::path &seed, const Json &definition,
                                 const Json &manifest);

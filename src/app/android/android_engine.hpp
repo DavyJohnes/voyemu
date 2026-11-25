@@ -1,6 +1,7 @@
 #pragma once
 #include "error.hpp"
 #include "os/platform.hpp"
+#include <algorithm>
 #include <filesystem>
 #include <map>
 #include <stdexcept>
@@ -8,6 +9,12 @@
 #include <string_view>
 #include <vector>
 namespace voyemu {
+inline bool android_sdk_headless_backend(const std::vector<std::string> &arguments) {
+    const auto options_end = std::find(arguments.begin(), arguments.end(), "-qemu");
+
+    return std::find(arguments.begin(), options_end, "-no-window") != options_end;
+}
+
 // An explicit binding always wins; Windows prefers its shipped PE SDK when present; every other
 // host keeps the native SDK.
 inline std::filesystem::path android_runtime_sdk_root(const std::filesystem::path &root,

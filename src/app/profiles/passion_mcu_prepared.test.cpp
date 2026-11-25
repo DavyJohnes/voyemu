@@ -1,4 +1,5 @@
 #include "passion_mcu_prepared.hpp"
+#include "passion_signed_guest.test.hpp"
 #include <cassert>
 #include <exception>
 #include <fstream>
@@ -25,7 +26,9 @@ int main() try {
             {"id", "test-passion"},
             {"platform", "passion"},
             {"board", "8155"},
-            {"android", {{"sha256", std::string(64, 'b')}}},
+            {"android",
+             {{"package", "system-images;android-30;default;arm64-v8a"},
+              {"sha256", std::string(64, 'b')}}},
             {"patches",
              {{"MonzaCarService",
                {{"input", "original:MonzaCarService"},
@@ -240,6 +243,46 @@ int main() try {
             validate_passion_mcu_candidate(definition, bad, images, profile);
         });
     }
+
+    auto x86_definition = definition;
+    auto x86_candidate = candidate;
+    test::use_signed_x86_guest(x86_definition, x86_candidate);
+    x86_candidate["mcu_property"] = passion_mcu_contract(x86_definition, x86_candidate, apk,
+                                                         candidate.at("mcu_property").at("helper"));
+    const auto signed_images = x86_candidate.at("android").at("images");
+    assert(validate_passion_mcu_candidate(x86_definition, x86_candidate, signed_images, profile) ==
+           passion_mcu_capability());
+
+    auto unsigned_candidate = x86_candidate;
+    unsigned_candidate.erase("signed_android");
+    rejects([&] {
+        validate_passion_mcu_candidate(x86_definition, unsigned_candidate, signed_images, profile);
+    });
+    auto wrong_abi = x86_candidate;
+    wrong_abi["android"]["abi"] = "arm64-v8a";
+    rejects([&] {
+        validate_passion_mcu_candidate(x86_definition, wrong_abi, signed_images, profile);
+    });
+    auto wrong_base = x86_definition;
+    wrong_base["android"]["package"] = "system-images;android-29;default;x86_64";
+    rejects([&] {
+        validate_passion_mcu_candidate(wrong_base, x86_candidate, signed_images, profile);
+    });
+    auto absent_verity = x86_candidate;
+    absent_verity["checks"].erase(absent_verity["checks"].end() - 1);
+    rejects([&] {
+        validate_passion_mcu_candidate(x86_definition, absent_verity, signed_images, profile);
+    });
+    auto extra_check = x86_candidate;
+    extra_check["checks"].push_back(extra_check["checks"].back());
+    rejects([&] {
+        validate_passion_mcu_candidate(x86_definition, extra_check, signed_images, profile);
+    });
+    auto wrong_image = x86_candidate;
+    wrong_image["signed_android"]["files"]["vendor.img"]["sha256"] = std::string(64, '9');
+    rejects([&] {
+        validate_passion_mcu_candidate(x86_definition, wrong_image, signed_images, profile);
+    });
 
     auto old = definition;
     old["patches"]["MonzaCarService"]["steps"].erase(

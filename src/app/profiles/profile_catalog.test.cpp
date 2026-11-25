@@ -519,31 +519,117 @@ int main(int argc, char **argv) {
         check(!names.empty(), "bundled catalogue cannot be empty");
         check(std::set<std::string>(names.begin(), names.end()).size() == names.size(),
               "bundled ids unique");
+        bool multi_target = false;
 
         for (const auto &item : embedded_profile_catalog()) {
             auto id = item.at("id").get<std::string>();
             check(valid_profile_name(id), "valid bundled id");
             check(item.at("definition").at("schema") == 1, "supported profile schema");
-            std::ifstream source(std::filesystem::path(argv[1]) / id / "profile.json");
-            Json original;
-            source >> original;
-            check(item.at("definition") == original,
-                  "complete definition survives embedding without escaping changes");
-            const auto fonts = original.value("fonts", Json::object());
+            const auto root = std::filesystem::absolute(argv[1]).parent_path();
+            const auto bytes = authoring_profile_bytes(root, id);
+            const auto original = Json::parse(bytes);
+            check(item.at("definition") == original && item.at("sha256") == sha256_bytes(bytes),
+                  "embedded profile matches the canonical authoring bytes");
 
-            // The window draws with the car fonts that every machine carries.
+            if (original.contains("targets")) {
+                multi_target = true;
+                check(select_profile_target(original, "", "darwin/arm64", false) == "arm" &&
+                              select_profile_target(original, "", "linux/x64", true) == "x86" &&
+                              select_profile_target(original, "x86", "linux/x64", true) == "x86" &&
+                              select_profile_target(original, "arm", "darwin/arm64", false) ==
+                                      "arm",
+                      "default and explicit profile targets follow host capability");
+
+                for (const auto &[target, host] :
+                     std::array<std::pair<std::string, std::string>, 3>{{{"", "linux/x64"},
+                                                                         {"x86", "darwin/arm64"},
+                                                                         {"other", "linux/x64"}}}) {
+                    bool rejected = false;
+
+                    try {
+                        (void)select_profile_target(original, target, host, false);
+                    } catch (const VoyemuError &error) {
+                        rejected = std::string_view(error.what()).starts_with("PROFILE_TARGET:");
+                    }
+
+                    check(rejected, "unsupported target or host cannot start preparation");
+                }
+
+                const auto arm = authoring_profile(root, id, "arm");
+                const auto x86 = authoring_profile(root, id, "x86");
+                check(arm.at("id") == id && x86.at("id") == id,
+                      "both targets resolve to the single catalog identity");
+                check(arm.at("android") == original.at("android") &&
+                              x86.at("android").at("package") ==
+                                      "system-images;android-30;default;x86_64" &&
+                              x86.at("android").at("sha256") != arm.at("android").at("sha256") &&
+                              profile_target_identity(arm).at("abi") == "arm64-v8a" &&
+                              profile_target_identity(x86).at("abi") == "x86_64" &&
+                              !profile_multimedia_only(arm) && profile_multimedia_only(x86) &&
+                              profile_recipe_directory(root, id) == root / "profiles" / id,
+                      "resolved bases and scopes differ while the recipe stays shared");
+
+                for (const auto *field :
+                     {"original", "identity", "patches", "components", "verify"}) {
+                    check(arm.at(field) == x86.at(field), "targets share OEM definition");
+                }
+
+                check(declared_patch_plan(arm) == declared_patch_plan(x86),
+                      "targets share the exact OEM patch graph");
+            }
+
+            const auto fonts = original.at("fonts");
+
             for (const auto *role : {"primary", "fallback"}) {
                 for (const auto *weight : {"regular", "medium", "bold"}) {
                     check(fonts.size() == 2 && fonts.contains(role) && fonts.at(role).size() == 3 &&
                                   fonts.at(role).contains(weight) &&
                                   fonts.at(role).at(weight).contains("original"),
-                          "every profile declares the car fonts of the window");
+                          "vehicle profile declares the car fonts of the window");
                 }
             }
 
-            check(item.at("sha256") ==
-                          sha256_file(std::filesystem::path(argv[1]) / id / "profile.json"),
-                  "embedded profile matches exact source bytes");
+            if (original.contains("variant")) {
+                const auto source = runtime_profile_reference(original, id);
+                const auto &oem = embedded_profile(source).at("definition");
+                check(profile_recipe_directory(root, id) == root / "profiles" / source &&
+                              original.at("original") == oem.at("original") &&
+                              original.at("identity") == oem.at("identity") &&
+                              original.at("patches") == oem.at("patches") &&
+                              original.at("install") == oem.at("install") &&
+                              original.at("verify") == oem.at("verify") &&
+                              original.at("configure") == oem.at("configure") &&
+                              original.at("components") == oem.at("components") &&
+                              original.at("android").at("features") ==
+                                      oem.at("android").at("features") &&
+                              original.at("emulator").at("acceleration") == "kvm" &&
+                              original.at("emulator").at("gpuMode") == "host" &&
+                              original.at("android").at("package") ==
+                                      "system-images;android-30;default;x86_64",
+                      "vehicle variant must keep the OEM source, guest configuration and verification");
+
+                if (profile_platform(original) == ProfilePlatform::passion) {
+                    check(original.at("emulator").at("audioOutput") == true &&
+                                  original.at("features") == oem.at("features"),
+                          "vehicle variant must retain OEM features and enable host audio");
+                    check(declared_patch_plan(original) == declared_patch_plan(oem),
+                          "Passion Android x86_64 variant must keep the exact OEM patch plan");
+
+                    auto incompatible = original;
+                    incompatible.erase("variant");
+                    bool denied = false;
+                    try {
+                        (void)declared_patch_plan(incompatible);
+                    } catch (const VoyemuError &error) {
+                        denied = std::string_view(error.what()) ==
+                                 "PREPARATION_SCHEMA: unsupported patch type";
+                    }
+
+                    check(denied,
+                          "Passion navigation JAR requires a declared vehicle x86_64 variant");
+                }
+            }
+
             check(embedded_profile(id) == item, "lookup returns complete definition");
             const auto &definition = item.at("definition");
             const auto platform = profile_platform(definition);
@@ -2466,6 +2552,7 @@ int main(int argc, char **argv) {
         }
 
         check(rejected, "unknown bundled profile rejected");
+        check(multi_target, "bundled catalogue exposes build targets");
         std::cout << "embedded profile catalogue passed\n";
 
         return 0;

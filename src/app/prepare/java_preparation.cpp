@@ -66,9 +66,12 @@ void pinned(const std::filesystem::path &p, const std::string &hash,
     need(sha256_file(p) == hash && cache_file_identity(p) == epoch, "input SHA/epoch mismatch");
 }
 
-std::filesystem::path profile_file(const std::filesystem::path &root,
-                                   const JavaPreparationRequest &request) {
-    return root / "profiles" / request.profile / "profile.json";
+Json pinned_profile(const std::filesystem::path &root, const JavaPreparationRequest &request) {
+    const auto bytes = authoring_profile_bytes(root, request.profile, request.target);
+
+    need(sha256_bytes(bytes) == request.profile_sha256, "authoring profile changed");
+
+    return Json::parse(bytes);
 }
 
 std::set<std::string> keys(const Json &obj) {
@@ -183,7 +186,9 @@ void response(const std::filesystem::path &root, const JavaPreparationRequest &r
                  result.contains("machine_ready") && result.at("machine_ready") == false &&
                  result.contains("guest_started") && result.at("guest_started") == false,
          "helper response identity/state mismatch");
-    const auto profile = read_private_json(profile_file(root, request), 4 << 20);
+    const auto profile = pinned_profile(root, request);
+    need(result.value("target", Json{}) == profile_target_identity(profile),
+         "helper response target, ABI or base pin differs");
     auto names = [](const Json &v) {
         need(v.is_array() && v.size() <= 4096, "bounded result list");
         std::set<std::string> s;
@@ -242,7 +247,7 @@ void response(const std::filesystem::path &root, const JavaPreparationRequest &r
                 const auto &declared = profile.at("files").at(artifact.key().substr(6));
                 const auto name = declared.at("file").get<std::string>();
                 relative(name);
-                need(file == root / "profiles" / request.profile / "files" / name,
+                need(file == profile_recipe_directory(root, request.profile) / "files" / name,
                      "artifact outside declared profile files");
 
                 if (declared.contains("sha256")) {
@@ -288,7 +293,7 @@ void response(const std::filesystem::path &root, const JavaPreparationRequest &r
 
 void validate_java_preparation_response(const std::filesystem::path &root,
                                         const JavaPreparationRequest &request, const Json &result) {
-    pinned(profile_file(root, request), request.profile_sha256, 4 << 20);
+    (void)pinned_profile(root, request);
 
     if (!request.source_snapshot.empty()) {
         need(sha256_text(request.source_snapshot) &&
@@ -301,8 +306,7 @@ void validate_java_preparation_response(const std::filesystem::path &root,
 
 Json java_preparation_native_files(const std::filesystem::path &root,
                                    const JavaPreparationRequest &request) {
-    pinned(profile_file(root, request), request.profile_sha256, 4 << 20);
-    const auto profile = read_private_json(profile_file(root, request), 4 << 20);
+    const auto profile = pinned_profile(root, request);
     const auto guest_api = native_base_api(profile.at("android"));
     const auto &b = request.build.value();
     Json result;
@@ -370,8 +374,8 @@ Json java_preparation_native_files(const std::filesystem::path &root,
         // their declared uses, recipes, outputs and dependencies. API30 file nodes read only the
         // system extraction.
         const auto &extraction = b.android_inputs.at(std::string(recipes.front().target));
-        auto expected = plan_profile_file_nodes(root, request.profile,
-                                                extraction.receipt.parent_path(), {});
+        auto expected = plan_profile_file_nodes(
+                root, request.profile, extraction.receipt.parent_path(), {}, request.target);
         need(receipt.at("schema") == 1 && receipt.at("kind") == "native-file-draft" &&
                      receipt.at("files").size() == native_nodes &&
                      expected.patches.size() == native_nodes &&
@@ -409,13 +413,24 @@ static Json request_document(const std::filesystem::path &root,
     path(root);
     need(std::filesystem::is_directory(root) && valid_profile_name(request.profile),
          "project/profile required");
-    pinned(profile_file(root, request), request.profile_sha256, 4 << 20);
-    const auto profile = read_private_json(profile_file(root, request), 4 << 20);
+    const auto profile = pinned_profile(root, request);
     need(profile.at("schema") == 1, "profile schema");
     Json result = {{"schema", 1},
                    {"root", root.string()},
                    {"profile", request.profile},
                    {"profile_sha256", request.profile_sha256}};
+
+    if (profile.contains("target")) {
+        result["target"] = profile_target_identity(profile);
+        result["android_base"] = profile.at("android");
+    }
+
+    if (profile.contains("variant") || profile.contains("target")) {
+        result["resolved_profile"] = authoring_profile_bytes(root, request.profile, request.target);
+        need(sha256_bytes(result.at("resolved_profile").get_ref<const std::string &>()) ==
+                     request.profile_sha256,
+             "vehicle variant changed before Java preparation");
+    }
 
     if (request.operation == JavaPreparationOperation::plan) {
         need(!request.build, "plan may not contain build inputs");
@@ -530,7 +545,7 @@ static Json request_document(const std::filesystem::path &root,
     for (auto it = profile.at("components").begin(); it != profile.at("components").end(); ++it) {
         const auto relative_name = it.value().get<std::string>();
         relative(relative_name);
-        const auto source = root / "profiles" / request.profile / relative_name;
+        const auto source = profile_recipe_directory(root, request.profile) / relative_name;
         const auto definition = read_private_json(source / "component.json");
 
         if (definition.value("type", std::string{}) != "native") {
@@ -551,16 +566,24 @@ static Json request_document(const std::filesystem::path &root,
         need(inside(item.receipt, root / ".local/build"),
              "owned native component receipt required");
         pinned(item.receipt, item.receipt_sha256);
-        // The receipt names the CI-built asset of the androidNativeComponents pin of this
-        // component.
         const auto proof = read_private_json(item.receipt, 1 << 20);
-        const auto &pin = manifest.at("androidNativeComponents")
-                                  .at(native_component_pin(request.profile, id, definition));
+        const auto key = native_component_pin(
+                profile_recipe_directory(root, request.profile).filename().string(), id,
+                definition);
+        const auto origin = native_component_origin(manifest.at("androidNativeComponents"), key,
+                                                    definition);
+        const auto abi = native_component_abi(definition,
+                                              native_base_identity(profile.at("android")).abi);
+        const bool matching_origin =
+                origin.contains("asset")
+                        ? !proof.contains("source") &&
+                                  proof.value("asset", Json{}) == origin.at("asset")
+                        : !proof.contains("asset") &&
+                                  proof.value("source", std::string{}) == "recipe";
         need(proof.at("schema") == 1 && proof.at("type") == "native" &&
                      proof.at("output_type") == output_type && proof.at("api") == recipe_api &&
-                     proof.at("abi") == "arm64-v8a" &&
-                     proof.at("output") == definition.at("output") &&
-                     proof.at("sha256") == pin.at("sha256") && proof.at("asset") == pin.at("url"),
+                     proof.at("abi") == abi && proof.at("output") == definition.at("output") &&
+                     proof.at("sha256") == origin.at("sha256") && matching_origin,
              "native component receipt differs from its pin");
         pinned(item.receipt.parent_path() / proof.at("output").get<std::string>(),
                proof.at("sha256").get<std::string>());

@@ -89,6 +89,34 @@ int main(int argc, char **argv) try {
     assert(parse({"deps", "--verbose"}).verbose);
     assert(parse({"fetch", profile, "--verbose"}).verbose);
     assert(parse({"build", profile, "--verbose"}).verbose);
+    const auto signed_release = root / "signed release";
+    const auto trusted_key = root / "trusted-public.pem";
+    const std::string trusted_spki(64, 'a');
+    const std::vector<std::string> signed_options{
+            "--signed-android",   signed_release.string(),       "--android-public-key",
+            trusted_key.string(), "--android-public-key-sha256", trusted_spki};
+    std::vector<std::string> signed_build{"build", profile, "--cluster=off"};
+    signed_build.insert(signed_build.end(), signed_options.begin(), signed_options.end());
+    const auto signed_result = parse(signed_build);
+
+    if (signed_result.command != "build" ||
+        signed_result.signed_android.release != signed_release ||
+        signed_result.signed_android.public_key != trusted_key ||
+        signed_result.signed_android.spki_sha256 != trusted_spki) {
+        throw std::runtime_error("signed Android build options were not accepted");
+    }
+
+    reject({"build", profile, "--cluster=off", "--signed-android", signed_release.string()},
+           "CLI_ARGUMENT:");
+    auto other_command = std::vector<std::string>{"fetch", profile};
+    other_command.insert(other_command.end(), signed_options.begin(), signed_options.end());
+    reject(other_command, "CLI_ARGUMENT:");
+    auto cluster_build = signed_build;
+    cluster_build[2] = "--cluster=on";
+    reject(cluster_build, "CLI_ARGUMENT:");
+    auto invalid_pin = signed_build;
+    invalid_pin.back() = "bad";
+    reject(invalid_pin, "CLI_ARGUMENT:");
     const auto selected = parse({"start", variant.string(), "--cluster=on", "--multimedia=off"});
     assert(selected.machine.name == "variant" && selected.cluster && !selected.multimedia);
     const auto media = parse({"restart", machine.string(), "--cluster=off", "--multimedia=on"});
@@ -201,6 +229,13 @@ int main(int argc, char **argv) try {
     const auto unnamed_build = parse({"build", profile});
     assert(unnamed_build.machine.name == profile && !unnamed_build.machine.selected &&
            unnamed_build.machine.selector().empty());
+    assert(parse({"build", profile, "--target=x86"}).build_target == "x86");
+    assert(parse({"build", "--target=arm", profile, "machines/second-build"}).build_target ==
+           "arm");
+    reject({"build", profile, "--target="}, "CLI_ARGUMENT:");
+    reject({"build", profile, "--target=arm64"}, "CLI_ARGUMENT:");
+    reject({"build", profile, "--target=x86", "--target=arm"}, "CLI_ARGUMENT:");
+    reject({"deps", profile, "--target=x86"}, "CLI_ARGUMENT:");
 
     for (const auto &path : {machine.string(), variant.string(), (root / "outside-new").string(),
                              std::string("machines/nested/new"), std::string("machines/../escape"),

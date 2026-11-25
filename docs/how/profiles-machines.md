@@ -2,6 +2,8 @@
 
 A profile describes one firmware; a machine is what preparation makes from it. Preparation reads the profile, and launch reads only the machine. The reasons are in [profiles as sources, machines as results](../why/profiles-machines.md).
 
+A profile can offer multiple build targets for the same firmware. The [Passion profile](../profiles/passion-11-russian-20260403-2.1.4.80.md) shares its H53 OEM inputs and recipes between the `arm` and `x86` targets.
+
 ## Profile
 
 A profile is the authoring directory `profiles/<profile>/`. Its name encodes the vehicle line, the Android generation, the firmware language, the firmware date and its version, for example `free-09-chinese-20260106-6.0.3`. `voyemu list` prints the known profile identifiers; the [published profiles](../profiles/index.md) have their own pages.
@@ -14,6 +16,7 @@ A profile is the authoring directory `profiles/<profile>/`. Its name encodes the
 | `components/` | [Components](components.md) of this profile |
 | `patches/` | Recipe steps that `profile.json` refers to |
 | `files/` | Small own files that preparation installs into the guest |
+| `targets/<target>/` | Files used only by a build target, where present |
 
 The `status` field of `profile.json` is `ready` when the multimedia is supported and `incomplete` while the OEM inputs of the profile are still being collected: then `fetch PROFILE --source=adb --serial SERIAL` reads them as `capture.json` lists. The `status` field of `profile-qnx.json` is `incomplete` while the cluster is experimental. The support of each published profile is listed in [profiles](../profiles/index.md).
 
@@ -22,6 +25,8 @@ The `title` field of `profile.json` names the profile in text for people, for ex
 The `features` field of `profile.json` turns on optional functions of the firmware. `original_navi` set to `true` installs the OEM navigation app of the firmware together with the recipes it needs; preparation selects them by this field, not by the profile name. `system_upgrade` lets a rebuild of an existing machine replace only its Android system and keep the user data, with the packages the machine delivers. `ui_observer_required` makes every Android machine of the profile carry the observer. `measured_disk_reserve` makes preparation reserve the disk space measured for the pinned system image of the profile instead of the larger default.
 
 The `emulator` field of `profile.json` sets the Android emulator of the machine: `port`, `memory`, `gpuMode` and optionally `cores`. `candidatePort` fixes the port of the emulator that preparation boots to build the machine; without it, preparation takes a free port.
+
+For a multi-target profile, `targets` declares the guest ABI, preparation path and any target-specific choice of Android base. The shared OEM inputs stay under the profile ID. See [selecting a target](preparation.md#build).
 
 The `wheel` field of `profile.json` names the steering-wheel artwork in `assets` and the Android key routes in `androidRoutes`; `provider` set to `com.voyemu.input.wheel` delivers the wheel to Android through that content provider of the profile instead of the routes.
 
@@ -33,12 +38,12 @@ OEM inputs never enter the repository. The user imports them into `.local/profil
 
 ## Machine
 
-A machine is a prepared directory under `machines/<name>/`. `voyemu build PROFILE` creates `machines/PROFILE` by default; `build PROFILE machines/NAME` picks another name. The destination must be a new directory directly inside the installation's `machines/`.
+A machine is a prepared directory under `machines/<name>/`. `voyemu build PROFILE` creates `machines/PROFILE` by default for a single-target profile and appends the target name for a multi-target profile. `build PROFILE machines/NAME` picks another name. The destination must be a new directory directly inside the installation's `machines/`.
 
 | Path | Content |
 | --- | --- |
-| `runtime.json` | Machine manifest: profile identity, guest images, boot files and resources with sizes and SHA-256 |
-| `profile.json` | The embedded copy of the authoring profile |
+| `runtime.json` | Machine manifest with profile identity, Android ABI, guest images, boot files and resources with sizes and SHA-256 |
+| `profile.json` | The embedded profile resolved for the selected build target |
 | `android/` | Android system and vendor images, the kernel, writable user and cache disks, installed packages |
 | `qnx/` | QNX boot images and the writable QNX disk; only when the cluster is prepared |
 | `ui/` | Voyemu logo, OEM boot animations in `ui/startup/`, the fonts of the vehicle in `ui/fonts/`, steering-wheel artwork and button routes |
@@ -49,6 +54,6 @@ A machine is a prepared directory under `machines/<name>/`. `voyemu build PROFIL
 
 A machine carries everything a launch needs from the profile, so it runs without `profiles/` and moves as one directory. Writable disks inside the machine, the Android QCOW2 layers among them, keep installed applications, files and settings: copy or archive the whole machine directory after a clean stop. Session state lives separately in `.local/machines/<name>/` and is recreated when absent; see [local roots](local-roots.md).
 
-A machine needs the installed host tools to run. A cluster launch also needs the QEMU and ANGLE binding in `.local/toolchains/installed.json`, which machine preparation writes on its host; `deps` installs the engine and `start` does not create the binding, so on a host without it start the machine with `--cluster=off`. `voyemu check MACHINE_PATH` verifies the stored files and the launch configuration without starting guests.
+A machine needs the installed host tools and a compatible backend for the guest ABI recorded in its manifest. A Linux installation receiving a signed Android machine also needs to [register the signing key](preparation.md#trust-a-signed-android-machine). A cluster launch needs the QEMU and ANGLE binding in `.local/toolchains/installed.json`, which machine preparation writes on its host; `deps` installs the engine and `start` does not create the binding, so on a host without it start the machine with `--cluster=off`. `voyemu check MACHINE_PATH` verifies the stored files and the launch configuration without starting guests.
 
 Give independent copies distinct directory names: session state is keyed by the machine directory name, and each machine has at most one session.

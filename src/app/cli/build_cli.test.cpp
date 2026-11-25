@@ -71,6 +71,50 @@ int main(int argc, char **argv) {
         const auto shows_records = [](const std::string &output) {
             return std::regex_search(output, std::regex(R"((^|\n)[a-z][a-z_]*: )"));
         };
+
+        if (os::platform_name == "Linux") {
+            const auto der = project / "src/app/prepare/testdata/apk-signing/public-key.der";
+            const auto pem = root / "public.pem";
+            ProcessSpec export_key;
+            export_key.executable = "/usr/bin/openssl";
+            export_key.arguments = {"pkey",       "-pubin",  "-inform", "DER",       "-in",
+                                    der.string(), "-pubout", "-out",    pem.string()};
+            require(execute(export_key).exit_code == 0, "public fixture PEM export failed");
+            const auto pin = sha256_file(der);
+            const auto trust = root / ".local/toolchains/avd-image-tools/trust";
+            const auto registered = trust / pin / "public.pem";
+            const auto import_key = [&](const std::filesystem::path &key,
+                                        const std::string &expected) {
+                ProcessSpec spec;
+                spec.executable = installed;
+                spec.arguments = {"trust-android-key",
+                                  "--android-public-key",
+                                  key.string(),
+                                  "--android-public-key-sha256",
+                                  expected,
+                                  "--lang=en"};
+                spec.directory = root;
+
+                return execute(spec, 10000);
+            };
+            const auto wrong = import_key(pem, std::string(64, '0'));
+            require(!wrong.timed_out && wrong.exit_code != 0 &&
+                            wrong.output.find("SIGNED_ANDROID") != std::string::npos &&
+                            !std::filesystem::exists(trust),
+                    "unverified public key created a host trust record: " + wrong.output);
+            const auto accepted = import_key(pem, pin);
+            require(!accepted.timed_out && accepted.exit_code == 0 &&
+                            accepted.output.find(pin) != std::string::npos &&
+                            sha256_file(registered) == sha256_file(pem),
+                    "explicit public key import failed: " + accepted.output);
+            require(import_key(pem, pin).exit_code == 0, "identical key import was not idempotent");
+            const auto original = sha256_file(registered);
+            std::ofstream(pem, std::ios::app | std::ios::binary) << '\n';
+            const auto different = import_key(pem, pin);
+            require(different.exit_code != 0 && sha256_file(registered) == original,
+                    "import changed exact bytes used by an existing signing receipt");
+        }
+
         const auto run_unknown = [&](const char *command) {
             ProcessSpec spec;
             spec.executable = installed;
@@ -149,8 +193,8 @@ int main(int argc, char **argv) {
             }
         }
 
-        for (const auto *profile :
-             {"free-11-chinese-20260731-7.3.1", "passion-11-russian-20260403-2.1.4.80"}) {
+        {
+            const auto *profile = "free-11-chinese-20260731-7.3.1";
             const auto file = root / "profiles" / profile / "profile.json";
             const auto definition =
                     read_private_json(project / "profiles" / profile / "profile.json");
@@ -229,6 +273,76 @@ int main(int argc, char **argv) {
                                 std::filesystem::is_empty(root / ".local/machines"),
                         "failed offline preparation changed status, published a machine or started a session");
             }
+        }
+
+        // Copy the actual target definition and preparation recipes, while leaving the SDK and
+        // helper caches empty. The command must reach target-specific preparation or explain the
+        // missing host capability before preparing anything.
+        {
+            const std::string profile = "passion-11-russian-20260403-2.1.4.80";
+            const auto source = project / "profiles" / profile;
+            const auto expected = root / "profiles" / profile;
+            const auto definition = read_private_json(source / "profile.json");
+            write_private_json(expected / "profile.json", definition);
+            const auto base =
+                    std::filesystem::path("profiles/common/android-bases") /
+                    (definition.at("targets").at("x86").at("androidBase").get<std::string>() +
+                     ".json");
+            ensure_private_directory((root / base).parent_path());
+            std::filesystem::copy_file(project / base, root / base);
+            ensure_private_directory(expected / "targets/x86");
+
+            for (const auto *file : {"filesystems.json", "native-bridge.json"}) {
+                std::filesystem::copy_file(source / "targets/x86" / file,
+                                           expected / "targets/x86" / file);
+            }
+
+            ProcessSpec spec;
+            spec.executable = installed;
+            spec.directory = root;
+            spec.arguments = {"build", profile, "--offline", "--lang=en"};
+            const auto result = execute_lf(spec);
+            const bool arm = os::dependency_host == "darwin/arm64";
+            const bool linux_x64 = os::dependency_host == "linux/x64";
+            const bool supported = arm || (linux_x64 && os::host_kvm_available());
+            const std::string target = arm ? "arm" : "x86";
+            const auto machine = std::filesystem::path("machines") / (profile + "-" + target);
+            require(!result.timed_out && result.exit_code == 4,
+                    "targeted build did not stop at its fixture boundary: " + result.output);
+
+            if (supported) {
+                const auto choice = "Selected " + target + " (" + (arm ? "arm64-v8a" : "x86_64") +
+                                    ") for ";
+                const auto verify = [&](const ProcessResult &attempt,
+                                        const std::filesystem::path &destination) {
+                    require(!attempt.timed_out && attempt.exit_code == 4 &&
+                                    attempt.output.starts_with(choice + destination.string() +
+                                                               ".\n") &&
+                                    (attempt.output.find("JAVA_HELPER_ASSET_MISSING:") !=
+                                             std::string::npos ||
+                                     attempt.output.find("DOWNLOAD_OFFLINE:") != std::string::npos),
+                            "targeted build did not select its destination or reach preparation: " +
+                                    attempt.output);
+                };
+                verify(result, machine);
+                const auto alternate = std::filesystem::path("machines") / "explicit-build";
+                spec.arguments.emplace_back("--target=" + target);
+                spec.arguments.emplace_back(alternate.string());
+                verify(execute_lf(spec), alternate);
+                require(!std::filesystem::exists(root / alternate),
+                        "offline targeted build published its explicit destination");
+            } else {
+                require(result.output.starts_with("Voyemu: PROFILE_TARGET:") &&
+                                result.output.find(linux_x64 ? "/dev/kvm" : os::dependency_host) !=
+                                        std::string::npos &&
+                                result.output.find("Preparing machine") == std::string::npos,
+                        "target failure did not identify the missing host capability: " +
+                                result.output);
+            }
+
+            require(!std::filesystem::exists(root / machine) &&
+                            std::filesystem::is_empty(root / ".local/machines"),
+                    "offline targeted build published a machine or started a session");
         }
 
         // build refuses an existing machine before any work and names the next steps; --force

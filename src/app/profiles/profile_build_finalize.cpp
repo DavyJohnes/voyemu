@@ -1,6 +1,7 @@
 #include "android_java.hpp"
 #include "portable_fonts.hpp"
 #include "profile_build_internal.hpp"
+#include "profile_catalog.hpp"
 #include "project_files.hpp"
 
 // Upgrades, finalizes and activates built profiles and their frontend and UI observer bindings.
@@ -32,10 +33,11 @@ Json upgrade_profile_android_system(const std::filesystem::path &root, std::stri
     install_native_dependencies(root, true);
     const auto sdk = root / ".local/toolchains/native-sdk",
                tool = sdk / "emulator" / ("qemu-img" + exe());
-    const auto pins = host_pins(sdk);
-    const Json disk_tool = {{"path", tool.string()}, {"sha256", pins.at(tool.string())}};
     const auto candidate = read_private_json(android / "receipt.json", 1 << 20);
-    const auto definition = read_private_json(authoring_definition(root, profile), 1 << 20);
+    const auto definition = authoring_profile(
+            root, profile, candidate.value("target", Json::object()).value("name", std::string{}));
+    const auto pins = host_pins(sdk, definition);
+    const Json disk_tool = {{"path", tool.string()}, {"sha256", pins.at(tool.string())}};
     auto package = candidate.value("owned_package", Json());
     auto camera = candidate.value("camera_package", Json());
     auto prepared = candidate.value("prepared_packages", Json());
@@ -143,8 +145,7 @@ static Json export_built_ui_observer(const std::filesystem::path &root, std::str
     const auto observer = cached_profile_ui_observer(root);
 
     if (observer.empty()) {
-        need(!profile_feature(read_private_json(authoring_definition(root, profile), 1 << 20),
-                              "ui_observer_required"),
+        need(!profile_feature(authoring_profile(root, profile), "ui_observer_required"),
              "source-built UI observer required before portable publication");
 
         return Json::object();
@@ -187,7 +188,7 @@ static void export_built_owned_package(const std::filesystem::path &root, std::s
                                        const std::filesystem::path &stage, Json &runtime,
                                        std::uint64_t reserve,
                                        const std::filesystem::path &destination) {
-    const auto definition = read_private_json(authoring_definition(root, profile), 1 << 20);
+    const auto definition = authoring_profile(root, profile);
     const auto family = runtime_profile_reference(definition, profile);
 
     // Both callers publish complete fresh disks. Never migrate a differently signed Navi over
@@ -421,7 +422,9 @@ static void validate_android_candidate(const std::filesystem::path &android, con
          "accepted stopped Android candidate required");
     validate_accepted_android_profile(android, candidate, profile, definition);
     need(candidate.at("clean_base_archive_sha256") == definition.at("android").at("sha256") &&
-                 candidate.at("android").at("abi") == "arm64-v8a",
+                 candidate.at("android").at("abi") ==
+                         native_base_identity(definition.at("android")).abi &&
+                 candidate.value("target", Json{}) == profile_target_identity(definition),
          "candidate registered clean base/ABI differs");
 
     if (const auto development = portable_development_kernel(definition); !development.is_null()) {
@@ -489,18 +492,40 @@ static void export_android_machine_parts(
         runtime["ui_observer"] = observer;
     }
 
-    if (passion_power_requested(definition)) {
+    if (passion_power_runtime_requested(definition)) {
         runtime["android"]["display_power"] = export_passion_power(definition, candidate, stage,
                                                                    profile_pin);
     }
 
-    if (passion_mcu_requested(definition)) {
+    if (passion_mcu_runtime_requested(definition)) {
         runtime["android"]["mcu_property"] = export_passion_mcu(definition, candidate, stage,
                                                                 profile_pin);
     }
 
-    runtime["android"]["boot_files"] = export_portable_boot_files(
-            root, definition, stage, android_candidate_reserve_bytes(definition, profile));
+    const auto reserve = android_candidate_reserve_bytes(definition, profile);
+
+    if (candidate.contains("signed_android")) {
+        const auto &proof = candidate.at("signed_android");
+        const std::string metadata = "VerifiedBootParams.textproto";
+        runtime["android"]["boot_files"] = export_portable_boot_files(
+                root, definition, stage, reserve, android / "android" / metadata,
+                proof.at("files").at(metadata).at("sha256").get<std::string>());
+        const auto verified = stage / "android/signed-release";
+        ensure_private_directory(verified);
+
+        for (const auto &part : {std::pair{"manifest.sha256", "manifest_sha256"},
+                                 std::pair{"manifest.sig", "signature_sha256"}}) {
+            copy_portable_image(android / "android/signed-release" / part.first,
+                                proof.at(part.second).get<std::string>(), verified / part.first,
+                                reserve);
+        }
+
+        runtime["android"]["signed_android"] = proof;
+        (void)checked_signed_android_boot_pins(root, stage, definition, runtime);
+    } else {
+        runtime["android"]["boot_files"] = export_portable_boot_files(root, definition, stage,
+                                                                      reserve);
+    }
 
     if (const auto development = portable_development_kernel(definition); !development.is_null()) {
         runtime["android"]["development_kernel"] = development;
@@ -518,8 +543,7 @@ Json finalize_profile_build(const std::filesystem::path &root, std::string_view 
     const auto artifact_lease = candidate_artifact_reader(root, android);
 
     if (std::filesystem::exists(build_target(root, profile, machine)) &&
-        qinggan11_package_delivery(
-                read_private_json(authoring_definition(root, profile), 1 << 20))) {
+        qinggan11_package_delivery(authoring_profile(root, profile))) {
         return upgrade_profile_combined(root, profile, machine, android, qnx_file, qnx_pin,
                                         reuse_qnx_source);
     }
@@ -531,7 +555,8 @@ Json finalize_profile_build(const std::filesystem::path &root, std::string_view 
     need(hash(qnx_file, 1 << 20) == qnx_pin, "QNX acceptance pin mismatch");
     const auto qnx = read_private_json(qnx_file, 1 << 20),
                candidate = read_private_json(android / "receipt.json", 1 << 20);
-    const auto authoring_pin = hash(authoring_definition(root, profile), 1 << 20);
+    const auto selected = candidate.value("target", Json::object()).value("name", std::string{});
+    const auto authoring_pin = sha256_bytes(authoring_profile_bytes(root, profile, selected));
     need(qnx.at("schema") == 1 && qnx.at("kind") == "accepted-qnx-portable-seed" &&
                  qnx.at("profile") == profile && qnx.at("source_built") == true &&
                  qnx.at("cold_boot_verified") == true,
@@ -545,7 +570,8 @@ Json finalize_profile_build(const std::filesystem::path &root, std::string_view 
              "QNX acceptance evidence differs");
     }
 
-    const auto definition = read_private_json(authoring_definition(root, profile), 1 << 20);
+    const auto definition = authoring_profile(root, profile, selected);
+    need(!profile_multimedia_only(definition), "selected target supports multimedia only");
     validate_android_candidate(android, candidate, profile, definition);
     const auto profile_pin = candidate.at("profile_sha256").get<std::string>();
     const auto reused_qnx = reuse_qnx ? validate_accepted_qnx_reuse(root, profile, qnx_file,
@@ -597,11 +623,16 @@ Json finalize_profile_build(const std::filesystem::path &root, std::string_view 
                     {"profile_sha256", profile_pin},
                     {"android",
                      {{"api", api},
-                      {"abi", "arm64-v8a"},
+                      {"abi", candidate.at("android").at("abi")},
                       {"base_archive_sha256", candidate.at("clean_base_archive_sha256")},
                       {"images", android_images}}},
                     {"qnx", {{"guest_arch", "aarch64"}, {"images", qnx_images}}}};
     qnx_runtime_metadata(runtime["qnx"], layout);
+
+    if (!selected.empty()) {
+        runtime["android"]["target"] = selected;
+    }
+
     export_android_machine_parts(root, profile, definition, candidate, android, built, profile_pin,
                                  jdk, runtime);
 
@@ -610,7 +641,7 @@ Json finalize_profile_build(const std::filesystem::path &root, std::string_view 
     }
 
     write_private_json(stage / "runtime.json", runtime);
-    need(hash(authoring_definition(root, profile), 1 << 20) == authoring_pin &&
+    need(sha256_bytes(authoring_profile_bytes(root, profile, selected)) == authoring_pin &&
                  hash(qnx_file, 1 << 20) == qnx_pin,
          "finalization inputs changed");
     inspect_portable_runtime(root, profile, machine, stage);
@@ -644,8 +675,7 @@ Json finalize_android_profile_build(const std::filesystem::path &root, std::stri
     const auto artifact_lease = candidate_artifact_reader(root, android);
 
     if (std::filesystem::exists(build_target(root, profile, machine)) &&
-        profile_feature(read_private_json(authoring_definition(root, profile), 1 << 20),
-                        "system_upgrade")) {
+        profile_feature(authoring_profile(root, profile), "system_upgrade")) {
         return upgrade_profile_android_system(root, profile, machine, android, receipt_pin);
     }
 
@@ -655,9 +685,10 @@ Json finalize_android_profile_build(const std::filesystem::path &root, std::stri
     const auto receipt = android / "receipt.json";
     need(hash(receipt, 1 << 20) == receipt_pin, "Android candidate receipt pin mismatch");
     const auto candidate = read_private_json(receipt, 1 << 20);
-    const auto profile_file = authoring_definition(root, profile);
-    const auto authoring_pin = hash(profile_file, 1 << 20);
-    const auto definition = read_private_json(profile_file, 1 << 20);
+    const auto selected = candidate.value("target", Json::object()).value("name", std::string{});
+    const auto authoring_bytes = authoring_profile_bytes(root, profile, selected);
+    const auto authoring_pin = sha256_bytes(authoring_bytes);
+    const auto definition = portable_profile_json(authoring_bytes);
     validate_android_candidate(android, candidate, profile, definition);
     const auto profile_pin = candidate.at("profile_sha256").get<std::string>();
     const auto api = native_base_api(definition.at("android"));
@@ -686,13 +717,19 @@ Json finalize_android_profile_build(const std::filesystem::path &root, std::stri
                     {"candidate_receipt_sha256", receipt_pin},
                     {"android",
                      {{"api", api},
-                      {"abi", "arm64-v8a"},
+                      {"abi", candidate.at("android").at("abi")},
                       {"base_archive_sha256", candidate.at("clean_base_archive_sha256")},
                       {"images", images}}}};
+
+    if (!selected.empty()) {
+        runtime["android"]["target"] = selected;
+    }
+
     export_android_machine_parts(root, profile, definition, candidate, android, built, profile_pin,
                                  jdk, runtime);
     write_private_json(stage / "runtime.json", runtime);
-    need(hash(profile_file, 1 << 20) == authoring_pin && hash(receipt, 1 << 20) == receipt_pin,
+    need(sha256_bytes(authoring_profile_bytes(root, profile, selected)) == authoring_pin &&
+                 hash(receipt, 1 << 20) == receipt_pin,
          "finalization inputs changed");
     publish(stage, final);
     built.owned = false;
@@ -1271,7 +1308,7 @@ Json refresh_built_profile_ui_observer(const std::filesystem::path &root, std::s
 
 static std::map<std::string, std::string>
 verified_activation_sdk_pins(const std::filesystem::path &root, const std::filesystem::path &sdk,
-                             const std::filesystem::path &scoped) {
+                             const std::filesystem::path &scoped, bool x86) {
     const auto &toolchain = embedded_toolchain_manifest().at("sdk");
     const auto native_host = native_dependency_host();
     const auto compiled =
@@ -1289,7 +1326,10 @@ verified_activation_sdk_pins(const std::filesystem::path &root, const std::files
             need(record.at("android_launch_sha256") == sha256_bytes(bytes),
                  "retained Android launch pin differs");
 
-            if (Json::parse(bytes).at("android_sdk_root") == sdk.string()) {
+            const auto launch = Json::parse(bytes);
+
+            if (launch.at("android_sdk_root") == sdk.string() &&
+                (launch.value("guest_arch", std::string{}) == "x86_64") == x86) {
                 retained = record.at("host_file_pins");
             }
         }
@@ -1324,8 +1364,12 @@ verified_activation_sdk_pins(const std::filesystem::path &root, const std::files
     };
     add("emulator", sdk / "emulator" / ("emulator" + exe()));
     add("qemu_img", sdk / "emulator" / ("qemu-img" + exe()));
-    add("qemu_backend",
-        sdk / "emulator" / "qemu" / backend_host() / ("qemu-system-aarch64" + exe()));
+    const auto engines = sdk / "emulator/qemu" / backend_host();
+    add("qemu_backend", engines / ((x86 ? "qemu-system-x86_64" : "qemu-system-aarch64") + exe()));
+
+    if (x86) {
+        add("qemu_backend_headless", engines / "qemu-system-x86_64-headless");
+    }
 
     return pins;
 }
@@ -1367,7 +1411,8 @@ Json activate_built_profile(const std::filesystem::path &root, std::string_view 
 #endif
     } else {
         host.sdk = android_runtime_sdk_root(root, {}, !exe().empty());
-        host.pins = verified_activation_sdk_pins(root, host.sdk, scoped);
+        host.pins = verified_activation_sdk_pins(root, host.sdk, scoped,
+                                                 manifest.at("android").at("abi") == "x86_64");
     }
 
     host.clean_base = (seed.empty() ? build_target(root, profile, machine) : seed) / "android";

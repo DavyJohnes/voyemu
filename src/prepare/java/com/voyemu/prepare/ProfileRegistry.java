@@ -17,14 +17,20 @@ final class ProfileRegistry {
             Map<String, Object> data,
             String resourcePrefix,
             Path sourceRoot) {
-        private static final Set<String> PLATFORMS = Set.of("qinggan09", "qinggan11", "passion");
-        private static final Set<String> BOARDS = Set.of("8155", "nxp");
+        private static final Set<String> PLATFORMS =
+                Set.of("qinggan09", "qinggan11", "passion", "aosp");
+        private static final Set<String> BOARDS = Set.of("8155", "nxp", "ranchu");
 
         /** A definition that declares platform or board declares both valid; a title is valid. */
         Profile {
             if (data.containsKey("platform") || data.containsKey("board")) {
-                declared(data, "platform", PLATFORMS);
-                declared(data, "board", BOARDS);
+                String platform = declared(data, "platform", PLATFORMS);
+                String board = declared(data, "board", BOARDS);
+                Failure.require(
+                        "aosp".equals(platform) == "ranchu".equals(board),
+                        "PROFILE_INVALID",
+                        "The AOSP platform requires the ranchu board",
+                        2);
             }
 
             if (data.containsKey("title")) {
@@ -78,6 +84,10 @@ final class ProfileRegistry {
             return (String) data.get(field);
         }
 
+        String recipeId() {
+            return recipeName(id, data);
+        }
+
         String referenceProfile() {
             Failure.require(
                     !data.containsKey("id") || id.equals(data.get("id")),
@@ -86,7 +96,7 @@ final class ProfileRegistry {
                     2);
 
             if (!(data.get("capture") instanceof Map<?, ?>)) {
-                return id;
+                return recipeId();
             }
 
             var capture = Json.obj(data, "capture");
@@ -122,6 +132,10 @@ final class ProfileRegistry {
      * changes status.
      */
     ProfileRegistry(Path root, String preparationProfile) throws Exception {
+        this(root, preparationProfile, null);
+    }
+
+    ProfileRegistry(Path root, String preparationProfile, String target) throws Exception {
         if (preparationProfile != null) {
             validId(preparationProfile);
         }
@@ -155,26 +169,11 @@ final class ProfileRegistry {
                     continue;
                 } // Draft profiles have no executable definition.
 
-                Map<String, String> pins = new java.util.TreeMap<>();
-                long total = 0;
-
-                for (var file : FilesSupport.tree(directory).entrySet()) {
-                    long size = Files.size(file.getValue());
-                    total += size;
-                    Failure.require(
-                            size <= 32L * 1024 * 1024 && total <= 128L * 1024 * 1024,
-                            "PROFILE_RESOURCE_LIMIT",
-                            "Source profile exceeds bounds",
-                            2);
-                    pins.put(file.getKey(), FilesSupport.hash(file.getValue()));
-                }
-
-                Failure.require(
-                        Files.size(definition) <= 512 * 1024,
-                        "PROFILE_RESOURCE_LIMIT",
-                        "Profile definition exceeds bounds",
-                        2);
-                Map<String, Object> data = Json.object(Json.parse(Files.readString(definition)));
+                Map<String, Object> source = readDefinition(definition);
+                Map<String, Object> data =
+                        target == null
+                                ? resolveDefinition(root, id, source)
+                                : resolveTarget(root, id, source, target);
                 String status = (String) data.getOrDefault("status", "ready");
 
                 if (!"ready".equals(status)
@@ -187,10 +186,17 @@ final class ProfileRegistry {
                         "PROFILE_INVALID",
                         "Unsupported source profile schema",
                         2);
+                Map<String, String> pins = inventory(root, id, data);
                 String revision =
                         NativeCore.hash(Json.write(pins).getBytes(StandardCharsets.UTF_8));
                 profiles.put(
-                        id, new Profile(id, revision, data, "voyemu/profiles/" + id + "/", root));
+                        id,
+                        new Profile(
+                                id,
+                                revision,
+                                data,
+                                "voyemu/profiles/" + recipeName(id, data) + "/",
+                                root));
                 sourcePins.put(id, Map.copyOf(pins));
             }
         }
@@ -199,17 +205,233 @@ final class ProfileRegistry {
                 !profiles.isEmpty(), "PROFILE_MISSING", "No executable source profiles found", 2);
     }
 
+    private static String recipeName(String id, Map<String, Object> data) {
+        return data.containsKey("variant")
+                ? Json.str(Json.obj(data, "variant"), "recipeProfile")
+                : id;
+    }
+
+    private static Map<String, Object> readDefinition(Path file) throws Exception {
+        Failure.require(
+                Files.isRegularFile(file)
+                        && !Files.isSymbolicLink(file)
+                        && Files.size(file) <= 1024 * 1024,
+                "PROFILE_RESOURCE_LIMIT",
+                "Bounded regular source definition required",
+                2);
+
+        return Json.object(Json.parse(Files.readString(file)));
+    }
+
+    private static Path androidBase(Path root, Map<String, Object> variant) throws Exception {
+        String name = Json.str(variant, "androidBase");
+
+        validId(name);
+
+        return Storage.confined(root, "profiles/common/android-bases/" + name + ".json");
+    }
+
+    private static boolean vehicleRecipe(Map<String, Object> recipe, String reference) {
+        return reference.equals(recipe.getOrDefault("id", reference))
+                && !recipe.containsKey("capture")
+                && !recipe.containsKey("variant")
+                && Long.valueOf(1).equals(recipe.get("schema"))
+                && Boolean.FALSE.equals(recipe.getOrDefault("local", false))
+                && recipe.containsKey("original")
+                && recipe.containsKey("verify");
+    }
+
+    private static boolean variantEmulator(Map<String, Object> emulator) {
+        var allowed = Set.of("acceleration", "gpuMode", "memory", "audioOutput");
+
+        return allowed.containsAll(emulator.keySet())
+                && "kvm".equals(emulator.get("acceleration"))
+                && "host".equals(emulator.get("gpuMode"))
+                && emulator.getOrDefault("audioOutput", false) instanceof Boolean
+                && (!emulator.containsKey("memory")
+                        || (emulator.get("memory") instanceof Long
+                                && Json.integer(emulator, "memory") >= 512
+                                && Json.integer(emulator, "memory") <= 16384));
+    }
+
+    private static Map<String, Object> resolveDefinition(
+            Path root, String id, Map<String, Object> source) throws Exception {
+        if (!source.containsKey("variant")) {
+            return source;
+        }
+
+        var variant = Json.obj(source, "variant");
+        String reference = Json.str(variant, "recipeProfile");
+        validId(reference);
+        var recipe =
+                readDefinition(Storage.confined(root, "profiles/" + reference + "/profile.json"));
+        var base = readDefinition(androidBase(root, variant));
+        var emulator = Json.obj(source, "emulator");
+        var variantFields =
+                new java.util.HashSet<>(
+                        Set.of("id", "title", "status", "schema", "variant", "emulator"));
+
+        if (source.containsKey("features")) {
+            variantFields.add("features");
+        }
+
+        var disabled = Json.object(source.getOrDefault("features", Map.of()));
+        Failure.require(
+                source.keySet().equals(variantFields)
+                        && Set.of("mcu_property_runtime", "display_power_runtime")
+                                .containsAll(disabled.keySet())
+                        && disabled.values().stream().allMatch(Boolean.FALSE::equals)
+                        && Json.integer(source, "schema") == 1
+                        && id.equals(source.get("id"))
+                        && !id.equals(reference)
+                        && Set.of("ready", "incomplete").contains(Json.str(source, "status"))
+                        && variant.keySet().equals(Set.of("recipeProfile", "androidBase"))
+                        && vehicleRecipe(recipe, reference)
+                        && variantEmulator(emulator)
+                        && "system-images;android-30;default;arm64-v8a"
+                                .equals(Json.obj(recipe, "android").get("package"))
+                        && "system-images;android-30;default;x86_64".equals(base.get("package"))
+                        && base.containsKey("clean_base")
+                        && !base.containsKey("development_kernel"),
+                "PROFILE_VARIANT",
+                "Incompatible vehicle recipe or Android SDK variant",
+                2);
+        var features = new LinkedHashMap<>(Json.object(base.getOrDefault("features", Map.of())));
+        features.putAll(
+                Json.object(Json.obj(recipe, "android").getOrDefault("features", Map.of())));
+        base.put("features", features);
+        recipe.put("android", base);
+        var effectiveEmulator = Json.obj(recipe, "emulator");
+        effectiveEmulator.putAll(emulator);
+        recipe.put("emulator", effectiveEmulator);
+
+        if (!disabled.isEmpty()) {
+            var effectiveFeatures =
+                    new LinkedHashMap<>(Json.object(recipe.getOrDefault("features", Map.of())));
+            effectiveFeatures.putAll(disabled);
+            recipe.put("features", effectiveFeatures);
+        }
+
+        for (String field : List.of("variant", "id", "title", "status")) {
+            recipe.put(field, source.get(field));
+        }
+
+        return recipe;
+    }
+
+    private static Map<String, Object> resolveTarget(
+            Path root, String id, Map<String, Object> source, String name) throws Exception {
+        var catalogue = Json.obj(source, "targets");
+        var android = Json.obj(source, "android");
+        boolean x86 = "x86".equals(name);
+        String abi = x86 ? "x86_64" : "arm64-v8a";
+        String preparation = x86 ? "signed-offline" : "sdk";
+
+        Failure.require(
+                id.equals(source.get("id"))
+                        && !source.containsKey("variant")
+                        && !source.containsKey("target")
+                        && catalogue.keySet().equals(Set.of("arm", "x86"))
+                        && catalogue.containsKey(name)
+                        && "system-images;android-30;default;arm64-v8a"
+                                .equals(android.get("package")),
+                "PROFILE_TARGET",
+                "Invalid Android target catalogue",
+                2);
+        var entry = Json.obj(catalogue, name);
+        Failure.require(
+                entry.keySet()
+                                .equals(
+                                        x86
+                                                ? Set.of(
+                                                        "guestAbi",
+                                                        "preparation",
+                                                        "androidBase",
+                                                        "emulator")
+                                                : Set.of("guestAbi", "preparation"))
+                        && abi.equals(entry.get("guestAbi"))
+                        && preparation.equals(entry.get("preparation")),
+                "PROFILE_TARGET",
+                "Target ABI or preparation differs",
+                2);
+        var resolved = new LinkedHashMap<>(source);
+        var target =
+                new LinkedHashMap<String, Object>(
+                        Map.of("name", name, "guestAbi", abi, "preparation", preparation));
+
+        if (x86) {
+            var base = readDefinition(androidBase(root, entry));
+            var emulator = Json.obj(entry, "emulator");
+            Failure.require(
+                    variantEmulator(emulator)
+                            && "system-images;android-30;default;x86_64".equals(base.get("package"))
+                            && base.containsKey("clean_base")
+                            && !base.containsKey("development_kernel"),
+                    "PROFILE_TARGET",
+                    "X86 target requires a pinned API30 SDK base and KVM settings",
+                    2);
+            var features = Json.object(android.getOrDefault("features", Map.of()));
+
+            if (!features.isEmpty()) {
+                var combined =
+                        new LinkedHashMap<>(Json.object(base.getOrDefault("features", Map.of())));
+                combined.putAll(features);
+                base.put("features", combined);
+            }
+
+            resolved.put("android", base);
+            var settings = new LinkedHashMap<>(Json.obj(source, "emulator"));
+            settings.putAll(emulator);
+            resolved.put("emulator", settings);
+            target.put("androidBase", Json.str(entry, "androidBase"));
+        }
+
+        resolved.remove("targets");
+        resolved.put("target", target);
+
+        return resolved;
+    }
+
+    private static Map<String, String> inventory(Path root, String id, Map<String, Object> data)
+            throws Exception {
+        Map<String, String> pins = new java.util.TreeMap<>();
+        long total = 0;
+        String recipe = recipeName(id, data);
+        List<String> directories = id.equals(recipe) ? List.of(id) : List.of(id, recipe);
+
+        for (String dir : directories) {
+            for (var entry :
+                    FilesSupport.tree(Storage.confined(root, "profiles/" + dir)).entrySet()) {
+                long size = Files.size(entry.getValue());
+                total += size;
+                Failure.require(
+                        size <= 32L * 1024 * 1024 && total <= 128L * 1024 * 1024,
+                        "PROFILE_RESOURCE_LIMIT",
+                        "Source profile exceeds bounds",
+                        2);
+                pins.put(
+                        directories.size() == 1 ? entry.getKey() : dir + "/" + entry.getKey(),
+                        FilesSupport.hash(entry.getValue()));
+            }
+        }
+
+        var selection =
+                Json.object(data.getOrDefault("target", data.getOrDefault("variant", Map.of())));
+
+        if (selection.containsKey("androidBase")) {
+            Path file = androidBase(root, selection);
+            pins.put("common/android-bases/" + file.getFileName(), FilesSupport.hash(file));
+        }
+
+        return pins;
+    }
+
     void verifySource(Profile profile) throws Exception {
         if (projectRoot == null) {
             return;
         }
 
-        Path source = Storage.confined(projectRoot, "profiles/" + profile.id());
-        Map<String, String> actual = new java.util.TreeMap<>();
-
-        for (var file : FilesSupport.tree(source).entrySet()) {
-            actual.put(file.getKey(), FilesSupport.hash(file.getValue()));
-        }
+        Map<String, String> actual = inventory(projectRoot, profile.id(), profile.data());
 
         Failure.require(
                 actual.equals(sourcePins.get(profile.id())),
@@ -273,7 +495,7 @@ final class ProfileRegistry {
                 2);
         verifySource(profile);
 
-        return Storage.confined(projectRoot, "profiles/" + profile.id());
+        return Storage.confined(projectRoot, "profiles/" + profile.recipeId());
     }
 
     static Map<String, Object> patchMetadata(Profile profile) throws Exception {

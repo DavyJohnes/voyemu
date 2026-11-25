@@ -420,8 +420,21 @@ LpPartitionView read_lp_partition(const std::filesystem::path &image, const std:
     return result;
 }
 
+std::uint64_t lp_scratch_growth_bytes(std::uint64_t deficit, std::uint64_t alignment,
+                                      std::uint64_t disk_bytes, std::uint64_t limit) {
+    need(alignment >= 4096 && alignment <= 1ULL << 20 && (alignment & (alignment - 1)) == 0 &&
+                 limit <= lp_scratch_max_growth && deficit <= limit,
+         "bounded scratch super growth required");
+    const auto growth = (deficit + alignment - 1) / alignment * alignment;
+    need(growth <= limit && disk_bytes <= (4ULL << 30) - growth,
+         "bounded scratch super growth required");
+
+    return growth;
+}
+
 Json seed_lp_overlay_scratch(const std::filesystem::path &image, const std::string &pin,
-                             std::uint64_t bytes, LpScratchPlacement placement) {
+                             std::uint64_t bytes, LpScratchPlacement placement,
+                             std::uint64_t growth_limit) {
     need(bytes && bytes <= 2ULL << 30 && bytes % 4096 == 0,
          "bounded aligned scratch size required");
     const auto system = read_lp_partition(image, pin, "system");
@@ -483,9 +496,7 @@ Json seed_lp_overlay_scratch(const std::filesystem::path &image, const std::stri
     if (end + bytes > length) {
         need(placement == LpScratchPlacement::grow_terminal_super,
              "contiguous scratch would exceed super");
-        growth = (end + bytes - length + alignment - 1) / alignment * alignment;
-        need(growth <= lp_scratch_growth_limit && r.bytes <= (4ULL << 30) - growth,
-             "bounded scratch super growth required");
+        growth = lp_scratch_growth_bytes(end + bytes - length, alignment, r.bytes, growth_limit);
         disk = super_partition(r);
         need(disk.terminal, "scratch growth requires terminal super");
         backup = read_gpt_backup(r, disk);

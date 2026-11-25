@@ -261,9 +261,8 @@ android_candidate_sdk_environment(const std::filesystem::path &sdk, bool windows
 
 std::vector<std::string> android_candidate_art_verify_packages(const Json &profile) {
     if (!passion_platform(profile) || !profile.contains("android") ||
-        profile.at("android").value("package", std::string{}) !=
-                "system-images;android-30;default;arm64-v8a" ||
-        !profile.contains("original") || !profile.at("original").contains("LY_Car")) {
+        native_base_identity(profile.at("android")).api != 30 || !profile.contains("original") ||
+        !profile.at("original").contains("LY_Car")) {
         return {};
     }
 
@@ -342,13 +341,16 @@ std::string android_candidate_command_log(const std::vector<std::string> &argume
     }
 
     if (arguments[command] != "/system/bin/dex2oat" &&
-        arguments[command] != "/apex/com.android.art/bin/dex2oat64") {
+        arguments[command] != "/apex/com.android.art/bin/dex2oat64" &&
+        arguments[command] != "/apex/com.android.art/bin/dex2oat32") {
         return {};
     }
 
     for (std::size_t i = command + 1; i < arguments.size(); ++i) {
         if (arguments[i].starts_with("--image=") && arguments[i].size() > 8) {
-            return "boot-image-compile.log";
+            return arguments[command] == "/apex/com.android.art/bin/dex2oat32"
+                           ? "boot-image-compile-x86.log"
+                           : "boot-image-compile.log";
         }
     }
 
@@ -359,13 +361,12 @@ std::string android_candidate_command_log(const std::vector<std::string> &argume
            ".log";
 }
 
-std::vector<std::string>
-android_candidate_boot_compile_diagnostic_command(const Json &profile, const std::string &nonce) {
+std::vector<std::string> android_candidate_boot_compile_diagnostic_command(const Json &profile,
+                                                                           const std::string &nonce,
+                                                                           const std::string &isa) {
     need(android_candidate_api(profile) == 30 && hex_text(nonce, 32),
          "exact API30 compiler diagnostic owner required");
-    const auto command = android_candidate_boot_image_command(profile);
-    need(!command.empty() && command.front() == "/apex/com.android.art/bin/dex2oat64",
-         "pinned API30 compiler required");
+    const auto command = api30_framework_boot::command(profile, isa);
     std::vector<std::string> result = {"sh",         "-c",  art_diagnostic_script(),
                                        "voyemu-art", nonce, "/data/local/tmp"};
     result.insert(result.end(), command.begin(), command.end());
@@ -1012,7 +1013,8 @@ std::vector<std::string> android_candidate_boot_image_command(const Json &profil
     }
 
     if (android_candidate_api(profile) == 30) {
-        return api30_framework_boot::command(profile);
+        return api30_framework_boot::command(
+                profile, api30_framework_boot::instruction_sets(profile).back());
     }
 
     std::vector<std::string> args = {"/system/bin/dex2oat",

@@ -34,5 +34,5 @@ Json fetch_native_inputs(const std::filesystem::path &root, std::string_view pro
                          bool offline = false, const std::string &serial = "",
                          std::uint64_t reserve_bytes = 20ULL << 30,
                          const std::filesystem::path &jdk = {},
-                         const std::filesystem::path &update = {});
+                         const std::filesystem::path &update = {}, std::string_view target = {});
 } // namespace voyemu

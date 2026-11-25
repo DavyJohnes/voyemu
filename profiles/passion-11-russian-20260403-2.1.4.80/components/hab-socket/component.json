@@ -1,6 +1,8 @@
 {
   "type": "native",
   "minSdk": 30,
+  "abi": "arm64-v8a",
+  "sourceBuildSha256": "54c586bb11711a942c64f29abc71485a6615fcc92c253b74d5b36e109ba6022c",
   "output": "libuhab.so",
   "libs": ["log"],
   "sourceFiles": {

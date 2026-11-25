@@ -3,6 +3,7 @@
 #include "error.hpp"
 #include "os/fs.hpp"
 #include "process.hpp"
+#include "profile_catalog.hpp"
 #include "profile_originals.hpp"
 #include "profile_step_inputs.hpp"
 #include "quickboot.hpp"
@@ -24,11 +25,9 @@ ProfileBinaryApkNode plan_profile_binary_apk_node(const std::filesystem::path &r
     require(valid_profile_name(profile), "safe profile name required");
     require(name == "VehicleSetting" || name == "VehicleAir", "unsupported binary profile node");
     inputs.ordinary(build);
-    const auto profile_dir = root / "profiles" / std::string(profile),
-               profile_file = profile_dir / "profile.json",
+    const auto profile_dir = profile_recipe_directory(root, profile),
                patch_file = profile_dir / "patches/add-qg-runtime.json",
                receipt_file = build / "receipt.json";
-    inputs.file(profile_file, 512 * 1024);
     inputs.file(patch_file, 128 * 1024);
     inputs.file(receipt_file, 128 * 1024);
     std::map<std::filesystem::path, std::pair<Json, std::string>> tracked;
@@ -43,10 +42,17 @@ ProfileBinaryApkNode plan_profile_binary_apk_node(const std::filesystem::path &r
     inputs.file(compiler, 512ULL << 20);
     require(sha256_text(compiler_sha256) && track(compiler) == compiler_sha256,
             "native compiler pin mismatch");
-    track(profile_file);
     track(patch_file);
     const auto receipt_sha = track(receipt_file);
-    const auto definition = read_private_json(profile_file, 512 * 1024);
+    const auto definition =
+            Json::parse(authoring_profile_bytes(root, profile, [&](const auto &path) {
+                inputs.file(path, 512 * 1024);
+                const auto pin = track(path);
+                const auto bytes = read_private_json_bytes(path, 512 * 1024);
+                require(pin == sha256_bytes(bytes), "profile changed during read");
+
+                return bytes;
+            }));
     require(definition.at("schema") == 1, "profile schema");
     const auto &declaration = definition.at("patches").at(std::string(name));
     require(declaration == Json({{"type", "apk"},

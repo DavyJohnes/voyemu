@@ -9,12 +9,16 @@ namespace voyemu {
 struct AndroidCandidateRequest {
     std::string profile, profile_sha256, artifact_result_sha256, clean_receipt_sha256;
     std::filesystem::path artifact_result, clean_base, sdk;
+    std::filesystem::path signed_sdk;
+    Json signed_release;
+    std::map<std::string, std::string> signed_system_selections;
     std::map<std::string, std::string> tool_pins; // Absolute host file -> SHA256.
     unsigned port = 5580;
     // The candidate steps other than the boots of the emulator, which have no time limit.
     int overall_timeout_ms = 1800000;
     std::function<bool()> cancelled;
     bool capture_frames = false;
+    std::string target;
 };
 // Internal preparation cleanup helper, also exercised by retained fake-SDK host fixtures.
 Json capture_android_candidate_failure(ChildProcess &, const std::filesystem::path &adb,
@@ -132,7 +136,8 @@ std::vector<std::string> android_candidate_boot_cache_paths(const Json &profile)
 std::vector<std::string> android_candidate_boot_image_command(const Json &profile);
 // API30 compiler diagnostics preserve its exact argv/status before owned VM cleanup.
 std::vector<std::string>
-android_candidate_boot_compile_diagnostic_command(const Json &, const std::string &nonce);
+android_candidate_boot_compile_diagnostic_command(const Json &, const std::string &nonce,
+                                                  const std::string &isa = "arm64");
 std::vector<std::string> android_candidate_boot_relocation_command(const Json &profile);
 std::vector<std::vector<std::string>> android_candidate_system_server_commands(const Json &profile);
 std::string android_candidate_boot_properties(std::string_view source, const Json &values);

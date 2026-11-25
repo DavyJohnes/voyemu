@@ -19,6 +19,8 @@ Several profiles can build one component from shared sources. Their `component.j
 
 A `native` component whose output another profile already publishes names that pin under `pin` as `<profile>/<component>`. Preparation downloads the published file, and the profile publishes no file of its own for this component.
 
+The `abi` field of a native library names the architecture of the process that loads it. For a library built from source during machine preparation, `sourceBuildSha256` pins the output digest. Preparation uses the pinned NDK and checks the ELF architecture and SHA-256 before installing the library in the machine.
+
 ## Recipes and guards
 
 A recipe is an entry under `patches` in `profile.json`. It names its input, such as `original:Launcher` for an OEM APK, the components it uses, the list of steps and the signing key. A step is a JSON file in `patches/` with a list of operations: line edits in decompiled sources, added DEX files, removed entries, library declarations and class merges.

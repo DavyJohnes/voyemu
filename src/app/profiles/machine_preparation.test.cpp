@@ -501,6 +501,14 @@ void verify_candidate_peak_formula() {
 
     check(android_candidate_peak_extra_bytes(passion_media, 3ULL << 30, 1ULL << 30) ==
           (1792ULL << 20) + (3ULL << 30) + (1ULL << 30) + (2ULL << 30) + (512ULL << 20));
+    auto x86_media = passion_media;
+    x86_media["android"]["package"] = "system-images;android-30;default;x86_64";
+    x86_media["android"]["url"] =
+            "https://dl.google.com/android/repository/sys-img/android/x86_64-30_r11.zip";
+    const auto x86_payload = 1272150162ULL;
+    check(android_candidate_overlay_scratch_bytes(x86_media, x86_payload) == 2ULL << 30);
+    check(android_candidate_peak_extra_bytes(x86_media, 3ULL << 30, x86_payload) ==
+          (2ULL << 30) + (3ULL << 30) + x86_payload + (2ULL << 30) + (1ULL << 30));
     // Measured Passion build remains below the replaced flat12GiB term.
     check(android_candidate_peak_extra_bytes(passion_media, 3ULL << 30, 1ULL << 30) < 12ULL << 30);
 
@@ -2193,6 +2201,25 @@ static void owned_package_export_fixture() {
           !std::filesystem::exists(root / "untouched"));
 }
 
+void verify_candidate_avb_console(const std::filesystem::path &log) {
+    const std::string mismatch = "[  7.68] init: [libfs_avb]vbmeta digest mismatch\n",
+                      failed = "[  7.69] init: [libfs_avb]VerifyVbmetaImages failed\n",
+                      fatal = "[  7.70] init: InitFatalReboot: signal 6\n";
+
+    std::ofstream(log) << mismatch << failed << fatal;
+    machine_preparation_detail::CandidateAvbConsole console;
+    console.offset = std::filesystem::file_size(log);
+    check(!console.rejected(log));
+    std::ofstream(log, std::ios::app)
+            << failed << fatal << mismatch << failed << "[  0.0] Linux version 5.4\n"
+            << fatal;
+    check(!console.rejected(log));
+    std::ofstream(log, std::ios::app) << mismatch << failed << fatal.substr(0, 21);
+    check(!console.rejected(log));
+    std::ofstream(log, std::ios::app) << fatal.substr(21);
+    check(console.rejected(log));
+}
+
 void verify_retained_candidate_version_marker() {
     const auto root = std::filesystem::current_path() / ".local/build/tmp" /
                       ("candidate-retained-marker-" + random_token());
@@ -2206,6 +2233,7 @@ void verify_retained_candidate_version_marker() {
             std::filesystem::remove_all(p, e);
         }
     } cleanup{root};
+    verify_candidate_avb_console(root / "test-console.log");
     const auto properties = root / "base/build.prop", marker = root / "version_num.cache";
     std::ofstream(properties) << "ro.build.version.incremental=9767327\n";
     std::map<std::string, std::string> pins;
@@ -4375,7 +4403,12 @@ int main(int argc, char **argv) {
                 {"id", "test-passion"},
                 {"platform", "passion"},
                 {"board", "8155"},
-                {"android", {{"package", "system-images;android-30;default;arm64-v8a"}}},
+                {"android",
+                 {{"package", "system-images;android-30;default;arm64-v8a"},
+                  {"revision", "1"},
+                  {"url",
+                   "https://dl.google.com/android/repository/sys-img/android/arm64-v8a-30_r01.zip"},
+                  {"sha256", std::string(64, 'a')}}},
                 {"original", {{"LY_Car", Json::object()}, {"LY_Launcher", Json::object()}}}};
         art_profile["patches"]["LY_Launcher"]["steps"] = Json::array(
                 {"framework-libraries.json", "passion-api30-sidebars.json",
@@ -5417,6 +5450,43 @@ int main(int argc, char **argv) {
         for (const auto &path : api30_boot_paths) {
             check(path.starts_with("/system/framework/arm64/boot-") &&
                   !path.ends_with(".art.rel") && path.find("/apex/") == std::string::npos);
+        }
+
+        {
+            const Json multilib = {
+                    {"id", "test-x86-vehicle"},
+                    {"platform", "passion"},
+                    {"android", {{"package", "system-images;android-30;default;x86_64"}}},
+                    {"components", {{"view-observation", "components/view-observation"}}},
+                    {"install", Json::array({{{"artifact", "component:view-observation"},
+                                              {"type", "file"},
+                                              {"target", "/system/framework/framework.jar"},
+                                              {"mode", "0644"}}})}};
+            const auto paths = api30_framework_boot::paths(multilib);
+            check(paths.size() == 36 &&
+                  std::set<std::string>(paths.begin(), paths.end()).size() == paths.size());
+            Json events = Json::array();
+
+            for (const std::string isa : {"x86", "x86_64"}) {
+                const auto command = api30_framework_boot::command(multilib, isa);
+                check(command.front() == (isa == "x86" ? "/apex/com.android.art/bin/dex2oat32"
+                                                       : "/apex/com.android.art/bin/dex2oat64"));
+                check(std::count(command.begin(), command.end(), "--instruction-set=" + isa) == 1);
+                check(std::count(paths.begin(), paths.end(),
+                                 "/system/framework/" + isa + "/boot-framework.art") == 1);
+                check(std::count(command.begin(), command.end(),
+                                 "--image=/system/framework/" + isa + "/boot.art") == 1);
+                check(android_candidate_command_log(command) ==
+                      (isa == "x86" ? "boot-image-compile-x86.log" : "boot-image-compile.log"));
+                events.push_back(
+                        {{"phase", "boot-art-compiled"}, {"files", 18}, {"command", command}});
+            }
+
+            check(api30_framework_boot::compiled(multilib, events));
+            events[0] = events[1];
+            check(!api30_framework_boot::compiled(multilib, events));
+            events.erase(events.begin());
+            check(!api30_framework_boot::compiled(multilib, events));
         }
 
         const auto api30_boot_command = android_candidate_boot_image_command(acquired_api30);

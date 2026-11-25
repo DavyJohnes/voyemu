@@ -4,6 +4,23 @@
   "title": "Passion 2.1.4.80",
   "platform": "passion",
   "board": "8155",
+  "targets": {
+    "arm": {
+      "guestAbi": "arm64-v8a",
+      "preparation": "sdk"
+    },
+    "x86": {
+      "guestAbi": "x86_64",
+      "androidBase": "android-30-x86_64",
+      "preparation": "signed-offline",
+      "emulator": {
+        "acceleration": "kvm",
+        "gpuMode": "host",
+        "audioOutput": true,
+        "memory": 4096
+      }
+    }
+  },
   "features": {
     "system_upgrade": true
   },

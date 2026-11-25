@@ -10,7 +10,10 @@ std::filesystem::path session_sdk_registration_directory(const std::filesystem::
                                                          bool) {
     const auto home = directory / "emulator-home";
 
-    return sdk_registration_directory(home, home);
+    // The Linux SDK registers its emulator in the XDG_RUNTIME_DIR of the child.
+    const auto root = os::platform_name == "Linux" ? directory / "tmp" : home;
+
+    return sdk_registration_directory(root, home);
 }
 
 bool android_windows_renderer(const Json &, bool) {
@@ -275,8 +278,7 @@ void Session::advance_android(bool guest_possible, std::chrono::steady_clock::ti
                                     android_spec_["features"].value("MultiDisplay",
                                                                     std::string{}) != "on" ||
                                     android_displays_ready_;
-        const bool presentation_only = passion_presentation(android_spec_) ||
-                                       nxp_presentation(android_spec_);
+        const bool presentation_only = !media::presentation_family(android_spec_).empty();
         const bool current_state =
                 passion_mcu_available(android_spec_)
                         ? passion_mcu_delivery_current(
@@ -404,10 +406,16 @@ void Session::assert_android_identity() {
     if (native_owned) {
         const auto launcher =
                 std::filesystem::path(android_spec_.at("executable").get<std::string>());
+        const auto arch = android_spec_.value("guest_arch", std::string("aarch64"));
+
+        if (arch != "x86_64" && arch != "aarch64") {
+            throw VoyemuError("ANDROID_IDENTITY_MISMATCH",
+                              "unsupported Android SDK guest architecture");
+        }
+
+        const auto engine = "qemu-system-" + arch + (android_sdk_headless_ ? "-headless" : "");
         const auto backend = launcher.parent_path() / "qemu" / std::string(os::emulator_host) /
-                             (android_spec_.value("headless", false)
-                                      ? "qemu-system-aarch64-headless"
-                                      : "qemu-system-aarch64");
+                             engine;
         refresh_android_launch_identity(directory_, session_id_, android_.pid(),
                                         android_generation_, launcher, backend);
     }

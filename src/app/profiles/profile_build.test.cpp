@@ -634,6 +634,93 @@ static void artifact_resume_checks(const std::filesystem::path &root, bool equip
             throw std::runtime_error("shared or independent artifact reader refused");
         }
     }
+
+    if (!equipment) {
+        const auto base_pin = sha256_bytes("selected x86 base");
+        const Json arm_base = {{"package", "system-images;android-30;default;arm64-v8a"},
+                               {"sha256", sha256_bytes("other ARM base")}};
+        const Json x86_base = {{"package", "system-images;android-30;default;x86_64"},
+                               {"sha256", base_pin},
+                               {"clean_base", Json::object()}};
+        write_private_json(definition,
+                           {{"schema", 1},
+                            {"id", profile},
+                            {"android", arm_base},
+                            {"emulator", Json::object()},
+                            {"targets",
+                             {{"arm", {{"guestAbi", "arm64-v8a"}, {"preparation", "sdk"}}},
+                              {"x86",
+                               {{"guestAbi", "x86_64"},
+                                {"preparation", "signed-offline"},
+                                {"androidBase", "fixture-x86"},
+                                {"emulator", {{"acceleration", "kvm"}, {"gpuMode", "host"}}}}}}}});
+        write_private_json(root / "profiles/common/android-bases/fixture-x86.json", x86_base);
+        const auto selected_base = root / ".local/profiles/common/android-base" / base_pin;
+        write_private_json(selected_base / "base.json",
+                           {{"archive_sha256", base_pin}, {"package", x86_base.at("package")}});
+        const Json selected = {{"name", "x86"}, {"abi", "x86_64"}, {"base_sha256", base_pin}};
+        auto selected_request = request, selected_result = result, selected_receipt = receipt;
+        selected_request["target"] = selected;
+        selected_request["android_base"] = x86_base;
+        selected_request["profile_sha256"] =
+                sha256_bytes(authoring_profile_bytes(root, profile, "x86"));
+        selected_result["target"] = selected;
+        selected_receipt["target"] = selected;
+        selected_receipt["base"] = selected_base.string();
+        selected_receipt["base_receipt_sha256"] = sha256_file(selected_base / "base.json");
+        const auto publish = [&](const Json &input, const Json &output, Json top) {
+            write_private_json(transport / "request.json", input);
+            write_private_json(transport / "result.json", output);
+            auto child = invocation;
+            child["request_sha256"] = sha256_file(transport / "request.json");
+            child["result_sha256"] = sha256_file(transport / "result.json");
+            write_private_json(transport / "receipt.json", child);
+            top["request_sha256"] = child.at("request_sha256");
+            top["result_sha256"] = child.at("result_sha256");
+            top["invocation_sha256"] = sha256_file(transport / "receipt.json");
+            write_private_json(receipt_file, top);
+
+            return sha256_file(receipt_file);
+        };
+        const auto selected_pin = publish(selected_request, selected_result, selected_receipt);
+
+        if (validate_profile_artifact_resume(root, profile, receipt_file, selected_pin, "x86")
+                    .at("target") != selected) {
+            throw std::runtime_error("selected target artifact resume refused");
+        }
+
+        const auto reject_selected = [&](const std::string &bad_pin, std::string_view message) {
+            try {
+                (void)validate_profile_artifact_resume(root, profile, receipt_file, bad_pin, "x86");
+            } catch (const VoyemuError &error) {
+                if (std::string_view(error.what()).find(message) != std::string_view::npos) {
+                    return;
+                }
+
+                throw;
+            }
+
+            throw std::runtime_error("foreign selected target cache input accepted");
+        };
+        auto altered = selected_receipt;
+        altered["target"]["name"] = "arm";
+        reject_selected(publish(selected_request, selected_result, altered),
+                        "artifact preparation epoch differs");
+        altered = selected_result;
+        altered["target"]["abi"] = "arm64-v8a";
+        reject_selected(publish(selected_request, altered, selected_receipt),
+                        "prepared artifact profile source closure changed");
+        altered = selected_request;
+        altered["android_base"]["sha256"] = arm_base.at("sha256");
+        reject_selected(publish(altered, selected_result, selected_receipt),
+                        "prepared request target or pinned Android base differs");
+
+        put(definition, original_definition);
+        write_private_json(transport / "request.json", request);
+        write_private_json(transport / "result.json", result);
+        write_private_json(transport / "receipt.json", invocation);
+    }
+
     receipt.erase("android_inputs");
     receipt.erase("native_files");
     receipt.erase("invocation_sha256");
@@ -2866,7 +2953,7 @@ static void qnx_reuse_checks(const std::filesystem::path &stage) {
     candidate_receipt["events"] =
             Json::array({{{"phase", "boot-art-compiled"},
                           {"files", 18},
-                          {"command", api30_framework_boot::command(definition)}}});
+                          {"command", api30_framework_boot::command(definition, "arm64")}}});
     const auto package = candidate / "android/packages/owned.apk";
     put(package, "owned provider APK");
     const auto package_sha = sha256_file(package);
@@ -2967,9 +3054,10 @@ static void system_upgrade_candidate_checks(const std::filesystem::path &stage) 
             {"android", {{"abi", "arm64-v8a"}, {"images", {{"system.img", image}}}}},
             {"checks", Json::array({{{"id", "boot"}, {"passed", true}}})},
             {"installed", installed},
-            {"events", Json::array({{{"phase", "boot-art-compiled"},
-                                     {"files", 18},
-                                     {"command", api30_framework_boot::command(definition)}}})}};
+            {"events",
+             Json::array({{{"phase", "boot-art-compiled"},
+                           {"files", 18},
+                           {"command", api30_framework_boot::command(definition, "arm64")}}})}};
     std::filesystem::copy_file(definition_file, candidate / "profile.json");
     const std::string package_bytes = "owned provider APK";
     const auto package_sha = sha256_bytes(package_bytes);
@@ -3124,7 +3212,7 @@ static void system_upgrade_candidate_checks(const std::filesystem::path &stage) 
 
             bool refused = false;
             try {
-                api30_framework_boot::command(bad);
+                api30_framework_boot::command(bad, "arm64");
             } catch (...) {
                 refused = true;
             }
@@ -3134,7 +3222,8 @@ static void system_upgrade_candidate_checks(const std::filesystem::path &stage) 
             }
         }
 
-        if (api30_framework_boot::command(source) != api30_framework_boot::command(definition)) {
+        if (api30_framework_boot::command(source, "arm64") !=
+            api30_framework_boot::command(definition, "arm64")) {
             throw std::runtime_error("Passion changed pinned API30 boot recipe");
         }
 
@@ -3585,12 +3674,14 @@ int main(int argc, char **argv) {
             return 0;
         }
 
-        if (argc == 7 && std::string_view(argv[1]) == "--finalize-android") {
+        if ((argc == 7 || argc == 8) && std::string_view(argv[1]) == "--finalize-android") {
             const auto root = std::filesystem::canonical(argv[2]),
                        candidate = std::filesystem::absolute(argv[4]);
+            const auto jdk = argc == 8 ? std::filesystem::canonical(argv[7])
+                                       : std::filesystem::path{};
             std::cout << finalize_android_profile_build(root, argv[3],
                                                         machine_identity(argv[3], argv[6]),
-                                                        candidate, argv[5])
+                                                        candidate, argv[5], jdk)
                                  .dump()
                       << '\n';
 
@@ -3841,6 +3932,81 @@ int main(int argc, char **argv) {
                 std::filesystem::remove_all(p, e);
             }
         } cleanup{stage};
+        {
+            const auto check = [](bool condition, const char *message) {
+                if (!condition) {
+                    throw std::runtime_error(message);
+                }
+            };
+            const auto project = stage / "variant-project";
+            const auto profiles = project / "profiles";
+            const std::string id = "sample-vehicle-x86", parent = "sample-vehicle",
+                              base_id = "sdk-x86";
+            const auto definition = profiles / id / "profile.json";
+            const Json variant = {
+                    {"schema", 1},
+                    {"id", id},
+                    {"title", "Test x86"},
+                    {"status", "incomplete"},
+                    {"variant", {{"recipeProfile", parent}, {"androidBase", base_id}}},
+                    {"emulator", {{"acceleration", "kvm"}, {"gpuMode", "host"}}}};
+            write_private_json(definition, variant);
+            const auto recipe = embedded_profile(embedded_profile_names(ProfilePlatform::passion,
+                                                                        ProfileBoard::sa8155)
+                                                         .at(0))
+                                        .at("definition");
+            auto original = recipe;
+            original["id"] = parent;
+            write_private_json(profiles / parent / "profile.json", original);
+            auto image = original.at("android");
+            image["package"] = "system-images;android-30;default;x86_64";
+            image.erase("development_kernel");
+
+            for (const auto mode : {"missing", "valid", "path", "override", "loop"}) {
+                auto declaration = variant;
+                const std::string_view value(mode);
+
+                if (value == "path") {
+                    declaration["variant"]["androidBase"] = "../other";
+                } else if (value == "override") {
+                    declaration["original"] = Json::object();
+                } else if (value == "loop") {
+                    declaration["variant"]["recipeProfile"] = id;
+                }
+
+                if (value != "missing") {
+                    write_private_json(profiles / "common/android-bases" / (base_id + ".json"),
+                                       image);
+                }
+
+                write_private_json(definition, declaration);
+                bool refused = false;
+                try {
+                    const auto effective = authoring_profile(project, id);
+
+                    if (value == "valid") {
+                        check(effective.at("verify") == original.at("verify") &&
+                                      effective.at("id") == id,
+                              "variant identity or acceptance differs");
+                    }
+                } catch (const VoyemuError &) {
+                    refused = true;
+                }
+
+                check(refused == (value != "valid"), "invalid vehicle variant resolution");
+            }
+
+            write_private_json(definition, variant);
+            bool refused_cluster = false;
+            try {
+                build_profile(project, id, machine_identity(id, {}), true, {}, {}, true);
+            } catch (const VoyemuError &error) {
+                refused_cluster = error.code() == "PROFILE_BUILD";
+            }
+
+            check(refused_cluster && !std::filesystem::exists(project / "machines" / id),
+                  "multimedia-only variant published a cluster machine");
+        }
         const auto root = stage / "source-project";
         ensure_private_directory(root / "profiles" / qinggan09_profile());
         std::filesystem::copy_file(source_root / "profiles" / qinggan09_profile() / "profile.json",

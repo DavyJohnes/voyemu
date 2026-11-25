@@ -1,6 +1,7 @@
 #include "check.hpp"
 #include "os/platform.hpp"
 #include "portable_runtime_internal.hpp"
+#include "signed_android.hpp"
 
 namespace voyemu {
 using namespace portable_detail;
@@ -771,13 +772,14 @@ std::string runtime_avd_config(const Json &definition, const std::filesystem::pa
 
     need(memory >= 512 && memory <= 16384 && cores >= 1 && cores <= 8,
          "bounded profile memory/CPU configuration required");
+    const bool x86 = android_kvm(definition);
     std::map<std::string, std::string> values{
             {"AvdId", avd},
             {"avd.ini.displayname", definition.value("id", std::string("Voyemu"))},
             {"image.sysdir.1", base.string() + "/"},
-            {"abi.type", "arm64-v8a"},
+            {"abi.type", x86 ? "x86_64" : "arm64-v8a"},
             {"tag.id", "default"},
-            {"hw.cpu.arch", "arm64"},
+            {"hw.cpu.arch", x86 ? "x86_64" : "arm64"},
             {"hw.ramSize", std::to_string(memory)},
             {"hw.cpu.ncore", std::to_string(cores)},
             {"hw.gpu.enabled", "yes"},
@@ -1126,11 +1128,12 @@ Json passion_system_evidence(const std::filesystem::path &seed, const Json &mani
          "actual stopped Passion cold candidate required");
     need(candidate.at("clean_base_archive_sha256") == android.at("base_archive_sha256") &&
                  definition.at("android").at("sha256") == android.at("base_archive_sha256") &&
-                 candidate.at("android").at("abi") == "arm64-v8a",
+                 candidate.at("android").at("abi") ==
+                         native_base_identity(definition.at("android")).abi,
          "system proof clean base differs");
     const auto paths = api30_framework_boot::paths(definition);
     std::set<std::string> compiled;
-    unsigned bridge = 0, boot = 0;
+    unsigned bridge = 0;
 
     for (const auto &row : candidate.at("installed")) {
         if (row.at("artifact") == "component:view-observation") {
@@ -1146,16 +1149,8 @@ Json passion_system_evidence(const std::filesystem::path &seed, const Json &mani
         }
     }
 
-    for (const auto &event : candidate.at("events")) {
-        if (event.at("phase") == "boot-art-compiled") {
-            need(event.at("files") == 18 &&
-                         event.at("command") == api30_framework_boot::command(definition),
-                 "cold boot recipe differs");
-            ++boot;
-        }
-    }
-
-    need(bridge == 1 && boot == 1 && compiled == std::set<std::string>(paths.begin(), paths.end()),
+    need(bridge == 1 && api30_framework_boot::compiled(definition, candidate.at("events")) &&
+                 compiled == std::set<std::string>(paths.begin(), paths.end()),
          "complete cold bridge boot extension required");
     const auto &fresh = candidate.at("android").at("images");
     need(fresh.is_object() && fresh.size() == 5, "complete cold candidate image set required");
@@ -1428,10 +1423,22 @@ Json portable_android_launch(const std::filesystem::path &root,
 
     // The window names the machine by the title of its profile, such as "Voyemu Free 7.3.1".
     android["profile_title"] = profile_title(definition);
-    android["api"] = definition.contains("android") ? native_base_api(definition.at("android"))
-                                                    : 28;
+    const auto base_identity = definition.contains("android")
+                                       ? native_base_identity(definition.at("android"))
+                                       : AndroidBaseIdentity{28, "arm64-v8a"};
+    const bool x86 = android_kvm(definition), sdk_guest = android_sdk_profile(definition);
 
-    if (android.at("api") == 30) {
+    if (x86 && os::dependency_host != "linux/x64") {
+        throw VoyemuError("ANDROID_ACCELERATION", "x86_64 Android requires a Linux x64 KVM host");
+    }
+
+    android["api"] = base_identity.api;
+
+    if (x86) {
+        android["guest_arch"] = base_identity.abi;
+    }
+
+    if (android.at("api") == 30 && !sdk_guest) {
         need(definition.contains("configure") && definition.at("configure").contains("home") &&
                      definition.at("configure").contains("homeActivity"),
              "API30 profile HOME package and activity metadata required");
@@ -1448,7 +1455,9 @@ Json portable_android_launch(const std::filesystem::path &root,
     }
 
     if (definition.contains("emulator")) {
-        android["gpuMode"] = definition.at("emulator").value("gpuMode", std::string("host"));
+        const auto &emulator = definition.at("emulator");
+        android["gpuMode"] = emulator.value("gpuMode", std::string("host"));
+        android["audioOutput"] = android_launch_audio_output(emulator, x86);
     }
 
     if (definition.contains("configure")) {
@@ -1505,7 +1514,15 @@ Json portable_android_launch(const std::filesystem::path &root,
                                          ProfileBoard::sa8155);
     const bool nxp = record_declares(definition, ProfilePlatform::qinggan09, ProfileBoard::nxp);
 
-    if (passion) {
+    if (sdk_guest) {
+        need(x86 && android.at("gpuMode") == "host" &&
+                     android.at("features").value("MultiDisplay", std::string{}) == "on" &&
+                     android_screens(android.at("screens")).size() == 2,
+             "SDK guest requires x86_64, host graphics and two Android displays");
+        android.erase("home");
+        android.erase("vehicle_adapter");
+        android.erase("systemui_adapter");
+    } else if (passion) {
 #ifdef _WIN32
         throw VoyemuError("PASSION_PRESENTATION",
                           "Windows presentation startup is not yet supported");
@@ -1537,7 +1554,7 @@ Json portable_android_launch(const std::filesystem::path &root,
 
     android["args"] = Json::array({"-accel", diagnostic_native.empty() ? "off" : "on"});
 #else
-    android["args"] = Json::array({"-accel", host_name == "darwin/arm64" ? "on" : "off"});
+    android["args"] = Json::array({"-accel", (x86 || host_name == "darwin/arm64") ? "on" : "off"});
 #endif
     const char *inherited_path = std::getenv("PATH");
 
@@ -1566,6 +1583,10 @@ Json portable_android_launch(const std::filesystem::path &root,
     if (frontend) {
         android["frontend"] = host.frontend;
         android["args"].push_back("-no-window");
+    }
+
+    if (sdk_guest) {
+        return android;
     }
 
     if (nxp) {
@@ -1663,10 +1684,8 @@ bool portable_runtime_available(const std::filesystem::path &root, std::string_v
 Json portable_profile_definition(const std::filesystem::path &root, std::string_view profile,
                                  const MachineIdentity &machine,
                                  const std::filesystem::path &explicit_seed) {
-    const auto source = root / "profiles" / std::string(profile) / "profile.json";
-
     if (!portable_runtime_available(root, profile, machine, explicit_seed)) {
-        return read_private_json(source, 1024 * 1024);
+        return authoring_profile(root, profile);
     }
 
     const auto seed = seed_directory(root, profile, machine, explicit_seed);
@@ -1694,6 +1713,74 @@ Json portable_profile_definition(const std::filesystem::path &root, std::string_
 }
 
 namespace portable_detail {
+void check_android_guest_identity(const Json &definition, const Json &manifest) {
+    const auto &android = manifest.at("android");
+    const auto identity = native_base_identity(definition.at("android"));
+
+    (void)android_kvm(definition);
+    need(android.at("abi") == identity.abi && android.at("api") == identity.api &&
+                 android.at("base_archive_sha256") == definition.at("android").at("sha256"),
+         "registered clean base/API/ABI required");
+
+    if (definition.contains("target") || android.contains("target")) {
+        const std::string_view name = identity.abi == "x86_64" ? "x86" : "arm";
+        const auto target = definition.value("target", Json::object());
+        // An ARM system upgrade can retain a machine that predates explicit targets.
+        const bool legacy_upgrade = !android.contains("target") && identity.abi == "arm64-v8a" &&
+                                    android.contains("system_upgrade");
+        need(target.value("name", std::string{}) == name &&
+                     target.value("guestAbi", std::string{}) == identity.abi &&
+                     (legacy_upgrade || android.value("target", std::string{}) == name),
+             "portable Android target differs from its profile snapshot");
+    }
+}
+
+void check_sdk_seed(const std::filesystem::path &seed, const Json &definition,
+                    const Json &manifest) {
+    if (!android_sdk_profile(definition) || manifest.at("android").contains("signed_android")) {
+        return;
+    }
+
+    const auto &descriptor = definition.at("android"), &android = manifest.at("android");
+    const auto clean = native_clean_base(descriptor);
+    need(android_kvm(definition) && manifest.value("scope", std::string{}) == "android" &&
+                 !manifest.contains("qnx") && android.value("abi", std::string{}) == "x86_64" &&
+                 android.value("api", 0) == 30 &&
+                 android.at("base_archive_sha256") == descriptor.at("sha256") &&
+                 !android.contains("system_upgrade") && !android.contains("development_kernel") &&
+                 manifest.at("candidate_receipt_sha256") == clean.receipt_sha256,
+         "SDK machine must retain its clean Android base");
+    const auto file = seed / "evidence/candidate.json";
+    checked_file(file, clean.receipt_sha256, 512 * 1024);
+    const auto receipt = read_private_json(file, 512 * 1024);
+    need(receipt.at("archive_sha256") == descriptor.at("sha256") &&
+                 receipt.at("package") == descriptor.at("package") &&
+                 receipt.at("revision") == descriptor.at("revision") &&
+                 receipt.at("prepared_VM") == false,
+         "SDK extraction receipt identity differs");
+
+    for (const auto *name : {"system.img", "vendor.img"}) {
+        const auto &image = android.at("images").at(name);
+        need(image.at("file") == std::string("android/") + name &&
+                     image.at("sha256") == clean.pin("images", name) &&
+                     image.at("sha256") == receipt.at("files").at(name).at("sha256") &&
+                     image.at("bytes") == receipt.at("files").at(name).at("bytes"),
+             "stock SDK system or vendor image differs from the archive");
+    }
+
+    const auto &boot = android.at("boot_files");
+    need(boot.size() == clean.boot_files.size(), "SDK boot file roles differ");
+
+    for (const auto &[name, sha] : clean.boot_files) {
+        const auto rel = "android/" + name;
+        const auto &item = boot.at(name);
+        need(std::filesystem::path(name).filename() == name && item.at("file") == rel &&
+                     item.at("sha256") == sha && receipt.at("files").at(name).at("sha256") == sha,
+             "SDK boot metadata differs from the archive");
+        checked_file(seed / rel, sha, 64 * mib);
+    }
+}
+
 std::string checked_can_model_receipt(const std::filesystem::path &seed, const Json &manifest) {
     const auto &android = manifest.at("android");
 
@@ -1771,12 +1858,10 @@ static Json inspect_portable_runtime_impl(const std::filesystem::path &root,
          "manifest identity");
     const auto definition = portable_profile_definition(root, profile, machine, seed);
     const auto family = runtime_profile_reference(definition, profile);
-    const auto api = native_base_api(definition.at("android"));
-    need(manifest.at("android").at("base_archive_sha256") ==
-                         definition.at("android").at("sha256") &&
-                 manifest.at("android").at("api") == api &&
-                 manifest.at("android").at("abi") == "arm64-v8a",
-         "registered clean base/API/ABI required");
+    check_android_guest_identity(definition, manifest);
+    check_sdk_seed(seed, definition, manifest);
+    const auto boot_pins = checked_signed_android_boot_pins(root, seed, definition, manifest);
+    const auto api = manifest.at("android").at("api").get<unsigned>();
     const bool android_only = manifest.contains("scope");
 
     if (android_only) {
@@ -1790,7 +1875,8 @@ static Json inspect_portable_runtime_impl(const std::filesystem::path &root,
                                     (manifest.contains("ui_observer") ? 1 : 0) +
                                     (manifest.contains("resources") ? 1 : 0) &&
                  manifest.at("android").size() ==
-                         4 + (manifest.at("android").contains("display_power") ? 1 : 0) +
+                         4 + (manifest.at("android").contains("target") ? 1 : 0) +
+                                 (manifest.at("android").contains("display_power") ? 1 : 0) +
                                  (manifest.at("android").contains("mcu_property") ? 1 : 0) +
                                  (manifest.at("android").contains("owned_package") ? 1 : 0) +
                                  (manifest.at("android").contains("camera_package") ? 1 : 0) +
@@ -1802,6 +1888,7 @@ static Json inspect_portable_runtime_impl(const std::filesystem::path &root,
                                                                                              : 0) +
                                  (manifest.at("android").contains("boot_files") ? 1 : 0) +
                                  (manifest.at("android").contains("development_kernel") ? 1 : 0) +
+                                 (manifest.at("android").contains("signed_android") ? 1 : 0) +
                                  (manifest.at("android").contains("can_model_receipt") ? 1 : 0),
          "unknown portable fields");
     (void)checked_development_kernel(seed, definition, manifest);
@@ -1809,11 +1896,9 @@ static Json inspect_portable_runtime_impl(const std::filesystem::path &root,
 
     if (manifest.at("android").contains("boot_files")) {
         const auto &boot = manifest.at("android").at("boot_files");
-        const auto clean_pins = portable_clean_boot_pins(definition.at("android"));
-        need(boot.is_object() && boot.size() == clean_pins.size(),
-             "machine boot file roles differ");
+        need(boot.is_object() && boot.size() == boot_pins.size(), "machine boot file roles differ");
 
-        for (const auto &[name, expected] : clean_pins) {
+        for (const auto &[name, expected] : boot_pins) {
             const auto &descriptor = boot.at(name);
             const auto relative = std::string("android/") + name;
             need(descriptor.is_object() && descriptor.size() == 3 &&
@@ -1901,7 +1986,8 @@ static Json inspect_portable_runtime_impl(const std::filesystem::path &root,
         (void)portable_passion_power(seed, manifest, definition);
     }
 
-    need(passion_mcu_requested(definition) == manifest.at("android").contains("mcu_property"),
+    need(passion_mcu_runtime_requested(definition) ==
+                 manifest.at("android").contains("mcu_property"),
          "partial MCU graph requires matching cold evidence");
 
     if (manifest.at("android").contains("mcu_property")) {

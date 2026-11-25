@@ -1,5 +1,6 @@
 #include "os/platform.hpp"
 #include "portable_runtime_internal.hpp"
+#include "signed_android.hpp"
 
 // Activates a prepared machine as the runtime of a profile.
 namespace voyemu {
@@ -124,16 +125,20 @@ Json activate_portable_runtime(const std::filesystem::path &root, std::string_vi
                qemu_image = host.sdk / "emulator" / ("qemu-img" + suffix);
     const auto emulator_sha = tool_pin(root, host, emulator);
     tool_pin(root, host, qemu_image);
-    const auto backend = host.sdk / "emulator" / "qemu" / std::string(os::emulator_host) /
-                         ("qemu-system-aarch64" + suffix);
-    const auto backend_sha = tool_pin(root, host, backend);
     const auto definition = portable_profile_definition(root, profile, machine, seed);
     const auto family = runtime_profile_reference(definition, profile);
-    const auto api = native_base_api(definition.at("android"));
+    const auto &guest = manifest.at("android");
+    const auto abi = guest.at("abi").get<std::string>();
+    const auto api = guest.at("api").get<unsigned>();
+    const auto backend =
+            host.sdk / "emulator" / "qemu" / std::string(os::emulator_host) /
+            ((abi == "x86_64" ? "qemu-system-x86_64" : "qemu-system-aarch64") + suffix);
+    const auto backend_sha = tool_pin(root, host, backend);
 
     const auto development_kernel = checked_development_kernel(seed, definition, manifest);
     const auto can_model_sha = checked_can_model_receipt(seed, manifest);
-    const auto clean_pins = portable_clean_boot_pins(definition.at("android"));
+    const auto clean_pins = checked_signed_android_boot_pins(root, seed, definition, manifest);
+    const bool signed_system = manifest.at("android").contains("signed_android");
 
     for (const auto &[name, sha] : clean_pins) {
         // A seed clean base carries the development kernel the profile declares.
@@ -244,6 +249,10 @@ Json activate_portable_runtime(const std::filesystem::path &root, std::string_vi
 
     for (const auto &backing : {"userdata-qemu.img", "cache.img", "encryptionkey.img",
                                 "base/system.img", "base/vendor.img"}) {
+        if (signed_system && std::string_view(backing).starts_with("base/")) {
+            continue;
+        }
+
         const auto name = std::filesystem::path(backing).filename().string() + ".qcow2";
         native_tool(qemu_image, {"create", "-f", "qcow2", "-F", "raw", "-b", backing, name});
         need(std::filesystem::is_regular_file(machine_dir / name) &&
@@ -262,13 +271,21 @@ Json activate_portable_runtime(const std::filesystem::path &root, std::string_vi
     private_text(machine_dir / "config.ini", config);
     write_private_json(machine_dir / "machine.json", {{"schema", 1},
                                                       {"profile", profile},
-                                                      {"abi", "arm64-v8a"},
+                                                      {"abi", abi},
                                                       {"fingerprint", manifest_sha},
                                                       {"portable_seed_sha256", manifest_sha},
                                                       {"cold_boot_verified_here", false}});
     Json pins = Json::array();
     add_pin(pins, emulator, emulator_sha);
     add_pin(pins, backend, backend_sha);
+    std::string headless_sha;
+
+    if (abi == "x86_64") {
+        const auto headless = backend.parent_path() / "qemu-system-x86_64-headless";
+        headless_sha = tool_pin(root, host, headless);
+        add_pin(pins, headless, headless_sha);
+    }
+
     add_pin(pins, final_machine / "config-template.ini",
             sha256_file(machine_dir / "config-template.ini"));
     add_pin(pins, final_machine / "machine.json", sha256_file(machine_dir / "machine.json"));
@@ -288,6 +305,10 @@ Json activate_portable_runtime(const std::filesystem::path &root, std::string_vi
                                            final_machine / "config-template.ini", avd,
                                            std::move(pins), definition, Json::object(),
                                            manifest.at("profile").get<std::string>());
+
+    if (signed_system) {
+        android["signed_system"] = true;
+    }
 
     if (!can_model_sha.empty()) {
         android["can_model_observer_sha256"] = can_model_sha;
@@ -409,6 +430,10 @@ Json activate_portable_runtime(const std::filesystem::path &root, std::string_vi
             {"cluster_requested", host.require_cluster},
             {"cluster_seed_present", manifest.contains("qnx")},
             {"presentation", frontend ? "native-frontend" : "Android SDK window"}};
+
+    if (!headless_sha.empty()) {
+        record["host_file_pins"]["qemu_backend_headless"] = headless_sha;
+    }
 
     if (cluster) {
         ensure_private_directory(stage.path / "qnx");

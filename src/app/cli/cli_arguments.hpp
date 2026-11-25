@@ -8,6 +8,7 @@
 #include "profile_catalog.hpp"
 #include "profile_runtime.hpp"
 #include "progress.hpp"
+#include "signed_android.hpp"
 #include <charconv>
 #include <cstdlib>
 #include <set>
@@ -17,7 +18,8 @@ struct Arguments {
     std::string command = "help", profile;
     std::filesystem::path root, session, request_file, jdk, update, machine_path, build_destination,
             reuse_qnx, reuse_qnx_source;
-    std::string ownership_id, serial, refresh_session, reuse_qnx_sha256;
+    std::string ownership_id, serial, refresh_session, reuse_qnx_sha256, build_target;
+    SignedAndroidInput signed_android;
     // Normalized at the end of parse; a positional machine directory, a build destination or the
     // internal --machine selects it.
     voyemu::MachineIdentity machine;
@@ -89,9 +91,10 @@ inline Arguments parse(int argc, char **argv, const std::filesystem::path &execu
         result.command = "start";
     }
 
-    const std::set<std::string> commands{"help",   "--help", "--version", "test",  "list",
-                                         "fetch",  "deps",   "build",     "check", "restart",
-                                         "status", "stop",   "patch",     "start", "_supervise"};
+    const std::set<std::string> commands{"help",  "--help",  "--version",  "test",
+                                         "list",  "fetch",   "deps",       "build",
+                                         "check", "restart", "status",     "stop",
+                                         "patch", "start",   "_supervise", "trust-android-key"};
 
     if (!commands.contains(result.command)) {
         throw LocalizedError("CLI_COMMAND", "error.unknown_command", {{"command", result.command}});
@@ -182,6 +185,17 @@ inline Arguments parse(int argc, char **argv, const std::filesystem::path &execu
             continue;
         }
 
+        if (option.starts_with("--target=")) {
+            const auto target = option.substr(9);
+
+            if (result.command != "build" || (target != "arm" && target != "x86")) {
+                throw VoyemuError("CLI_ARGUMENT", "build requires --target=arm or --target=x86");
+            }
+
+            result.build_target = target;
+            continue;
+        }
+
         if (!option.starts_with("-") && lifecycle) {
             if (!result.machine_path.empty()) {
                 throw LocalizedError("MACHINE_PATH", "error.one_machine");
@@ -207,6 +221,12 @@ inline Arguments parse(int argc, char **argv, const std::filesystem::path &execu
             result.reuse_qnx = user_path(next());
         } else if (option == "--reuse-qnx-sha256") {
             result.reuse_qnx_sha256 = next();
+        } else if (option == "--signed-android") {
+            result.signed_android.release = user_path(next());
+        } else if (option == "--android-public-key") {
+            result.signed_android.public_key = user_path(next());
+        } else if (option == "--android-public-key-sha256") {
+            result.signed_android.spki_sha256 = next();
         } else if (option == "--jdk") {
             result.jdk = user_path(next());
         } else if (option == "--serial") {
@@ -376,6 +396,24 @@ inline Arguments parse(int argc, char **argv, const std::filesystem::path &execu
         if (result.command != "build" || !result.cluster || !result.multimedia ||
             result.reuse_qnx.empty() || !sha256_text(result.reuse_qnx_sha256)) {
             throw LocalizedError("CLI_ARGUMENT", "error.reuse_qnx");
+        }
+    }
+
+    const auto &signed_android = result.signed_android;
+
+    if (result.command == "trust-android-key") {
+        if (!signed_android.release.empty() || signed_android.public_key.empty() ||
+            !hex_text(signed_android.spki_sha256, 64)) {
+            throw VoyemuError("CLI_ARGUMENT", "public key and its SHA-256 SPKI pin required");
+        }
+    } else if (!signed_android.release.empty() || !signed_android.public_key.empty() ||
+               !signed_android.spki_sha256.empty()) {
+        if (result.command != "build" || result.cluster || !result.multimedia ||
+            result.force_existing || !result.reuse_qnx.empty() || signed_android.release.empty() ||
+            signed_android.public_key.empty() || !hex_text(signed_android.spki_sha256, 64)) {
+            throw VoyemuError("CLI_ARGUMENT",
+                              "signed Android requires a new multimedia-only build, release, "
+                              "public key and its SHA-256 SPKI pin");
         }
     }
 

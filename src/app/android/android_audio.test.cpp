@@ -28,17 +28,21 @@ int main() {
         check(silent.arguments == std::vector<std::string>{"-no-audio"},
               "silent mode still disables audio");
 
-        // macOS and Windows play Android audio; Linux keeps it disabled.
-        if (voyemu::os::platform_name != "Linux") {
-            check(android_audio_output_enabled({{"audioOutput", true}}),
-                  "output enabled explicitly");
+        check(!android_audio_output_enabled({{"audioOutput", false}}),
+              "explicit legacy silence remains supported");
+        check(android_audio_output_enabled({{"audioOutput", true}}), "output enabled explicitly");
+
+        if (os::platform_name == "Linux") {
+            linux_pulse_audio_case();
+        } else {
             ProcessSpec output;
             output.environment["QEMU_AUDIO_IN_DRV"] = "coreaudio";
             configure_android_audio(output, true);
-            const std::string expected = voyemu::os::host_windows ? "dsound" : "coreaudio";
-            check(output.environment.at("QEMU_AUDIO_OUT_DRV") == expected &&
+            const std::string expected = os::host_windows ? "dsound" : "coreaudio";
+            check(output.environment.at("QEMU_AUDIO_DRV") == expected &&
+                          output.environment.at("QEMU_AUDIO_OUT_DRV") == expected &&
                           output.environment.at("QEMU_AUDIO_IN_DRV") == "none",
-                  "input backend cannot inherit an enabled microphone");
+                  "output backend must match the host and cannot inherit an enabled microphone");
             check(output.arguments.empty(),
                   "output does not add global audio-disable or host-recording flags");
             const auto fixture = std::filesystem::current_path() / ".local/build/tmp" /
@@ -144,15 +148,6 @@ int main() {
 
             check(rejected, "explicit inherited audio override accepted");
             wine_volume_root_case(directory);
-        } else {
-            rejected = false;
-            try {
-                android_audio_output_enabled({{"audioOutput", true}});
-            } catch (...) {
-                rejected = true;
-            }
-
-            check(rejected, "unverified platform backend rejected");
         }
 
         {

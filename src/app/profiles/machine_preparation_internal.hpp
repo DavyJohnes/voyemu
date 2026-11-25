@@ -96,6 +96,14 @@ struct Installed {
     std::string artifact, target, sha256, package, mode;
     bool mutable_seed = false;
 };
+// Reads only the new kernel console bytes of one owned SDK boot.
+struct CandidateAvbConsole {
+    std::uintmax_t offset = 0;
+    std::string incomplete;
+    unsigned stage = 0;
+    bool rejected(const std::filesystem::path &log);
+};
+
 struct Candidate {
     std::filesystem::path root, stage, machine, sdk, adb, emulator, qemu_img;
     std::string avd, token, kernel_sha;
@@ -106,7 +114,8 @@ struct Candidate {
     Json events = Json::array();
     unsigned boots = 0;
     std::function<bool()> cancelled;
-    bool capture_frames = false, retained_disks = false;
+    bool capture_frames = false, retained_disks = false, watch_verified_boot = false;
+    bool signed_system = false;
 
     Candidate(std::filesystem::path r, std::filesystem::path s, std::filesystem::path sdk_root,
               std::filesystem::path a, std::filesystem::path e, std::filesystem::path q, unsigned p,
@@ -177,8 +186,10 @@ struct Candidate {
         if (!log.empty()) {
             write(stage / log, result.output);
 
-            if (log == "boot-image-compile.log") {
-                write_private_json(stage / "boot-image-process.json",
+            if (log == "boot-image-compile.log" || log == "boot-image-compile-x86.log") {
+                write_private_json(stage / (log == "boot-image-compile-x86.log"
+                                                    ? "boot-image-process-x86.json"
+                                                    : "boot-image-process.json"),
                                    {{"argv", cmd.arguments},
                                     {"host_exit_code", result.exit_code},
                                     {"timed_out", result.timed_out},
@@ -254,11 +265,22 @@ struct Candidate {
     // exits or the build is interrupted. The boot does not count against the deadline of the other
     // steps.
     void wait_boot(const std::function<bool()> &check, const std::string &what,
-                   progress::Elapsed *elapsed = nullptr) {
+                   progress::Elapsed *elapsed = nullptr, std::uintmax_t console_offset = 0) {
         const auto left = deadline - Clock::now();
+        CandidateAvbConsole console;
+        console.offset = console_offset;
+        const auto log = stage / ("emulator-" + std::to_string(boots) + ".log");
 
         for (;;) {
             deadline = Clock::now() + left;
+
+            if (watch_verified_boot && console.rejected(log)) {
+                throw VoyemuError(
+                        "ANDROID_VERIFIED_BOOT",
+                        "the guest rejected the vbmeta digest and init requested a fatal reboot during " +
+                                what + "; kernel console: " + log.string());
+            }
+
             need(!cancelled || !cancelled(), "candidate preparation cancelled");
             need(process.alive(), "owned emulator exited while waiting: " + what);
 
@@ -373,7 +395,18 @@ struct Candidate {
                          "-no-window",
                          "-prop",
                          "qemu.voyemu.token=" + token};
+
+        if (signed_system) {
+            std::erase(cmd.arguments, "-writable-system");
+        }
+
+        watch_verified_boot = android_kvm(profile);
         const auto trace = android_boot_trace_arguments(std::getenv("VOYEMU_ANDROID_BOOT_TRACE"));
+
+        if (watch_verified_boot && trace.empty()) {
+            cmd.arguments.push_back("-show-kernel");
+        }
+
         cmd.arguments.insert(cmd.arguments.end(), trace.begin(), trace.end());
         const auto control = android_candidate_capture_arguments(profile, capture_frames, port);
         cmd.arguments.insert(cmd.arguments.end(), control.begin(), control.end());
@@ -395,7 +428,7 @@ struct Candidate {
 #elif defined(__aarch64__) || defined(__arm64__)
         cmd.arguments.insert(cmd.arguments.end(), {"-accel", "on"});
 #else
-        cmd.arguments.insert(cmd.arguments.end(), {"-accel", "off"});
+        cmd.arguments.insert(cmd.arguments.end(), {"-accel", android_kvm(profile) ? "on" : "off"});
 #endif
 #ifdef _WIN32
         const auto machine_arguments = android_sdk_machine_arguments(true);
@@ -614,6 +647,11 @@ getprop qemu.voyemu.token
 
         const auto previous = shell({"cat", "/proc/sys/kernel/random/boot_id"});
         need(!previous.empty(), "kernel boot identity missing");
+        const auto offset =
+                watch_verified_boot
+                        ? std::filesystem::file_size(stage /
+                                                     ("emulator-" + std::to_string(boots) + ".log"))
+                        : 0;
         adbd({"reboot"});
         wait_boot(
                 [&] {
@@ -623,7 +661,7 @@ getprop qemu.voyemu.token
                            raw({"shell", "getprop", "sys.boot_completed"}) == "1" &&
                            raw({"shell", "pm", "path", "android"}).starts_with("package:");
                 },
-                "guest reboot");
+                "guest reboot", nullptr, offset);
 
         if (!kernel_sha.empty()) {
             check_file(machine / "base/kernel-ranchu", kernel_sha, 64ULL << 20);
@@ -633,6 +671,7 @@ getprop qemu.voyemu.token
     }
 
     void writable() {
+        need(!signed_system, "read-only signed candidate system cannot be remounted");
         root_adbd();
         const auto result = adbd({"remount"});
 

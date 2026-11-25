@@ -64,4 +64,12 @@ inline constexpr std::string_view build_tools_host = host_windows               
                                                                                 : "linuxBuild";
 // The separator of the entries of a path list such as PATH or a Java class path.
 inline constexpr char path_list_separator = host_windows ? ';' : ':';
+#ifdef __linux__
+// Checks read-write access to the KVM API without creating a VM.
+bool host_kvm_available();
+#else
+inline bool host_kvm_available() {
+    return false;
+}
+#endif
 } // namespace voyemu::os

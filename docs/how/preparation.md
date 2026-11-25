@@ -12,6 +12,8 @@ Run the launcher from the installation root; on Windows the launcher is `voyemu.
 
 A file or directory path in an option, such as `--source=update.zip`, may be relative to the current directory or start with `~/` for the home directory; symbolic links in it are followed. Voyemu turns such a path into an absolute one before use.
 
+The [Passion profile's `x86` target](../profiles/passion-11-russian-20260403-2.1.4.80.md#linux-x86_64-target) requires Linux x64 with access to `/dev/kvm`. For host GPU rendering, use a hardware-accelerated graphical session with access to the GPU render device.
+
 ## deps
 
 `deps [PROFILE]` installs the pinned host tools into `.local/toolchains/`: the Android Emulator, Platform Tools, Build Tools, the SDK CMake and Ninja, and the QEMU engine for QNX. With a profile it also prepares that profile's Android base when the profile needs one. `deps` also installs the Android platform JARs and the Java tools of preparation, which CI builds and publishes: a minimal Java runtime of the host, the Java helper and the guest Java code of the profiles, see [CI](../dev/ci.md). No JDK is needed; [Java preparation](../why/java-preparation.md) explains why. By default the pinned helper asset is used even in a source checkout. If it is unavailable, preparation stops with `JAVA_HELPER_ASSET_MISSING`; developers can explicitly select the source recipe with `--jdk`, see [Java helper CI](../dev/ci.md#the-java-helper-workflow).
@@ -40,11 +42,15 @@ The records of each command, including those of the cold boot check, go to its [
 
 The archive and the files are checked against the sizes and SHA-256 in the profile before anything is published. Each [profile page](../profiles/index.md) names its input route and OEM file names. The launcher imports an archive itself, and an import from a vehicle uses the pinned SDK `adb`; the capture of an incomplete profile runs on the Java tools that `deps` installs.
 
+For a profile with build targets, `fetch` imports the shared OEM inputs once. `deps PROFILE` uses the default target of the current host, and `build` ensures the dependencies of its selected target.
+
 On stderr `fetch` names the archive and its size and shows the bytes of the archive check, of each Android image it unpacks and of the QNX images, the number of files extracted from each image and the time the import took. A repeated `fetch` checks the archive and the retained originals and reports them as already imported. A missing file or an archive of another size names the expected update and, when the size matches the update of another profile, that profile. The summary ends with the next command, `voyemu build PROFILE`.
 
 ## build
 
 `build PROFILE [MACHINE_PATH]` prepares a new machine, `machines/PROFILE` by default. It applies [components and recipes](components.md), builds the guest images, boots the guests for verification and writes `runtime.json` last. A failed verification boot of QNX ends the QEMU and graphics processes that `build` started and removes their RAM and image copies.
+
+For a profile with build targets, `build` selects a compatible target before preparing any inputs and prints the target, Android ABI and machine path. The Passion profile defaults to `arm` on Apple Silicon and to `x86` on Linux x64 with usable KVM. Use `--target=arm` or `--target=x86` to select explicitly. An unsupported or unavailable target stops preparation with `PROFILE_TARGET`. The default output is `machines/PROFILE-arm` or `machines/PROFILE-x86`; an explicit path takes precedence. The `x86` target builds multimedia only.
 
 On stderr `build` first names the machine, its subsystems and the free space it needs; without hardware acceleration of the cluster, as under TCG on Windows and Linux, one more line warns that the cold boot of the cluster can take hours. Each phase follows in its own block: the check of tools and OEM inputs, the QNX image build, the cold boot of the cluster, the Android preparation with the number of components, the cold boot of Android, the bytes of the system image and of the machine assembly, and the space freed by removing temporary files. Lines that a phase reports, such as downloads and checks, appear indented below it, and a phase ends with the time it took. The summary names the machine and the time of the whole build and ends with the command that starts it, `voyemu start MACHINE_PATH`; with `--verbose` it also names its `runtime.json`.
 
@@ -52,7 +58,7 @@ The QNX guest images take CI-built binaries: `build` downloads them by their pin
 
 The QNX guest shell scripts are installed without comments, indentation, trailing blanks and blank lines, so that each fits the OEM file it replaces; the scripts in the repository keep them. Preparation refuses a guest script with a here-document (`<<`).
 
-The native Android components of a profile are CI-built as well: `build` downloads each by its pin and hands it to the Java helper; no NDK takes part. A library that imports from libraries of the Android image, such as the multi-display library, links with those imports undefined, and `build` checks that the libraries of the image export them. See [the android-native workflow](../dev/ci.md#the-android-native-workflow).
+For native Android components built by CI, `build` downloads the pinned artifacts and hands them to the Java helper. These components need no local NDK. A library that imports from libraries of the Android image, such as the multi-display library, links with those imports undefined, and `build` checks that the libraries of the image export them. See [the android-native workflow](../dev/ci.md#the-android-native-workflow).
 
 The QNX host image keeps the OEM bytes of every unchanged 64 KiB block of its boot stream; Voyemu packs the changed blocks itself and, on Free 6.0.3, sizes them so that the startup accepts the stream. See [own LZO1X packer](../why/lzo-packer.md).
 
@@ -60,7 +66,21 @@ The QNX host image keeps the OEM bytes of every unchanged 64 KiB block of its bo
 
 Without `--force` `build` refuses an existing machine before any work and suggests starting it or deleting its directory; `--force` needs an existing machine. Preparation checks free space before each storage-heavy stage; tools, OEM inputs, intermediate files and writable disks need far more space than the firmware archive alone.
 
+On Linux a target with an offline filesystem recipe builds its Android 11 x86_64 system partitions from a pinned SDK archive. `build` applies the recipe, verifies the result and signs it with a local development key. The first build creates the key in `.local/toolchains/avd-image-tools/`. The SDK archive stays in its cache under its own digest. Before publishing a new machine, `build` boots the signed system twice, observes distinct kernel boot IDs and checks Android Verified Boot, the active dm-verity root and the read-only system mount. Writable user data follows the ordinary preparation path.
+
+Use an independently signed release for a fresh multimedia build with `--target=x86 --signed-android RELEASE --android-public-key FILE --android-public-key-sha256 SHA256`. The SHA-256 is the fingerprint of the public key's DER SubjectPublicKeyInfo. Obtain the original public PEM and the fingerprint through a trusted channel independent of the release. Signed system and vendor disks have no writable overlays.
+
 Profiles using `qg-runtime` keep emulated NVRAM in `/data/user_de/0/com.voyemu/nvram` inside the guest. The first caller atomically creates it from the read-only `/system/etc/nvram` seed; later calls from OEM processes share the same file, which survives a cold boot in the machine's writable Android disk. Clearing the Android app data of `com.voyemu` removes this state, so the next access creates it from the seed again.
+
+## Trust a signed Android machine
+
+On a new Linux installation, register the signing key before running `check` or `start` on a copied signed machine. Use the original public PEM supplied by the builder and the independently obtained fingerprint. The machine's receipt also pins the exact bytes of that PEM.
+
+```sh
+./voyemu trust-android-key --android-public-key FILE --android-public-key-sha256 SHA256
+```
+
+The command verifies the fingerprint before storing the public key. `check` and `start` verify the signed manifest and boot files against the key trusted by that installation.
 
 ## Offline preparation
 

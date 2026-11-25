@@ -3,6 +3,7 @@
 #include "error.hpp"
 #include "os/fs.hpp"
 #include "process.hpp"
+#include "profile_catalog.hpp"
 #include "profile_originals.hpp"
 #include "profile_step_inputs.hpp"
 #include "quickboot.hpp"
@@ -26,8 +27,7 @@ ProfileBinaryPatch plan_profile_binary_patch(
                     (!music && builds.size() == 2 && builds.contains("qgime-handwrite") &&
                      builds.contains("qgime-pinyin")),
             "exact native producers required");
-    const auto directory = root / "profiles" / std::string(profile),
-               profile_file = directory / "profile.json";
+    const auto directory = profile_recipe_directory(root, profile);
     const std::string step = music ? "music-arm64-libs.json" : "qgime-arm64-natives.json";
     std::map<std::filesystem::path, std::pair<Json, std::string>> tracked;
     std::map<std::filesystem::path, Json> source_trees;
@@ -40,9 +40,15 @@ ProfileBinaryPatch plan_profile_binary_patch(
 
         return hash;
     };
-    track(profile_file, 512 * 1024);
     track(directory / "patches" / step, 128 * 1024);
-    const auto definition = read_private_json(profile_file, 512 * 1024);
+    const auto definition =
+            Json::parse(authoring_profile_bytes(root, profile, [&](const auto &path) {
+                const auto pin = track(path, 512 * 1024);
+                const auto bytes = read_private_json_bytes(path, 512 * 1024);
+                require(pin == sha256_bytes(bytes), "profile changed during read");
+
+                return bytes;
+            }));
     require(definition.at("schema") == 1, "profile schema");
     const auto &node = definition.at("patches").at(std::string(name));
     const Json expected_uses =

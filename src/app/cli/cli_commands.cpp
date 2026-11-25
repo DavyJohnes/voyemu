@@ -1,4 +1,5 @@
 #include "cli_commands.hpp"
+#include "base_image.hpp"
 
 namespace voyemu::cli {
 int test_command(const Arguments &args) {
@@ -55,6 +56,16 @@ namespace {
 // The free space that deps and fetch keep beyond what each download or extraction needs; build
 // keeps the larger reserve of machine preparation.
 constexpr std::uint64_t preparation_margin = 2ULL << 30, build_margin = 20ULL << 30;
+
+std::string build_target_for(const Arguments &args) {
+    const auto file = args.root / "profiles" / args.profile / "profile.json";
+    const auto declaration = std::filesystem::exists(file)
+                                     ? authoring_profile(args.root, args.profile)
+                                     : embedded_profile(args.profile).at("definition");
+
+    return select_profile_target(declaration, args.build_target, os::dependency_host,
+                                 declaration.contains("targets") && os::host_kvm_available());
+}
 } // namespace
 
 int fetch_command(const Arguments &args, const Emit &emit) {
@@ -74,6 +85,8 @@ int deps_command(const Arguments &args, const Emit &emit) {
         !std::filesystem::exists(args.root / "profiles" / args.profile / "profile.json")) {
         (void)voyemu::embedded_profile(args.profile);
     }
+
+    const auto target = args.profile.empty() ? std::string{} : build_target_for(args);
 
     // Each step ends with one line: already installed when the step reported nothing, installed
     // after its downloads and extractions.
@@ -103,35 +116,48 @@ int deps_command(const Arguments &args, const Emit &emit) {
 
     // While the QNX engine of this host can be neither downloaded nor taken from the cache, deps
     // reports it unavailable and machines run without the cluster.
-    try {
-        result["qnx_host"] = step("qnx_host", [&] {
-            return voyemu::install_qnx_host(args.root, args.offline, preparation_margin);
-        });
-    } catch (const std::runtime_error &error) {
-        if (!std::string_view(error.what()).starts_with("QNX_HOST_ASSET_MISSING:")) {
-            throw;
-        }
+    const auto profile_file = args.root / "profiles" / args.profile / "profile.json";
+    const bool multimedia_variant =
+            !args.profile.empty() && std::filesystem::exists(profile_file) &&
+            profile_multimedia_only(authoring_profile(args.root, args.profile, target));
 
-        result["qnx_host"] = {{"status", "unavailable"}, {"reason", error.what()}};
+    if (!multimedia_variant) {
+        try {
+            result["qnx_host"] = step("qnx_host", [&] {
+                return voyemu::install_qnx_host(args.root, args.offline, preparation_margin);
+            });
+        } catch (const std::runtime_error &error) {
+            if (!std::string_view(error.what()).starts_with("QNX_HOST_ASSET_MISSING:")) {
+                throw;
+            }
+
+            result["qnx_host"] = {{"status", "unavailable"}, {"reason", error.what()}};
+        }
     }
 
-    if (!args.profile.empty() &&
-        voyemu::portable_runtime_available(args.root, args.profile,
-                                           voyemu::machine_identity(args.profile, {}))) {
+    if (multimedia_variant || (!target.empty() && std::filesystem::exists(profile_file)) ||
+        (!args.profile.empty() &&
+         voyemu::portable_runtime_available(args.root, args.profile,
+                                            voyemu::machine_identity(args.profile, {})))) {
         result["guest_base"] = step("guest_base", [&] {
             return voyemu::prepare_portable_base(args.root, args.profile, args.offline,
-                                                 preparation_margin);
+                                                 preparation_margin, target);
         });
     }
 
+    const auto jdk = voyemu::profile_preparation_jdk(
+            args.root, args.jdk, multimedia_variant,
+            voyemu::embedded_toolchain_manifest().at("javaHelper"), !target.empty());
     // The Java runtime of preparation; while its asset is neither published nor cached and no
     // recipe JDK links it, deps reports it unavailable.
     try {
         result["java_runtime"] =
                 step("java_runtime", [&] {
-                    return voyemu::install_java_runtime(
-                            args.root, voyemu::embedded_toolchain_manifest().at("javaRuntime"),
-                            args.offline, preparation_margin);
+                    return voyemu::java_preparation_java(
+                            args.root,
+                            multimedia_variant || !target.empty() ? jdk : std::filesystem::path{},
+                            voyemu::embedded_toolchain_manifest().at("javaRuntime"), args.offline,
+                            preparation_margin);
                 }).string();
     } catch (const std::runtime_error &error) {
         const std::string_view message = error.what();
@@ -147,18 +173,17 @@ int deps_command(const Arguments &args, const Emit &emit) {
     // Without --jdk the Java helper runs on the Java runtime; while its asset or that of the helper
     // can be neither downloaded nor built, deps reports preparation unavailable.
     try {
-        result["java_preparation"] =
-                step("java_tools", [&] {
-                    return voyemu::ensure_java_preparation_tools(args.root, args.jdk, args.offline,
-                                                                 preparation_margin);
-                }).receipt;
+        result["java_preparation"] = step("java_tools", [&] {
+                                         return voyemu::ensure_java_preparation_tools(
+                                                 args.root, jdk, args.offline, preparation_margin);
+                                     }).receipt;
         result["preparation_tools_ready"] = true;
     } catch (const std::exception &error) {
         const std::string_view message = error.what();
 
-        if (!args.jdk.empty() || !(message.starts_with("JAVA_HELPER_ASSET_MISSING:") ||
-                                   message.starts_with("JAVA_RUNTIME_ASSET_MISSING:") ||
-                                   message.starts_with("DOWNLOAD_OFFLINE:"))) {
+        if (!jdk.empty() || !(message.starts_with("JAVA_HELPER_ASSET_MISSING:") ||
+                              message.starts_with("JAVA_RUNTIME_ASSET_MISSING:") ||
+                              message.starts_with("DOWNLOAD_OFFLINE:"))) {
             throw;
         }
 
@@ -186,10 +211,19 @@ int deps_command(const Arguments &args, const Emit &emit) {
 }
 
 int build_command(const Arguments &args, const Emit &emit) {
+    const auto selected = build_target_for(args);
+    const auto definition = authoring_profile(args.root, args.profile, selected);
+    const auto multimedia_only = profile_multimedia_only(definition);
+
+    if (multimedia_only && ((args.cluster_explicit && args.cluster) || !args.multimedia)) {
+        throw LocalizedError("PROFILE_TARGET", "error.profile_target_multimedia");
+    }
+
     // A profile without profile-qnx.json has no cluster, and without an installable QNX engine the
     // default build prepares the machine without the cluster; an explicit --cluster=on stops at the
     // engine.
     const bool declared_cluster =
+            !multimedia_only &&
             std::filesystem::exists(args.root / "profiles" / args.profile / "profile-qnx.json");
     const auto unavailable = args.cluster_explicit || !args.multimedia || !declared_cluster
                                      ? std::string{}
@@ -203,7 +237,10 @@ int build_command(const Arguments &args, const Emit &emit) {
         (void)voyemu::embedded_profile(args.profile);
     }
 
-    const auto target = args.root / "machines" / args.machine.name;
+    const auto identity = selected.empty() || args.machine.selected
+                                  ? args.machine
+                                  : machine_identity(args.profile, args.profile + "-" + selected);
+    const auto target = args.root / "machines" / identity.name;
     const auto machine = progress::path_text(target);
 
     // Only --force changes an existing machine, and it needs one.
@@ -217,6 +254,14 @@ int build_command(const Arguments &args, const Emit &emit) {
 
     // The header names the machine, its subsystems and the space that preparation keeps free.
     progress::block();
+
+    if (!selected.empty()) {
+        progress::report("build_target",
+                         {{"target", selected},
+                          {"abi", definition.at("target").at("guestAbi").get<std::string>()},
+                          {"machine", machine}});
+    }
+
     progress::report("build_plan", {{"machine", machine},
                                     {"scope", message(progress::language(),
                                                       cluster ? "progress.scope_both"
@@ -232,12 +277,12 @@ int build_command(const Arguments &args, const Emit &emit) {
     }
 
     auto result = voyemu::build_profile(
-            args.root, args.profile, args.machine, args.offline, args.jdk,
+            args.root, args.profile, identity, args.offline, args.jdk,
             [] {
                 return interrupted.load();
             },
             cluster, args.multimedia, voyemu::os::executable_path(), args.reuse_qnx,
-            args.reuse_qnx_sha256, args.reuse_qnx_source);
+            args.reuse_qnx_sha256, args.reuse_qnx_source, args.signed_android, selected);
 
     if (!unavailable.empty()) {
         result["qnx_host"] = {{"status", "unavailable"},

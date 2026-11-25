@@ -207,10 +207,11 @@ void help() {
         const auto text = cli_help(language);
         rendered.insert(text);
 
-        for (const auto *syntax : {"start MACHINE_PATH", "build PROFILE [MACHINE_PATH]",
-                                   "--cluster=on|off", "--multimedia=on|off", "--network=yes|no",
-                                   "--lang=en|ru|zh", "fetch PROFILE --source=adb --serial SERIAL",
-                                   R"('{"speed":80}')", "voyemu test --request request.json"}) {
+        for (const auto *syntax :
+             {"start MACHINE_PATH", "build PROFILE [MACHINE_PATH] [--target=arm|x86]",
+              "--cluster=on|off", "--multimedia=on|off", "--network=yes|no", "--lang=en|ru|zh",
+              "fetch PROFILE --source=adb --serial SERIAL", R"('{"speed":80}')",
+              "voyemu test --request request.json"}) {
             check(text.find(syntax) != std::string::npos,
                   std::string(tag(language)) + " help keeps " + syntax);
         }
@@ -228,8 +229,10 @@ void help() {
                               "machine\n  start MACHINE_PATH     Launch the selected machine "
                               "directory\n"),
           "English help keeps its layout");
-    check(english.find("  build PROFILE [MACHINE_PATH]\n                         Prepare a new "
-                       "machine; default: machines/PROFILE\n") != std::string::npos,
+    check(english.find("  build PROFILE [MACHINE_PATH] [--target=arm|x86]\n"
+                       "                         Prepare a new machine. The default path is "
+                       "machines/PROFILE. Targets arm and x86 use machines/PROFILE-arm and "
+                       "machines/PROFILE-x86, respectively.\n") != std::string::npos,
           "long syntax moves its description to the next line");
     const auto names = embedded_profile_names();
     check(std::any_of(names.begin(), names.end(),
@@ -274,6 +277,19 @@ void errors() {
                                   log.string() +
                                   ". If the error persists, attach the log to a problem report.\n",
           "an uncatalogued error keeps its code and names the log");
+    const auto rejected = std::make_exception_ptr(
+            VoyemuError("ANDROID_VERIFIED_BOOT", "private technical detail"));
+
+    for (const auto language : cli::languages) {
+        const auto visible = human_cli_error(rejected, language, log);
+        check(visible.find("ANDROID_VERIFIED_BOOT: " +
+                           cli::message(language, "error.android_verified_boot")) !=
+                              std::string::npos &&
+                      visible.find(log.string()) != std::string::npos &&
+                      visible.find("private technical detail") == std::string::npos,
+              "verified boot rejection retains its diagnostic and log in the selected language");
+    }
+
     // An exception without a code shows its kind and its cause, then the log.
     const auto denied = std::make_error_code(std::errc::permission_denied);
     const std::filesystem::path machine = "/machines/car";
