@@ -4,6 +4,7 @@
 #include "os/process.hpp"
 #include "session.hpp"
 #include "session_internal.hpp"
+#include "session_process_identity.hpp"
 #include <arpa/inet.h>
 #include <chrono>
 #include <csignal>
@@ -175,9 +176,102 @@ std::string refusal(const std::filesystem::path &directory, const std::string &i
 
     return {};
 }
+
+void launch_identity_waits_for_same_process_publication() {
+    constexpr std::int64_t pid = 123;
+    const std::vector<std::string> command{"/test/worker", "--hold"};
+    const auto refuses = [&](const session_detail::ProcessIdentityReader &observations,
+                             const std::optional<std::string> &expected_start = std::nullopt) {
+        try {
+            (void)session_detail::read_launch_process_identity(pid, observations, expected_start);
+        } catch (const VoyemuError &error) {
+            return std::string_view(error.what()).starts_with("SESSION_PROCESS_IDENTITY_UNKNOWN:");
+        }
+
+        return false;
+    };
+    unsigned sample = 0;
+    const session_detail::ProcessIdentityReader delayed{
+            [&](std::int64_t owner) -> std::optional<std::string> {
+                check(owner == pid, "sampled a different process");
+
+                return "boot:42";
+            },
+            [&](std::int64_t) -> std::filesystem::path {
+                return ++sample == 1 ? "" : "/test/worker";
+            },
+            [&](std::int64_t) {
+                return sample == 2 ? std::vector<std::string>{} : command;
+            }};
+    const auto receipt = session_detail::read_launch_process_identity(pid, delayed);
+
+    check(receipt.at("pid") == pid && receipt.at("start") == "boot:42" &&
+                  receipt.at("executable") == "/test/worker" &&
+                  receipt.at("arguments_sha256") == sha256_bytes(R"(["/test/worker","--hold"])"),
+          "launch did not record the first complete identity of the original process");
+
+    auto unavailable = delayed;
+    unavailable.arguments = [](std::int64_t) {
+        return std::vector<std::string>{};
+    };
+    check(refuses(unavailable), "launch accepted a persistently incomplete identity");
+    unavailable.start = [](std::int64_t) {
+        return std::optional<std::string>{};
+    };
+    unavailable.executable = [](std::int64_t) -> std::filesystem::path {
+        throw std::runtime_error("launch read the image without the expected birth");
+    };
+    check(refuses(unavailable), "launch accepted a missing initial birth");
+    unavailable.start = delayed.start;
+    check(refuses(unavailable, std::optional<std::string>{"boot:43"}),
+          "launch accepted a different birth than the caller observed");
+
+    // A fresh complete reading cannot restore ownership after this birth has disappeared.
+    for (const auto &lost : {std::optional<std::string>{}, std::optional<std::string>{"boot:43"}}) {
+        unsigned observations = 0;
+        const session_detail::ProcessIdentityReader unstable{
+                [&](std::int64_t) -> std::optional<std::string> {
+                    return observations == 1 ? lost : std::optional<std::string>{"boot:42"};
+                },
+                [&](std::int64_t) -> std::filesystem::path {
+                    return ++observations == 1 ? "" : "/test/worker";
+                },
+                [&](std::int64_t) {
+                    return command;
+                }};
+
+        check(refuses(unstable) && observations == 1,
+              "launch accepted a missing or changed birth identity");
+    }
+}
+
+void exited_sdk_has_no_identity() {
+    ProcessSpec specification;
+
+    specification.executable = "/bin/sh";
+    specification.arguments = {"-c", "exit 0"};
+    auto sdk = ChildProcess::launch(specification);
+    const auto pid = sdk.pid();
+
+    check(settles([&] {
+              return !sdk.alive();
+          }) && sdk.exit_code() == 0,
+          "SDK fixture did not exit");
+    check(android_launch_identity(pid).empty(),
+          "an SDK that exited before the first observation published an identity");
+}
 } // namespace
 
 int main(int argc, char **argv) try {
+    if (argc == 1 || (argc == 2 && std::string_view(argv[1]) == "--launch-identity-only")) {
+        launch_identity_waits_for_same_process_publication();
+        exited_sdk_has_no_identity();
+
+        if (argc == 2) {
+            return 0;
+        }
+    }
+
     if (argc == 4 && std::string_view(argv[1]) == "--foreign-listener") {
         const auto listener = ::socket(AF_INET, SOCK_STREAM, 0);
         check(listener >= 0, "foreign listener socket failed");
