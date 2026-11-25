@@ -141,6 +141,7 @@ std::optional<unsigned> secondary_display_ready(const std::string &displays,
 std::optional<unsigned> passion_secondary_display_ready(const std::string &displays,
                                                         const std::string &windows);
 bool passion_secondary_provider_ready(const std::string &displays);
+bool passion_guest_secondary_provider_ready(const std::string &displays);
 bool passion_secondary_provider_preserves_readiness(const std::string &displays,
                                                     const std::string &established_boot,
                                                     const std::string &current_boot);
@@ -171,7 +172,10 @@ std::optional<std::string> resolved_home_component(std::string_view response,
                                                    std::string_view package);
 bool home_component_declared(std::string_view candidates, std::string_view component,
                              std::string_view package);
-bool primary_home_visible(std::string_view windows, std::string_view component);
+void validate_guest_android_home(const Json &specification);
+std::optional<std::string> selected_guest_home(std::string_view response);
+bool primary_home_visible(std::string_view windows, std::string_view component,
+                          bool exact_title = false);
 std::vector<std::string> primary_home_start_command(const std::string &component);
 Json home_start_result(const ProcessResult &result, const std::vector<std::string> &secrets = {});
 void record_home_start(Json &android, const ProcessResult &result,

@@ -32,7 +32,7 @@ struct Arguments {
     voyemu::Json values = voyemu::Json::object();
     std::optional<unsigned> seconds;
     bool cluster = false, cluster_explicit = false, multimedia = true, multimedia_explicit = false,
-         resume = false, background = false;
+         resume = false, background = false, guest_home = false;
     bool network = false, network_explicit = false;
 };
 
@@ -239,6 +239,8 @@ inline Arguments parse(int argc, char **argv, const std::filesystem::path &execu
             result.force_existing = true;
         } else if (option == "--background") {
             result.background = true;
+        } else if (option == "--guest-home") {
+            result.guest_home = true;
         } else if (option == "--request") {
             const auto value = next();
             result.request_file = value == "-" ? std::filesystem::path(value) : user_path(value);
@@ -344,9 +346,13 @@ inline Arguments parse(int argc, char **argv, const std::filesystem::path &execu
         throw LocalizedError("CLI_ARGUMENT", "error.subsystem_scope");
     }
 
-    if ((result.background || result.seconds) && result.command != "start" &&
+    if ((result.background || result.seconds || result.guest_home) && result.command != "start" &&
         result.command != "restart" && result.command != "_supervise") {
         throw LocalizedError("CLI_ARGUMENT", "error.launch_scope");
+    }
+
+    if (result.guest_home && !result.multimedia) {
+        throw VoyemuError("CLI_ARGUMENT", "--guest-home requires Android multimedia");
     }
 
     if (result.network_explicit && result.command != "start" && result.command != "restart" &&

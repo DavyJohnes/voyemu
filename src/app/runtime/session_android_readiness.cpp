@@ -39,10 +39,17 @@ bool sdk_display_ready(std::string_view dump, unsigned id, unsigned width, unsig
     return found;
 }
 
+enum class SecondaryDisplayIdentity {
+    name,
+    canonical,
+    owned
+};
+
 static std::optional<unsigned>
 secondary_display_for(const std::string &displays, const std::string &windows,
                       std::string_view component, bool provider_only = false,
-                      std::string_view state = "ON", bool canonical = false) {
+                      std::string_view state = "ON",
+                      SecondaryDisplayIdentity identity = SecondaryDisplayIdentity::name) {
     if (displays.size() > 128 * 1024 || windows.size() > 128 * 1024) {
         return std::nullopt;
     }
@@ -70,7 +77,7 @@ secondary_display_for(const std::string &displays, const std::string &windows,
             continue;
         }
 
-        if (canonical) {
+        if (identity != SecondaryDisplayIdentity::name) {
             if (ids[i].second != 1 || block.find("real 1920 x 720,") == std::string::npos) {
                 return std::nullopt;
             }
@@ -89,6 +96,15 @@ secondary_display_for(const std::string &displays, const std::string &windows,
 
             if (!found) {
                 return std::nullopt;
+            }
+
+            if (identity == SecondaryDisplayIdentity::owned) {
+                static const std::regex owner(
+                        R"((?:^|\n)[ \t]*mBaseDisplayInfo=DisplayInfo\{[^\r\n]*, displayId 1, [^\r\n]*, owner com\.android\.emulator\.multidisplay \(uid 1000\),)");
+
+                if (!std::regex_search(block, owner)) {
+                    return std::nullopt;
+                }
             }
 
             static const std::regex geometry(R"(real (\d+) x (\d+),)"),
@@ -184,6 +200,11 @@ bool passion_secondary_provider_ready(const std::string &displays) {
     return id && *id == 1;
 }
 
+bool passion_guest_secondary_provider_ready(const std::string &displays) {
+    return secondary_display_for(displays, "", passion_secondary, true, "ON",
+                                 SecondaryDisplayIdentity::owned) == 1;
+}
+
 bool passion_secondary_provider_preserves_readiness(const std::string &displays,
                                                     const std::string &established_boot,
                                                     const std::string &current_boot) {
@@ -191,7 +212,8 @@ bool passion_secondary_provider_preserves_readiness(const std::string &displays,
     // base device. Availability therefore checks physical identity/geometry only; the fresh power
     // watch owns ON/OFF admission.
     return android_boot_id_valid(current_boot) && established_boot == current_boot &&
-           secondary_display_for(displays, "", passion_secondary, true, "", true) == 1;
+           secondary_display_for(displays, "", passion_secondary, true, "",
+                                 SecondaryDisplayIdentity::canonical) == 1;
 }
 
 Json passion_display_readiness_diagnostic(const std::string &displays,
@@ -200,10 +222,12 @@ Json passion_display_readiness_diagnostic(const std::string &displays,
     auto result = host_lifecycle_receipt();
     const bool valid = android_boot_id_valid(current_boot),
                match = valid && established_boot == current_boot;
-    const bool on = secondary_display_for(displays, "", passion_secondary, true, "ON", true) == 1,
-               off = secondary_display_for(displays, "", passion_secondary, true, "OFF", true) == 1;
-    const bool physical = secondary_display_for(displays, "", passion_secondary, true, "", true) ==
-                          1;
+    const bool on = secondary_display_for(displays, "", passion_secondary, true, "ON",
+                                          SecondaryDisplayIdentity::canonical) == 1,
+               off = secondary_display_for(displays, "", passion_secondary, true, "OFF",
+                                           SecondaryDisplayIdentity::canonical) == 1;
+    const bool physical = secondary_display_for(displays, "", passion_secondary, true, "",
+                                                SecondaryDisplayIdentity::canonical) == 1;
     static const std::regex header(R"((?:^|\n)[ \t]*Display 1:\r?(?:\n|$))"),
             next(R"(\n(?:[ \t]*Display \d+:|[A-Z][^\n]*))");
     std::smatch found, following;
@@ -321,9 +345,9 @@ bool multimedia_canvas_ready(const Json &record) {
     return matched == 1;
 }
 
-std::optional<std::string> resolved_home_component(std::string_view response,
-                                                   std::string_view package) {
-    if (response.size() > 8192 || package.empty()) {
+static std::optional<std::string> find_home_component(std::string_view response,
+                                                      std::string_view package) {
+    if (response.size() > 8192) {
         return std::nullopt;
     }
 
@@ -341,14 +365,15 @@ std::optional<std::string> resolved_home_component(std::string_view response,
             continue;
         }
 
-        if (found || !line.starts_with(std::string(package) + "/")) {
+        const auto slash = line.find('/');
+        const auto resolved_package = line.substr(0, slash);
+
+        if (found || (!package.empty() && resolved_package != package)) {
             return std::nullopt;
         }
 
-        const auto slash = line.find('/');
-
         if (line[slash + 1] == '.') {
-            line.insert(slash + 1, package);
+            line.insert(slash + 1, resolved_package);
         }
 
         found = line;
@@ -357,13 +382,35 @@ std::optional<std::string> resolved_home_component(std::string_view response,
     return found;
 }
 
-bool primary_home_visible(std::string_view windows, std::string_view component) {
+std::optional<std::string> resolved_home_component(std::string_view response,
+                                                   std::string_view package) {
+    return package.empty() ? std::nullopt : find_home_component(response, package);
+}
+
+std::optional<std::string> selected_guest_home(std::string_view response) {
+    auto component = find_home_component(response, {});
+
+    if (component && (component->starts_with("android/") ||
+                      *component == "com.android.settings/com.android.settings.FallbackHome")) {
+        return std::nullopt;
+    }
+
+    return component;
+}
+
+bool primary_home_visible(std::string_view windows, std::string_view component, bool exact_title) {
     if (windows.size() > 128 * 1024 || component.empty()) {
         return false;
     }
 
+    const auto expected = exact_title ? find_home_component(component, {}) : std::nullopt;
+
+    if (exact_title && !expected) {
+        return false;
+    }
+
     const std::string text(windows);
-    const std::regex header(R"((?:^|\n)\s*Window #\d+)");
+    static const std::regex header(R"((?:^|\n)\s*Window #\d+)");
     std::vector<std::size_t> starts;
 
     for (auto it = std::sregex_iterator(text.begin(), text.end(), header);
@@ -372,13 +419,18 @@ bool primary_home_visible(std::string_view windows, std::string_view component) 
     }
 
     static const std::regex primary(R"(mDisplayId=0(?:\D|$))");
+    static const std::regex title(R"(^\s*Window #\d+ Window\{[^ \t\r\n}]+ u0 ([^ \t\r\n}]+)\}:)");
 
     for (std::size_t i = 0; i < starts.size(); ++i) {
-        auto block = text.substr(starts[i],
-                                 (i + 1 < starts.size() ? starts[i + 1] : text.size()) - starts[i]);
+        const auto block = text.substr(
+                starts[i], (i + 1 < starts.size() ? starts[i + 1] : text.size()) - starts[i]);
+        std::smatch window;
+        const bool matching_home = exact_title ? std::regex_search(block, window, title) &&
+                                                         find_home_component(window[1].str(), {}) ==
+                                                                 expected
+                                               : block.find(component) != std::string::npos;
 
-        if (block.find(component) != std::string::npos &&
-            block.find("isOnScreen=true") != std::string::npos &&
+        if (matching_home && block.find("isOnScreen=true") != std::string::npos &&
             std::regex_search(block, primary)) {
             return true;
         }
@@ -609,19 +661,47 @@ bool Session::ensure_android_home() {
         return true;
     }
 
+    const std::vector<std::string> intent{"shell",
+                                          "cmd",
+                                          "package",
+                                          "resolve-activity",
+                                          "--brief",
+                                          "--user",
+                                          "0",
+                                          "-a",
+                                          "android.intent.action.MAIN",
+                                          "-c",
+                                          "android.intent.category.HOME"};
+
+    if (android_spec_.value("guest_home", false)) {
+        const auto current = adb(intent, 2500);
+        const auto selected = current.exit_code || current.timed_out
+                                      ? std::nullopt
+                                      : selected_guest_home(current.output);
+
+        if (!selected) {
+            return false;
+        }
+
+        const auto windows = adb({"shell", "dumpsys", "window", "windows"}, 2500);
+
+        if (windows.exit_code || windows.timed_out ||
+            !primary_home_visible(windows.output, *selected, true)) {
+            return false;
+        }
+
+        primary_home_ready_ = true;
+        deliveries_["android"]["home"] = {{"status", "visible_on_primary"},
+                                          {"component", *selected},
+                                          {"display_id", 0},
+                                          {"boot_id", android_transport_boot_},
+                                          {"source", "guest_selection"}};
+
+        return true;
+    }
+
     const auto &home = android_spec_["home"];
     auto package = home.at("package").get<std::string>();
-    std::vector<std::string> intent{"shell",
-                                    "cmd",
-                                    "package",
-                                    "resolve-activity",
-                                    "--brief",
-                                    "--user",
-                                    "0",
-                                    "-a",
-                                    "android.intent.action.MAIN",
-                                    "-c",
-                                    "android.intent.category.HOME"};
     auto scoped = intent;
     scoped.insert(scoped.end(), {"-p", package});
     auto qualified = adb(scoped, 2500);
@@ -700,13 +780,14 @@ void Session::prepare_android_displays() {
                           android_spec_["features"].value("MultiDisplay", std::string{}) == "on";
 
     const bool sdk_guest = android_sdk_profile(android_spec_);
+    const bool guest_home = android_spec_.value("guest_home", false);
 
     if (!sdk_guest && (primary_home_ready_ || !android_spec_.contains("home")) && !multiple) {
         return;
     }
 
     // State and wheel delivery keep their own cadence; only expensive display observations wait.
-    if ((android_displays_ready_ || sdk_guest) &&
+    if ((android_displays_ready_ || sdk_guest || guest_home) &&
         std::chrono::steady_clock::now() < next_display_observation_) {
         return;
     }
@@ -827,7 +908,11 @@ void Session::prepare_android_displays() {
             return;
         }
 
-        if (!passion_secondary_provider_ready(provider.output)) {
+        const bool provider_ready =
+                guest_home ? passion_guest_secondary_provider_ready(provider.output)
+                           : passion_secondary_provider_ready(provider.output);
+
+        if (!provider_ready) {
             pending();
 
             if (std::chrono::steady_clock::now() >= next_display_activation_) {
@@ -848,11 +933,26 @@ void Session::prepare_android_displays() {
 
             return;
         }
+
+        if (guest_home) {
+            next_display_observation_ = std::chrono::steady_clock::now() + std::chrono::seconds(1);
+
+            if (!android_boot_id_valid(android_transport_boot_) ||
+                !sdk_display_ready(provider.output, 0, 1920, 720)) {
+                pending();
+
+                return;
+            }
+        }
     }
+
+    const auto &boot_identity = android_boot_id_valid(android_transport_boot_)
+                                        ? android_transport_boot_
+                                        : android_boot_nonce_;
 
     if (passion && deliveries_["android"]
                                    .value("startup_services", Json::object())
-                                   .value("boot_id", std::string{}) != android_boot_nonce_) {
+                                   .value("boot_id", std::string{}) != boot_identity) {
         for (const auto *component :
              {"com.android.car/com.voyemu.oem.car.CarAvailabilityService",
               "com.mega.nexus.server/.BootService", "com.mega.car/.MegaCarService",
@@ -866,10 +966,26 @@ void Session::prepare_android_displays() {
         }
 
         deliveries_["android"]["startup_services"] = {
-                {"status", "submitted"}, {"boot_id", android_boot_nonce_}, {"mode", "service"}};
+                {"status", "submitted"}, {"boot_id", boot_identity}, {"mode", "service"}};
     }
 
     if (!ensure_android_home() || !multiple) {
+        return;
+    }
+
+    if (guest_home) {
+        if (!android_host_canvas_ready(pending)) {
+            return;
+        }
+
+        next_display_observation_ = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+        android_displays_ready_ = true;
+        deliveries_["android"]["displays"] = {{"status", "both_guest_displays_ready"},
+                                              {"secondary_display_id", 1},
+                                              {"boot_id", android_transport_boot_},
+                                              {"size", Json::array({3840, 720})},
+                                              {"source", "owned Android SDK display topology"}};
+
         return;
     }
 
@@ -958,8 +1074,8 @@ void Session::prepare_android_displays() {
             {"size", Json::array({3840, 720})},
             {"source", "matching visible secondary launcher and display geometry"}};
 
-    if (passion &&
-        secondary_display_for(display.output, "", passion_secondary, true, "", true) == 1) {
+    if (passion && secondary_display_for(display.output, "", passion_secondary, true, "",
+                                         SecondaryDisplayIdentity::canonical) == 1) {
         deliveries_["android"]["displays"]["boot_id"] = android_transport_boot_;
     }
 }

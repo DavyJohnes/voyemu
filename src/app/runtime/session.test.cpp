@@ -5112,6 +5112,21 @@ int main(int argc, char **argv) try {
     assert(!passion_secondary_display_ready(passion_on,
                                             "")); // A foreground app may hide LauncherSecond.
 
+    assert(passion_guest_secondary_provider_ready(passion_on));
+    assert(!passion_guest_secondary_provider_ready(passion_off));
+    assert(!passion_guest_secondary_provider_ready(passion_display));
+    assert(!passion_guest_secondary_provider_ready(passion_on + "\n" + passion_on));
+
+    for (const auto &[from, to] : std::vector<std::pair<std::string, std::string>>{
+                 {"Display 1:", "Display 2:"},
+                 {"1234562", "1234563"},
+                 {"owner com.android.emulator.multidisplay", "owner com.example.display"},
+                 {"uid 1000", "uid 10001"}}) {
+        auto invalid = passion_on;
+        invalid.replace(invalid.find(from), from.size(), to);
+        assert(!passion_guest_secondary_provider_ready(invalid));
+    }
+
     for (const auto &observation : {passion_on, passion_off, passion_on}) {
         assert(passion_secondary_provider_preserves_readiness(observation, display_boot,
                                                               display_boot));
@@ -5434,9 +5449,32 @@ int main(int argc, char **argv) try {
                                     "com.qinggan.app.launcher"));
     assert(!home_component_declared(std::string(65537, 'x'), home, "com.qinggan.app.launcher"));
     assert(!resolved_home_component(home + "\n" + home, "com.qinggan.app.launcher"));
+    assert(selected_guest_home("priority=0\ncom.example.other/.Main\r\n") ==
+           "com.example.other/com.example.other.Main");
+    assert(!selected_guest_home("android/com.android.internal.app.ResolverActivity"));
+    assert(!selected_guest_home("com.android.settings/.FallbackHome"));
+    assert(!selected_guest_home("No activity found"));
+    assert(!selected_guest_home("com.example.other/.Main\ncom.example.other/.Other"));
     assert(primary_home_visible("Window #0 " + home + "\n mDisplayId=0 isOnScreen=true\n", home));
     assert(!primary_home_visible("Window #0 " + home + "\n mDisplayId=1 isOnScreen=true\n", home));
     assert(!primary_home_visible("Window #0 " + home + "\n mDisplayId=0 isOnScreen=false\n", home));
+    const auto home_window = [](const std::string &title, unsigned display, bool on_screen = true) {
+        return "  Window #1 Window{9f8e7d6 u0 " + title +
+               "}:\n"
+               "    mDisplayId=" +
+               std::to_string(display) + "\n    isOnScreen=" + (on_screen ? "true" : "false") +
+               "\n";
+    };
+    assert(primary_home_visible(home_window(home, 0), home, true));
+    assert(primary_home_visible(home_window("com.qinggan.app.launcher/.activity.MainActivity", 0),
+                                home, true));
+    assert(!primary_home_visible(home_window(home + "Other", 0), home, true));
+    assert(!primary_home_visible(
+            home_window("com.qinggan.app.launcher/.activity.MainActivityOther", 0), home, true));
+    assert(!primary_home_visible(home_window("OtherApp", 0) + " mActivityRecord=" + home, home,
+                                 true));
+    assert(!primary_home_visible(home_window(home, 1), home, true));
+    assert(!primary_home_visible(home_window(home, 0, false), home, true));
 
     const std::string bars =
             "Window #0 Window{a u0 StatusBar1}:\n mDisplayId=0 package=com.qinggan.systemui appop=NONE\n mFrame=[0,0][1920,50] isOnScreen=true\nWindow #1 Window{b u0 StatusBar2}:\n mDisplayId=4 package=com.qinggan.systemui appop=NONE\n mFrame=[0,0][1920,50] isOnScreen=true\n";

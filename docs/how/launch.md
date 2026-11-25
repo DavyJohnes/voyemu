@@ -40,6 +40,7 @@ Different machines run at the same time, each in its own session. Every start cl
 | --- | --- |
 | `--network=yes\|no` | Outbound NAT for the guest; off by default |
 | `--background` | Keeps the window and audio in the background |
+| `--guest-home` | Leaves HOME selection and startup to Android. Applies to `start` and `restart`, see [session options](api.md#session). |
 | `--resume` | Restores the saved vehicle scenario instead of default vehicle values |
 | `--seconds 1..3600` | Bounds QNX execution time |
 | `--provider FILE` | Registers a provider manifest, up to four; the path follows the [path rule](preparation.md) |

@@ -120,6 +120,16 @@ Json launch_android_app(
             {"application_ready", false}};
 }
 
+void validate_guest_android_home(const Json &specification) {
+    if (os::host_windows || !specification.contains("features") ||
+        specification.at("features").value("MultiDisplay", std::string{}) != "on" ||
+        (!android_sdk_profile(specification) &&
+         (!passion_presentation(specification) || !specification.contains("home")))) {
+        throw VoyemuError("ANDROID_HOME_POLICY",
+                          "guest HOME requires a supported dual-display Android guest");
+    }
+}
+
 void Session::attach_android(const Json &input, bool explicit_cold_boot) {
     auto specification = input;
 
@@ -150,6 +160,11 @@ void Session::attach_android(const Json &input, bool explicit_cold_boot) {
     }
 
     const bool passion_wheel = passion_presentation(specification);
+    const bool guest_home = specification.value("guest_home", false);
+
+    if (guest_home) {
+        validate_guest_android_home(specification);
+    }
 
     if (passion_wheel) {
         passion_wheel_validate(specification);
@@ -594,6 +609,7 @@ void Session::attach_android(const Json &input, bool explicit_cold_boot) {
             {"generation", android_generation_},
             {"pid", android_.pid()},
             {"serial", "emulator-" + std::to_string(port)},
+            {"home_policy", guest_home ? "guest" : "profile"},
             {"quickboot",
              {{"mode", android_resume_ ? "restore_requested" : "cold"},
               {"reason", explicit_cold_boot ? "explicit_cold_boot" : checkpoint.reason},

@@ -386,6 +386,10 @@ int supervise(Arguments args, const std::filesystem::path &current_program) {
             android_spec["network"] = voyemu::android_network_contract();
         }
 
+        if (args.guest_home) {
+            android_spec["guest_home"] = true;
+        }
+
         session.attach_android(android_spec);
     }
 
@@ -488,6 +492,11 @@ std::optional<int> restart_command(Arguments &args, const Emit &emit) {
         throw voyemu::cli::LocalizedError("MACHINE_NOT_PREPARED", "error.restart_not_prepared");
     }
 
+    if (args.guest_home) {
+        voyemu::validate_guest_android_home(
+                voyemu::read_private_json(prepared / "android-launch.json"));
+    }
+
     auto response = active_request(args, {{"op", "stop"}});
 
     if (!response.value("ok", false)) {
@@ -554,6 +563,12 @@ int start_command(Arguments &args, const Emit &emit) {
         if (args.exclusive) {
             throw VoyemuError("TEST_SESSION_ACTIVE",
                               "selected profile already has a live session; create never attaches");
+        }
+
+        if (args.guest_home && existing.value("deliveries", Json::object())
+                                               .value("android", Json::object())
+                                               .value("home_policy", std::string{}) != "guest") {
+            throw VoyemuError("ANDROID_HOME_POLICY", "active session uses another HOME policy");
         }
 
         if (!args.machine_path.empty() &&
@@ -691,6 +706,11 @@ int start_command(Arguments &args, const Emit &emit) {
     // Validate the selected source before spawning a supervisor or guest.
     (void)startup_vehicle_state(args);
 
+    if (args.guest_home) {
+        voyemu::validate_guest_android_home(
+                voyemu::read_private_json(prepared / "android-launch.json"));
+    }
+
     record = voyemu::native_current_active_directory(args.root, args.profile, args.machine) /
              (args.profile + ".json");
 
@@ -747,6 +767,10 @@ int start_command(Arguments &args, const Emit &emit) {
 
         if (args.background) {
             spec.arguments.push_back("--background");
+        }
+
+        if (args.guest_home) {
+            spec.arguments.push_back("--guest-home");
         }
 
         if (args.resume) {
