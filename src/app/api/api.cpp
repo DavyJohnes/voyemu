@@ -1140,6 +1140,10 @@ Api::Api(std::filesystem::path root, std::filesystem::path executable, Transport
                 spec.arguments.push_back("--background");
             }
 
+            if (request.at("home_policy") == "guest") {
+                spec.arguments.push_back("--guest-home");
+            }
+
             if (request.value("scenario", std::string("fresh")) == "resume") {
                 spec.arguments.push_back("--resume");
             }

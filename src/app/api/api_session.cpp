@@ -61,6 +61,13 @@ Json Api::dispatch_session(const std::string &op, const Json &request, Clock::ti
             throw VoyemuError("TEST_UNSUPPORTED", "only actual auto boot selection is implemented");
         }
 
+        const auto home_policy = request.contains("home_policy") ? text(request, "home_policy", 16)
+                                                                 : "profile";
+
+        if (home_policy != "profile" && home_policy != "guest") {
+            throw VoyemuError("TEST_ARGUMENT", "home_policy must be profile or guest");
+        }
+
         const auto scenario = request.value("scenario", std::string("fresh"));
 
         if (scenario != "fresh" && scenario != "resume") {
@@ -152,6 +159,7 @@ Json Api::dispatch_session(const std::string &op, const Json &request, Clock::ti
         }
 
         created["background"] = boolean(request, "background", true);
+        created["home_policy"] = home_policy;
 
         if (!created.contains("ownership_id")) {
             created["ownership_id"] = random_token();
@@ -175,6 +183,7 @@ Json Api::dispatch_session(const std::string &op, const Json &request, Clock::ti
                 {"scenario", scenario},
                 {"boot_policy", "auto"},
                 {"background", created["background"]},
+                {"home_policy", home_policy},
                 {"readiness", "session.reachable"},
                 {"visible_effect_verified", false},
                 {"actual_boot", "read session.status deliveries.*.quickboot after readiness"}};

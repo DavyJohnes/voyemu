@@ -130,6 +130,11 @@ int main(int argc, char **argv) try {
 
     reject({"start", machine.string(), "--cluster=on", "--cluster=off"}, "CLI_ARGUMENT:");
     reject({"status", machine.string(), "--background"}, "CLI_ARGUMENT:");
+    assert(parse({"start", machine.string(), "--guest-home"}).command == "start");
+    assert(parse({"restart", machine.string(), "--guest-home"}).command == "restart");
+    reject({"start", machine.string(), "--guest-home", "--guest-home"}, "CLI_ARGUMENT:");
+    reject({"status", machine.string(), "--guest-home"}, "CLI_ARGUMENT:");
+    reject({"start", machine.string(), "--multimedia=off", "--guest-home"}, "CLI_ARGUMENT:");
     reject({"check", machine.string(), "--seconds", "2"}, "CLI_ARGUMENT:");
     assert(!parse({"start", machine.string()}).network);
     assert(parse({"start", machine.string(), "--network=yes"}).network);

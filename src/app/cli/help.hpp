@@ -74,6 +74,7 @@ inline std::string cli_help(cli::Language language = cli::Language::english) {
     entries({{"--network=yes|no", "help.network", {}},
              {"--verbose", "help.verbose", {}},
              {"--background", "help.background", {}},
+             {"--guest-home", "help.guest_home", {}},
              {"--resume", "help.resume", {}},
              {"--seconds 1..3600", "help.seconds", {}},
              {"--provider FILE", "help.provider", {}}});

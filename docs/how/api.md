@@ -123,11 +123,14 @@ Session operations need a prepared machine with its pinned dependencies; the ava
 | `with_cluster` | Starts the cluster | `false` |
 | `seconds` | 1..3600, the QNX run limit with `with_cluster: true` | No limit |
 | `background` | Window in the background | `true` |
+| `home_policy` | `profile` or `guest`. Choose HOME using the profile or let Android select and start it | `profile` |
 | `machine` | A `machines/<machine>/` directory whose manifest references `profile` | — |
 | `machine_path` | A relative or absolute path to a prepared machine, also outside the project | — |
 | `providers` | Up to four absolute provider manifest paths | — |
 
 `machine` and `machine_path` are mutually exclusive (`MACHINE_ARGUMENT`). A relative `machine_path` resolves against the working directory of the API process, and the machine manifest must reference the requested `profile`. The session is created with the canonical machine path; the response keeps `machine`, the canonical `machine_seed` and `machine_manifest_sha256`. The `seconds` field is also available in `test.run.start`. An Android-only machine rejects `with_cluster: true`.
+
+The opt-in `guest` mode keeps the SDK display provider and the profile services. Android selects and starts its HOME activities. Voyemu waits for an active primary HOME and both guest displays before publishing presentation readiness for an OEM profile. Inspect the secondary HOME and its frame separately. The mode is available for dual-display Android SDK and Passion machines on Linux and macOS, see [launch options](launch.md#launch-options).
 
 Preflight admits a registered portable machine before local launch settings exist: the launcher checks the manifest and the required host tool bindings, then activates the machine. `scenario` does not select Quick Boot: `session.status` reports the actual mode under `deliveries`. There is no forced cold boot instead of Quick Boot and no restore-required mode.
 
