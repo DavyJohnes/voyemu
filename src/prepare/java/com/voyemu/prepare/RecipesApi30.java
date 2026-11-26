@@ -142,10 +142,15 @@ final class RecipesApi30 {
                             List.of(
                                     Map.of(
                                             "operation",
+                                            "guardLegacyActivityResume",
+                                            "args",
+                                            List.of()),
+                                    Map.of(
+                                            "operation",
                                             "guardSecondaryNavigationDecorated",
                                             "args",
                                             List.of()))),
-                    "Exact Passion clean secondary navigation operation required");
+                    "Exact ordered Passion display operations required");
         }
 
         if (name.equals("api30-hiboard-libraries.json")) {
@@ -986,6 +991,14 @@ final class RecipesApi30 {
                 guardedStrPower = true;
                 target.guardStrPower(false);
             }
+            case "guardLegacyActivityResume" -> {
+                require(
+                        name.equals(PassionSecondaryNavigationGuard.NAME + ".json")
+                                && pins.equals(List.of(PassionSecondaryNavigationGuard.PIN))
+                                && args.isEmpty(),
+                        "Exact clean legacy activity resume operation required");
+                target.guardLegacyActivityResume(false);
+            }
             case "guardSecondaryNavigationDecorated" -> {
                 require(
                         name.equals(PassionSecondaryNavigationGuard.NAME + ".json")
@@ -1146,6 +1159,7 @@ final class RecipesApi30 {
                 case "guardHiboardStartup" -> target.guardHiboardStartup(true);
                 case "routeHiboard" -> target.routeHiboard(true);
                 case "routeRearScreen" -> target.routeRearScreen(true);
+                case "guardLegacyActivityResume" -> target.guardLegacyActivityResume(true);
                 case "guardSecondaryNavigationDecorated" ->
                         target.guardSecondaryNavigationDecorated(true);
                 case "guardSecondaryNavigationSuppressed" ->
