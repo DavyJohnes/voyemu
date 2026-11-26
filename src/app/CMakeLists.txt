@@ -831,6 +831,9 @@ if(BUILD_TESTING)
     add_executable(cli_flow_test runtime/cli_flow.test.cpp runtime/cli_flow_${voyemu_host_backend}.test.cpp)
     target_link_libraries(cli_flow_test PRIVATE voyemu_core)
     voyemu_add_test(cli_arguments LABELS host TIMEOUT 15 RUN_SERIAL COMMAND cli_flow_test $<TARGET_FILE:voyemu> $<TARGET_FILE:runtime_fixture> --arguments-only)
+    if(NOT WIN32)
+        voyemu_add_test(android_warm_reboot_delayed LABELS host TIMEOUT 30 RUN_SERIAL COMMAND cli_flow_test $<TARGET_FILE:voyemu> $<TARGET_FILE:runtime_fixture> --android-warm-reboot-delayed)
+    endif()
     # The session flows start supervised machines whose Android audio, JSON automation and
     # runtime SDK steps are not ported to Linux yet.
     if(NOT VOYEMU_LINUX)

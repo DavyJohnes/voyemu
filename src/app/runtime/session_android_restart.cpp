@@ -612,7 +612,18 @@ Json Session::reboot_android(const std::string &mode) {
             next_display_activation_ = {};
 
             // The command is fixed, never a shell fragment or caller-supplied executable.
-            const auto submitted = adb({"reboot"}, 5000);
+            // The reboot service may stay open until adbd disconnects during shutdown.
+            const auto remaining =
+                    std::chrono::duration_cast<std::chrono::milliseconds>(
+                            android_request_deadline_ - std::chrono::steady_clock::now())
+                            .count();
+
+            if (remaining < 1) {
+                throw VoyemuError("ANDROID_REBOOT_UNKNOWN", "SDK reboot dispatch deadline expired");
+            }
+
+            const auto submitted = adb({"reboot"},
+                                       static_cast<int>(std::min<std::int64_t>(15000, remaining)));
 
             if (submitted.exit_code || submitted.timed_out) {
                 throw VoyemuError("ANDROID_REBOOT_UNKNOWN", "SDK reboot may have been submitted");

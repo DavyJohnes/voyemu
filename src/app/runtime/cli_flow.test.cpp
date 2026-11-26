@@ -1,5 +1,6 @@
 #include "android_engine.hpp"
 #include "android_port_lease.hpp"
+#include "android_reboot.hpp"
 #include "cli_flow_test_host.hpp"
 #include "machine_path.hpp"
 #include "os/platform.hpp"
@@ -181,6 +182,8 @@ int main(int argc, char **argv) try {
     const bool latency = argc == 4 && (std::string(argv[3]) == "--quickboot-latency" || timings);
     const bool runtime_paths = argc == 4 && std::string(argv[3]) == "--runtime-paths";
     const bool reboot_preflight = argc == 4 && std::string(argv[3]) == "--android-reboot-preflight";
+    const bool reboot_delayed = argc == 4 &&
+                                std::string(argv[3]) == "--android-warm-reboot-delayed";
     const bool cluster_lifecycle = argc == 4 && std::string(argv[3]) == "--cluster-lifecycle";
     const bool frontend_lifecycle = argc == 4 && std::string(argv[3]) == "--frontend-lifecycle";
     const bool startup_cancel = argc == 4 && std::string(argv[3]) == "--startup-cancel";
@@ -847,8 +850,8 @@ int main(int argc, char **argv) try {
                                 {"integrity_audited", false}});
         }
 
-        // The in-process reboot preflight covers the POSIX SDK launch of this fixture.
-        if (!os::host_windows && reboot_preflight) {
+        // The in-process reboot tests use the fixture's owned POSIX SDK launch.
+        if (!os::host_windows && (reboot_preflight || reboot_delayed)) {
             require(os::set_environment_variable("VOYEMU_NATIVE_FIXTURE_ROOT", root.string()),
                     "fixture environment unavailable");
             const auto token = random_token();
@@ -868,6 +871,54 @@ int main(int argc, char **argv) try {
             }
 
             const auto before = session.handle({{"op", "status"}});
+
+            if (reboot_delayed) {
+                const Json identity{{"op", "test_boot_identity"}, {"session_id", token}};
+                const auto readiness = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+                Json boot;
+
+                do {
+                    session.tick();
+                    boot = session.handle(identity);
+
+                    if (boot.value("ok", false)) {
+                        break;
+                    }
+
+                    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+                } while (std::chrono::steady_clock::now() < readiness);
+
+                require(boot.value("ok", false),
+                        "warm reboot fixture did not establish boot identity: " + boot.dump());
+                { std::ofstream(root / "delay-reboot-close") << "delay the service close"; }
+                const auto reply = session.handle({{"op", "android_reboot"},
+                                                   {"session_id", token},
+                                                   {"ownership_id", ownership},
+                                                   {"mode", "warm"}});
+                require(reply.value("ok", false), "delayed warm reboot failed: " + reply.dump());
+                require(std::filesystem::file_size(root / "reboot-requests") == 1,
+                        "warm reboot service was not dispatched exactly once");
+                require(reply.at("status") == "completed" &&
+                                reply.at("scope") == "guest_boot_changed" &&
+                                reply.at("boot_id_before") == boot.at("boot_id") &&
+                                android_reboot_changed(
+                                        reply.at("boot_id_before").get<std::string>(),
+                                        reply.at("boot_id").get<std::string>()),
+                        "delayed warm reboot did not confirm a fresh Linux boot");
+                const auto generation = before.at("deliveries").at("android").at("generation");
+                require(reply.at("android_pid_before") == before.at("android_pid") &&
+                                reply.at("android_pid") == before.at("android_pid") &&
+                                reply.at("generation_before") == generation &&
+                                reply.at("generation") == generation.get<std::uint64_t>() + 1,
+                        "delayed warm reboot did not retain its owned SDK process and advance one generation");
+                session.stop();
+                require(tcp_port_free(port) && tcp_port_free(port + 1),
+                        "warm reboot fixture left owned SDK listeners");
+                std::filesystem::remove_all(root);
+
+                return 0;
+            }
+
             const auto observer_file = directory / "ui-observer.json";
             const Json lease{{"schema", 1},
                              {"session_id", token},
