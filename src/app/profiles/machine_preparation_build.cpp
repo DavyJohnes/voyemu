@@ -129,9 +129,7 @@ Json verify_signed_android_input(const std::filesystem::path &root, const Signed
     const auto require = require_signed_android;
     const auto read = read_signed_android_metadata;
 
-#ifndef __linux__
-    require(false, "signed Android preparation requires Linux");
-#endif
+    require(os::platform_name == "Linux", "signed Android preparation requires Linux");
     const auto &base = profile.at("android");
     const auto identity = native_base_identity(base);
     require(identity.api == 30 && identity.abi == "x86_64" && android_kvm(profile),
@@ -264,9 +262,10 @@ checked_signed_android_boot_pins(const std::filesystem::path &root,
         return pins;
     }
 
-#ifndef __linux__
-    throw VoyemuError("SIGNED_ANDROID", "signed Android machines require Linux");
-#endif
+    if (os::platform_name != "Linux") {
+        throw VoyemuError("SIGNED_ANDROID", "signed Android machines require Linux");
+    }
+
     const auto &proof = android.at("signed_android");
     const auto &files = proof.at("files");
     const std::regex boot_id("[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}");
