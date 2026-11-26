@@ -112,6 +112,7 @@ set(CASES_passion
     "PassionPowerAdapterTest ROOT ORIGINAL:${PASSION}/framework/framework.jar PLATFORM"
     "PassionStatusBarGuardTest ANDROID:${PASSION}/system_ext/priv-app/SystemUI/SystemUI.apk NEW"
     "PassionDisplayPowerGuardTest ANDROID:${PASSION}/system/system/framework/services.jar NEW"
+    "PassionLegacyActivityResumeTest ROOT ANDROID:${PASSION}/system/system/framework/services.jar NEW"
     "PassionNavigationReadyGuardTest ROOT WORK NEEDS:${PASSION}"
     "PassionStartupVolumeGuardTest ANDROID:${PASSION}/system/system/framework/services.jar NEW"
     "PassionStatusBarInsetsPolicyTest ROOT ANDROID:${PASSION}/system/system/framework/services.jar")

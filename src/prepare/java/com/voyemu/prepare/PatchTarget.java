@@ -1456,6 +1456,31 @@ final class PatchTarget implements Recipes.Target {
     }
 
     @Override
+    public void guardLegacyActivityResume(boolean apply) throws Exception {
+        if ("arm64-v8a".equals(abi)) {
+            return;
+        }
+
+        Failure.require(
+                api == 30
+                        && "x86_64".equals(abi)
+                        && profile.data().get("target") instanceof Map<?, ?> target
+                        && "x86".equals(target.get("name"))
+                        && abi.equals(target.get("guestAbi"))
+                        && "signed-offline".equals(target.get("preparation"))
+                        && "jar".equals(type)
+                        && "android:/system/framework/services.jar".equals(reference),
+                "LEGACY_ACTIVITY_RESUME_CONTRACT",
+                "Resolved x86 signed Android services input required",
+                3);
+        byte[] result = LegacyActivityResumeGuard.run(entries.get("classes2.dex"), apply);
+
+        if (apply) {
+            entries.put("classes2.dex", result);
+        }
+    }
+
+    @Override
     public void guardSecondaryNavigationDecorated(boolean apply) throws Exception {
         if (apply) {
             entries.put(
