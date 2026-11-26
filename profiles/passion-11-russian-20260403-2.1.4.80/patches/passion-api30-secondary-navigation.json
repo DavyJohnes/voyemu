@@ -3,6 +3,10 @@
   "api": 30,
   "calls": [
     {
+      "operation": "guardLegacyActivityResume",
+      "args": []
+    },
+    {
       "operation": "guardSecondaryNavigationDecorated",
       "args": []
     }

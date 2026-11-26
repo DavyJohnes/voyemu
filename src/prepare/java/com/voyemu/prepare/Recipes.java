@@ -387,6 +387,11 @@ final class Recipes {
                     "PATCH_OPERATION_UNSUPPORTED", "ThirdScreen rear display adapter missing", 5);
         }
 
+        default void guardLegacyActivityResume(boolean apply) throws Exception {
+            throw new Failure(
+                    "PATCH_OPERATION_UNSUPPORTED", "Legacy activity resume adapter missing", 5);
+        }
+
         default void guardSecondaryNavigationDecorated(boolean apply) throws Exception {
             throw new Failure(
                     "PATCH_OPERATION_UNSUPPORTED",

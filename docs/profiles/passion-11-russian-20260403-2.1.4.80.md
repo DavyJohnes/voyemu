@@ -15,6 +15,8 @@ Both targets use API 30 and the `passion-2024` steering wheel.
 
 The `x86` target runs the multimedia on Linux x64. KVM executes the Android guest and the host GPU driver renders graphics. Preparation checks the two OEM home screens and their Android Binder services. This target includes the Voyemu MCU adapter for the battery state of charge and separate power control for each multimedia display.
 
+The signed system image carries the firmware's activity policy for older Android applications. Both OEM HOME activities share a process. Selecting the second activity leaves the other display's HOME resumed.
+
 Playback uses the local PulseAudio socket and microphone capture stays disabled. The default socket is `$XDG_RUNTIME_DIR/pulse/native`. To use another local socket, set `PULSE_SERVER=unix:/path/to/socket`. With no available socket Android starts without audio. The firmware sets playback volume to its minimum at cold boot. Raise it with the normal volume controls to hear sound.
 
 The build uses API 30 `default` x86_64 r11. A normal reboot of r11 succeeds. After the standard Android remount, Android Verified Boot rejects the changed boot metadata on restart before preparation copies the first OEM file. The target assembles the system files before generating integrity trees and signing the images with a local development key. It uses the pinned ARM Native Bridge files from Google APIs r16 because `MonzaCarService` needs its ARM64 JNI library to register the service that both OEM home screens use. See [preparation](../how/preparation.md#build) and [profiles as sources, machines as results](../why/profiles-machines.md).

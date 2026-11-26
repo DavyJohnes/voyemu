@@ -802,9 +802,12 @@ int main(int argc, char **argv) {
         if (passion_metadata.at("passion-api30-secondary-navigation.json").at("sourceSha256") !=
                     sha256_file(passion_nav) ||
             passion_metadata.at("passion-api30-secondary-navigation.json").at("calls") !=
-                    Json::array({Json{{"operation", "guardSecondaryNavigationDecorated"},
+                    Json::array({Json{{"operation", "guardLegacyActivityResume"},
+                                      {"args", Json::array()}},
+                                 Json{{"operation", "guardSecondaryNavigationDecorated"},
                                       {"args", Json::array()}}})) {
-            throw std::runtime_error("Passion clean policy recipe source and operation must match");
+            throw std::runtime_error(
+                    "Passion clean display policy recipe source and operations must match");
         }
 
         const auto qinggan11_metadata = profile_patch_metadata(root,
