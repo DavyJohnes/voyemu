@@ -1568,6 +1568,14 @@ int fixture_main(int argc, char **argv) {
             }
 
             if (command == "reboot:" && !shell) {
+                if (std::filesystem::exists(root / "delay-reboot-close")) {
+                    {
+                        std::ofstream(root / "reboot-requests", std::ios::app) << '\n';
+                    }
+                    // adbd has acknowledged opening the service, but has yet to close it.
+                    std::this_thread::sleep_for(std::chrono::milliseconds(6200));
+                }
+
                 auto identity = voyemu::read_private_json(root / "identity.json");
                 identity["boot_token"] = voyemu::random_token();
                 voyemu::write_private_json(root / "identity.json", identity);
