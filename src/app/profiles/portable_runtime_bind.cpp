@@ -93,15 +93,17 @@ std::filesystem::path bind_machine_configuration(const std::filesystem::path &ro
          "portable machine configuration required");
     const auto retained_definition = portable_profile_definition(root, profile, machine, seed);
     check_sdk_seed(seed, retained_definition, manifest);
-    const auto launch_boot_pins = checked_signed_android_boot_pins(root, seed, retained_definition,
-                                                                   manifest);
     const bool signed_system = manifest.at("android").contains("signed_android");
     const auto family = runtime_profile_reference(retained_definition, profile);
     const auto development_kernel = checked_development_kernel(seed, retained_definition, manifest);
     const auto can_model_sha = checked_can_model_receipt(seed, manifest);
 
     if (multimedia) {
-        check_android_guest_identity(retained_definition, manifest);
+        // A profile that declares no Android base keeps its bound launch configuration.
+        if (retained_definition.contains("android")) {
+            check_android_guest_identity(retained_definition, manifest);
+        }
+
         (void)portable_resource_path(seed, "ui/splash.png");
     }
 
@@ -1393,7 +1395,10 @@ std::filesystem::path bind_machine_configuration(const std::filesystem::path &ro
             if (signed_system) {
                 launch["signed_system"] = true;
 
-                for (const auto &[name, pin] : launch_boot_pins) {
+                // The pins need the android descriptor of the profile, which a machine that only
+                // runs its bound configuration or its cluster does not have to declare.
+                for (const auto &[name, pin] :
+                     checked_signed_android_boot_pins(root, seed, retained_definition, manifest)) {
                     add_pin(launch["pins"], launch_base / name, pin);
                 }
             }
